@@ -36,7 +36,7 @@
           <template #default="{ row }">{{ row.newPlayerName || (row.newPlayerId ? 'ID:' + row.newPlayerId : '-') }}</template>
         </el-table-column>
         <el-table-column prop="createdAt" label="申请时间" width="165" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <template v-if="row.status === 'PENDING'">
               <el-button link type="success" @click="openApproveDialog(row)">通过</el-button>
@@ -91,10 +91,13 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csRelayList, csRelayApprove, csRelayReject, csPlayerList } from '@/api/business'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+
+const { isCompact } = useResponsive()
 
 const statusText = { PENDING: '待处理', APPROVED: '已通过', REJECTED: '已拒绝' }
 const statusTagType = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }

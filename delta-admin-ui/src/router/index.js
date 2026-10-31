@@ -117,6 +117,8 @@ const routes = [
       }
     ]
   },
+  {path:'/player-level',component:Layout,children:[{path:'',name:'PlayerLevels',component:()=>import('@/views/player/PlayerLevels.vue'),meta:{title:'打手等级分类',icon:'Medal',roles:['admin']}}]},
+  {path:'/rewards',component:Layout,children:[{path:'',name:'RewardList',component:()=>import('@/views/player/RewardList.vue'),meta:{title:'打赏记录',icon:'Wallet',roles:['admin']}}]},
   // 数据统计（仅管理员）
   {
     path: '/statistics',
@@ -242,6 +244,7 @@ const routes = [
         component: () => import('@/views/system/BannerList.vue'),
         meta: { title: '轮播图管理', roles: ['admin'] }
       },
+      {path:'reward-grab',name:'RewardGrabSettings',component:()=>import('@/views/system/RewardGrabSettings.vue'),meta:{title:'打赏与抢单设置',roles:['admin']}},
       {
         path: 'config',
         name: 'SysConfig',

@@ -20,6 +20,17 @@ public class Player extends BaseEntity {
     private String phone;
     private String skillTags;
     private String gameLevel;
+    private Integer level;
+    /** -1 follows level, 0 exempt, 1 required. Admin only. */
+    private Integer grabCaptchaOverride;
+    /** -1 跟随等级；0 不涨价；其他为独立涨价百分比。仅管理员可修改。 */
+    private BigDecimal priceIncreaseRate;
+    private String introduction;
+    private String coverImage;
+    private String albumImages;
+    private String story;
+    private String voiceUrl;
+    private Integer voiceDuration;
     private String proofImages;
     private String serviceTypes;
     private BigDecimal avgRating;

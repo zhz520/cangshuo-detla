@@ -7,7 +7,6 @@ import com.delta.common.chat.service.ChatServiceImpl;
 import com.delta.common.chat.util.ChatParticipantId;
 import com.delta.common.security.service.TokenService;
 import com.delta.common.websocket.manager.WebSocketSessionManager;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,38 +27,36 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     /** session -> userKey 映射，用于断开时清理 */
     private final ConcurrentHashMap<String, String> sessionUserMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> unauthenticated = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        // 从URL参数中解析JWT token
-        String query = session.getUri() != null ? session.getUri().getQuery() : "";
-        String token = extractParam(query, "token");
-        if (token == null || token.isEmpty()) {
-            log.warn("WebSocket连接缺少token, 关闭连接");
-            closeQuietly(session);
-            return;
-        }
-        Claims claims = tokenService.parseToken(token);
-        if (claims == null) {
-            log.warn("WebSocket token解析失败, 关闭连接");
-            closeQuietly(session);
-            return;
-        }
-        Long userId = claims.get("userId", Long.class);
-        // 专用聊天页通过 URL 参数 chatRole 声明身份，便于同一 token 下区分用户/打手/客服
-        String chatRole = extractParam(query, "chatRole");
-        String userType = isValidChatRole(chatRole) ? ("ADMIN".equals(chatRole) ? "CS" : chatRole) : (String) claims.get("userType");
-        String userKey = WebSocketSessionManager.buildKey(userType, userId);
-
-        // 注册到SessionManager
-        sessionManager.add(userKey, session);
-        sessionUserMap.put(session.getId(), userKey);
-        log.info("WebSocket connected: {} -> {}", session.getId(), userKey);
+        session.setTextMessageSizeLimit(16384);
+        unauthenticated.put(session.getId(),System.currentTimeMillis());
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         Map<String, Object> data = JSON.parseObject(message.getPayload());
+        if(data==null){closeQuietly(session);return;}
+        if(!sessionUserMap.containsKey(session.getId())){
+            if(!"auth".equalsIgnoreCase(String.valueOf(data.get("type")))){closeQuietly(session);return;}
+            String token=String.valueOf(data.get("token"));
+            Map<String,Object> principal=tokenService.authenticate(token);
+            if(principal==null){closeQuietly(session);return;}
+            String chatRole=data.get("chatRole")==null?null:String.valueOf(data.get("chatRole"));
+            String userType;
+            try {userType=com.delta.common.chat.util.ChatIdentity.role((String)principal.get("userType"),chatRole);}
+            catch(com.delta.common.exception.BusinessException e){closeQuietly(session);return;}
+            Long userId=((Number)principal.get("userId")).longValue();
+            String userKey=WebSocketSessionManager.buildKey(userType,userId);
+            sessionManager.add(userKey,session);sessionUserMap.put(session.getId(),userKey);
+            session.getAttributes().put("authenticatedToken",token);unauthenticated.remove(session.getId());
+            session.sendMessage(new TextMessage("{\"type\":\"auth\",\"success\":true}"));
+            log.info("WebSocket authenticated: {} -> {}",session.getId(),userKey);return;
+        }
+        Object authenticatedToken=session.getAttributes().get("authenticatedToken");
+        if(!(authenticatedToken instanceof String token) || tokenService.authenticate(token)==null){closeQuietly(session);return;}
         String msgType = (String) data.get("type");
 
         // 心跳消息：只做应答，不落库、不推送
@@ -79,6 +76,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Long sessionId = Long.parseLong(data.get("sessionId").toString());
             String userKey = sessionUserMap.get(session.getId());
             if (userKey != null) {
+                String[] identity=userKey.split(":",2);
+                com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(sessionId),
+                        com.delta.common.chat.util.ChatIdentity.encoded(identity[0],Long.parseLong(identity[1])));
                 chatService.markRead(sessionId, userKey);
             }
             return;
@@ -114,7 +114,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         String chatRole = (String) data.get("chatRole");
-        if (isValidChatRole(chatRole)) senderType = "ADMIN".equals(chatRole) ? "CS" : chatRole;
+        senderType=com.delta.common.chat.util.ChatIdentity.role(senderType,chatRole);
         long encodedSenderId = ChatParticipantId.encode(senderType, rawSenderId);
         if (!isSessionMember(chatSession, encodedSenderId)) {
             log.warn("WebSocket发送: 非会话成员禁止发消息, encodedId={}, sessionId={}", encodedSenderId, sid);
@@ -128,6 +128,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         msg.setType(msgType != null ? msgType : "TEXT");
 
         String content = (String) data.get("content");
+        com.delta.common.chat.util.ChatIdentity.validateMessage(msg.getType(),content);
         msg.setContent(filterSensitiveWords(content));
         msg.setIsRead(0);
         chatService.saveMessage(msg);
@@ -142,11 +143,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        unauthenticated.remove(session.getId());
         String userKey = sessionUserMap.remove(session.getId());
         if (userKey != null) {
             sessionManager.remove(userKey);
         }
         log.info("WebSocket disconnected: {} -> {}", session.getId(), userKey);
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=30000)
+    public void closeStaleUnauthenticated() {
+        long cutoff=System.currentTimeMillis()-30000;
+        unauthenticated.forEach((id,started)->{
+            if(started<cutoff && !sessionUserMap.containsKey(id)){
+                unauthenticated.remove(id);
+                sessionManager.getAll().stream().filter(s->id.equals(s.getId())).findFirst().ifPresent(this::closeQuietly);
+            }
+        });
     }
 
     /** 推送消息给会话中另一参与者（排除发送者） */
@@ -163,10 +176,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         long rawOther = ChatParticipantId.getRawId(otherEncoded);
         pushToMember(otherType, String.valueOf(rawOther), senderKey, msgJson);
         if ("CS".equals(otherType)) pushToMember("ADMIN", String.valueOf(rawOther), senderKey, msgJson);
-    }
-
-    private static boolean isValidChatRole(String role) {
-        return "USER".equals(role) || "PLAYER".equals(role) || "CS".equals(role) || "ADMIN".equals(role);
     }
 
     private void pushToMember(String userType, String memberId, String senderKey, String msgJson) {
@@ -187,15 +196,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String[] words = {"开挂", "外挂", "代练骗子"};
         for (String w : words) content = content.replace(w, "***");
         return content;
-    }
-
-    private String extractParam(String query, String key) {
-        if (query == null) return null;
-        for (String param : query.split("&")) {
-            String[] kv = param.split("=", 2);
-            if (kv.length == 2 && key.equals(kv[0])) return kv[1];
-        }
-        return null;
     }
 
     private void closeQuietly(WebSocketSession session) {

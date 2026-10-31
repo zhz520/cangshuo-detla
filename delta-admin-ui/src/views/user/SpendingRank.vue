@@ -59,7 +59,7 @@ onMounted(fetchData)
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .user-cell { display: flex; align-items: center; gap: 10px; }
 .nickname { font-weight: 500; }
-.amount { color: #ff6b2b; font-weight: 600; }
-.rank { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; font-size: 13px; font-weight: bold; background: #f0f2f5; color: #606266; }
-.rank-top { background: linear-gradient(135deg, #ff9a44, #ff6b2b); color: #fff; }
+.amount { color: #17191c; font-weight: 600; }
+.rank { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; font-size: 13px; font-weight: bold; background: #f0f2f5; color: #555b63; }
+.rank-top { background: linear-gradient(135deg, #51565e, #17191c); color: #fff; }
 </style>

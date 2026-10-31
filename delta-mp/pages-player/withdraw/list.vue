@@ -44,8 +44,8 @@ function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; 
 function goDetail(id) { uni.navigateTo({ url: '/pages-player/withdraw/detail?id=' + id }) }
 </script>
 <style lang="scss" scoped>
-.list-page { background: #ffffff; min-height: 100vh; }
-.list { height: 100vh; }
+.list-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
+.list { height: var(--app-page-height, 100vh); }
 .record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx;
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
   .amount { font-size: 34rpx; font-weight: bold; color: rgba(0,0,0,0.85); }

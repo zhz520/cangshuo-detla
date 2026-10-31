@@ -188,7 +188,7 @@ onMounted(() => {
 .summary-card {
   .summary-label {
     font-size: 13px;
-    color: #909399;
+    color: #73777e;
     margin-bottom: 10px;
   }
 
@@ -196,12 +196,12 @@ onMounted(() => {
     font-size: 28px;
     line-height: 1.2;
     font-weight: 700;
-    color: #303133;
+    color: #17191c;
   }
 
   &.highlight {
     .summary-value {
-      color: #e6a23c;
+      color: #996b30;
     }
   }
 }
@@ -215,12 +215,12 @@ onMounted(() => {
 
 .table-range {
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
 }
 
 .income-detail {
   padding: 14px 18px 18px 48px;
-  background: #f8fafc;
+  background: #f7f8f9;
 }
 
 .detail-title {
@@ -229,11 +229,24 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  color: #172033;
+  color: #17191c;
   font-weight: 700;
 }
 
 .detail-table {
   border-radius: 8px;
+}
+@media (max-width: 1024px) {
+  .summary-row :deep(.el-col-6) { max-width: 50%; flex: 0 0 50%; margin-bottom: 12px; }
+  .summary-value { overflow-wrap: anywhere; word-break: break-word; }
+}
+@media (max-width: 768px) {
+  .table-header, .detail-title { flex-wrap: wrap; }
+  .summary-card .summary-value { font-size: 22px; }
+  .income-detail { padding: 10px; }
+  :deep(.el-table__expanded-cell) { padding: 8px; }
+}
+@media (max-width: 360px) {
+  .summary-row :deep(.el-col-6) { max-width: 100%; flex: 0 0 100%; }
 }
 </style>

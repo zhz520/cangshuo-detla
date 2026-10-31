@@ -48,6 +48,29 @@ public class PlayerOrderController {
     private final ApplicationEventPublisher eventPublisher;
     private final SysConfigService sysConfigService;
     private final CrossModuleMapper crossModuleMapper;
+    private final com.delta.common.security.service.VerificationService verification;
+    private final com.delta.system.service.RewardGrabRulesService grabRules;
+
+    public record AcceptRequest(String captchaId,String captchaCode,String deviceId) {}
+
+    @GetMapping("/{orderId}/accept-challenge")
+    public R<java.util.Map<String,Object>> challenge(@PathVariable Long orderId,
+            @RequestParam(required=false) String deviceId,jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control","no-store, private");response.setHeader("Pragma","no-cache");
+        Long id=SecurityUtils.getUserId();Player p=playerService.getById(id);
+        if(p==null || !"ACTIVE".equals(p.getStatus())) throw new BusinessException(403,"打手账号状态不允许接单");
+        Order o=orderService.getById(orderId);
+        if(o==null || !("PAID".equals(o.getStatus())&&o.getPlayerId()==null || "ASSIGNED".equals(o.getStatus())&&id.equals(o.getPlayerId()))
+                || o.getDesignatedPlayerId()!=null&&!id.equals(o.getDesignatedPlayerId())) throw new BusinessException(409,"订单已被抢或当前不可接单");
+        boolean required=!Integer.valueOf(0).equals(crossModuleMapper.selectGrabCaptchaRequired(id));
+        if(o.getRequestedPlayerLevelId()!=null&&!o.getRequestedPlayerLevelId().equals(p.getLevel()))
+            throw new BusinessException(403,"该订单仅限所选等级的打手接单");
+        var rule=grabRules.get();var result=new java.util.HashMap<String,Object>();result.put("required",required);
+        result.put("refreshSeconds",rule.captchaRefreshSeconds());result.put("expiresIn",rule.captchaSeconds());
+        if(required) result.putAll(verification.grabCaptcha(id,orderId,deviceId,request.getHeader("User-Agent"),request.getRemoteAddr(),rule.captchaSeconds(),rule.captchaAttempts(),rule.captchaRefreshSeconds()));
+        return R.ok(result);
+    }
 
     /**
      * 接单大厅：浏览可接订单。
@@ -63,6 +86,8 @@ public class PlayerOrderController {
                 // 显示未指定打手的订单 + 指定给当前打手的订单
                 .and(aw -> aw.isNull(Order::getDesignatedPlayerId)
                         .or().eq(Order::getDesignatedPlayerId, playerId))
+                .and(aw -> aw.isNull(Order::getRequestedPlayerLevelId)
+                        .or().eq(Order::getRequestedPlayerLevelId, crossModuleMapper.selectPlayerLevel(playerId)))
                 .orderByDesc(Order::getCreatedAt);
         List<Long> ids = parseCategoryIds(categoryIds);
         if (!ids.isEmpty()) {
@@ -73,6 +98,7 @@ public class PlayerOrderController {
         // 接单前隐藏游戏账号（安全要求）
         page.getRecords().forEach(o -> {
             o.setGameAccount(null);
+            o.setContact(null);o.setRemark(null);o.setExtraFields(null);o.setUserId(null);
         });
         return R.ok(page);
     }
@@ -122,6 +148,9 @@ public class PlayerOrderController {
      */
     @GetMapping("/{orderId}/progress")
     public R<java.util.List<OrderProgress>> viewProgress(@PathVariable Long orderId) {
+        Order order=orderService.getById(orderId);Long id=SecurityUtils.getUserId();
+        boolean teammate=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getPlayerId,id).eq(OrderPlayer::getStatus,"ACCEPTED"))>0;
+        if(order==null || !id.equals(order.getPlayerId()) && !teammate) return R.fail(404,"订单不存在");
         return R.ok(orderProgressService.list(
                 new LambdaQueryWrapper<OrderProgress>()
                         .eq(OrderProgress::getOrderId, orderId)
@@ -132,25 +161,10 @@ public class PlayerOrderController {
      * 打手接单（校验打手状态后委托给OrderService）
      */
     @PostMapping("/{orderId}/accept")
-    public R<Void> accept(@PathVariable Long orderId) {
-        Long playerId = SecurityUtils.getUserId();
-        Player player = playerService.getById(playerId);
-        if (player == null || !"ACTIVE".equals(player.getStatus())) {
-            // 冻结期间给出更明确的提示
-            if (player != null && "FROZEN".equals(player.getStatus())) {
-                return R.fail("账号已被冻结，冻结期间无法接单");
-            }
-            return R.fail("打手状态不允许接单");
-        }
-        // 接单上限校验
-        int maxActive = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
-        long activeCount = orderService.count(new LambdaQueryWrapper<Order>()
-                .eq(Order::getPlayerId, playerId)
-                .in(Order::getStatus, "ACCEPTED", "IN_PROGRESS", "WAITING_TEAMMATE"));
-        if (activeCount >= maxActive) {
-            return R.fail("您当前进行中的订单已达上限(" + maxActive + "单)");
-        }
-        orderService.acceptOrder(orderId, playerId);
+    public R<Void> accept(@PathVariable Long orderId,@RequestBody(required=false) AcceptRequest body,
+            jakarta.servlet.http.HttpServletRequest request) {
+        orderService.acceptOrder(orderId,SecurityUtils.getUserId(),body==null?null:body.captchaId(),
+                body==null?null:body.captchaCode(),body==null?null:body.deviceId(),request.getHeader("User-Agent"),request.getRemoteAddr());
         return R.ok();
     }
 

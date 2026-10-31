@@ -5,7 +5,7 @@
       <view v-else class="group-title">顶级分类</view>
       <view v-for="c in group.children" :key="c.id" class="category-card">
         <view class="card-left">
-          <image v-if="c.icon && !c.parentId" class="icon" :src="c.icon" mode="aspectFill" lazy-load />
+          <AppImage v-if="c.icon && !c.parentId" class="icon" :src="c.icon" mode="aspectFill" />
           <view class="info" :class="{ 'sub-info': c.parentId }">
             <text class="name">{{ c.name }}</text>
             <text class="count">商品数：{{ c.productCount || 0 }}</text>
@@ -47,6 +47,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -152,20 +153,20 @@ function doDelete(id) {
 }
 </script>
 <style lang="scss" scoped>
-.category-page { background: #ffffff; min-height: 100vh; padding: 24rpx; }
-.group-title { font-size: 26rpx; color: #ff4544; font-weight: 600; margin: 24rpx 0 12rpx; padding-left: 8rpx; }
+.category-page { background: #ffffff; min-height: var(--app-page-height, 100vh); padding: 24rpx; }
+.group-title { font-size: 26rpx; color: #17191c; font-weight: 600; margin: 24rpx 0 12rpx; padding-left: 8rpx; }
 .group-title:first-child { margin-top: 0; }
 .category-card { display: flex; justify-content: space-between; align-items: center; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; margin-bottom: 16rpx;
   .card-left { display: flex; align-items: center; gap: 16rpx; }
   .icon { width: 64rpx; height: 64rpx; border-radius: 8rpx; }
-  .info { .name { font-size: 28rpx; font-weight: bold; display: block; color: rgba(0,0,0,0.85); } .count { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; margin-top: 4rpx; } &.sub-info { padding-left: 16rpx; border-left: 4rpx solid rgba(255,69,68,0.25); } }
-  .card-actions { display: flex; gap: 20rpx; .action-btn { font-size: 26rpx; color: #ff4544; &.danger { color: #ee0a24; } } }
+  .info { .name { font-size: 28rpx; font-weight: bold; display: block; color: rgba(0,0,0,0.85); } .count { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; margin-top: 4rpx; } &.sub-info { padding-left: 16rpx; border-left: 4rpx solid rgba(23, 25, 28, 0.25); } }
+  .card-actions { display: flex; gap: 20rpx; .action-btn { font-size: 26rpx; color: #17191c; &.danger { color: #d44955; } } }
 }
-.add-btn { text-align: center; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; font-size: 28rpx; color: #ff4544; }
+.add-btn { text-align: center; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; font-size: 28rpx; color: #17191c; }
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .dialog { width: 80%; background: #ffffff; border-radius: 16rpx; padding: 32rpx; border: 1rpx solid rgba(0,0,0,0.06);
   .dialog-title { font-size: 30rpx; font-weight: bold; display: block; margin-bottom: 24rpx; text-align: center; color: rgba(0,0,0,0.85); }
   .form-item { margin-bottom: 20rpx; .label { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 8rpx; } .input { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); } .pick-text { display: block; padding: 16rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); &.placeholder { color: rgba(0,0,0,0.35); } } }
-  .dialog-btn { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; text-align: center; padding: 20rpx; border-radius: 999rpx; font-size: 28rpx; margin-top: 16rpx; }
+  .dialog-btn { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; text-align: center; padding: 20rpx; border-radius: 999rpx; font-size: 28rpx; margin-top: 16rpx; }
 }
 </style>

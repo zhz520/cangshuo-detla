@@ -42,6 +42,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.common.mapper.CrossModuleMapper crossModuleMapper;
     private final SysConfigService sysConfigService;
+    private final com.delta.common.security.service.VerificationService verification;
+    private final com.delta.order.service.OrderPricingService orderPricing;
+
+    @Override
+    public Order getById(java.io.Serializable id) {
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())
+            return getOne(new LambdaQueryWrapper<Order>().eq(Order::getId,id).last("FOR UPDATE"));
+        return super.getById(id);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -50,6 +59,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Product product = productService.getById(req.getProductId());
         if (product == null) throw new BusinessException("商品不存在");
         if (product.getStatus() != 1) throw new BusinessException("商品已下架");
+        com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId());
         LocalDateTime now = LocalDateTime.now();
 
         // 1.1 限购校验：按商品设置的周期限制重复购买
@@ -67,11 +77,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
         }
 
-        // 2. 服务端价格校验：以商品价格为准
-        BigDecimal serverPrice = product.getPrice();
-        if (serverPrice == null) throw new BusinessException("商品未设置价格");
-        if (serverPrice.compareTo(req.getAmount()) != 0) {
-            throw new BusinessException("价格异常，请刷新后重试");
+        // 2. 重新核算商品价与打手涨价，绝不信任客户端传入的金额或比例。
+        BigDecimal serverPrice = quote.getAmount();
+        if (req.getAmount()==null || serverPrice.compareTo(req.getAmount()) != 0) {
+            throw new BusinessException("价格已变化，请核对最新金额后重新提交");
         }
 
         // 3. 构建订单
@@ -84,6 +93,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         String specInfo = req.getSpecInfo();
         order.setSpecInfo(specInfo != null && !specInfo.isEmpty() ? specInfo : null);
         order.setAmount(serverPrice);
+        order.setBaseAmount(quote.getBaseAmount());
+        order.setPriceIncreaseRate(quote.getPriceIncreaseRate());
+        order.setPriceIncreaseAmount(quote.getPriceIncreaseAmount());
+        order.setRequestedPlayerLevelId(quote.getPlayerLevelId());
+        order.setPlayerLevelName(quote.getPlayerLevelName());
         // 抽佣比例：商品级优先，否则用系统默认
         if (product.getCommissionRate() != null) {
             order.setCommissionRate(product.getCommissionRate());
@@ -192,6 +206,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!"ACTIVE".equals(playerStatus)) {
             throw new BusinessException("目标打手状态不可用，无法指派");
         }
+        requirePlayerLevel(order,playerId);
         // 校验打手当前活跃订单数是否已达上限
         int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "1"));
         int activeOrders = crossModuleMapper.selectPlayerActiveOrders(playerId);
@@ -222,21 +237,28 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void acceptOrder(Long orderId, Long playerId) {
-        // 分布式锁防止并发接单
-        String lockKey = "order:accept:" + orderId;
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1",
-                java.time.Duration.ofSeconds(10));
-        if (Boolean.FALSE.equals(locked)) throw new BusinessException("操作太频繁，请稍后重试");
-        try {
+        acceptOrder(orderId,playerId,null,null,null,null,"");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void acceptOrder(Long orderId,Long playerId,String captchaId,String captchaCode,String device,String agent,String ip) {
             Order order = getById(orderId);
-            if (order == null) throw new BusinessException("订单不存在");
-            if (!OrderStatusEnum.PAID.name().equals(order.getStatus()) &&
-                !OrderStatusEnum.ASSIGNED.name().equals(order.getStatus()))
-                throw new BusinessException("当前状态不允许接单");
-            // 如果是指定打手的订单，校验是否匹配
-            if (order.getDesignatedPlayerId() != null && !order.getDesignatedPlayerId().equals(playerId)) {
-                throw new BusinessException("该订单已指定其他打手");
-            }
+            if (order == null) throw new BusinessException(404,"订单不存在");
+            boolean assigned=OrderStatusEnum.ASSIGNED.name().equals(order.getStatus());
+            if (!(OrderStatusEnum.PAID.name().equals(order.getStatus()) && order.getPlayerId()==null)
+                    && !(assigned && playerId.equals(order.getPlayerId())))
+                throw new BusinessException(409,"订单已被抢或当前状态不允许接单");
+            if(order.getDesignatedPlayerId()!=null && !playerId.equals(order.getDesignatedPlayerId()))
+                throw new BusinessException(403,"该订单已指定其他打手");
+            if(crossModuleMapper.lockActivePlayer(playerId)==null) throw new BusinessException(403,"打手未通过审核或账号已冻结，无法接单");
+            requirePlayerLevel(order,playerId);
+            int max=Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player","5"));
+            int active=crossModuleMapper.countActivePlayerOrders(playerId);
+            if(assigned) active--; // This assigned order already occupies one slot.
+            if(active>=max) throw new BusinessException(400,"您当前进行中的订单已达上限("+max+"单)");
+            if(!Integer.valueOf(0).equals(crossModuleMapper.selectGrabCaptchaRequired(playerId)))
+                verification.verifyGrab(playerId,orderId,device,agent,captchaId,captchaCode,ip);
             order.setPlayerId(playerId);
             order.setAcceptTime(LocalDateTime.now());
 
@@ -263,9 +285,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             // 通知用户订单已被接单
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_ACCEPTED",
                     "USER", order.getUserId(), orderId, "您的订单已被打手接单"));
-        } finally {
-            redisTemplate.delete(lockKey);
-        }
     }
 
     @Override
@@ -438,6 +457,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setUpdatedAt(LocalDateTime.now());
         updateById(order);
         addProgress(order.getId(), from, to.name(), operatorType, operatorId, content);
+    }
+
+    private void requirePlayerLevel(Order order,Long playerId) {
+        if(order.getRequestedPlayerLevelId()!=null &&
+                !order.getRequestedPlayerLevelId().equals(crossModuleMapper.selectPlayerLevel(playerId)))
+            throw new BusinessException(403,"该订单仅限所选等级的打手接单");
     }
 
     private void addProgress(Long orderId, String from, String to, String operatorType, Long operatorId, String content) {

@@ -1,5 +1,6 @@
 <template>
   <view class="detail" v-if="order">
+    <GrabAcceptDialog ref="grabDialog" @accepted="loadDetail" />
     <!-- 状态栏 -->
     <view class="status-bar">
       <view class="status-left"><StatusTag :status="order.status" /></view>
@@ -27,7 +28,7 @@
     <view class="card" v-if="order.userNickname">
       <view class="card-header"><view class="title-bar" /><text class="card-title">用户信息</text></view>
       <view class="user-row">
-        <image class="u-avatar" :src="order.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="u-avatar" :src="order.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <text class="u-name">{{ order.userNickname }}</text>
       </view>
     </view>
@@ -44,7 +45,7 @@
     <view class="card" v-if="order.teammates && order.teammates.length">
       <view class="card-header"><view class="title-bar" /><text class="card-title">队友信息</text></view>
       <view v-for="t in order.teammates" :key="t.id" class="teammate-row">
-        <image class="t-avatar" :src="t.avatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="t-avatar" :src="t.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <text class="t-name">{{ t.nickname }}</text>
         <StatusTag :status="t.status" :textMap="teammateStatusText" :colorMap="teammateStatusColor" />
       </view>
@@ -56,13 +57,13 @@
         <text class="p-content">{{ p.content }}</text>
         <text class="p-time">{{ p.createdAt }}</text>
         <view v-if="p.images" class="p-images">
-          <image v-for="(img,i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="p-img" lazy-load @click="previewImg(p.images.split(','),i)" />
+          <AppImage v-for="(img,i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="p-img" @click="previewImg(p.images.split(','),i)" />
         </view>
       </view>
     </view>
     <!-- 操作按钮 -->
     <view class="actions">
-      <view v-if="order.status==='ASSIGNED'" class="btn" @click="doAccept">接单</view>
+      <view v-if="['PAID','ASSIGNED'].includes(order.status)" class="btn" @click="doAccept">接单</view>
       <view v-if="order.status==='ASSIGNED'" class="btn-warn" @click="doReject">拒绝</view>
       <view v-if="['ACCEPTED','WAITING_TEAMMATE'].includes(order.status)" class="btn" @click="doStart">开始服务</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="goProgress">提交进度</view>
@@ -113,13 +114,16 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
+import GrabAcceptDialog from '@/components/GrabAcceptDialog.vue'
+const grabDialog=ref(null)
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
 import PriceText from '@/components/PriceText.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import { acceptOrder, startOrder, completeOrder, getPlayerOrderProgress, rejectAssign, replaceSelf, replaceAll, replaceTeammate } from '@/api/player'
-import { getOrderDetail } from '@/api/order'
+import { getPlayerOrderDetail as getOrderDetail } from '@/api/player'
 import { requestPlayerSubscribe } from '@/utils/subscribe'
 
 const order = ref(null)
@@ -191,7 +195,7 @@ async function loadDetail() {
 }
 async function doAccept() {
   await requestPlayerSubscribe()  // 接单前请求订阅
-  await acceptOrder(orderId.value); uni.showToast({ title: '已接单' }); loadDetail()
+  grabDialog.value?.open(orderId.value)
 }
 async function doReject() {
   uni.showModal({ title: '提示', content: '确定拒绝该指派？', success: async (r) => {
@@ -268,13 +272,13 @@ async function doReplace(type) {
 }
 </script>
 <style lang="scss" scoped>
-.detail { background: #f5f7fa; min-height: 100vh; padding-bottom: 40rpx; }
+.detail { background: #f5f6f7; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
 .status-bar {
   display: flex; justify-content: space-between; align-items: center;
   padding: 28rpx 32rpx; background: #fff;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
   .status-right { display: flex; align-items: center; gap: 16rpx; }
-  .order-no { font-size: 24rpx; color: #94a3b8; }
+  .order-no { font-size: 24rpx; color: #73777e; }
 }
 .card {
   margin: 20rpx 24rpx 0; padding: 28rpx 28rpx 24rpx;
@@ -286,15 +290,15 @@ async function doReplace(type) {
 }
 .title-bar {
   width: 6rpx; height: 28rpx; border-radius: 3rpx;
-  background: linear-gradient(180deg, #ff4544, #e63939);
+  background: linear-gradient(180deg, #17191c, #30343a);
   margin-right: 12rpx;
 }
-.card-title { font-size: 28rpx; font-weight: bold; color: #1e293b; }
+.card-title { font-size: 28rpx; font-weight: bold; color: #17191c; }
 .copy-link {
   padding: 8rpx 18rpx;
   font-size: 22rpx;
-  color: #ff4544;
-  border: 1rpx solid rgba(255,69,68,0.28);
+  color: #17191c;
+  border: 1rpx solid rgba(23, 25, 28, 0.28);
   border-radius: 999rpx;
   flex-shrink: 0;
 }
@@ -304,46 +308,46 @@ async function doReplace(type) {
 }
 .info-row {
   display: flex; align-items: center; padding: 12rpx 0;
-  .label { font-size: 26rpx; color: #94a3b8; width: 140rpx; flex-shrink: 0; }
-  .value { font-size: 26rpx; color: #1e293b; flex: 1; &.bold { font-weight: 600; } }
+  .label { font-size: 26rpx; color: #73777e; width: 140rpx; flex-shrink: 0; }
+  .value { font-size: 26rpx; color: #17191c; flex: 1; &.bold { font-weight: 600; } }
 }
 .info-row-copy .value { min-width: 0; margin-right: 12rpx; }
-.divider { height: 1rpx; background: #f1f5f9; margin: 16rpx 0; }
+.divider { height: 1rpx; background: #f4f5f6; margin: 16rpx 0; }
 .income-block {
-  background: linear-gradient(135deg, rgba(255,69,68,0.06), rgba(255,69,68,0.02));
+  background: linear-gradient(135deg, rgba(23, 25, 28, 0.06), rgba(23, 25, 28, 0.02));
   border-radius: 12rpx; padding: 20rpx 24rpx;
 }
 .income-main { display: flex; align-items: baseline; gap: 12rpx; }
-.income-label { font-size: 26rpx; color: #64748b; }
-.income-val { font-size: 36rpx; color: #ee0a24; font-weight: bold; }
-.income-hint { font-size: 22rpx; color: #94a3b8; margin-top: 6rpx; display: block; }
-.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f5f7fa; .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; font-size: 26rpx; color: #1e293b; } }
+.income-label { font-size: 26rpx; color: #666b73; }
+.income-val { font-size: 36rpx; color: #d44955; font-weight: bold; }
+.income-hint { font-size: 22rpx; color: #73777e; margin-top: 6rpx; display: block; }
+.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7; .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; font-size: 26rpx; color: #17191c; } }
 .progress-item {
-  padding: 16rpx 0; border-bottom: 1rpx solid #f5f7fa;
-  .p-content { font-size: 26rpx; color: #1e293b; display: block; }
-  .p-time { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 6rpx; }
+  padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7;
+  .p-content { font-size: 26rpx; color: #17191c; display: block; }
+  .p-time { font-size: 22rpx; color: #73777e; display: block; margin-top: 6rpx; }
   .p-images { display: flex; gap: 12rpx; margin-top: 12rpx; }
   .p-img { width: 120rpx; height: 120rpx; border-radius: 12rpx; }
 }
 .actions { display: flex; gap: 20rpx; padding: 40rpx 24rpx; flex-wrap: wrap; justify-content: flex-end; }
-.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; &.btn-success { background: linear-gradient(135deg, #07c160, #06ad56); } }
-.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(255,69,68,0.4); color: #ff4544; font-size: 28rpx; border-radius: 999rpx; }
-.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(238,10,36,0.4); color: #ee0a24; font-size: 28rpx; border-radius: 999rpx; }
-.user-row { display: flex; align-items: center; gap: 16rpx; .u-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; border: 2rpx solid #f1f5f9; } .u-name { font-size: 28rpx; color: #1e293b; font-weight: 500; } }
+.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; &.btn-success { background: linear-gradient(135deg, #347a5b, #06ad56); } }
+.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(23, 25, 28, 0.4); color: #17191c; font-size: 28rpx; border-radius: 999rpx; }
+.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(201, 79, 89, 0.4); color: #d44955; font-size: 28rpx; border-radius: 999rpx; }
+.user-row { display: flex; align-items: center; gap: 16rpx; .u-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; border: 2rpx solid #f4f5f6; } .u-name { font-size: 28rpx; color: #17191c; font-weight: 500; } }
 /* 换人弹窗 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-box { width: 85%; background: #ffffff; border-radius: 16rpx; padding: 40rpx 32rpx; border: 1rpx solid #e2e8f0; }
-.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: #ff4544; }
-.modal-sub { font-size: 24rpx; color: #94a3b8; display: block; text-align: center; margin-top: 8rpx; }
+.modal-box { width: 85%; background: #ffffff; border-radius: 16rpx; padding: 40rpx 32rpx; border: 1rpx solid #e6e7e9; }
+.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: #17191c; }
+.modal-sub { font-size: 24rpx; color: #73777e; display: block; text-align: center; margin-top: 8rpx; }
 .complete-block { margin-top: 24rpx; }
-.complete-label { font-size: 26rpx; color: #1e293b; display: block; margin-bottom: 16rpx; }
+.complete-label { font-size: 26rpx; color: #17191c; display: block; margin-bottom: 16rpx; }
 .replace-options { margin-top: 24rpx; }
-.replace-opt { display: flex; flex-direction: column; padding: 24rpx; margin-bottom: 16rpx; background: #f1f5f9; border-radius: 12rpx;
-  &:active { background: rgba(255,69,68,0.1); }
-  .opt-label { font-size: 28rpx; font-weight: bold; color: #1e293b; }
-  .opt-desc { font-size: 22rpx; color: #94a3b8; margin-top: 6rpx; }
+.replace-opt { display: flex; flex-direction: column; padding: 24rpx; margin-bottom: 16rpx; background: #f4f5f6; border-radius: 12rpx;
+  &:active { background: rgba(23, 25, 28, 0.1); }
+  .opt-label { font-size: 28rpx; font-weight: bold; color: #17191c; }
+  .opt-desc { font-size: 22rpx; color: #73777e; margin-top: 6rpx; }
 }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
-.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #cbd5e1; border-radius: 999rpx; font-size: 28rpx; color: #64748b; }
+.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #b9bdc4; border-radius: 999rpx; font-size: 28rpx; color: #666b73; }
 .complete-submit { flex: 1; text-align: center; }
 </style>

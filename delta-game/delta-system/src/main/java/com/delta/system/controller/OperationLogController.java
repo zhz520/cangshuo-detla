@@ -7,6 +7,7 @@ import com.delta.common.domain.R;
 import com.delta.system.entity.OperationLog;
 import com.delta.system.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,8 +21,8 @@ public class OperationLogController {
                                        @RequestParam(value = "module", required = false) String module,
                                        @RequestParam(value = "operatorType", required = false) String operatorType) {
         LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<OperationLog>()
-                .eq(module != null, OperationLog::getModule, module)
-                .eq(operatorType != null, OperationLog::getOperatorType, operatorType)
+                .eq(StringUtils.hasText(module), OperationLog::getModule, module)
+                .eq(StringUtils.hasText(operatorType), OperationLog::getOperatorType, operatorType)
                 .orderByDesc(OperationLog::getCreatedAt);
         return R.ok(operationLogService.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper));
     }

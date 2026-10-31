@@ -1,17 +1,17 @@
 <template>
   <view class="chat-bubble" :class="{ 'is-self': isSelf }">
     <!-- 自己的头像：有则用图，无则显示昵称首字 -->
-    <image v-if="isSelf && selfAvatar" class="avatar" :src="selfAvatar" mode="aspectFill" lazy-load />
+    <AppImage :width="160" v-if="isSelf && selfAvatar" class="avatar" :src="selfAvatar" mode="aspectFill" />
     <view v-else-if="isSelf" class="avatar avatar-placeholder">{{ firstChar(selfName) }}</view>
     <!-- 对方头像：有则用图，无则显示名字首字 -->
-    <image v-else-if="avatar" class="avatar" :src="avatar" mode="aspectFill" lazy-load />
+    <AppImage :width="160" v-else-if="avatar" class="avatar" :src="avatar" mode="aspectFill" />
     <view v-else class="avatar avatar-placeholder">{{ firstChar(name) }}</view>
     <view class="bubble-content" :class="{ self: isSelf }">
-      <text v-if="msg.type === 'TEXT'">{{ msg.content }}</text>
-      <image v-else-if="msg.type === 'IMAGE'" class="msg-image" :src="msg.content" mode="widthFix" lazy-load @click="previewImage" />
+      <text v-if="msg.type === 'TEXT'" class="text-msg">{{ msg.content }}</text>
+      <AppImage v-else-if="msg.type === 'IMAGE'" class="msg-image" :src="msg.content" mode="widthFix" @click="previewImage" />
       <!-- 商品卡片 -->
       <view v-else-if="msg.type === 'PRODUCT'" class="card-msg product-card" @click="goProduct(cardData)">
-        <image class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFill" lazy-load />
+        <AppImage class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFill" />
         <view class="card-info">
           <text class="card-name text-ellipsis">{{ cardData.name }}</text>
           <text class="card-price">¥{{ Number(cardData.price || 0).toFixed(2) }}</text>
@@ -36,6 +36,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { computed } from 'vue'
 import { ORDER_STATUS_TEXT } from '@/utils/constants'
 
@@ -95,7 +96,7 @@ function goOrder(d) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #94a3b8, #64748b);
+    background: linear-gradient(135deg, #73777e, #666b73);
     color: #fff;
     font-size: 32rpx;
     font-weight: bold;
@@ -105,24 +106,37 @@ function goOrder(d) {
     max-width: 70%;
     margin: 0 16rpx;
     padding: 20rpx 24rpx;
-    background: #e2e8f0;
-    border: 1rpx solid #f1f5f9;
+    background: #e6e7e9;
+    border: 1rpx solid #f4f5f6;
     border-radius: 12rpx;
     font-size: 28rpx;
-    color: #1e293b;
+    color: #17191c;
     word-break: break-all;
 
     &.self {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: linear-gradient(135deg, #17191c, #30343a);
       border-color: transparent;
-      color: #1e293b;
+      color: #ffffff;
 
-      .card-msg { background: #f1f5f9; border-color: #e2e8f0; }
-      .card-name { color: #1e293b; }
-      .card-price { color: #4f46e5; }
-      .card-status { color: #64748b; }
-      .card-order-no { color: #64748b; }
-      .card-tag { background: #e2e8f0; color: #64748b; }
+      /* Some older WebViews do not inherit text colour inside uni-text. */
+      .text-msg {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+      }
+      .system-msg { color: #ffffff; opacity: 0.82; }
+
+      .card-msg { background: #f4f5f6; border-color: #e6e7e9; }
+      .card-name { color: #17191c; }
+      .card-price { color: #17191c; }
+      .card-status { color: #666b73; }
+      .card-order-no { color: #666b73; }
+      .card-tag { background: #e6e7e9; color: #666b73; }
+    }
+
+    .text-msg {
+      color: inherit;
+      -webkit-text-fill-color: currentColor;
+      line-height: 1.55;
     }
 
     .msg-image {
@@ -131,7 +145,7 @@ function goOrder(d) {
     }
 
     .system-msg {
-      color: #94a3b8;
+      color: #73777e;
       font-size: 24rpx;
     }
   }
@@ -141,12 +155,14 @@ function goOrder(d) {
 .card-msg {
   display: flex;
   padding: 0;
-  background: #f1f5f9;
-  border: 1rpx solid #e2e8f0;
+  background: #f4f5f6;
+  border: 1rpx solid #e6e7e9;
   border-radius: 12rpx;
   overflow: hidden;
   position: relative;
-  min-width: 400rpx;
+  width: 400rpx;
+  max-width: 100%;
+  min-width: 0;
 }
 .card-cover {
   width: 160rpx;
@@ -163,7 +179,7 @@ function goOrder(d) {
 }
 .card-name {
   font-size: 26rpx;
-  color: #1e293b;
+  color: #17191c;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -171,7 +187,7 @@ function goOrder(d) {
 }
 .card-price {
   font-size: 28rpx;
-  color: #4f46e5;
+  color: #17191c;
   font-weight: bold;
   margin-top: 8rpx;
 }
@@ -183,11 +199,11 @@ function goOrder(d) {
 }
 .card-status {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 .card-order-no {
   font-size: 20rpx;
-  color: #94a3b8;
+  color: #73777e;
   margin-top: 4rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -199,8 +215,8 @@ function goOrder(d) {
   right: 0;
   font-size: 18rpx;
   padding: 2rpx 12rpx;
-  background: #e2e8f0;
-  color: #6366f1;
+  background: #e6e7e9;
+  color: #17191c;
   border-radius: 0 12rpx 0 8rpx;
 }
 </style>

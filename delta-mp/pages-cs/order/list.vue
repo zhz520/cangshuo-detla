@@ -85,13 +85,13 @@ function goAssign(id) { uni.navigateTo({ url: '/pages-cs/order/assign?orderId=' 
 .search-bar { padding: 16rpx 24rpx; background: rgba(0,0,0,0.04); }
 .search-input { height: 72rpx; line-height: 72rpx; box-sizing: border-box; background: rgba(0,0,0,0.05); padding: 0 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
 .filter-bar { white-space: nowrap; padding: 12rpx 24rpx; background: rgba(0,0,0,0.04); border-bottom: 1rpx solid rgba(0,0,0,0.04); }
-.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } }
-.list { height: calc(100vh - 300rpx - env(safe-area-inset-bottom)); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
+.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } }
+.list { height: calc(var(--app-page-height, 100vh) - 300rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
 .order-card { background: rgba(0,0,0,0.04); border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; .order-no { font-size: 24rpx; color: rgba(0,0,0,0.3); } }
-  .card-body { .product-name { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 8rpx; color: rgba(0,0,0,0.85); } .info-row { display: flex; justify-content: space-between; .user { font-size: 24rpx; color: rgba(0,0,0,0.55); } .amount { font-size: 28rpx; color: #ff4544; font-weight: bold; } } .time { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; margin-top: 4rpx; } }
+  .card-body { .product-name { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 8rpx; color: rgba(0,0,0,0.85); } .info-row { display: flex; justify-content: space-between; .user { font-size: 24rpx; color: rgba(0,0,0,0.55); } .amount { font-size: 28rpx; color: #17191c; font-weight: bold; } } .time { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; margin-top: 4rpx; } }
   .card-actions { display: flex; justify-content: flex-end; padding-top: 16rpx; margin-top: 12rpx; border-top: 1rpx solid rgba(0,0,0,0.04); }
-  .btn-assign { padding: 10rpx 28rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; font-size: 24rpx; border-radius: 999rpx; }
+  .btn-assign { padding: 10rpx 28rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; font-size: 24rpx; border-radius: 999rpx; }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
 </style>

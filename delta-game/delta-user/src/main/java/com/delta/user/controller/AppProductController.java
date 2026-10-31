@@ -8,6 +8,7 @@ import com.delta.product.entity.Category;
 import com.delta.product.entity.Product;
 import com.delta.product.service.CategoryService;
 import com.delta.product.service.ProductService;
+import com.delta.product.service.ProductSort;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,14 +33,12 @@ public class AppProductController {
     @GetMapping("/list")
     public R<Page<Product>> list(PageQuery query,
                                  @RequestParam(value = "categoryId", required = false) Long categoryId,
-                                 @RequestParam(value = "sort", defaultValue = "default") String sort) {
+                                 @RequestParam(value = "sort", defaultValue = "default") String sort,
+                                 @RequestParam(value = "orderDir", defaultValue = "asc") String orderDir) {
         LambdaQueryWrapper<Product> w = new LambdaQueryWrapper<Product>()
                 .eq(Product::getStatus, 1)
                 .eq(categoryId != null, Product::getCategoryId, categoryId);
-        switch (sort) {
-            case "sales" -> w.orderByDesc(Product::getSalesCount);
-            default -> w.orderByAsc(Product::getSortOrder);
-        }
+        ProductSort.apply(w, sort, orderDir);
         return R.ok(productService.page(new Page<>(query.getPageNum(), query.getPageSize()), w));
     }
 

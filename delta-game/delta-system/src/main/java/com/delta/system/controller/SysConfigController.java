@@ -29,19 +29,23 @@ public class SysConfigController {
     @GetMapping("/list")
     public R<List<SysConfig>> list() {
         ensureBuiltinConfigs();
-        return R.ok(sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId)));
+        List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId));
+        list.forEach(c -> {if(secret(c.getConfigKey()) && c.getConfigValue()!=null && !c.getConfigValue().isBlank()) c.setConfigValue("********");});
+        return R.ok(list);
     }
 
     @PutMapping
     public R<Void> update(@RequestBody SysConfig config) {
-        sysConfigService.updateById(config);
+        updateValue(config);
         return R.ok();
     }
 
     @OpLog(module = "system", operation = "修改系统配置")
     @PutMapping("/batch")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> batchUpdate(@RequestBody List<SysConfig> configs) {
-        sysConfigService.updateBatchById(configs);
+        if(configs==null || configs.size()>200) return R.fail(400,"配置数量无效");
+        configs.forEach(this::updateValue);
         return R.ok();
     }
 
@@ -65,9 +69,8 @@ public class SysConfigController {
     /** 公开接口：获取站点配置（无需登录） */
     @GetMapping("/site")
     public R<Map<String, String>> getSiteConfig() {
-        ensureBuiltinConfigs();
         List<SysConfig> list = sysConfigService.list(
-                new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigGroup, "站点配置"));
+                new LambdaQueryWrapper<SysConfig>().in(SysConfig::getConfigKey,java.util.List.of("site_name","site_subtitle","site_logo","site_admin_title")));
         Map<String, String> map = list.stream()
                 .collect(Collectors.toMap(SysConfig::getConfigKey, SysConfig::getConfigValue, (a, b) -> b));
         // 打手端抽佣比例（百分比）：从结算配置 settlement.commission_rate 转换，0.1 -> 10
@@ -84,10 +87,21 @@ public class SysConfigController {
         map.put("player_deposit_amount", sysConfigService.getConfigValue("player.deposit_amount", "100"));
         // 微信支付总开关（支付模块运行时动态读取）
         map.put("wx_pay_enabled", sysConfigService.getConfigValue("wx.pay.enabled", "false"));
+        map.put("notice_popup_every_visit", sysConfigService.getConfigValue("notice.popup_every_visit", "true"));
+        map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
+        map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
         return R.ok(map);
     }
 
     private void ensureBuiltinConfigs() {
+        ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
+                "显示在用户、打手和客服“我的”页面底部，最多80个字符");
+        ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
+                "可填写 http:// 或 https:// 开头的链接；留空时底部文字不可点击");
+        ensureConfig("notice.popup_every_visit", "首页公告每次刷新都弹窗", "true", "boolean", "公告配置",
+                "开启后浏览器刷新会展示已发布的首页公告，切换页面不会重复弹出；关闭后仅在新版本公告首次出现时提醒");
+        ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
+        ensureConfig("sms.aliyun.template_code.verification","短信验证码模板 Code","","text","短信配置","已审核模板，使用code作为验证码参数名");
         ensureConfig("player.deposit_amount", "打手入驻押金金额", "100", "number", "打手配置",
                 "开启打手押金时的应支付金额，单位：元");
         ensureConfig("wallet.recharge.packages", "余额充值套餐",
@@ -101,6 +115,8 @@ public class SysConfigController {
                 "微信支付商户平台的商户号");
         ensureConfig("wx.pay.notify-url", "支付回调地址", "", "text", "微信支付配置",
                 "例如：https://你的域名/api/pay/wx/notify，必须是微信可访问的 HTTPS 地址");
+        ensureConfig("wx.pay.refund-notify-url", "退款回调地址", "", "text", "微信支付配置",
+                "可选；留空时由支付回调地址自动推导为 /api/pay/wx/refund-notify");
         ensureConfig("wx.pay.api-v3-key", "微信支付 API v3 密钥", "", "text", "微信支付配置",
                 "微信商户平台 API 安全中设置的 API v3 密钥");
         ensureConfig("wx.pay.private-key-path", "商户私钥文件", "", "file", "微信支付配置",
@@ -155,6 +171,44 @@ public class SysConfigController {
             msgTpl.setRemark("用户、打手、客服端通用的消息提醒短信模板");
             sysConfigService.updateById(msgTpl);
         }
+    }
+
+    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret").contains(key==null?"":key);}
+    private void updateValue(SysConfig submitted) {
+        SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
+        if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
+        String key=old.getConfigKey(),value=submitted.getConfigValue();
+        if(com.delta.system.service.RewardGrabRulesService.KEY.equals(key)) return; // Edited through validated dedicated settings only.
+        if(value==null || secret(key) && "********".equals(value)) return;
+        if(value.length()>10000) throw new com.delta.common.exception.BusinessException(400,"配置内容过长");
+        if("sms.aliyun.endpoint".equals(key) && !"dysmsapi.aliyuncs.com".equals(value)) throw new com.delta.common.exception.BusinessException(400,"短信服务地址无效");
+        if("wx.pay.api-v3-key".equals(key) && !value.isEmpty() && value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length!=32)
+            throw new com.delta.common.exception.BusinessException(400,"微信API v3密钥须为32字节");
+        if("settlement.commission_rate".equals(key)) {
+            try {var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.compareTo(java.math.BigDecimal.ONE)>0) throw new IllegalArgumentException();}
+            catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"抽佣比例须在0至1之间");}
+        }
+        if("site.tech_support_text".equals(key)) {
+            value = value.trim();
+            if(value.isEmpty() || value.length()>80) throw new com.delta.common.exception.BusinessException(400,"技术支持文字须为1至80个字符");
+        }
+        if("site.tech_support_url".equals(key)) {
+            value = value.trim();
+            if(!value.isEmpty()) {
+                try {
+                    java.net.URI uri = java.net.URI.create(value);
+                    if(uri.getHost()==null || !("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())))
+                        throw new IllegalArgumentException();
+                } catch(Exception e) {
+                    throw new com.delta.common.exception.BusinessException(400,"技术支持链接须为有效的 http 或 https 地址");
+                }
+            }
+        }
+        if(java.util.Set.of("withdraw.min_amount","player.deposit_amount","sms.aliyun.player_fee").contains(key)) {
+            try{var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.stripTrailingZeros().scale()>2 || n.compareTo(new java.math.BigDecimal("1000000"))>0)throw new IllegalArgumentException();}
+            catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"金额配置无效");}
+        }
+        SysConfig update=new SysConfig();update.setId(old.getId());update.setConfigValue(value);sysConfigService.updateById(update);
     }
 
     private void ensureConfig(String key, String name, String value, String valueType, String group, String remark) {

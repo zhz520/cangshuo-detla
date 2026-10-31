@@ -103,11 +103,11 @@ function goDetail(c) {
 
 <style lang="scss" scoped>
 .complaint-list-page {
-  background: #f8fafc;
-  min-height: 100vh;
+  background: #f7f8f9;
+  min-height: var(--app-page-height, 100vh);
 }
 .scroll {
-  height: 100vh;
+  height: var(--app-page-height, 100vh);
   padding: 20rpx 24rpx 40rpx;
   box-sizing: border-box;
 }
@@ -121,11 +121,11 @@ function goDetail(c) {
   padding: 8rpx 20rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
-  color: #94a3b8;
-  border: 1rpx solid rgba(99, 102, 241, 0.1);
+  color: #73777e;
+  border: 1rpx solid rgba(23, 25, 28, 0.1);
 }
 .status-chip.active {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #17191c, #30343a);
   color: #ffffff;
   border-color: transparent;
 }
@@ -134,7 +134,7 @@ function goDetail(c) {
   margin-bottom: 20rpx;
   background: #ffffff;
   border-radius: 16rpx;
-  border: 1rpx solid #e2e8f0;
+  border: 1rpx solid #e6e7e9;
 }
 .card-top {
   display: flex;
@@ -144,11 +144,11 @@ function goDetail(c) {
 }
 .type {
   font-size: 26rpx;
-  color: #1e293b;
+  color: #17191c;
 }
 .card-body .content {
   font-size: 26rpx;
-  color: #334155;
+  color: #41464e;
 }
 .card-bottom {
   margin-top: 12rpx;
@@ -158,22 +158,22 @@ function goDetail(c) {
 }
 .time {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 .arrow {
   font-size: 22rpx;
-  color: #64748b;
+  color: #666b73;
 }
 .empty {
   margin-top: 80rpx;
   text-align: center;
-  color: #94a3b8;
+  color: #73777e;
   font-size: 26rpx;
 }
 .load-tip {
   text-align: center;
   padding: 20rpx 0;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 </style>

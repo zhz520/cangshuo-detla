@@ -151,8 +151,10 @@ public class CsComplaintController {
     @PutMapping("/{id}/resolve")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> resolve(@PathVariable Long id, @RequestBody Complaint complaint) {
-        Complaint c = complaintService.getById(id);
+        Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
+        if(!java.util.Set.of("PENDING","PROCESSING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
+        if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
         Long operatorId = SecurityUtils.getUserId();
 
         c.setResult(complaint.getResult());

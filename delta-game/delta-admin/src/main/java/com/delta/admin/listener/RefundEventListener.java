@@ -22,10 +22,6 @@ public class RefundEventListener {
 
         Long orderId = event.getOrderId();
         log.info("收到退款事件: orderId={}", orderId);
-        try {
-            paymentService.refundByOrderId(orderId, "用户取消订单退款");
-        } catch (Exception e) {
-            log.error("退款处理失败: orderId={}", orderId, e);
-        }
+        paymentService.refundByOrderId(orderId, "用户取消订单退款");
     }
 }

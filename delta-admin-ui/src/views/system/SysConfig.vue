@@ -39,7 +39,7 @@ import ImageUpload from '@/components/ImageUpload.vue'
 const loading = ref(false), submitting = ref(false)
 const configList = ref([])
 const activeGroup = ref('')
-const visibleConfigList = computed(() => configList.value.filter(c => c.configKey !== 'wallet.recharge.packages'))
+const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab'].includes(c.configKey)))
 const groupNames = computed(() => {
   const groups = [...new Set(visibleConfigList.value.map(c => c.configGroup || '默认'))]
   return groups.length ? groups : ['默认']

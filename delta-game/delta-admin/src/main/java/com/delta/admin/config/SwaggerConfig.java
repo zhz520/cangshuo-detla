@@ -36,6 +36,13 @@ public class SwaggerConfig implements WebMvcConfigurer {
         String location = "file:" + uploadPath.replace("\\", "/");
         if (!location.endsWith("/")) location += "/";
         registry.addResourceHandler("/file/**")
-                .addResourceLocations(location);
+                .addResourceLocations(location)
+                .setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(30)).cachePublic())
+                .resourceChain(true).addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
+                    @Override protected org.springframework.core.io.Resource getResource(String resourcePath,org.springframework.core.io.Resource location) throws java.io.IOException {
+                        if(!resourcePath.matches("\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif|webp|mp3|m4a|wav|aac|ogg|webm)")) return null;
+                        return super.getResource(resourcePath,location);
+                    }
+                });
     }
 }

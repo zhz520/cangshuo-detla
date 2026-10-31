@@ -65,17 +65,17 @@ async function markAllReadClick() {
 }
 </script>
 <style lang="scss" scoped>
-.message-page { background: #f8fafc; min-height: 100vh; }
-.header-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 24rpx 20rpx; background: #f8fafc; border-bottom: 1rpx solid #edf1f7; }
-.page-title { font-size: 32rpx; font-weight: bold; color: #1e293b; }
-.btn-read-all { font-size: 28rpx; color: #4f46e5; }
-.list { height: calc(100vh - 120rpx); }
-.msg-item { padding: 24rpx; background: #ffffff; border-bottom: 1rpx solid #edf1f7; }
+.message-page { background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
+.header-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 24rpx 20rpx; background: #f7f8f9; border-bottom: 1rpx solid #eeeff1; }
+.page-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
+.btn-read-all { font-size: 28rpx; color: #17191c; }
+.list { height: calc(var(--app-page-height, 100vh) - 120rpx); }
+.msg-item { padding: 24rpx; background: #ffffff; border-bottom: 1rpx solid #eeeff1; }
 .msg-header { display: flex; align-items: center; gap: 8rpx;
-  .msg-title { font-size: 28rpx; font-weight: 500; color: #1e293b; flex: 1; }
-  .dot { width: 14rpx; height: 14rpx; background: #ee0a24; border-radius: 50%; flex-shrink: 0; }
+  .msg-title { font-size: 28rpx; font-weight: 500; color: #17191c; flex: 1; }
+  .dot { width: 14rpx; height: 14rpx; background: #d44955; border-radius: 50%; flex-shrink: 0; }
 }
-.msg-content { font-size: 26rpx; color: #64748b; margin-top: 8rpx; display: block; }
-.msg-time { font-size: 22rpx; color: #94a3b8; margin-top: 8rpx; display: block; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #94a3b8; }
+.msg-content { font-size: 26rpx; color: #666b73; margin-top: 8rpx; display: block; }
+.msg-time { font-size: 22rpx; color: #73777e; margin-top: 8rpx; display: block; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
 </style>

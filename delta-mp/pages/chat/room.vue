@@ -1,5 +1,6 @@
 <template>
-  <view class="chat-room" :class="{ 'toolbar-open': showToolbar }">
+  <view class="chat-room" :class="{ 'toolbar-open': showToolbar, 'keyboard-open': keyboardHeight > 0 }" :style="{ '--chat-keyboard-height': keyboardHeight + 'px' }">
+    <view ref="messagePane" class="message-pane">
     <scroll-view scroll-y class="msg-list" :scroll-into-view="scrollAnchor" @scroll="onScroll">
       <view v-for="(m, idx) in messages" :key="m.id">
         <view v-if="showTimeSep(idx)" class="time-separator">
@@ -12,6 +13,7 @@
     </scroll-view>
     <!-- 回到底部按钮 -->
     <view v-if="showBottomBtn" class="scroll-bottom-btn" @click="scrollToBottom">↓</view>
+    </view>
 
     <!-- 扩展工具栏 - 固定显示 -->
     <view v-if="showToolbar" class="toolbar">
@@ -34,9 +36,9 @@
     </view>
 
     <view class="input-bar">
-      <view class="plus-btn" @click="showToolbar = !showToolbar">＋</view>
-      <input v-model="inputText" placeholder="输入消息" @confirm="send" @focus="showToolbar = false" />
-      <view class="send-btn" @click="send">发送</view>
+      <view class="plus-btn" @mousedown.prevent @click="toggleToolbar">＋</view>
+      <input v-model="inputText" placeholder="输入消息" confirm-type="send" :confirm-hold="true" :adjust-position="false" @confirm="send" @focus="onInputFocus" @blur="onInputBlur" @keyboardheightchange="onKeyboardHeightChange" />
+      <view class="send-btn" @mousedown.prevent @touchend.prevent="send" @click="send">发送</view>
     </view>
 
     <!-- 商品选择弹窗 -->
@@ -48,7 +50,7 @@
         </view>
         <scroll-view scroll-y class="picker-list">
           <view v-for="p in productList" :key="p.id" class="picker-item" @click="doSendProduct(p)">
-            <image class="picker-cover" :src="p.coverImage || p.image" mode="aspectFill" lazy-load />
+            <AppImage class="picker-cover" :src="p.coverImage || p.image" mode="aspectFill" />
             <view class="picker-info">
               <text class="picker-name text-ellipsis">{{ p.name }}</text>
               <text class="picker-price">¥{{ Number(p.price || 0).toFixed(2) }}</text>
@@ -84,8 +86,9 @@
   </view>
 </template>
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import AppImage from '@/components/AppImage.vue'
+import { ref, computed, watch, nextTick, getCurrentInstance, onMounted, onUnmounted } from 'vue'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import ChatBubble from '@/components/ChatBubble.vue'
 import { getChatMessageList, getSessionByOrderId, getSessionDetail, markMessageRead, sendChatSmsReminder } from '@/api/chat'
 import { getProductList } from '@/api/product'
@@ -130,8 +133,90 @@ const canSendSmsReminder = computed(() =>
   appStore.role === 'player' ? targetType.value === 'USER' : targetType.value === 'PLAYER'
 )
 
+
+const pageInstance = getCurrentInstance()
+const messagePane = ref(null)
+const keyboardHeight = ref(0)
+let messageListHeight = 0
+let scrollTimer
+let pageActive = true
+let chatResizeObserver
+
+// 只测量消息区，不另算 H5 视口，避免与全局 visualViewport 适配重复顶起。
+function measureChatLayout() {
+  nextTick(() => {
+    if (!pageActive) return
+    uni.createSelectorQuery().in(pageInstance.proxy).select('.msg-list').boundingClientRect(rect => {
+      if (!pageActive || !rect || !rect.height) return
+      messageListHeight = rect.height
+      if (!showBottomBtn.value) scrollToBottom()
+    }).exec()
+  })
+}
+
+function onInputFocus(event) {
+  showToolbar.value = false
+  // #ifndef H5
+  keyboardHeight.value = Math.max(0, Number(event.detail?.height) || 0)
+  // #endif
+  measureChatLayout()
+  scrollToBottom()
+}
+
+function onInputBlur() {
+  // #ifndef H5
+  keyboardHeight.value = 0
+  measureChatLayout()
+  // #endif
+}
+
+function onKeyboardHeightChange(event) {
+  // #ifndef H5
+  keyboardHeight.value = Math.max(0, Number(event.detail?.height) || 0)
+  measureChatLayout()
+  // #endif
+}
+
+function toggleToolbar() {
+  showToolbar.value = !showToolbar.value
+  uni.hideKeyboard()
+}
+
+watch(showToolbar, measureChatLayout, { flush: 'post' })
+
+onMounted(() => {
+  measureChatLayout()
+  // #ifdef H5
+  const element = messagePane.value?.$el || messagePane.value
+  if (element && typeof ResizeObserver !== 'undefined') {
+    chatResizeObserver = new ResizeObserver(measureChatLayout)
+    chatResizeObserver.observe(element)
+  }
+  window.addEventListener('resize', measureChatLayout)
+  window.visualViewport?.addEventListener('resize', measureChatLayout)
+  // #endif
+})
+
+onHide(() => {
+  pageActive = false
+  keyboardHeight.value = 0
+  clearTimeout(scrollTimer)
+})
+
+onUnmounted(() => {
+  pageActive = false
+  clearTimeout(scrollTimer)
+  // #ifdef H5
+  chatResizeObserver?.disconnect()
+  window.removeEventListener('resize', measureChatLayout)
+  window.visualViewport?.removeEventListener('resize', measureChatLayout)
+  // #endif
+})
+
 onShow(() => {
+  pageActive = true
   unlockH5TabbarPageScroll()
+  measureChatLayout()
 })
 
 function unlockH5TabbarPageScroll() {
@@ -153,7 +238,9 @@ const productList = ref([])
 const orderList = ref([])
 
 function scrollToBottom() {
-  setTimeout(() => {
+  clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => {
+    if (!pageActive) return
     scrollAnchor.value = scrollAnchor.value === 'msg-end-a' ? 'msg-end-b' : 'msg-end-a'
     showBottomBtn.value = false
     _isNearBottom = true
@@ -162,7 +249,7 @@ function scrollToBottom() {
 
 function onScroll(e) {
   const { scrollTop, scrollHeight } = e.detail
-  _isNearBottom = scrollHeight - scrollTop < (e.detail.clientHeight || 600) + 300
+  _isNearBottom = scrollHeight - scrollTop < (e.detail.clientHeight || messageListHeight || 600) + 300
   showBottomBtn.value = !_isNearBottom
 }
 
@@ -353,9 +440,9 @@ function resolveEncodedType(encodedId) {
 }
 </script>
 <style lang="scss" scoped>
-.chat-room { height: 100vh; min-height: 100vh; background: #f8fafc; position: relative; overflow: hidden; }
-.msg-list { height: 100vh; padding: 20rpx 0 calc(128rpx + env(safe-area-inset-bottom)); background: #f8fafc; box-sizing: border-box; }
-.chat-room.toolbar-open .msg-list { padding-bottom: calc(250rpx + env(safe-area-inset-bottom)); }
+.chat-room { background: #f7f8f9; position: relative; overflow: hidden; }
+.msg-list { background: #f7f8f9; box-sizing: border-box; }
+
 .scroll-bottom-btn {
   position: absolute;
   right: 32rpx;
@@ -365,14 +452,14 @@ function resolveEncodedType(encodedId) {
   line-height: 72rpx;
   text-align: center;
   font-size: 36rpx;
-  color: #4f46e5;
+  color: #17191c;
   background: rgba(255,255,255,0.9);
-  border: 1rpx solid rgba(99, 102, 241, 0.15);
+  border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 50%;
   z-index: 10;
   box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.4);
 }
-.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #94a3b8; background: #eef2ff; padding: 4rpx 16rpx; border-radius: 8rpx; } }
+.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #73777e; background: #f3f4f5; padding: 4rpx 16rpx; border-radius: 8rpx; } }
 
 /* 工具栏 */
 .toolbar {
@@ -386,7 +473,7 @@ function resolveEncodedType(encodedId) {
   gap: 12rpx;
   padding: 8rpx 32rpx;
   background: #ffffff;
-  border-top: 1rpx solid #e2e8f0;
+  border-top: 1rpx solid #e6e7e9;
   box-sizing: border-box;
 }
 .toolbar-item {
@@ -397,7 +484,7 @@ function resolveEncodedType(encodedId) {
   min-width: 80rpx;
 }
 .toolbar-icon-img { width: 36rpx; height: 36rpx; }
-.toolbar-label { font-size: 18rpx; color: #64748b; }
+.toolbar-label { font-size: 18rpx; color: #666b73; }
 
 .input-bar {
   position: fixed;
@@ -409,11 +496,11 @@ function resolveEncodedType(encodedId) {
   align-items: center;
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background: rgba(255,255,255,0.95);
-  border-top: 1rpx solid #e2e8f0;
+  border-top: 1rpx solid #e6e7e9;
   box-sizing: border-box;
 
-  input { flex: 1; height: 72rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #1e293b; }
-  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
+  input { flex: 1; height: 72rpx; background: #f7f8f9; border: 1rpx solid #e6e7e9; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #17191c; }
+  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
 }
 .plus-btn {
   width: 64rpx;
@@ -421,8 +508,8 @@ function resolveEncodedType(encodedId) {
   line-height: 60rpx;
   text-align: center;
   font-size: 40rpx;
-  color: #4f46e5;
-  border: 1rpx solid rgba(99, 102, 241, 0.15);
+  color: #17191c;
+  border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 50%;
   margin-right: 16rpx;
   flex-shrink: 0;
@@ -451,23 +538,64 @@ function resolveEncodedType(encodedId) {
   align-items: center;
   justify-content: space-between;
   padding: 28rpx 32rpx;
-  border-bottom: 1rpx solid #e2e8f0;
+  border-bottom: 1rpx solid #e6e7e9;
 }
-.picker-title { font-size: 30rpx; font-weight: bold; color: #4f46e5; }
-.picker-close { font-size: 36rpx; color: #94a3b8; padding: 0 8rpx; }
+.picker-title { font-size: 30rpx; font-weight: bold; color: #17191c; }
+.picker-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
 .picker-list { flex: 1; max-height: 38vh; }
 .picker-item {
   display: flex;
   align-items: center;
   padding: 20rpx 32rpx;
-  border-bottom: 1rpx solid #edf1f7;
+  border-bottom: 1rpx solid #eeeff1;
 }
 .picker-cover { width: 100rpx; height: 100rpx; border-radius: 8rpx; flex-shrink: 0; margin-right: 20rpx; }
 .picker-info { flex: 1; overflow: hidden; }
-.picker-name { font-size: 28rpx; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.picker-price { font-size: 28rpx; color: #4f46e5; font-weight: bold; }
+.picker-name { font-size: 28rpx; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.picker-price { font-size: 28rpx; color: #17191c; font-weight: bold; }
 .picker-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
-.picker-status { font-size: 22rpx; color: #94a3b8; }
-.picker-sub { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; }
-.picker-empty { text-align: center; padding: 80rpx 0; color: #94a3b8; font-size: 28rpx; }
+.picker-status { font-size: 22rpx; color: #73777e; }
+.picker-sub { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
+.picker-empty { text-align: center; padding: 80rpx 0; color: #73777e; font-size: 28rpx; }
+
+/* 消息区占满剩余空间，工具栏和输入栏按实际高度参与布局。 */
+.chat-room {
+  --chat-safe-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--app-page-height, 100vh) - var(--chat-keyboard-height, 0px));
+  min-height: 0;
+  box-sizing: border-box;
+}
+.chat-room.keyboard-open { --chat-safe-bottom: 0px; }
+.message-pane { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.msg-list { height: 100%; padding: 20rpx 0; }
+.scroll-bottom-btn { bottom: 24rpx; }
+.toolbar, .input-bar { position: relative; left: auto; right: auto; bottom: auto; width: 100%; flex-shrink: 0; }
+.toolbar { flex-wrap: wrap; }
+.toolbar-item { flex-shrink: 0; }
+.input-bar { padding-bottom: calc(16rpx + var(--chat-safe-bottom)); }
+.input-bar input { min-width: 0; width: 0; }
+.send-btn { flex-shrink: 0; white-space: nowrap; }
+.picker-popup { min-height: 0; padding-bottom: var(--chat-safe-bottom); box-sizing: border-box; }
+.picker-header { flex-shrink: 0; }
+.picker-list { min-height: 0; }
+
+/* #ifdef H5 */
+.chat-room {
+  --chat-safe-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom));
+  height: var(--app-visible-page-height, calc(var(--app-page-height, calc(var(--app-viewport-height, 100vh) - var(--window-top, 0px))) - var(--app-viewport-bottom, 0px)));
+}
+.msg-list { overscroll-behavior-y: contain; }
+.input-bar input, .input-bar :deep(.uni-input-input) { font-size: 16px; }
+.plus-btn, .send-btn { touch-action: manipulation; }
+.picker-mask {
+  left: var(--app-content-left, 0px);
+  right: auto;
+  width: var(--app-content-width, 100%);
+  bottom: var(--app-viewport-bottom, 0px);
+}
+.picker-popup { max-height: min(45vh, var(--app-visible-page-height, 45vh)); }
+.picker-list { max-height: calc(var(--app-visible-page-height, 100vh) - 120rpx - var(--chat-safe-bottom)); }
+/* #endif */
 </style>

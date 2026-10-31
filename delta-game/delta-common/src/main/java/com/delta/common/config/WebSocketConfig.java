@@ -13,9 +13,13 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
     private final ChatWebSocketHandler chatWebSocketHandler;
+    private final com.delta.common.websocket.ChatHandshakeInterceptor handshakeInterceptor;
+    @org.springframework.beans.factory.annotation.Value("${app.allowed-origins:https://jax.kkimg.top,https://jaxapi.kkimg.top}")
+    private String allowedOrigins;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(chatWebSocketHandler, "/ws/chat").setAllowedOrigins("*");
+        registry.addHandler(chatWebSocketHandler, "/ws/chat").addInterceptors(handshakeInterceptor)
+                .setAllowedOrigins(allowedOrigins.split(","));
     }
 }

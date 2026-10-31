@@ -6,7 +6,7 @@
   </div>
 </template>
 <style scoped>
-.error-page { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-.error-page h1 { font-size: 120px; color: #dcdfe6; margin: 0; }
-.error-page p { font-size: 18px; color: #606266; margin: 20px 0; }
+.error-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: var(--app-viewport-height); padding: calc(16px + var(--app-safe-top)) calc(16px + var(--app-safe-right)) calc(16px + var(--app-safe-bottom)) calc(16px + var(--app-safe-left)); text-align: center; }
+.error-page h1 { font-size: 120px; color: #e1e3e6; margin: 0; }
+.error-page p { font-size: 18px; color: #555b63; margin: 20px 0; }
 </style>

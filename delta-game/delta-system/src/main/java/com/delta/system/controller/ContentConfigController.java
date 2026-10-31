@@ -1,6 +1,7 @@
 package com.delta.system.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.system.entity.ContentConfig;
 import com.delta.system.service.ContentConfigService;
@@ -25,9 +26,11 @@ public class ContentConfigController {
                 new LambdaQueryWrapper<ContentConfig>().eq(ContentConfig::getConfigKey, key)));
     }
 
+    @OpLog(module = "system", operation = "新增内容配置")
     @PostMapping
     public R<Void> add(@RequestBody ContentConfig config) { contentConfigService.save(config); return R.ok(); }
 
+    @OpLog(module = "system", operation = "编辑内容配置")
     @PutMapping
     public R<Void> update(@RequestBody ContentConfig config) { contentConfigService.updateById(config); return R.ok(); }
 }

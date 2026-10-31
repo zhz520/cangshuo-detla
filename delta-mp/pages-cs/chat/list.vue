@@ -2,7 +2,7 @@
   <view class="cs-chat-list tab-page">
     <scroll-view scroll-y class="cs-chat-scroll tab-page-scroll" :show-scrollbar="false">
       <view v-for="s in sessions" :key="s.id" class="session-item" @click="goRoom(s)">
-        <image v-if="s.avatar" class="avatar" :src="s.avatar" mode="aspectFill" lazy-load />
+        <AppImage :width="160" v-if="s.avatar" class="avatar" :src="s.avatar" mode="aspectFill" />
         <view v-else class="avatar avatar-placeholder">{{ firstChar(s.targetName || '') }}</view>
         <view class="session-info">
           <view class="top-row">
@@ -22,6 +22,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -64,8 +65,8 @@ function goRoom(s) {
   margin-bottom: 16rpx;
   position: relative; z-index: 1;
 }
-.avatar { width: 88rpx; height: 88rpx; border-radius: 50%; margin-right: 20rpx; flex-shrink: 0; border: 2rpx solid rgba(99, 102, 241, 0.1); }
-.avatar-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; font-size: 36rpx; font-weight: bold; }
+.avatar { width: 88rpx; height: 88rpx; border-radius: 50%; margin-right: 20rpx; flex-shrink: 0; border: 2rpx solid rgba(23, 25, 28, 0.1); }
+.avatar-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #73777e, #666b73); color: #fff; font-size: 36rpx; font-weight: bold; }
 .session-info { flex: 1; overflow: hidden; }
 .top-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -78,7 +79,7 @@ function goRoom(s) {
 }
 .badge {
   min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx;
-  font-size: 20rpx; color: #ffffff; background: #ff4544; border-radius: 32rpx;
+  font-size: 20rpx; color: #ffffff; background: #17191c; border-radius: 32rpx;
   text-align: center; flex-shrink: 0; margin-left: 16rpx;
 }
 </style>

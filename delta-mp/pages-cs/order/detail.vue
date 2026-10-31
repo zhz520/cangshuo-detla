@@ -46,7 +46,7 @@
             <text class="progress-time">{{ p.createdAt }}</text>
             <text class="progress-text">{{ p.content || statusLabel(p.toStatus) || p.toStatus }}</text>
             <view v-if="p.images" class="progress-images">
-              <image v-for="(img, i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="progress-img" lazy-load @click="previewImg(p.images.split(','), i)" />
+              <AppImage v-for="(img, i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="progress-img" @click="previewImg(p.images.split(','), i)" />
             </view>
           </view>
         </view>
@@ -62,6 +62,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
@@ -172,13 +173,13 @@ async function doConfirm() {
 }
 </script>
 <style lang="scss" scoped>
-.cs-order-detail { background: #f5f7fa; min-height: 100vh; padding-bottom: 40rpx; }
+.cs-order-detail { background: #f5f6f7; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
 .status-bar {
   display: flex; justify-content: space-between; align-items: center;
   padding: 28rpx 32rpx; background: #fff;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
   .status-right { display: flex; align-items: center; gap: 16rpx; }
-  .order-no { font-size: 24rpx; color: #94a3b8; }
+  .order-no { font-size: 24rpx; color: #73777e; }
 }
 .card {
   margin: 20rpx 24rpx 0; padding: 28rpx 28rpx 24rpx;
@@ -188,15 +189,15 @@ async function doConfirm() {
 .card-header { display: flex; align-items: center; margin-bottom: 20rpx; }
 .title-bar {
   width: 6rpx; height: 28rpx; border-radius: 3rpx;
-  background: linear-gradient(180deg, #ff4544, #e63939);
+  background: linear-gradient(180deg, #17191c, #30343a);
   margin-right: 12rpx;
 }
-.card-title { font-size: 28rpx; font-weight: bold; color: #1e293b; }
+.card-title { font-size: 28rpx; font-weight: bold; color: #17191c; }
 .copy-link {
   padding: 8rpx 18rpx;
   font-size: 22rpx;
-  color: #ff4544;
-  border: 1rpx solid rgba(255,69,68,0.28);
+  color: #17191c;
+  border: 1rpx solid rgba(23, 25, 28, 0.28);
   border-radius: 999rpx;
   flex-shrink: 0;
 }
@@ -206,8 +207,8 @@ async function doConfirm() {
 }
 .info-row {
   display: flex; align-items: center; padding: 12rpx 0;
-  .label { font-size: 26rpx; color: #94a3b8; width: 140rpx; flex-shrink: 0; }
-  .value { font-size: 26rpx; color: #1e293b; flex: 1; &.bold { font-weight: 600; } &.price { color: #ee0a24; font-weight: bold; } }
+  .label { font-size: 26rpx; color: #73777e; width: 140rpx; flex-shrink: 0; }
+  .value { font-size: 26rpx; color: #17191c; flex: 1; &.bold { font-weight: 600; } &.price { color: #d44955; font-weight: bold; } }
 }
 .info-row-copy .value { min-width: 0; margin-right: 12rpx; }
 .progress-list { padding: 8rpx 0; }
@@ -215,17 +216,17 @@ async function doConfirm() {
 .progress-item:last-child { margin-bottom: 0; }
 .progress-dot {
   width: 16rpx; height: 16rpx; border-radius: 50%;
-  background: #cbd5e1; flex-shrink: 0; margin: 10rpx 16rpx 0 0;
-  &.last { background: linear-gradient(135deg, #ff4544, #e63939); }
+  background: #b9bdc4; flex-shrink: 0; margin: 10rpx 16rpx 0 0;
+  &.last { background: linear-gradient(135deg, #17191c, #30343a); }
 }
 .progress-content { flex: 1; min-width: 0; }
-.progress-time { display: block; font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx; }
-.progress-text { font-size: 26rpx; color: #1e293b; }
+.progress-time { display: block; font-size: 22rpx; color: #73777e; margin-bottom: 4rpx; }
+.progress-text { font-size: 26rpx; color: #17191c; }
 .progress-images { display: flex; gap: 12rpx; margin-top: 12rpx; flex-wrap: wrap; }
 .progress-img { width: 120rpx; height: 120rpx; border-radius: 12rpx; }
 
 .actions { display: flex; gap: 20rpx; padding: 40rpx 24rpx; justify-content: flex-end; }
-.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; }
-.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(255,69,68,0.4); color: #ff4544; font-size: 28rpx; border-radius: 999rpx; }
-.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(238,10,36,0.4); color: #ee0a24; font-size: 28rpx; border-radius: 999rpx; }
+.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; }
+.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(23, 25, 28, 0.4); color: #17191c; font-size: 28rpx; border-radius: 999rpx; }
+.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(201, 79, 89, 0.4); color: #d44955; font-size: 28rpx; border-radius: 999rpx; }
 </style>

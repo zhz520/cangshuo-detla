@@ -95,14 +95,14 @@ async function doSave() {
 }
 </script>
 <style lang="scss" scoped>
-.edit-page { background: #ffffff; min-height: 100vh; }
+.edit-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .form-card { margin: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; padding: 0 24rpx; }
 .form-item { padding: 24rpx 0; border-bottom: 1rpx solid rgba(0,0,0,0.04);
   .label { font-size: 28rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 12rpx; } .input { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
   .pick-text { font-size: 26rpx; color: rgba(0,0,0,0.85); padding: 16rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; &.placeholder { color: rgba(0,0,0,0.15); } }
 }
 .textarea { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; width: 100%; height: 200rpx; color: rgba(0,0,0,0.85); }
-.status-selector { display: flex; gap: 16rpx; .opt { padding: 12rpx 32rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 26rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } } }
+.status-selector { display: flex; gap: 16rpx; .opt { padding: 12rpx 32rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 26rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } } }
 .btn-area { padding: 40rpx 24rpx; }
-.submit-btn { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
+.submit-btn { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
 </style>

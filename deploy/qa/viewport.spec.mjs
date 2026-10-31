@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+
+const source = await readFile(new URL('../../delta-mp/utils/viewport.js', import.meta.url), 'utf8')
+const { viewportMetrics } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
+const desktop = viewportMetrics({ width: 1440, height: 900 })
+assert.equal(desktop.width, 540)
+assert.equal(desktop.bottom, 0)
+assert.equal(desktop.keyboardOpen, false)
+assert.equal(viewportMetrics({ width: 320, height: 568 }).width, 320)
+assert.equal(viewportMetrics({ width: 540, height: 844 }).width, 540)
+
+const iosKeyboard = viewportMetrics({ width: 390, height: 844, visualHeight: 500, focused: true })
+assert.equal(iosKeyboard.bottom, 344)
+assert.equal(iosKeyboard.keyboardOpen, true)
+const scrolledKeyboard = viewportMetrics({ width: 390, height: 844, visualHeight: 500, visualTop: 44, focused: true })
+assert.equal(scrolledKeyboard.bottom, 300)
+assert.equal(scrolledKeyboard.top, 44)
+
+const androidKeyboard = viewportMetrics({ width: 390, height: 500, baseline: 844, focused: true })
+assert.equal(androidKeyboard.bottom, 0)
+assert.equal(androidKeyboard.keyboardOpen, true)
+const zoomed = viewportMetrics({ width: 390, height: 844, visualHeight: 422, scale: 2, focused: true })
+assert.equal(zoomed.keyboardOpen, false)
+assert.equal(zoomed.bottom, 0)
+assert.equal(zoomed.visibleHeight, 844)
+assert.equal(viewportMetrics({ width: 390, height: 844, visualHeight: 800, focused: true }).keyboardOpen, false)
+assert.equal(viewportMetrics({ width: 390, height: 844, visualHeight: 500 }).keyboardOpen, false)
+assert.equal(viewportMetrics({ width: 844, height: 390 }).visibleHeight, 390)
+console.log('PASS: 10 viewport scenarios; iOS overlay keyboard, Android resized keyboard, zoom, landscape and desktop width.')

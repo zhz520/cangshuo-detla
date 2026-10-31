@@ -5,7 +5,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="u in users" :key="u.id" class="user-card">
-        <image class="avatar" :src="u.avatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="avatar" :src="u.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ u.nickname || u.phone }}</text>
           <text class="meta">注册：{{ u.createdAt }} | 订单：{{ u.orderCount || 0 }}</text>
@@ -22,6 +22,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -57,18 +58,18 @@ async function toggleStatus(id, status) {
 }
 </script>
 <style lang="scss" scoped>
-.user-list { background: #ffffff; min-height: 100vh; overflow: hidden; }
+.user-list { background: #ffffff; min-height: var(--app-page-height, 100vh); overflow: hidden; }
 .search-bar { padding: 16rpx 24rpx; }
 .search-input { height: 72rpx; line-height: 72rpx; box-sizing: border-box; background: rgba(0,0,0,0.05); padding: 0 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
-.list { height: calc(100vh - 100rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
+.list { height: calc(var(--app-page-height, 100vh) - 100rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
 .user-card {
   display: flex; align-items: center; gap: 16rpx; padding: 24rpx;
   background: rgba(0,0,0,0.04); border-radius: 12rpx; margin-bottom: 16rpx;
   box-sizing: border-box; overflow: hidden;
   .avatar { width: 72rpx; height: 72rpx; border-radius: 50%; flex-shrink: 0; }
   .info { flex: 1; overflow: hidden; .name { font-size: 28rpx; font-weight: bold; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(0,0,0,0.85); } .meta { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; margin-top: 4rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
-  .status-badge { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 4rpx; flex-shrink: 0; &.active { color: #07c160; background: rgba(7,193,96,0.12); } &.disabled { color: #ee0a24; background: rgba(238,10,36,0.12); } }
-  .action-btns { flex-shrink: 0; .action-btn { font-size: 24rpx; color: #ff4544; &.danger { color: #ee0a24; } } }
+  .status-badge { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 4rpx; flex-shrink: 0; &.active { color: #347a5b; background: rgba(7,193,96,0.12); } &.disabled { color: #d44955; background: rgba(201, 79, 89, 0.12); } }
+  .action-btns { flex-shrink: 0; .action-btn { font-size: 24rpx; color: #17191c; &.danger { color: #d44955; } } }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
 </style>

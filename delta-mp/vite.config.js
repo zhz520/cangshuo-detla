@@ -2,5 +2,15 @@ import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 
 export default defineConfig({
-  plugins: [uni()]
+  plugins: [uni()],
+  server: {
+    host: '127.0.0.1',
+    strictPort: true,
+    fs: { strict: true }
+  },
+  build: {
+    sourcemap: false,
+    target: 'es2018',
+    cssTarget: ['chrome79', 'safari13']
+  }
 })

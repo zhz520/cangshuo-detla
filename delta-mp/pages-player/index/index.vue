@@ -53,13 +53,13 @@ function go(url) { uni.navigateTo({ url }) }
 .player-home { background: #ffffff; position: relative; }
 .stat-cards { display: flex; gap: 20rpx; padding: 24rpx;
   .card { flex: 1; background: rgba(0,0,0,0.04); padding: 24rpx; border-radius: 12rpx; text-align: center;
-    .num { font-size: 36rpx; font-weight: bold; color: #ff4544; display: block; }
+    .num { font-size: 36rpx; font-weight: bold; color: #17191c; display: block; }
     .label { font-size: 24rpx; color: rgba(0,0,0,0.3); margin-top: 8rpx; display: block; }
   }
 }
 .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20rpx; padding: 0 24rpx;
   .action { background: rgba(0,0,0,0.04); padding: 24rpx 0; text-align: center; border-radius: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.85); position: relative; display: flex; flex-direction: column; align-items: center; gap: 8rpx; .action-icon { width: 48rpx; height: 48rpx; } }
-  .pending-badge { position: absolute; top: 8rpx; right: 8rpx; min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx; font-size: 20rpx; color: #fff; background: #ee0a24; border-radius: 32rpx; text-align: center; }
+  .pending-badge { position: absolute; top: 8rpx; right: 8rpx; min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx; font-size: 20rpx; color: #fff; background: #d44955; border-radius: 32rpx; text-align: center; }
 }
 .section { padding: 24rpx; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; .section-title { font-size: 28rpx; font-weight: bold; } .more { font-size: 24rpx; color: rgba(0,0,0,0.3); } }

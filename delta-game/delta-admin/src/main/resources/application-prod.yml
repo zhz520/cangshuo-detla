@@ -1,5 +1,6 @@
 server:
   port: 8080
+  forward-headers-strategy: native
 
 spring:
   application:
@@ -29,7 +30,7 @@ mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   global-config:
     db-config:
       id-type: auto
@@ -48,7 +49,10 @@ jwt:
 
 auth:
   h5:
-    login-code: ${AUTH_H5_LOGIN_CODE:change_login_code}
+    otp-required: true
+
+app:
+  allowed-origins: ${ALLOWED_ORIGINS:https://jax.kkimg.top,https://jaxapi.kkimg.top}
 
 # WeChat Mini Program
 wx:
@@ -80,6 +84,7 @@ wx:
     public-key-path: ${WX_PAY_PUBLIC_KEY_PATH:}
     # 微信支付公钥ID（商户平台“微信支付公钥”页面展示的ID）
     public-key-id: ${WX_PAY_PUBLIC_KEY_ID:}
+    key-store-path: ${WX_PAY_KEY_STORE_PATH:/www/data/private/wxpay}
 
 # File upload（生产环境，Linux 服务器）
 file:
@@ -95,21 +100,22 @@ delta:
 # Logging
 logging:
   level:
-    com.delta: debug
+    com.delta: info
     org.springframework.security: info
 
 # Knife4j Swagger
 springdoc:
   swagger-ui:
-    enabled: true
+    enabled: false
     path: /swagger-ui.html
   api-docs:
+    enabled: false
     path: /v3/api-docs
   packages-to-scan: com.delta
   paths-to-match: "/**"
 
 knife4j:
-  enable: true
+  enable: false
   setting:
     language: zh_cn
     swagger-model-name: 实体类

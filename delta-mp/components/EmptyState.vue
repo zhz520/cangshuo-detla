@@ -1,6 +1,6 @@
 <template>
   <view class="empty-state">
-    <image v-if="image" class="empty-image" :src="image" mode="aspectFit" />
+    <AppImage v-if="image" class="empty-image" :src="image" mode="aspectFit" />
     <text class="empty-text">{{ text }}</text>
     <view v-if="buttonText" class="empty-btn" @click="$emit('action')">
       {{ buttonText }}
@@ -9,6 +9,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 defineProps({
   text: { type: String, default: '暂无数据' },
   image: { type: String, default: '/static/icons/空空如也.svg' },
@@ -33,7 +34,7 @@ defineEmits(['action'])
 
   .empty-text {
     font-size: 28rpx;
-    color: #94a3b8;
+    color: #73777e;
   }
 
   .empty-btn {
@@ -41,7 +42,7 @@ defineEmits(['action'])
     padding: 16rpx 48rpx;
     font-size: 28rpx;
     color: #fff;
-    background: linear-gradient(135deg, #ff4544, #e63939);
+    background: linear-gradient(135deg, #17191c, #30343a);
     border: none;
     border-radius: 999rpx;
   }

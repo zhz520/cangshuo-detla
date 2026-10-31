@@ -26,6 +26,7 @@ public class AliyunSmsServiceImpl implements AliyunSmsService {
                              String phoneNumber,
                              Map<String, String> templateParams) {
         try {
+            if(!"dysmsapi.aliyuncs.com".equals(endpoint)) throw new BusinessException(400,"短信服务地址无效");
             Config config = new Config()
                     .setAccessKeyId(accessKeyId)
                     .setAccessKeySecret(accessKeySecret);
@@ -44,13 +45,13 @@ public class AliyunSmsServiceImpl implements AliyunSmsService {
             String code = response.getBody() != null ? response.getBody().getCode() : null;
             String message = response.getBody() != null ? response.getBody().getMessage() : null;
             if (!"OK".equalsIgnoreCase(code)) {
-                log.warn("aliyun sms send failed, phone={}, code={}, message={}", phoneNumber, code, message);
-                throw new BusinessException(500, message != null && !message.isEmpty() ? message : "短信发送失败");
+                log.warn("aliyun sms send failed, code={}", code);
+                throw new BusinessException(503,"短信发送失败，请稍后重试");
             }
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            log.error("aliyun sms send error, phone={}", phoneNumber, e);
+            log.error("aliyun sms send error, type={}",e.getClass().getSimpleName());
             throw new BusinessException(500, "短信发送失败，请稍后重试");
         }
     }

@@ -50,7 +50,10 @@ public class AdminWithdrawController {
                     w.setPlayerPhone(player.getPhone());
                 }
             }
-            if (w.getAccountId() != null) {
+            if(w.getAccountNoSnapshot()!=null) {
+                w.setAccountType(w.getAccountTypeSnapshot());w.setAccountNo(w.getAccountNoSnapshot());
+                w.setAccountName(w.getAccountNameSnapshot());w.setQrcodeUrl(w.getAccountQrcodeSnapshot());
+            } else if (w.getAccountId() != null) {
                 PlayerAccount account = playerAccountService.getById(w.getAccountId());
                 if (account != null) {
                     w.setAccountType(account.getType());
@@ -67,7 +70,7 @@ public class AdminWithdrawController {
     @PutMapping("/{id}/process")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> process(@PathVariable Long id, @RequestBody Withdraw w) {
-        Withdraw withdraw = withdrawService.getById(id);
+        Withdraw withdraw = withdrawService.getOne(new LambdaQueryWrapper<Withdraw>().eq(Withdraw::getId,id).last("FOR UPDATE"));
         if (withdraw == null || !"PENDING".equals(withdraw.getStatus()))
             throw new BusinessException("提现记录不存在或已处理");
 
@@ -98,7 +101,7 @@ public class AdminWithdrawController {
     @PutMapping("/{id}/reject")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> reject(@PathVariable Long id, @RequestParam("reason") String reason) {
-        Withdraw withdraw = withdrawService.getById(id);
+        Withdraw withdraw = withdrawService.getOne(new LambdaQueryWrapper<Withdraw>().eq(Withdraw::getId,id).last("FOR UPDATE"));
         if (withdraw == null || !"PENDING".equals(withdraw.getStatus()))
             throw new BusinessException("提现记录不存在或已处理");
 

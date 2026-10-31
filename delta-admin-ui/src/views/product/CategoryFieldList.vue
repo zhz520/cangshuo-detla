@@ -13,9 +13,12 @@
           <div
             v-for="c in parentCategories" :key="c.id"
             class="cat-item" :class="{ active: selectedCategoryId === c.id }"
+            role="button" tabindex="0" :aria-pressed="selectedCategoryId === c.id"
             @click="selectCategory(c.id)"
+            @keydown.enter.prevent="selectCategory(c.id)"
+            @keydown.space.prevent="selectCategory(c.id)"
           >
-            <el-image v-if="c.icon" :src="c.icon" class="cat-icon" fit="cover" />
+            <el-image lazy v-if="c.icon" :src="c.icon" class="cat-icon" fit="cover" />
             <div v-else class="cat-icon-placeholder">{{ c.name?.charAt(0) }}</div>
             <span class="cat-name">{{ c.name }}</span>
             <el-icon v-if="selectedCategoryId === c.id" class="cat-check"><Check /></el-icon>
@@ -31,12 +34,12 @@
               <el-tag effect="dark" type="primary" style="margin-right:8px">{{ selectedCategoryName }}</el-tag>
               下单表单字段
             </span>
-            <span v-else class="header-hint">请先选择左侧的游戏分类</span>
+            <span v-else class="header-hint">请先选择游戏分类</span>
             <el-button v-if="selectedCategoryId" type="primary" :icon="Plus" @click="openDialog()">新增字段</el-button>
           </div>
         </template>
         <!-- 未选择分类的空状态 -->
-        <el-empty v-if="!selectedCategoryId" description="选择左侧分类后可配置下单表单字段" :image-size="120" />
+        <el-empty v-if="!selectedCategoryId" description="选择游戏分类后可配置下单表单字段" :image-size="120" />
         <!-- 字段表格 -->
         <el-table v-else :data="fieldList" v-loading="loading" stripe>
           <el-table-column prop="fieldLabel" label="字段名称" min-width="130">
@@ -226,7 +229,7 @@ onMounted(loadCategories)
   font-weight: 600;
 }
 .header-hint {
-  color: #909399;
+  color: #73777e;
   font-weight: 400;
 }
 .cat-list {
@@ -245,13 +248,13 @@ onMounted(loadCategories)
   border: 1px solid transparent;
 }
 .cat-item:hover {
-  background: #f5f7fa;
+  background: #f5f6f7;
 }
 .cat-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: #f3f4f5;
+  color: #17191c;
   font-weight: 600;
-  border-color: #b3d8ff;
+  border-color: #d8dadd;
 }
 .cat-icon {
   width: 28px;
@@ -266,7 +269,7 @@ onMounted(loadCategories)
   border-radius: 6px;
   margin-right: 10px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #409eff, #79bbff);
+  background: linear-gradient(135deg, #17191c, #51565e);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -281,21 +284,28 @@ onMounted(loadCategories)
   white-space: nowrap;
 }
 .cat-check {
-  color: #409eff;
+  color: #17191c;
   font-size: 16px;
   flex-shrink: 0;
 }
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
   margin-top: 4px;
   line-height: 1.4;
 }
 code {
-  background: #f5f7fa;
+  background: #f5f6f7;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
+}
+@media (max-width: 1024px) {
+  .field-layout { flex-direction: column; min-height: 0; align-items: stretch; }
+  .category-card, .field-card { width: 100%; }
+  .cat-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
+  .cat-item { min-width: 0; padding: 10px; }
+  .cat-name { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 }
 </style>

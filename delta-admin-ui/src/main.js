@@ -7,6 +7,11 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import router from './router'
 import App from './App.vue'
 import './style.css'
+import './styles/responsive.css'
+import { installViewport } from './utils/responsive'
+
+const stopViewport = installViewport()
+if (import.meta.hot) import.meta.hot.dispose(stopViewport)
 
 const app = createApp(App)
 

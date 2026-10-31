@@ -4,6 +4,7 @@
     <view class="summary-card">
       <text class="card-label">累计收益（元）</text>
       <text class="total-amount">¥{{ summary.totalIncome || '0.00' }}</text>
+      <text class="reward-total">其中打赏收入 ¥{{ Number(summary.rewardIncome || 0).toFixed(2) }}</text>
       <view class="row">
         <view class="col"><text class="num">¥{{ summary.monthIncome || '0.00' }}</text><text class="desc">本月收益</text></view>
         <view class="divider" />
@@ -57,8 +58,9 @@ function goDetail() { uni.navigateTo({ url: '/pages-player/earnings/detail' }) }
 function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) }
 </script>
 <style lang="scss" scoped>
-.earnings-page { background: #ffffff; min-height: 100vh; }
-.summary-card { background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
+.earnings-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
+.reward-total { display:block;font-size:24rpx;opacity:.85;margin:-12rpx 0 28rpx; }
+.summary-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .card-label { font-size: 26rpx; opacity: 0.85; display: block; }
   .total-amount { font-size: 56rpx; font-weight: bold; display: block; margin: 16rpx 0 32rpx; }
   .row { display: flex; align-items: center; }
@@ -66,11 +68,11 @@ function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) 
   .divider { width: 1rpx; height: 48rpx; background: rgba(255,255,255,0.3); }
 }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20rpx; padding: 0 24rpx 24rpx;
-  .stat-item { background: #f1f5f9; padding: 24rpx; border-radius: 12rpx; text-align: center;
-    .stat-num { font-size: 32rpx; font-weight: bold; color: #1e293b; display: block; }
-    .stat-label { font-size: 24rpx; color: #94a3b8; display: block; margin-top: 8rpx; }
+  .stat-item { background: #f4f5f6; padding: 24rpx; border-radius: 12rpx; text-align: center;
+    .stat-num { font-size: 32rpx; font-weight: bold; color: #17191c; display: block; }
+    .stat-label { font-size: 24rpx; color: #73777e; display: block; margin-top: 8rpx; }
   }
 }
-.action-list { margin: 0 24rpx; background: #f1f5f9; border-radius: 12rpx; overflow: hidden; }
-.action-row { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f1f5f9; font-size: 28rpx; .arrow { color: #cbd5e1; } }
+.action-list { margin: 0 24rpx; background: #f4f5f6; border-radius: 12rpx; overflow: hidden; }
+.action-row { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f4f5f6; font-size: 28rpx; .arrow { color: #b9bdc4; } }
 </style>

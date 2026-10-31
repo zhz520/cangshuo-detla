@@ -2,7 +2,7 @@
   <view class="audit-page" v-if="player">
     <view class="card">
       <view class="profile-top">
-        <image class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="profile-info">
           <text class="name">{{ player.nickname || player.realName }}</text>
           <text class="status" :class="player.status?.toLowerCase()">{{ STATUS_TEXT[player.status] || player.status }}</text>
@@ -18,7 +18,7 @@
     <view class="card" v-if="player.proofImages">
       <text class="card-title">证明截图</text>
       <view class="images">
-        <image v-for="(img,i) in player.proofImages.split(',')" :key="i" :src="img" mode="aspectFill" class="img" lazy-load @click="previewImg(player.proofImages.split(','),i)" />
+        <AppImage v-for="(img,i) in player.proofImages.split(',')" :key="i" :src="img" mode="aspectFill" class="img" @click="previewImg(player.proofImages.split(','),i)" />
       </view>
     </view>
     <!-- 审核操作 -->
@@ -36,6 +36,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCsPlayerDetail, auditCsPlayer } from '@/pages-cs/api/cs'
@@ -66,18 +67,18 @@ async function doAudit(status) {
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 </script>
 <style lang="scss" scoped>
-.audit-page { background: #ffffff; min-height: 100vh; }
+.audit-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .card { margin: 20rpx 24rpx; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; }
 .card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: rgba(0,0,0,0.85); }
 .profile-top { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; padding-bottom: 20rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04);
   .avatar { width: 96rpx; height: 96rpx; border-radius: 50%; }
-  .profile-info { .name { font-size: 32rpx; font-weight: bold; display: block; color: rgba(0,0,0,0.85); } .status { font-size: 24rpx; display: block; margin-top: 4rpx; &.pending { color: #ff9900; } &.active { color: #07c160; } &.frozen { color: #ee0a24; } } }
+  .profile-info { .name { font-size: 32rpx; font-weight: bold; display: block; color: rgba(0,0,0,0.85); } .status { font-size: 24rpx; display: block; margin-top: 4rpx; &.pending { color: #996b30; } &.active { color: #347a5b; } &.frozen { color: #d44955; } } }
 }
 .info-row { display: flex; padding: 10rpx 0; .label { font-size: 26rpx; color: rgba(0,0,0,0.3); width: 140rpx; } .value { font-size: 26rpx; color: rgba(0,0,0,0.85); flex: 1; } }
 .images { display: flex; gap: 12rpx; flex-wrap: wrap; .img { width: 200rpx; height: 200rpx; border-radius: 8rpx; } }
 .form-item { margin-bottom: 24rpx; .label { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 12rpx; } }
 .textarea { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; width: 100%; height: 160rpx; color: rgba(0,0,0,0.85); }
 .btn-group { display: flex; gap: 20rpx; }
-.btn-approve { flex: 1; text-align: center; padding: 20rpx; background: #07c160; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
-.btn-reject { flex: 1; text-align: center; padding: 20rpx; background: #ee0a24; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.btn-approve { flex: 1; text-align: center; padding: 20rpx; background: #347a5b; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.btn-reject { flex: 1; text-align: center; padding: 20rpx; background: #d44955; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
 </style>

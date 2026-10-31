@@ -31,6 +31,9 @@ public class ComplaintController {
 
     @PostMapping
     public R<Void> create(@RequestBody Complaint complaint) {
+        Complaint supplied=complaint;complaint=new Complaint();complaint.setOrderId(supplied.getOrderId());complaint.setType(supplied.getType());
+        complaint.setContent(supplied.getContent());complaint.setImages(supplied.getImages());complaint.setExpectedResult(supplied.getExpectedResult());
+        if(complaint.getContent()==null || complaint.getContent().isBlank() || complaint.getContent().length()>2000) return R.fail(400,"投诉内容长度不符合要求");
         Long userId = SecurityUtils.getUserId();
 
         // 1. 校验订单存在且属于当前用户

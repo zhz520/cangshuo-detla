@@ -12,6 +12,7 @@ public class Admin extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String username;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String nickname;
     private String avatar;

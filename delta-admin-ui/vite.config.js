@@ -4,6 +4,10 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  build: {
+    target: 'es2018',
+    cssTarget: ['chrome79', 'safari13']
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')

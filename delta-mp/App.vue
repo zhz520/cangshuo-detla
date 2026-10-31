@@ -7,6 +7,9 @@ import { usePlayerStore } from '@/store/player'
 import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 import { getTokenByRole } from '@/utils/auth'
+// #ifdef H5
+import { installViewportAdapter } from '@/utils/viewport'
+// #endif
 
 function shouldConnectChat() {
   const role = uni.getStorageSync('app_role') || 'user'
@@ -29,6 +32,9 @@ function syncRemindPolling() {
 }
 
 onLaunch(() => {
+  // #ifdef H5
+  installViewportAdapter()
+  // #endif
   const appStore = useAppStore()
   const userStore = useUserStore()
   const playerStore = usePlayerStore()
@@ -63,30 +69,32 @@ onShow(() => {
 
 <style lang="scss">
 @import '@/uni.scss';
+@import '@/styles/monochrome.scss';
+@import '@/styles/responsive.scss';
 
 page, view, text, image, scroll-view, textarea, input { box-sizing: border-box; }
 
 page {
-  background-color: #f8fafc;
+  background-color: #f7f8f9;
   font-size: 28rpx;
-  color: #1e293b;
+  color: #17191c;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* 安全区域底部留白（为自定义tabBar腾出空间） */
 .safe-area-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 120rpx);
+  padding-bottom: calc(var(--app-safe-bottom, env(safe-area-inset-bottom)) + 120rpx);
 }
 
 .tab-page {
-  height: 100vh;
-  min-height: 100vh;
+  height: var(--app-page-height, 100vh);
+  min-height: var(--app-page-height, 100vh);
   overflow: hidden;
   padding-bottom: 0 !important;
 }
 
 .tab-page-scroll {
-  height: calc(100vh - 110rpx - env(safe-area-inset-bottom));
+  height: calc(var(--app-page-height, 100vh) - 110rpx - var(--app-safe-bottom, env(safe-area-inset-bottom)));
   position: relative;
   z-index: 1;
   box-sizing: border-box;

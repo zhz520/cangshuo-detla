@@ -15,7 +15,7 @@
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }"><el-tag size="small">{{ row.status === 'ACTIVE' ? '进行中' : (row.status || '-') }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right" @click.stop>
+        <el-table-column label="操作" width="100" :fixed="isCompact ? false : 'right'" @click.stop>
           <template #default="{ row }">
             <el-button link type="primary" @click="goDetail(row)">查看记录</el-button>
           </template>
@@ -27,11 +27,14 @@
 </template>
 
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminChatSessionList, csChatSessionAllList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import Pagination from '@/components/Pagination.vue'
+
+const { isCompact } = useResponsive()
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -65,5 +68,5 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.header-tip { margin-left: 12px; font-size: 12px; color: #909399; }
+.header-tip { margin-left: 12px; font-size: 12px; color: #73777e; }
 </style>

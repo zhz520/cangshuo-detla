@@ -66,17 +66,17 @@ async function doApprove(id) {
 }
 </script>
 <style lang="scss" scoped>
-.withdraw-list { background: #ffffff; min-height: 100vh; }
+.withdraw-list { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .filter-bar { white-space: nowrap; padding: 12rpx 24rpx; background: rgba(0,0,0,0.04); border-bottom: 1rpx solid rgba(0,0,0,0.04); }
-.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } }
-.list { height: calc(100vh - 100rpx); padding: 20rpx 24rpx; }
+.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } }
+.list { height: calc(var(--app-page-height, 100vh) - 100rpx); padding: 20rpx 24rpx; }
 .withdraw-card { background: rgba(0,0,0,0.04); border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; .amount { font-size: 34rpx; font-weight: bold; color: rgba(0,0,0,0.85); } }
   .card-body { margin-bottom: 8rpx; .player { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; } .account { font-size: 24rpx; color: rgba(0,0,0,0.55); display: block; margin-top: 4rpx; } }
   .time { font-size: 22rpx; color: rgba(0,0,0,0.3); display: block; }
   .card-actions { display: flex; justify-content: flex-end; gap: 16rpx; padding-top: 16rpx; margin-top: 12rpx; border-top: 1rpx solid rgba(0,0,0,0.04); }
-  .btn-approve { padding: 10rpx 28rpx; background: #07c160; color: #fff; font-size: 24rpx; border-radius: 999rpx; }
-  .btn-reject { padding: 10rpx 28rpx; border: 1rpx solid #ee0a24; color: #ee0a24; font-size: 24rpx; border-radius: 999rpx; }
+  .btn-approve { padding: 10rpx 28rpx; background: #347a5b; color: #fff; font-size: 24rpx; border-radius: 999rpx; }
+  .btn-reject { padding: 10rpx 28rpx; border: 1rpx solid #d44955; color: #d44955; font-size: 24rpx; border-radius: 999rpx; }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
 </style>

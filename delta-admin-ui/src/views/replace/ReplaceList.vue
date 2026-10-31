@@ -32,7 +32,7 @@
         <el-table-column prop="processedAt" label="处理时间" width="170">
           <template #default="{ row }">{{ row.processedAt || '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <template v-if="row.status === 'PENDING'">
               <el-button link type="success" @click="openApproveDialog(row)">同意</el-button>
@@ -104,10 +104,13 @@
 </template>
 
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csReplaceList, csReplaceApprove, csReplaceReject, csPlayerList, csOrderAssign } from '@/api/business'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+
+const { isCompact } = useResponsive()
 
 const statusText = { PENDING: '待处理', APPROVED: '已通过', REJECTED: '已拒绝' }
 const statusTagType = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
@@ -217,14 +220,14 @@ onMounted(fetchData)
 .search-form { margin-bottom: 16px; }
 .player-search { margin-bottom: 8px; }
 .mode-card {
-  border: 1px solid #dcdfe6;
+  border: 1px solid #e1e3e6;
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 12px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
-.mode-card:hover { border-color: #409eff; background: #f0f7ff; }
-.mode-title { font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 4px; }
-.mode-desc { font-size: 13px; color: #909399; }
+.mode-card:hover { border-color: #17191c; background: #f5f6f7; }
+.mode-title { font-size: 15px; font-weight: bold; color: #17191c; margin-bottom: 4px; }
+.mode-desc { font-size: 13px; color: #73777e; }
 </style>

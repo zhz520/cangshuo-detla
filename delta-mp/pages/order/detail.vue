@@ -11,6 +11,8 @@
       <view class="info-row"><text class="label">商品</text><text class="value">{{ order.productName }}</text></view>
       <view v-if="order.specInfo || order.specCombination" class="info-row"><text class="label">规格</text><text class="value">{{ order.specCombination || order.specInfo }}</text></view>
       <view class="info-row"><text class="label">金额</text><PriceText :value="order.amount" :size="32" /></view>
+      <view v-if="order.playerLevelName" class="info-row"><text class="label">打手等级</text><text class="value">{{ order.playerLevelName }}</text></view>
+      <view v-if="Number(order.priceIncreaseRate)>0" class="info-row"><text class="label">含打手涨价</text><text class="value">{{ Number(order.priceIncreaseRate) }}%（¥{{ Number(order.priceIncreaseAmount).toFixed(2) }}）</text></view>
     </view>
     <!-- 动态字段 -->
     <view class="card" v-if="parsedExtra.length">
@@ -37,7 +39,7 @@
             <text class="progress-desc">{{ p.content || p.description || ORDER_STATUS_TEXT[p.status] || p.status }}</text>
             <text class="progress-time">{{ p.createdAt }}</text>
             <view v-if="p.images" class="progress-images">
-              <image v-for="(img, i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="progress-img" lazy-load @click="previewImg(p.images.split(','), i)" />
+              <AppImage v-for="(img, i) in p.images.split(',')" :key="i" :src="img" mode="aspectFill" class="progress-img" @click="previewImg(p.images.split(','), i)" />
             </view>
           </view>
         </view>
@@ -55,6 +57,7 @@
       <view v-if="order.status==='IN_PROGRESS'" class="btn-warn" @click="showReplaceModal=true">申请换人</view>
       <view v-if="['IN_PROGRESS','COMPLETED'].includes(order.status)" class="btn-warn" @click="goComplaint">投诉</view>
     </view>
+    <RewardAction :order-id="orderId" :refresh-key="rewardRefresh" :auto-open="autoReward" />
     <!-- 时间信息 -->
     <view class="card time-card">
       <view class="info-row"><text class="label">创建时间</text><text class="value">{{ order.createdAt }}</text></view>
@@ -84,7 +87,7 @@
             :class="{ full: isFull(p), offline: !isOnline(p) }"
             @click="pickPlayer(p)"
           >
-            <image :src="p.avatar || '/static/images/default-avatar.png'" class="picker-avatar" mode="aspectFill" lazy-load />
+            <AppImage :width="160" :src="p.avatar || '/static/images/default-avatar.png'" class="picker-avatar" mode="aspectFill" />
             <view class="picker-info">
               <view class="picker-name-row">
                 <text class="picker-name">{{ p.nickname || '-' }}</text>
@@ -120,9 +123,12 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, watch, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
+import RewardAction from '@/components/RewardAction.vue'
+const rewardRefresh=ref(0),autoReward=ref(false)
 import PriceText from '@/components/PriceText.vue'
 import { getOrderDetail, getOrderProgress, confirmOrder, cancelOrder, requestReplace, getAvailablePlayers, designatePlayer } from '@/api/order'
 import { ORDER_STATUS_TEXT } from '@/utils/constants'
@@ -147,7 +153,7 @@ const parsedExtra = computed(() => {
   return legacy
 })
 
-onLoad((opts) => { orderId.value = opts.id })
+onLoad((opts) => { orderId.value = opts.id; autoReward.value=opts.reward==='1' })
 onShow(() => {
   unlockH5TabbarPageScroll()
   loadDetail()
@@ -163,6 +169,7 @@ function unlockH5TabbarPageScroll() {
 async function loadDetail() {
   const res = await getOrderDetail(orderId.value)
   order.value = res.data
+  rewardRefresh.value++
   try {
     const pRes = await getOrderProgress(orderId.value)
     progressList.value = pRes.data || []
@@ -262,12 +269,12 @@ function isFull(p) {
 }
 </script>
 <style lang="scss" scoped>
-.order-detail { background: #f8fafc; min-height: 100vh; padding-bottom: 40rpx; }
+.order-detail { background: #f7f8f9; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
 .status-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 28rpx 32rpx; background: #fff;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  .order-no { font-size: 24rpx; color: #94a3b8; }
+  .order-no { font-size: 24rpx; color: #73777e; }
 }
 .card {
   margin: 20rpx 24rpx 0; padding: 28rpx 28rpx 24rpx;
@@ -277,28 +284,28 @@ function isFull(p) {
 .card-header { display: flex; align-items: center; margin-bottom: 20rpx; }
 .title-bar {
   width: 6rpx; height: 28rpx; border-radius: 3rpx;
-  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+  background: linear-gradient(180deg, #17191c, #30343a);
   margin-right: 12rpx;
 }
-.card-title { font-size: 28rpx; font-weight: bold; color: #1e293b; }
+.card-title { font-size: 28rpx; font-weight: bold; color: #17191c; }
 .info-row {
   display: flex; align-items: center; padding: 12rpx 0;
-  .label { font-size: 26rpx; color: #94a3b8; width: 140rpx; flex-shrink: 0; }
-  .value { font-size: 26rpx; color: #1e293b; flex: 1; }
+  .label { font-size: 26rpx; color: #73777e; width: 140rpx; flex-shrink: 0; }
+  .value { font-size: 26rpx; color: #17191c; flex: 1; }
 }
 .timeline { padding-left: 24rpx; }
 .timeline-item { display: flex; position: relative; padding-bottom: 28rpx; }
-.timeline-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #cbd5e1; margin-top: 8rpx; flex-shrink: 0; &.active { background: #4f46e5; box-shadow: 0 0 0 4rpx rgba(79,70,229,0.16); } }
-.timeline-line { position: absolute; left: 7rpx; top: 28rpx; bottom: 0; width: 2rpx; background: #e2e8f0; }
+.timeline-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #b9bdc4; margin-top: 8rpx; flex-shrink: 0; &.active { background: #17191c; box-shadow: 0 0 0 4rpx rgba(23, 25, 28, 0.04); } }
+.timeline-line { position: absolute; left: 7rpx; top: 28rpx; bottom: 0; width: 2rpx; background: #e6e7e9; }
 .timeline-content { margin-left: 20rpx; flex: 1; }
-.progress-desc { font-size: 26rpx; color: #1e293b; display: block; }
-.progress-time { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 6rpx; }
+.progress-desc { font-size: 26rpx; color: #17191c; display: block; }
+.progress-time { font-size: 22rpx; color: #73777e; display: block; margin-top: 6rpx; }
 .progress-images { display: flex; gap: 12rpx; margin-top: 12rpx; }
 .progress-img { width: 120rpx; height: 120rpx; border-radius: 12rpx; }
 .actions { display: flex; gap: 20rpx; padding: 32rpx 24rpx; flex-wrap: wrap; justify-content: flex-end; }
-.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
-.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(79,70,229,0.35); color: #4f46e5; font-size: 28rpx; border-radius: 999rpx; }
-.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(238,10,36,0.4); color: #ee0a24; font-size: 28rpx; border-radius: 999rpx; }
+.btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
+.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(23, 25, 28, 0.35); color: #17191c; font-size: 28rpx; border-radius: 999rpx; }
+.btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(201, 79, 89, 0.4); color: #d44955; font-size: 28rpx; border-radius: 999rpx; }
 .time-card { margin-bottom: 0; }
 .modal-mask {
   position: fixed;
@@ -312,13 +319,13 @@ function isFull(p) {
   align-items: flex-end;
   justify-content: center;
 }
-.replace-modal { width: 560rpx; background: #ffffff; border-radius: 20rpx; padding: 40rpx; border: 1rpx solid #e2e8f0; }
-.modal-title { font-size: 32rpx; font-weight: bold; color: #4f46e5; display: block; text-align: center; margin-bottom: 24rpx; }
-.modal-textarea { width: 100%; height: 160rpx; background: #f1f5f9; border: none; border-radius: 8rpx; padding: 16rpx; font-size: 28rpx; color: #1e293b; }
+.replace-modal { width: 560rpx; background: #ffffff; border-radius: 20rpx; padding: 40rpx; border: 1rpx solid #e6e7e9; }
+.modal-title { font-size: 32rpx; font-weight: bold; color: #17191c; display: block; text-align: center; margin-bottom: 24rpx; }
+.modal-textarea { width: 100%; height: 160rpx; background: #f4f5f6; border: none; border-radius: 8rpx; padding: 16rpx; font-size: 28rpx; color: #17191c; }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 24rpx; }
 .modal-btn { flex: 1; height: 72rpx; line-height: 72rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx; }
-.modal-btn.cancel { border: 1rpx solid #cbd5e1; color: #64748b; }
-.modal-btn.confirm { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; }
+.modal-btn.cancel { border: 1rpx solid #b9bdc4; color: #666b73; }
+.modal-btn.confirm { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; }
 /* 接单员选择弹窗（底部滑出，同下单页样式） */
 .player-picker {
   width: 100%;
@@ -326,7 +333,7 @@ function isFull(p) {
   background: #ffffff;
   border-radius: 24rpx 24rpx 0 0;
   padding: 0 24rpx 24rpx;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
   animation: slideUp 0.3s ease-out;
 }
 .player-picker.slide-up {
@@ -340,11 +347,11 @@ function isFull(p) {
   display: flex;
   justify-content: center;
   padding: 16rpx 0;
-  .handle-bar { width: 64rpx; height: 8rpx; background: #e2e8f0; border-radius: 4rpx; }
+  .handle-bar { width: 64rpx; height: 8rpx; background: #e6e7e9; border-radius: 4rpx; }
 }
 .picker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rpx; }
-.picker-title { font-size: 32rpx; font-weight: bold; color: #4f46e5; }
-.picker-close { font-size: 36rpx; color: #94a3b8; padding: 0 8rpx; }
+.picker-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
+.picker-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
 .limit-tip {
   padding: 12rpx 24rpx;
   font-size: 24rpx;
@@ -353,7 +360,7 @@ function isFull(p) {
   text-align: center;
   border-radius: 8rpx;
   margin-bottom: 16rpx;
-  .gold { color: #4f46e5; font-weight: bold; }
+  .gold { color: #17191c; font-weight: bold; }
 }
 .picker-search {
   display: flex;
@@ -362,18 +369,18 @@ function isFull(p) {
   input {
     flex: 1;
     height: 72rpx;
-    background: #f1f5f9;
+    background: #f4f5f6;
     padding: 0 24rpx;
     border-radius: 999rpx;
     font-size: 26rpx;
-    color: #1e293b;
+    color: #17191c;
     box-sizing: border-box;
   }
   .search-btn {
     padding: 0 32rpx;
     height: 72rpx;
     line-height: 72rpx;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #17191c, #30343a);
     color: #ffffff;
     font-weight: bold;
     border-radius: 999rpx;
@@ -395,18 +402,18 @@ function isFull(p) {
 .picker-avatar { width: 80rpx; height: 80rpx; border-radius: 50%; flex-shrink: 0; margin-right: 20rpx; }
 .picker-info { flex: 1; overflow: hidden; }
 .picker-name-row { display: flex; align-items: center; gap: 8rpx; }
-.picker-name { font-size: 28rpx; color: #1e293b; font-weight: 500; }
+.picker-name { font-size: 28rpx; color: #17191c; font-weight: 500; }
 .online-badge {
-  font-size: 20rpx; color: #22c55e; background: rgba(34,197,94,0.15);
+  font-size: 20rpx; color: #347a5b; background: rgba(34,197,94,0.15);
   padding: 2rpx 10rpx; border-radius: 4rpx;
 }
 .offline-badge {
-  font-size: 20rpx; color: #94a3b8; background: rgba(148,163,184,0.15);
+  font-size: 20rpx; color: #73777e; background: rgba(148,163,184,0.15);
   padding: 2rpx 10rpx; border-radius: 4rpx;
 }
-.picker-stats { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; }
-.picker-check { font-size: 28rpx; color: #4f46e5; font-weight: bold; }
-.picker-empty { text-align: center; padding: 40rpx; font-size: 26rpx; color: #94a3b8; }
+.picker-stats { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
+.picker-check { font-size: 28rpx; color: #17191c; font-weight: bold; }
+.picker-empty { text-align: center; padding: 40rpx; font-size: 26rpx; color: #73777e; }
 .picker-footer {
   display: flex;
   gap: 20rpx;
@@ -421,12 +428,12 @@ function isFull(p) {
   font-size: 28rpx;
 }
 .picker-btn.cancel {
-  border: 1rpx solid #cbd5e1;
-  color: #64748b;
+  border: 1rpx solid #b9bdc4;
+  color: #666b73;
   background: #ffffff;
 }
 .picker-btn.confirm {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #17191c, #30343a);
   color: #ffffff;
   font-weight: bold;
 }

@@ -2,6 +2,7 @@ package com.delta.system.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.system.entity.Notice;
@@ -30,12 +31,15 @@ public class NoticeController {
                 .eq(Notice::getStatus, 1).orderByAsc(Notice::getSortOrder)));
     }
 
+    @OpLog(module = "system", operation = "新增公告")
     @PostMapping
     public R<Void> add(@RequestBody Notice notice) { noticeService.save(notice); return R.ok(); }
 
+    @OpLog(module = "system", operation = "编辑公告")
     @PutMapping
     public R<Void> update(@RequestBody Notice notice) { noticeService.updateById(notice); return R.ok(); }
 
+    @OpLog(module = "system", operation = "删除公告")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { noticeService.removeById(id); return R.ok(); }
 }

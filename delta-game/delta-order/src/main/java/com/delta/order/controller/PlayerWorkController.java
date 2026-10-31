@@ -30,12 +30,41 @@ public class PlayerWorkController {
     private final OrderProgressService orderProgressService;
     private final com.delta.common.mapper.CrossModuleMapper crossModuleMapper;
 
+    @GetMapping("/{id}")
+    public R<Order> detail(@PathVariable Long id) {
+        Long playerId=SecurityUtils.getUserId();Order order=orderService.getById(id);
+        if(order==null) return R.fail(404,"订单不存在");
+        boolean primary=playerId.equals(order.getPlayerId());
+        boolean teammate=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,id)
+                .eq(OrderPlayer::getPlayerId,playerId).eq(OrderPlayer::getStatus,"ACCEPTED"))>0;
+        boolean available="PAID".equals(order.getStatus()) && order.getPlayerId()==null
+                && (order.getDesignatedPlayerId()==null || playerId.equals(order.getDesignatedPlayerId()))
+                && (order.getRequestedPlayerLevelId()==null || order.getRequestedPlayerLevelId().equals(crossModuleMapper.selectPlayerLevel(playerId)));
+        if(!primary&&!teammate&&!available) return R.fail(404,"订单不存在");
+        if(available || "ASSIGNED".equals(order.getStatus())) {
+            order.setGameAccount(null);order.setContact(null);order.setRemark(null);order.setExtraFields(null);order.setUserId(null);
+        } else {
+            order.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
+            order.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
+            order.setTeammates(orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,id).eq(OrderPlayer::getRole,"TEAMMATE")));
+            order.getTeammates().forEach(op->{op.setNickname(crossModuleMapper.selectPlayerNickname(op.getPlayerId()));op.setAvatar(crossModuleMapper.selectPlayerAvatar(op.getPlayerId()));});
+        }
+        return R.ok(order);
+    }
+
     @GetMapping("/available")
     public R<Page<Order>> available(PageQuery query) {
+        Long playerId=SecurityUtils.getUserId();
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<Order>()
                 .eq(Order::getStatus, "PAID")
+                .isNull(Order::getPlayerId)
+                .and(w -> w.isNull(Order::getDesignatedPlayerId).or().eq(Order::getDesignatedPlayerId,playerId))
+                .and(w -> w.isNull(Order::getRequestedPlayerLevelId).or()
+                        .eq(Order::getRequestedPlayerLevelId,crossModuleMapper.selectPlayerLevel(playerId)))
                 .orderByDesc(Order::getCreatedAt);
-        return R.ok(orderService.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper));
+        Page<Order> page=orderService.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        page.getRecords().forEach(o -> {o.setGameAccount(null);o.setContact(null);o.setRemark(null);o.setExtraFields(null);o.setUserId(null);});
+        return R.ok(page);
     }
 
     @GetMapping("/my")

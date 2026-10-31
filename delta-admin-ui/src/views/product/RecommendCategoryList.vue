@@ -115,7 +115,7 @@ onMounted(fetchData)
 }
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
   margin-top: 4px;
 }
 </style>

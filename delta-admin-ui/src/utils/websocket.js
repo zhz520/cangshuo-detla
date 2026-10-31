@@ -14,20 +14,17 @@ let onMessageCallback = null
 let onConnectCallback = null
 let onCloseCallback = null
 let manualClose = false
+let authenticated = false
 
 let currentChatRole = ''
 
-function getWsUrl(token, chatRole = '') {
+function getWsUrl() {
   const loc = window.location
-  let path = '/ws/chat'
-  const params = new URLSearchParams()
-  params.set('token', token)
-  if (chatRole) params.set('chatRole', chatRole)
-  const qs = params.toString()
+  const path = '/ws/chat'
   const base = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1'
     ? 'ws://localhost:8080'
     : `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`
-  return `${base}${path}?${qs}`
+  return `${base}${path}`
 }
 
 /**
@@ -41,23 +38,31 @@ export function connectWebSocket(token, options = {}) {
   currentChatRole = options.chatRole || ''
   reconnectCount = 0
   manualClose = false
+  authenticated = false
   _doConnect()
 }
 
 function _doConnect() {
-  const url = getWsUrl(currentToken, currentChatRole)
+  const url = getWsUrl()
   ws = new WebSocket(url)
 
   ws.onopen = () => {
-    console.log('[WS] connected')
-    reconnectCount = 0
-    _startHeartbeat()
-    onConnectCallback && onConnectCallback()
+    ws.send(JSON.stringify({ type: 'auth', token: currentToken, chatRole: currentChatRole }))
   }
 
   ws.onmessage = (evt) => {
     try {
       const data = JSON.parse(evt.data)
+      if (data.type === 'auth') {
+        if (data.success) {
+          console.log('[WS] authenticated')
+          authenticated = true
+          reconnectCount = 0
+          _startHeartbeat()
+          onConnectCallback && onConnectCallback()
+        } else closeWebSocket()
+        return
+      }
       if (data.type !== 'pong') {
         onMessageCallback && onMessageCallback(data)
       }
@@ -71,6 +76,7 @@ function _doConnect() {
   ws.onclose = () => {
     console.log('[WS] closed')
     _stopHeartbeat()
+    authenticated = false
     ws = null
     onCloseCallback && onCloseCallback()
     // 自动重连（非手动关闭时）
@@ -102,7 +108,7 @@ function _stopHeartbeat() {
  * 发送消息
  */
 export function sendWsMessage(data) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
+  if (!authenticated || !ws || ws.readyState !== WebSocket.OPEN) {
     console.warn('[WS] not connected, cannot send')
     return false
   }
@@ -128,4 +134,4 @@ export function closeWebSocket() {
 export function onWsMessage(callback) { onMessageCallback = callback }
 export function onWsConnect(callback) { onConnectCallback = callback }
 export function onWsClose(callback) { onCloseCallback = callback }
-export function isWsConnected() { return ws !== null && ws.readyState === WebSocket.OPEN }
+export function isWsConnected() { return authenticated && ws !== null && ws.readyState === WebSocket.OPEN }

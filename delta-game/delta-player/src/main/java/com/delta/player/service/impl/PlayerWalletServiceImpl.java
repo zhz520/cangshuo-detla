@@ -13,7 +13,9 @@ public class PlayerWalletServiceImpl extends ServiceImpl<PlayerWalletMapper, Pla
 
     @Override
     public PlayerWallet getByPlayerId(Long playerId) {
-        return getOne(new LambdaQueryWrapper<PlayerWallet>().eq(PlayerWallet::getPlayerId, playerId));
+        var query=new LambdaQueryWrapper<PlayerWallet>().eq(PlayerWallet::getPlayerId, playerId);
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) query.last("FOR UPDATE");
+        return getOne(query);
     }
 
     @Override

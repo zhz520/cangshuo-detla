@@ -6,6 +6,7 @@ import com.delta.common.enums.UserTypeEnum;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.redis.service.RedisService;
 import com.delta.common.security.service.TokenService;
+import com.delta.common.security.utils.AdminRolePolicy;
 import com.delta.cs.dto.AdminLoginRequest;
 import com.delta.cs.dto.AdminLoginResponse;
 import com.delta.cs.service.AdminAuthService;
@@ -35,13 +36,19 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final TokenService tokenService;
     private final OperationLogService operationLogService;
     private final RedisService redisService;
+    private final com.delta.common.security.service.RateLimitService limits;
 
     @Override
     public AdminLoginResponse login(AdminLoginRequest request) {
+        String username = request.getUsername() == null ? "" : request.getUsername().trim();
+        if(username.isEmpty() || username.length()>64 || request.getPassword()==null || request.getPassword().length()>128)
+            throw new BusinessException(400,"账号或密码错误");
+        var attrs=(ServletRequestAttributes)RequestContextHolder.getRequestAttributes();
+        limits.check("admin-login-ip:"+(attrs==null?"unknown":attrs.getRequest().getRemoteAddr()),100,900);
+        limits.check("admin-login-name:"+username.toLowerCase(java.util.Locale.ROOT),30,900);
         LocalDateTime now = LocalDateTime.now();
-        Admin admin = adminService.getOne(new LambdaQueryWrapper<Admin>().eq(Admin::getUsername, request.getUsername()));
-        if (admin == null) throw new BusinessException("账号不存在");
-        if (admin.getStatus() == 0) throw new BusinessException("账号已禁用");
+        Admin admin = adminService.getOne(new LambdaQueryWrapper<Admin>().eq(Admin::getUsername, username));
+        if (admin == null || !Integer.valueOf(1).equals(admin.getStatus())) throw new BusinessException("账号或密码错误");
         String failKey = buildFailKey(admin.getId());
         if (admin.getLockTime() != null && admin.getLockTime().isAfter(now))
             throw new BusinessException("账号已锁定，请稍后再试");
@@ -52,30 +59,15 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
             handleLoginFailure(admin, failKey, now);
         }
-        // 校验角色是否匹配
-        String requestedRole = request.getRole() != null ? request.getRole().toUpperCase() : "";
-        String dbRole = admin.getRole() != null ? admin.getRole().toUpperCase() : "";
-        if ("ADMIN".equals(requestedRole)) {
-            // 以管理员身份登录：DB role 必须是 BOTH 或 ADMIN
-            if (!"BOTH".equals(dbRole) && !"ADMIN".equals(dbRole)) {
-                throw new BusinessException("您没有管理员登录权限");
-            }
-        } else if ("CS".equals(requestedRole)) {
-            // 以客服身份登录：DB role 为 BOTH、ADMIN、CS 均可
-            if (!"BOTH".equals(dbRole) && !"ADMIN".equals(dbRole) && !"CS".equals(dbRole)) {
-                throw new BusinessException("您没有客服登录权限");
-            }
-        } else {
-            throw new BusinessException("无效的角色参数");
-        }
+        // The account role is authoritative. Ignore legacy client-side role
+        // selectors so a cached page cannot lock a valid account out.
+        String effectiveRole = AdminRolePolicy.effectiveRole(admin.getRole());
         clearLockState(admin, failKey, true);
+        UserTypeEnum userType = "CS".equals(effectiveRole) ? UserTypeEnum.CS : UserTypeEnum.ADMIN;
+        String token = tokenService.createToken(admin.getId(), userType);
         admin.setLastLoginAt(now);
         adminService.updateById(admin);
-        // 有效角色：选admin→ADMIN, 选cs→CS
-        UserTypeEnum userType = "CS".equals(requestedRole) ? UserTypeEnum.CS : UserTypeEnum.ADMIN;
-        String token = tokenService.createToken(admin.getId(), userType);
         // 记录登录日志到operation_log
-        String effectiveRole = "CS".equals(requestedRole) ? "CS" : "ADMIN";
         recordLoginLog(admin, effectiveRole);
         AdminLoginResponse resp = new AdminLoginResponse();
         resp.setToken(token);
@@ -99,7 +91,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
         admin.setLockTime(null);
         adminService.updateById(admin);
-        throw new BusinessException("密码错误，还可尝试" + (MAX_LOGIN_FAIL_COUNT - currentFailCount) + "次");
+        throw new BusinessException("账号或密码错误");
     }
 
     private long incrementFailCount(String failKey) {

@@ -1,5 +1,6 @@
 <template>
-  <view class="chat-room" :class="{ 'toolbar-open': showToolbar }">
+  <view class="chat-room" :class="{ 'toolbar-open': showToolbar, 'keyboard-open': keyboardHeight > 0 }" :style="{ '--chat-keyboard-height': keyboardHeight + 'px' }">
+    <view ref="messagePane" class="message-pane">
     <scroll-view scroll-y class="msg-list" :scroll-into-view="scrollAnchor" @scroll="onScroll">
       <view v-for="(m, idx) in messages" :key="m.id">
         <view v-if="showTimeSep(idx)" class="time-separator">
@@ -11,6 +12,7 @@
       <view id="msg-end-b" style="height:2rpx;" />
     </scroll-view>
     <view v-if="showBottomBtn" class="scroll-bottom-btn" @click="scrollToBottom">↓</view>
+    </view>
 
     <!-- 扩展工具栏 - 固定显示 -->
     <view v-if="showToolbar" class="toolbar">
@@ -50,9 +52,9 @@
     </view>
 
     <view class="input-bar">
-      <view class="plus-btn" @click="showToolbar = !showToolbar">＋</view>
-      <input v-model="inputText" placeholder="输入回复内容" @confirm="send" @focus="showToolbar = false" />
-      <view class="send-btn" @click="send">发送</view>
+      <view class="plus-btn" @mousedown.prevent @click="toggleToolbar">＋</view>
+      <input v-model="inputText" placeholder="输入回复内容" confirm-type="send" :confirm-hold="true" :adjust-position="false" @confirm="send" @focus="onInputFocus" @blur="onInputBlur" @keyboardheightchange="onKeyboardHeightChange" />
+      <view class="send-btn" @mousedown.prevent @touchend.prevent="send" @click="send">发送</view>
     </view>
 
     <!-- 商品选择弹窗 -->
@@ -64,7 +66,7 @@
         </view>
         <scroll-view scroll-y class="picker-list">
           <view v-for="p in productList" :key="p.id" class="picker-item" @click="doSendProduct(p)">
-            <image class="picker-cover" :src="p.coverImage || p.image" mode="aspectFill" lazy-load />
+            <AppImage class="picker-cover" :src="p.coverImage || p.image" mode="aspectFill" />
             <view class="picker-info">
               <text class="picker-name text-ellipsis">{{ p.name }}</text>
               <text class="picker-price">¥{{ Number(p.price || 0).toFixed(2) }}</text>
@@ -77,8 +79,9 @@
   </view>
 </template>
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import AppImage from '@/components/AppImage.vue'
+import { ref, watch, computed, nextTick, getCurrentInstance, onMounted, onUnmounted } from 'vue'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import ChatBubble from '@/components/ChatBubble.vue'
 import { getCsChatMessages, csChatMarkRead, getCsProductList, getActiveQuickReplies } from '@/pages-cs/api/cs'
 import { getSessionDetail, sendChatSmsReminder } from '@/api/chat'
@@ -109,8 +112,90 @@ const targetType = ref('')
 const canSendSmsReminder = computed(() => targetType.value === 'USER' || targetType.value === 'PLAYER')
 let _isNearBottom = true
 
+
+const pageInstance = getCurrentInstance()
+const messagePane = ref(null)
+const keyboardHeight = ref(0)
+let messageListHeight = 0
+let scrollTimer
+let pageActive = true
+let chatResizeObserver
+
+// 只测量消息区，不另算 H5 视口，避免与全局 visualViewport 适配重复顶起。
+function measureChatLayout() {
+  nextTick(() => {
+    if (!pageActive) return
+    uni.createSelectorQuery().in(pageInstance.proxy).select('.msg-list').boundingClientRect(rect => {
+      if (!pageActive || !rect || !rect.height) return
+      messageListHeight = rect.height
+      if (!showBottomBtn.value) scrollToBottom()
+    }).exec()
+  })
+}
+
+function onInputFocus(event) {
+  showToolbar.value = false
+  // #ifndef H5
+  keyboardHeight.value = Math.max(0, Number(event.detail?.height) || 0)
+  // #endif
+  measureChatLayout()
+  scrollToBottom()
+}
+
+function onInputBlur() {
+  // #ifndef H5
+  keyboardHeight.value = 0
+  measureChatLayout()
+  // #endif
+}
+
+function onKeyboardHeightChange(event) {
+  // #ifndef H5
+  keyboardHeight.value = Math.max(0, Number(event.detail?.height) || 0)
+  measureChatLayout()
+  // #endif
+}
+
+function toggleToolbar() {
+  showToolbar.value = !showToolbar.value
+  uni.hideKeyboard()
+}
+
+watch(showToolbar, measureChatLayout, { flush: 'post' })
+
+onMounted(() => {
+  measureChatLayout()
+  // #ifdef H5
+  const element = messagePane.value?.$el || messagePane.value
+  if (element && typeof ResizeObserver !== 'undefined') {
+    chatResizeObserver = new ResizeObserver(measureChatLayout)
+    chatResizeObserver.observe(element)
+  }
+  window.addEventListener('resize', measureChatLayout)
+  window.visualViewport?.addEventListener('resize', measureChatLayout)
+  // #endif
+})
+
+onHide(() => {
+  pageActive = false
+  keyboardHeight.value = 0
+  clearTimeout(scrollTimer)
+})
+
+onUnmounted(() => {
+  pageActive = false
+  clearTimeout(scrollTimer)
+  // #ifdef H5
+  chatResizeObserver?.disconnect()
+  window.removeEventListener('resize', measureChatLayout)
+  window.visualViewport?.removeEventListener('resize', measureChatLayout)
+  // #endif
+})
+
 onShow(() => {
+  pageActive = true
   unlockH5TabbarPageScroll()
+  measureChatLayout()
 })
 
 function unlockH5TabbarPageScroll() {
@@ -125,7 +210,9 @@ function isSelf(m) {
 }
 
 function scrollToBottom() {
-  setTimeout(() => {
+  clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => {
+    if (!pageActive) return
     scrollAnchor.value = scrollAnchor.value === 'msg-end-a' ? 'msg-end-b' : 'msg-end-a'
     showBottomBtn.value = false
     _isNearBottom = true
@@ -134,7 +221,7 @@ function scrollToBottom() {
 
 function onScroll(e) {
   const { scrollTop, scrollHeight } = e.detail
-  _isNearBottom = scrollHeight - scrollTop < (e.detail.clientHeight || 600) + 300
+  _isNearBottom = scrollHeight - scrollTop < (e.detail.clientHeight || messageListHeight || 600) + 300
   showBottomBtn.value = !_isNearBottom
 }
 
@@ -312,14 +399,14 @@ function resolveEncodedType(encodedId) {
 }
 </script>
 <style lang="scss" scoped>
-.chat-room { height: 100vh; min-height: 100vh; background: #ffffff; position: relative; overflow: hidden; }
-.msg-list { height: 100vh; padding: 20rpx 0 calc(128rpx + env(safe-area-inset-bottom)); background: #ffffff; box-sizing: border-box; }
-.chat-room.toolbar-open .msg-list { padding-bottom: calc(250rpx + env(safe-area-inset-bottom)); }
+.chat-room { background: #ffffff; position: relative; overflow: hidden; }
+.msg-list { background: #ffffff; box-sizing: border-box; }
+
 .scroll-bottom-btn {
   position: absolute; right: 32rpx; bottom: 180rpx;
   width: 72rpx; height: 72rpx; line-height: 72rpx; text-align: center;
-  font-size: 36rpx; color: #ff4544;
-  background: rgba(255,255,255,0.9); border: 1rpx solid rgba(255,69,68,0.15);
+  font-size: 36rpx; color: #17191c;
+  background: rgba(255,255,255,0.9); border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 50%; z-index: 10; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.4);
 }
 .time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: rgba(0,0,0,0.3); background: rgba(0,0,0,0.05); padding: 4rpx 16rpx; border-radius: 8rpx; } }
@@ -347,7 +434,7 @@ function resolveEncodedType(encodedId) {
   border-top: 1rpx solid rgba(0,0,0,0.06);
   box-sizing: border-box;
   input { flex: 1; height: 72rpx; background: rgba(0,0,0,0.05); border: 1rpx solid rgba(0,0,0,0.06); border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: rgba(0,0,0,0.85); }
-  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
+  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
 }
 .plus-btn {
   width: 64rpx;
@@ -355,8 +442,8 @@ function resolveEncodedType(encodedId) {
   line-height: 60rpx;
   text-align: center;
   font-size: 40rpx;
-  color: #ff4544;
-  border: 1rpx solid rgba(255,69,68,0.18);
+  color: #17191c;
+  border: 1rpx solid rgba(23, 25, 28, 0.18);
   border-radius: 50%;
   margin-right: 16rpx;
   flex-shrink: 0;
@@ -364,16 +451,57 @@ function resolveEncodedType(encodedId) {
 .picker-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; z-index: 999; }
 .picker-popup { width: 100%; max-height: 45vh; background: #ffffff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx; display: flex; flex-direction: column; border: 1rpx solid rgba(0,0,0,0.06); }
 .picker-header { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 32rpx; border-bottom: 1rpx solid rgba(0,0,0,0.06); }
-.picker-title { font-size: 30rpx; font-weight: bold; color: #ff4544; }
+.picker-title { font-size: 30rpx; font-weight: bold; color: #17191c; }
 .picker-close { font-size: 36rpx; color: rgba(0,0,0,0.45); padding: 0 8rpx; }
 .picker-list { flex: 1; max-height: 38vh; }
 .picker-item { display: flex; align-items: center; padding: 20rpx 32rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04); }
 .picker-cover { width: 100rpx; height: 100rpx; border-radius: 8rpx; flex-shrink: 0; margin-right: 20rpx; }
 .picker-info { flex: 1; overflow: hidden; }
 .picker-name { font-size: 28rpx; color: rgba(0,0,0,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.picker-price { font-size: 28rpx; color: #ff4544; font-weight: bold; }
+.picker-price { font-size: 28rpx; color: #17191c; font-weight: bold; }
 .picker-empty { text-align: center; padding: 80rpx 0; color: rgba(0,0,0,0.3); font-size: 28rpx; }
 .qr-item { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 32rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04); }
 .qr-text { font-size: 28rpx; color: rgba(0,0,0,0.85); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qr-category { font-size: 22rpx; color: #ff4544; background: rgba(255,69,68,0.1); padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: 12rpx; flex-shrink: 0; }
+.qr-category { font-size: 22rpx; color: #17191c; background: rgba(23, 25, 28, 0.1); padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: 12rpx; flex-shrink: 0; }
+
+/* 消息区占满剩余空间，工具栏和输入栏按实际高度参与布局。 */
+.chat-room {
+  --chat-safe-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--app-page-height, 100vh) - var(--chat-keyboard-height, 0px));
+  min-height: 0;
+  box-sizing: border-box;
+}
+.chat-room.keyboard-open { --chat-safe-bottom: 0px; }
+.message-pane { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.msg-list { height: 100%; padding: 20rpx 0; }
+.scroll-bottom-btn { bottom: 24rpx; }
+.toolbar, .input-bar { position: relative; left: auto; right: auto; bottom: auto; width: 100%; flex-shrink: 0; }
+.toolbar { flex-wrap: wrap; }
+.toolbar-item { flex-shrink: 0; }
+.input-bar { padding-bottom: calc(16rpx + var(--chat-safe-bottom)); }
+.input-bar input { min-width: 0; width: 0; }
+.send-btn { flex-shrink: 0; white-space: nowrap; }
+.picker-popup { min-height: 0; padding-bottom: var(--chat-safe-bottom); box-sizing: border-box; }
+.picker-header { flex-shrink: 0; }
+.picker-list { min-height: 0; }
+
+/* #ifdef H5 */
+.chat-room {
+  --chat-safe-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom));
+  height: var(--app-visible-page-height, calc(var(--app-page-height, calc(var(--app-viewport-height, 100vh) - var(--window-top, 0px))) - var(--app-viewport-bottom, 0px)));
+}
+.msg-list { overscroll-behavior-y: contain; }
+.input-bar input, .input-bar :deep(.uni-input-input) { font-size: 16px; }
+.plus-btn, .send-btn { touch-action: manipulation; }
+.picker-mask {
+  left: var(--app-content-left, 0px);
+  right: auto;
+  width: var(--app-content-width, 100%);
+  bottom: var(--app-viewport-bottom, 0px);
+}
+.picker-popup { max-height: min(45vh, var(--app-visible-page-height, 45vh)); }
+.picker-list { max-height: calc(var(--app-visible-page-height, 100vh) - 120rpx - var(--chat-safe-bottom)); }
+/* #endif */
 </style>

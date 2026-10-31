@@ -30,6 +30,7 @@ CREATE TABLE `admin` (
   `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '头像URL',
   `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色: ADMIN-管理员 CS-客服 BOTH-双重角色',
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '手机号',
+  `phone_unique` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci GENERATED ALWAYS AS (if((`phone` = ''),NULL,`phone`)) STORED COMMENT '非空手机号唯一索引',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常 0-禁用',
   `login_fail_count` int NOT NULL DEFAULT '0' COMMENT '连续登录失败次数',
   `lock_time` datetime DEFAULT NULL COMMENT '锁定截止时间(失败5次锁定30分钟)',
@@ -558,6 +559,8 @@ CREATE TABLE `payment` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uk_payment_no` (`payment_no`) USING BTREE,
+  UNIQUE KEY `uk_wx_transaction_id` (`wx_transaction_id`) USING BTREE,
+  UNIQUE KEY `uk_refund_no` (`refund_no`) USING BTREE,
   KEY `idx_order_id` (`order_id`) USING BTREE,
   KEY `idx_user_id` (`user_id`) USING BTREE,
   KEY `idx_status` (`status`) USING BTREE
@@ -589,6 +592,13 @@ CREATE TABLE `player` (
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '联系方式',
   `skill_tags` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `game_level` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '游戏段位/等级',
+  `level` int NOT NULL DEFAULT '1' COMMENT '平台打手等级',
+  `introduction` varchar(1000) NOT NULL DEFAULT '' COMMENT '公开个人简介',
+  `cover_image` varchar(512) NOT NULL DEFAULT '',
+  `album_images` text,
+  `story` text,
+  `voice_url` varchar(512) NOT NULL DEFAULT '',
+  `voice_duration` int NOT NULL DEFAULT 0,
   `proof_images` varchar(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '技能证明截图，多个以逗号分隔',
   `service_types` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `avg_rating` decimal(3,2) NOT NULL DEFAULT '5.00' COMMENT '平均评分(1.00~5.00)',
@@ -1125,7 +1135,8 @@ CREATE TABLE `user` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE KEY `uk_openid` (`openid`) USING BTREE
+  UNIQUE KEY `uk_openid` (`openid`) USING BTREE,
+  UNIQUE KEY `uk_phone_unique` (`phone_unique`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=376 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='用户表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1237,6 +1248,10 @@ CREATE TABLE `withdraw` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '提现ID',
   `player_id` bigint NOT NULL COMMENT '打手ID',
   `account_id` bigint NOT NULL COMMENT '提现账户ID',
+  `account_type_snapshot` varchar(20) DEFAULT NULL COMMENT '申请时收款账户类型快照',
+  `account_name_snapshot` varchar(128) DEFAULT NULL COMMENT '申请时收款人快照',
+  `account_no_snapshot` varchar(256) DEFAULT NULL COMMENT '申请时收款账号快照',
+  `account_qrcode_snapshot` varchar(512) DEFAULT NULL COMMENT '申请时收款码快照',
   `amount` decimal(10,2) NOT NULL COMMENT '提现金额',
   `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING-待处理 COMPLETED-已完成 REJECTED-已拒绝',
   `pay_method` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '实际打款方式(管理员填写)',
@@ -1284,3 +1299,92 @@ UNLOCK TABLES;
 
 
 
+
+-- Configurable player directory levels
+-- Existing installations: execute only absent ALTER columns. Do not reimport delta_game.sql.
+CREATE TABLE IF NOT EXISTS player_level (
+  id int NOT NULL AUTO_INCREMENT,
+  name varchar(30) NOT NULL,
+  sort_order int NOT NULL DEFAULT 0,
+  status tinyint NOT NULL DEFAULT 1,
+  deleted tinyint NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT INTO player_level(id,name,sort_order,status)
+SELECT 1,'高级打手',30,1 WHERE NOT EXISTS(SELECT 1 FROM player_level WHERE id=1);
+INSERT INTO player_level(id,name,sort_order,status)
+SELECT 2,'金牌打手',10,1 WHERE NOT EXISTS(SELECT 1 FROM player_level WHERE id=2);
+INSERT INTO player_level(id,name,sort_order,status)
+SELECT 3,'魔王护',20,1 WHERE NOT EXISTS(SELECT 1 FROM player_level WHERE id=3);
+INSERT INTO player_level(id,name,sort_order,status)
+SELECT DISTINCT p.level,CONCAT('Lv.',p.level),100+p.level,1 FROM player p
+WHERE p.level IS NOT NULL AND NOT EXISTS(SELECT 1 FROM player_level l WHERE l.id=p.level);
+
+
+-- Reward and graphical grab verification
+-- Run against the existing database before deploying the matching backend.
+-- Repeatable; preserves configured values and business records.
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player_level' AND column_name='grab_captcha_required')=0,
+ 'ALTER TABLE player_level ADD COLUMN grab_captcha_required tinyint NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE feature_stmt FROM @sql; EXECUTE feature_stmt; DEALLOCATE PREPARE feature_stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='grab_captcha_override')=0,
+ 'ALTER TABLE player ADD COLUMN grab_captcha_override tinyint NOT NULL DEFAULT -1', 'SELECT 1');
+PREPARE feature_stmt FROM @sql; EXECUTE feature_stmt; DEALLOCATE PREPARE feature_stmt;
+
+CREATE TABLE IF NOT EXISTS player_reward (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ reward_no varchar(40) NOT NULL,
+ request_id varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ user_id bigint NOT NULL, player_id bigint NOT NULL, order_id bigint NOT NULL,
+ order_no varchar(64) NOT NULL,
+ amount decimal(12,2) NOT NULL, fee decimal(12,2) NOT NULL, income decimal(12,2) NOT NULL,
+ fee_percent decimal(5,2) NOT NULL,
+ user_balance_before decimal(12,2) NOT NULL, user_balance_after decimal(12,2) NOT NULL,
+ player_balance_before decimal(12,2) NOT NULL, player_balance_after decimal(12,2) NOT NULL,
+ reversal_user_balance_before decimal(12,2), reversal_user_balance_after decimal(12,2),
+ reversal_player_balance_before decimal(12,2), reversal_player_balance_after decimal(12,2),
+ payment_method varchar(16) NOT NULL DEFAULT 'BALANCE',
+ remark varchar(200), status varchar(24) NOT NULL,
+ pending_recovery decimal(12,2) NOT NULL DEFAULT 0,
+ reversal_reason varchar(200), reversal_admin_id bigint, reversed_at datetime,
+ created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_reward_no(reward_no), UNIQUE KEY uk_order_reward(order_id),
+ UNIQUE KEY uk_user_reward_request(user_id,request_id),
+ KEY idx_reward_user_date(user_id,created_at), KEY idx_reward_player_date(player_id,created_at),
+ KEY idx_reward_status(status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'features.reward_grab','打赏与抢单验证规则',
+ '{"rewardEnabled":false,"minAmount":1,"maxAmount":200,"validDays":30,"userDailyLimit":10,"playerDailyLimit":5,"pairDailyLimit":5,"feePercent":0,"captchaSeconds":120,"captchaAttempts":5,"captchaRefreshSeconds":10}',
+ 'json','reward-grab','在打赏与抢单设置页面修改'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='features.reward_grab');
+
+
+-- Customer password and admin user management
+-- Apply before replacing the backend. Existing users set their own password after SMS verification.
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='user' AND column_name='password')=0,
+ 'ALTER TABLE `user` ADD COLUMN `password` varchar(100) DEFAULT NULL COMMENT ''BCrypt hash''', 'SELECT 1');
+PREPARE user_auth_stmt FROM @sql; EXECUTE user_auth_stmt; DEALLOCATE PREPARE user_auth_stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='user' AND column_name='auth_version')=0,
+ 'ALTER TABLE `user` ADD COLUMN auth_version bigint NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE user_auth_stmt FROM @sql; EXECUTE user_auth_stmt; DEALLOCATE PREPARE user_auth_stmt;
+
+-- 20261025 打手等级及独立涨价规则（默认不涨价）
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player_level' AND column_name='price_increase_rate')=0, 'ALTER TABLE player_level ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT ''等级涨价百分比''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='price_increase_rate')=0, 'ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1 COMMENT ''-1跟随等级，0不涨价，其他为百分比''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='base_amount')=0, 'ALTER TABLE `order` ADD COLUMN base_amount DECIMAL(10,2) DEFAULT NULL COMMENT ''商品原价快照''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='price_increase_rate')=0, 'ALTER TABLE `order` ADD COLUMN price_increase_rate DECIMAL(5,2) DEFAULT NULL COMMENT ''下单涨价比例快照''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='price_increase_amount')=0, 'ALTER TABLE `order` ADD COLUMN price_increase_amount DECIMAL(10,2) DEFAULT NULL COMMENT ''下单涨价金额快照''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='requested_player_level_id')=0, 'ALTER TABLE `order` ADD COLUMN requested_player_level_id INT DEFAULT NULL COMMENT ''指定接单等级''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='player_level_name')=0, 'ALTER TABLE `order` ADD COLUMN player_level_name VARCHAR(30) DEFAULT NULL COMMENT ''等级名称快照''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

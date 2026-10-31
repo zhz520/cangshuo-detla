@@ -30,7 +30,8 @@ public class OrderAutoAssignTask {
             for (Map<String, Object> order : orders) {
                 Long orderId = ((Number) order.get("id")).longValue();
                 // 查找空闲的ACTIVE打手（进行中订单数最少）
-                List<Map<String, Object>> players = scheduledTaskMapper.selectAvailablePlayers(maxActive);
+                Number level=(Number)order.get("requested_player_level_id");
+                List<Map<String, Object>> players = scheduledTaskMapper.selectAvailablePlayers(maxActive,level==null?null:level.intValue());
                 if (!players.isEmpty()) {
                     Long playerId = ((Number) players.get(0).get("id")).longValue();
                     int affected = scheduledTaskMapper.assignOrderToPlayer(orderId, playerId);

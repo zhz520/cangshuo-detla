@@ -21,7 +21,7 @@
         <text class="label">收款码图片</text>
         <view class="qrcode-upload">
           <view v-if="form.qrcodeUrl" class="qrcode-preview" @click="chooseQrcode">
-            <image :src="form.qrcodeUrl" mode="aspectFit" class="qrcode-img" />
+            <AppImage :src="form.qrcodeUrl" mode="aspectFit" class="qrcode-img" />
             <text class="qrcode-tip">点击更换</text>
           </view>
           <view v-else class="qrcode-placeholder" @click="chooseQrcode">
@@ -45,6 +45,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { reactive, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { addAccount, updateAccount } from '@/api/player'
@@ -86,20 +87,20 @@ async function doSave() {
 }
 </script>
 <style lang="scss" scoped>
-.edit-page { background: #ffffff; min-height: 100vh; }
+.edit-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .form-card { margin: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; padding: 0 24rpx; }
 .form-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid rgba(0,0,0,0.04);
   .label { font-size: 28rpx; color: rgba(0,0,0,0.85); width: 160rpx; flex-shrink: 0; } .input { flex: 1; font-size: 28rpx; }
 }
 .form-item-col { flex-direction: column; align-items: flex-start; }
 .qrcode-upload { margin-top: 12rpx; }
-.qrcode-preview, .qrcode-placeholder { width: 200rpx; height: 200rpx; border: 2rpx dashed rgba(0,0,0,0.15); border-radius: 12rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; }
+.qrcode-preview, .qrcode-placeholder { width: 200rpx; height: 200rpx; border: 2rpx dashed rgba(0,0,0,0.15); border-radius: 12rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f7f8f9; }
 .qrcode-img { width: 180rpx; height: 180rpx; }
-.qrcode-tip { font-size: 22rpx; color: #94a3b8; margin-top: 8rpx; }
+.qrcode-tip { font-size: 22rpx; color: #73777e; margin-top: 8rpx; }
 .placeholder-icon { font-size: 48rpx; margin-bottom: 8rpx; }
-.placeholder-text { font-size: 24rpx; color: #64748b; }
+.placeholder-text { font-size: 24rpx; color: #666b73; }
 .type-selector { display: flex; gap: 16rpx; flex: 1; }
-.type-opt { padding: 12rpx 20rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 24rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; } }
+.type-opt { padding: 12rpx 20rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 24rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; } }
 .btn-area { padding: 40rpx 24rpx; }
-.submit-btn { background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
+.submit-btn { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
 </style>

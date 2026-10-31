@@ -4,7 +4,7 @@
     <view class="avatar-section">
       <!-- #ifdef MP-WEIXIN -->
       <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
-        <image class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
           <text class="hint-text">点击更换头像</text>
         </view>
@@ -12,7 +12,7 @@
       <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
       <view class="avatar-btn" @click="chooseAvatarImage">
-        <image class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
           <text class="hint-text">点击更换头像</text>
         </view>
@@ -41,6 +41,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getUserProfile, updateUserProfile } from '@/api/user'
@@ -113,8 +114,8 @@ async function save() {
 <style lang="scss" scoped>
 .profile-page {
   padding: 24rpx;
-  background: #f8fafc;
-  min-height: 100vh;
+  background: #f7f8f9;
+  min-height: var(--app-page-height, 100vh);
 }
 
 .avatar-section {
@@ -140,21 +141,21 @@ async function save() {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
-  border: 4rpx solid rgba(99, 102, 241, 0.2);
+  border: 4rpx solid rgba(23, 25, 28, 0.2);
 }
 
 .avatar-edit-hint {
   margin-top: 16rpx;
   .hint-text {
     font-size: 24rpx;
-    color: #4f46e5;
+    color: #17191c;
   }
 }
 
 .form-card {
   background: #ffffff;
   border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(99, 102, 241, 0.08);
+  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
   overflow: hidden;
 }
 
@@ -163,13 +164,13 @@ async function save() {
   align-items: center;
   justify-content: space-between;
   padding: 32rpx 28rpx;
-  border-bottom: 1rpx solid #edf1f7;
+  border-bottom: 1rpx solid #eeeff1;
 
   &:last-child { border-bottom: none; }
 
   .label {
     font-size: 28rpx;
-    color: #334155;
+    color: #41464e;
     flex-shrink: 0;
     margin-right: 20rpx;
   }
@@ -178,17 +179,17 @@ async function save() {
     flex: 1;
     text-align: right;
     font-size: 28rpx;
-    color: #1e293b;
+    color: #17191c;
   }
 
   .value {
     font-size: 28rpx;
-    color: #64748b;
+    color: #666b73;
   }
 
   .uid {
     font-size: 24rpx;
-    color: #94a3b8;
+    color: #73777e;
   }
 }
 
@@ -196,7 +197,7 @@ async function save() {
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #17191c, #30343a);
   color: #ffffff;
   font-weight: bold;
   font-size: 32rpx;

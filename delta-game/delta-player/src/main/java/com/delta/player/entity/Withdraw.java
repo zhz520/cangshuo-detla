@@ -16,6 +16,10 @@ public class Withdraw extends BaseEntity {
     private Long id;
     private Long playerId;
     private Long accountId;
+    private String accountTypeSnapshot;
+    private String accountNameSnapshot;
+    private String accountNoSnapshot;
+    private String accountQrcodeSnapshot;
     private BigDecimal amount;
     private String status;
     private String payMethod;

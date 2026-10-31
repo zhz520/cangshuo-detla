@@ -21,7 +21,7 @@ import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
 import { getWallet } from '@/api/user'
 import { getTransactions } from '@/api/pay'
-const TX_TYPE_MAP = { PAY: '支付', REFUND: '退款', WITHDRAW: '提现', INCOME: '收入', RECHARGE: '充值', BALANCE_PAY: '余额支付' }
+const TX_TYPE_MAP = { REWARD_PAY:'打赏支出', REWARD_INCOME:'打赏收入', REWARD_REFUND:'打赏退款', REWARD_REVERSAL:'打赏冲正', PAY: '支付', REFUND: '退款', WITHDRAW: '提现', INCOME: '收入', RECHARGE: '充值', BALANCE_PAY: '余额支付' }
 function typeText(type) { return TX_TYPE_MAP[type] || '交易' }
 function remarkText(remark) {
   if (!remark) return ''
@@ -60,9 +60,9 @@ async function loadData() {
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 </script>
 <style lang="scss" scoped>
-.wallet-page { background: #f8fafc; min-height: 100vh; }
-.balance-card { position:relative; background:linear-gradient(135deg, #6366f1, #8b5cf6); color:#ffffff; padding:48rpx 32rpx; border-radius:20rpx; margin:24rpx; box-shadow:0 12rpx 28rpx rgba(79,70,229,.18); .label { font-size:26rpx; display:block; margin-bottom:16rpx; opacity:0.9; } .amount { font-size:56rpx; font-weight:bold; } .recharge-btn { position:absolute; right:28rpx; bottom:28rpx; padding:12rpx 22rpx; border:1rpx solid rgba(255,255,255,.65); border-radius:999rpx; font-size:24rpx; } }
-.section-title { padding:24rpx; font-size:30rpx; font-weight:bold; color:#4f46e5; }
-.tx-item { display:flex; justify-content:space-between; padding:24rpx; background:#ffffff; border-bottom:1rpx solid #edf1f7; .tx-type { font-size:28rpx; color:#1e293b; } .tx-remark { font-size:22rpx; color:#94a3b8; margin-left:12rpx; } .tx-amount { font-size:28rpx; color:#1e293b; &.income { color:#07c160; } } .tx-time { font-size:22rpx; color:#94a3b8; display:block; text-align:right; } }
-.list { height:calc(100vh - 400rpx); }
+.wallet-page { background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
+.balance-card { position:relative; background:linear-gradient(135deg, #17191c, #30343a); color:#ffffff; padding:48rpx 32rpx; border-radius:20rpx; margin:24rpx; box-shadow:0 12rpx 28rpx rgba(23, 25, 28, .18); .label { font-size:26rpx; display:block; margin-bottom:16rpx; opacity:0.9; } .amount { font-size:56rpx; font-weight:bold; } .recharge-btn { position:absolute; right:28rpx; bottom:28rpx; padding:12rpx 22rpx; border:1rpx solid rgba(255,255,255,.65); border-radius:999rpx; font-size:24rpx; } }
+.section-title { padding:24rpx; font-size:30rpx; font-weight:bold; color:#17191c; }
+.tx-item { display:flex; justify-content:space-between; padding:24rpx; background:#ffffff; border-bottom:1rpx solid #eeeff1; .tx-type { font-size:28rpx; color:#17191c; } .tx-remark { font-size:22rpx; color:#73777e; margin-left:12rpx; } .tx-amount { font-size:28rpx; color:#17191c; &.income { color:#347a5b; } } .tx-time { font-size:22rpx; color:#73777e; display:block; text-align:right; } }
+.list { height:calc(var(--app-page-height, 100vh) - 400rpx); }
 </style>

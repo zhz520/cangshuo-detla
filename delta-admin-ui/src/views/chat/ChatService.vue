@@ -1,7 +1,7 @@
 <template>
   <div class="chat-service">
     <!-- 左侧会话列表 -->
-    <div class="session-panel">
+    <div v-show="!isCompact || !mobileChatOpen" class="session-panel">
       <div class="panel-header">
         <span>客服会话</span>
         <el-button link type="primary" @click="fetchSessions">刷新</el-button>
@@ -11,8 +11,12 @@
           v-for="s in sessions"
           :key="s.id"
           class="session-item"
-          :class="{ active: currentSession?.id === s.id }"
+          :class="{ active: isSessionActive(s) }"
+          role="button"
+          tabindex="0"
           @click="selectSession(s)"
+          @keydown.enter.prevent="selectSession(s)"
+          @keydown.space.prevent="selectSession(s)"
         >
           <div class="session-row">
             <el-avatar :src="s.avatar" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
@@ -23,7 +27,7 @@
               </div>
               <div class="session-bottom">
                 <span class="session-last-msg">{{ s.lastMessage || '暂无消息' }}</span>
-                <span v-if="s.unreadCount > 0 && currentSession?.id !== s.id" class="unread-badge">{{ s.unreadCount > 99 ? '99+' : s.unreadCount }}</span>
+                <span v-if="s.unreadCount > 0 && !isSessionActive(s)" class="unread-badge">{{ s.unreadCount > 99 ? '99+' : s.unreadCount }}</span>
               </div>
             </div>
           </div>
@@ -33,10 +37,11 @@
     </div>
 
     <!-- 右侧聊天区 -->
-    <div class="chat-panel">
+    <div v-show="!isCompact || mobileChatOpen" class="chat-panel">
       <template v-if="currentSession">
         <div class="chat-header">
-          <span>{{ currentSession.targetName || '用户 #' + currentSession.id }}</span>
+          <el-button v-if="isCompact" plain size="small" aria-label="返回会话列表" @click="mobileChatOpen = false">返回会话</el-button>
+          <span class="chat-title">{{ currentSession.targetName || '用户 #' + currentSession.id }}</span>
           <el-tag size="small">{{ typeMap[currentSession.type] || currentSession.type }}</el-tag>
           <span v-if="currentSession.orderId && currentSession.orderId !== 0" class="order-link">
             关联订单: {{ currentSession.orderId }}
@@ -49,10 +54,10 @@
               <!-- 文本 -->
               <template v-if="m.type === 'TEXT'">{{ m.content }}</template>
               <!-- 图片 -->
-              <el-image v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
+              <el-image lazy v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
               <!-- 商品卡片 -->
               <div v-else-if="m.type === 'PRODUCT'" class="card-msg" @click="showProductDetail(parseJSON(m.content))">
-                <el-image v-if="parseJSON(m.content).coverImage" :src="parseJSON(m.content).coverImage" class="card-cover" fit="cover" />
+                <el-image lazy v-if="parseJSON(m.content).coverImage" :src="parseJSON(m.content).coverImage" class="card-cover" fit="cover" />
                 <div class="card-info">
                   <div class="card-name">{{ parseJSON(m.content).name }}</div>
                   <div class="card-price">¥{{ Number(parseJSON(m.content).price || 0).toFixed(2) }}</div>
@@ -96,17 +101,23 @@
           </div>
         </div>
         <div class="chat-input">
+          <div class="chat-tools">
           <el-button @click="toggleQuickReply" :type="showQuickReply ? 'warning' : ''" plain size="small">快捷</el-button>
           <el-button plain size="small" @click="pickImage">🖼️ 图片</el-button>
           <el-button plain size="small" @click="openProductPicker">🛒 商品</el-button>
           <el-button v-if="currentSession?.type === 'USER_CS'" plain size="small" type="danger" @click="openComplaintFromChat">📋 投诉</el-button>
+          </div>
+          <div class="chat-compose">
           <el-input
             v-model="inputText"
             placeholder="输入回复内容..."
-            @keyup.enter="sendText"
+            aria-label="回复内容"
+            enterkeyhint="send"
+            @keydown.enter="handleComposerEnter"
             :disabled="sending"
           />
           <el-button type="primary" @click="sendText" :loading="sending">发送</el-button>
+          </div>
           <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange" />
         </div>
 
@@ -123,7 +134,7 @@
               @click="doSendProduct(p)"
             >
               <div class="picker-card-cover">
-                <el-image v-if="p.coverImage" :src="p.coverImage" fit="cover" style="width:100%;height:100%" />
+                <el-image lazy v-if="p.coverImage" :src="p.coverImage" fit="cover" style="width:100%;height:100%" />
                 <div v-else class="picker-card-noimg">暂无图片</div>
               </div>
               <div class="picker-card-body">
@@ -153,10 +164,10 @@
           <div class="product-gallery">
             <el-carousel v-if="productAllImages.length > 1" height="280px" indicator-position="outside">
               <el-carousel-item v-for="(img, i) in productAllImages" :key="i">
-                <el-image :src="img" fit="contain" style="width:100%;height:280px" :preview-src-list="productAllImages" :initial-index="i" />
+                <el-image lazy :src="img" fit="contain" style="width:100%;height:280px" :preview-src-list="productAllImages" :initial-index="i" />
               </el-carousel-item>
             </el-carousel>
-            <el-image v-else-if="productAllImages.length === 1" :src="productAllImages[0]" fit="contain" style="width:100%;height:280px;border-radius:8px" :preview-src-list="productAllImages" />
+            <el-image lazy v-else-if="productAllImages.length === 1" :src="productAllImages[0]" fit="contain" style="width:100%;height:280px;border-radius:8px" :preview-src-list="productAllImages" />
             <div v-else class="no-image">暂无图片</div>
           </div>
           <!-- 信息区 -->
@@ -168,7 +179,7 @@
               <el-tag :type="productDetail.status === 1 ? 'success' : 'info'" size="small">{{ productDetail.status === 1 ? '上架中' : '已下架' }}</el-tag>
             </div>
           </div>
-          <el-descriptions :column="2" border size="small" class="product-desc-table">
+          <el-descriptions :column="isNarrow ? 1 : 2" border size="small" class="product-desc-table">
             <el-descriptions-item label="分类ID">{{ productDetail.categoryId || '-' }}</el-descriptions-item>
             <el-descriptions-item label="排序">{{ productDetail.sortOrder ?? '-' }}</el-descriptions-item>
             <el-descriptions-item label="销量">{{ productDetail.salesCount ?? 0 }}</el-descriptions-item>
@@ -251,7 +262,7 @@
           </div>
 
           <!-- 订单基本信息 -->
-          <el-descriptions :column="2" border size="small" style="margin-top:16px">
+          <el-descriptions :column="isNarrow ? 1 : 2" border size="small" style="margin-top:16px">
             <el-descriptions-item label="订单号">{{ orderDetail.orderNo }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="orderTagType(orderDetail.status)" size="small">{{ orderStatusMap[orderDetail.status] || orderDetail.status }}</el-tag>
@@ -292,7 +303,7 @@
                 <div class="progress-content">{{ p.content }}</div>
                 <div v-if="p.remark" class="progress-remark">{{ p.remark }}</div>
                 <div v-if="p.images" class="progress-images">
-                  <el-image
+                  <el-image lazy
                     v-for="(img, imgIdx) in p.images.split(',')"
                     :key="img + imgIdx"
                     :src="img"
@@ -313,6 +324,7 @@
 </template>
 
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { csChatSessionList, chatMessageList, chatMarkRead, adminOrderDetail, adminOrderConfirm, csOrderDetail, csOrderConfirm, csOrderProgress, getActiveQuickReplies, uploadFile, csComplaintCreate, csOrderList } from '@/api/business'
 import { getProductDetail, getProductList } from '@/api/product'
@@ -320,6 +332,8 @@ import { useUserStore } from '@/stores/user'
 import { useChatStore } from '@/stores/chat'
 import { sendWsMessage } from '@/utils/websocket'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const { isCompact, isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const chatStore = useChatStore()
@@ -349,10 +363,19 @@ async function fetchSessions() {
 
 // ===== 聊天消息 =====
 const currentSession = ref(null)
+const mobileChatOpen = ref(false)
 const messages = ref([])
 const inputText = ref('')
 const sending = ref(false)
 const msgContainer = ref(null)
+
+function isSessionActive(session) {
+  return currentSession.value?.id === session.id && (!isCompact.value || mobileChatOpen.value)
+}
+watch([isCompact, mobileChatOpen], () => {
+  chatStore.currentSessionId = currentSession.value && (!isCompact.value || mobileChatOpen.value) ? currentSession.value.id : null
+  scrollToBottom()
+})
 
 function isSelf(m) {
   return m.senderType === 'CS' || m.senderType === 'ADMIN'
@@ -370,6 +393,7 @@ function scrollToBottom() {
 
 async function selectSession(s) {
   currentSession.value = s
+  mobileChatOpen.value = true
   chatStore.currentSessionId = s.id
   messages.value = []
   await fetchMessages()
@@ -441,6 +465,12 @@ async function sendText() {
   } finally {
     sending.value = false
   }
+}
+
+function handleComposerEnter(event) {
+  if (event.isComposing || event.keyCode === 229) return
+  event.preventDefault()
+  sendText()
 }
 
 function pickImage() {
@@ -764,24 +794,25 @@ onUnmounted(() => {
 <style scoped>
 .chat-service {
   display: flex;
-  height: calc(100vh - 130px);
+  height: calc(var(--app-viewport-height) - 130px);
+  min-height: 180px;
   background: #fff;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #e6e7e9;
 }
 
 /* 左侧会话列表 */
 .session-panel {
   width: 280px;
-  border-right: 1px solid #e4e7ed;
+  border-right: 1px solid #e6e7e9;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 .panel-header {
   padding: 12px 16px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #e6e7e9;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -790,6 +821,7 @@ onUnmounted(() => {
 }
 .session-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 .session-item {
@@ -798,19 +830,19 @@ onUnmounted(() => {
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.2s;
 }
-.session-item:hover { background: #f5f7fa; }
-.session-item.active { background: #ecf5ff; border-left: 3px solid #409eff; }
+.session-item:hover { background: #f5f6f7; }
+.session-item.active { background: #f3f4f5; border-left: 3px solid #17191c; }
 .session-row { display: flex; align-items: center; gap: 10px; width: 100%; }
 .session-avatar { flex-shrink: 0; }
 .session-body { flex: 1; overflow: hidden; }
 .session-top { display: flex; justify-content: space-between; align-items: center; }
-.session-name { font-size: 14px; font-weight: 500; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.session-time { font-size: 11px; color: #c0c4cc; flex-shrink: 0; margin-left: 8px; }
+.session-name { font-size: 14px; font-weight: 500; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.session-time { font-size: 11px; color: #b9bdc4; flex-shrink: 0; margin-left: 8px; }
 .session-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-.session-last-msg { font-size: 12px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.session-last-msg { font-size: 12px; color: #73777e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .unread-badge {
   min-width: 18px; height: 18px; line-height: 18px; padding: 0 5px;
-  font-size: 11px; color: #fff; background: #f56c6c; border-radius: 10px;
+  font-size: 11px; color: #fff; background: #c94f59; border-radius: 10px;
   text-align: center; flex-shrink: 0; margin-left: 6px;
 }
 
@@ -820,18 +852,20 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 .chat-header {
   padding: 12px 20px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #e6e7e9;
   display: flex;
   align-items: center;
   gap: 12px;
   font-weight: 500;
 }
-.order-link { font-size: 13px; color: #909399; }
+.order-link { font-size: 13px; color: #73777e; }
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px 20px;
   background: #f5f5f5;
@@ -849,15 +883,15 @@ onUnmounted(() => {
   background: #fff;
   border-radius: 8px;
   font-size: 14px;
-  color: #303133;
+  color: #17191c;
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
   word-break: break-all;
 }
 .msg-bubble.self {
-  background: #409eff;
+  background: #17191c;
   color: #fff;
 }
-.msg-time { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
+.msg-time { font-size: 11px; color: #b9bdc4; margin-top: 4px; }
 
 /* 卡片消息 */
 .card-msg {
@@ -873,9 +907,9 @@ onUnmounted(() => {
 .card-cover { width: 60px; height: 60px; border-radius: 4px; flex-shrink: 0; }
 .card-info { flex: 1; overflow: hidden; }
 .card-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-price { font-size: 14px; color: #e6a23c; font-weight: bold; margin-top: 2px; }
+.card-price { font-size: 14px; color: #996b30; font-weight: bold; margin-top: 2px; }
 .card-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
-.card-sub { font-size: 11px; color: #909399; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-sub { font-size: 11px; color: #73777e; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .card-actions .card-tag { position: static; }
 .card-complaint-btn { font-size: 11px !important; padding: 2px 6px !important; }
@@ -886,7 +920,7 @@ onUnmounted(() => {
 
 /* 快捷回复栏 */
 .quick-reply-bar {
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid #e6e7e9;
   background: #fafafa;
   max-height: 160px;
   display: flex;
@@ -899,7 +933,7 @@ onUnmounted(() => {
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #606266;
+  color: #555b63;
   border-bottom: 1px solid #eee;
 }
 .qr-list {
@@ -913,37 +947,43 @@ onUnmounted(() => {
 .qr-item {
   padding: 4px 12px;
   background: #fff;
-  border: 1px solid #dcdfe6;
+  border: 1px solid #e1e3e6;
   border-radius: 4px;
   font-size: 13px;
   cursor: pointer;
-  color: #606266;
+  color: #555b63;
   white-space: nowrap;
   transition: all 0.2s;
 }
-.qr-item:hover { border-color: #409eff; color: #409eff; background: #ecf5ff; }
-.qr-empty { font-size: 12px; color: #c0c4cc; padding: 8px; }
+.qr-item:hover { border-color: #17191c; color: #17191c; background: #f3f4f5; }
+.qr-empty { font-size: 12px; color: #b9bdc4; padding: 8px; }
 
 /* 输入区 */
 .chat-input {
   padding: 12px 20px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid #e6e7e9;
   display: flex;
   gap: 12px;
   align-items: center;
 }
 .chat-input .el-input { flex: 1; }
+.chat-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.chat-compose { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.chat-compose .el-input { min-width: 0; }
+.chat-compose > .el-button { flex-shrink: 0; }
+.chat-input .el-button + .el-button { margin-left: 0; }
+.chat-header, .chat-input { flex-shrink: 0; }
 
 /* 商品弹窗完整版 */
 .product-full {}
 .product-gallery { margin-bottom: 16px; background: #fafafa; border-radius: 8px; overflow: hidden; }
-.no-image { height: 120px; display: flex; align-items: center; justify-content: center; color: #c0c4cc; font-size: 14px; }
+.no-image { height: 120px; display: flex; align-items: center; justify-content: center; color: #b9bdc4; font-size: 14px; }
 .product-main { margin-bottom: 12px; }
-.product-title { font-size: 17px; font-weight: 600; color: #303133; line-height: 1.4; }
+.product-title { font-size: 17px; font-weight: 600; color: #17191c; line-height: 1.4; }
 .product-price-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.price-val { font-size: 22px; color: #e6a23c; font-weight: bold; }
+.price-val { font-size: 22px; color: #996b30; font-weight: bold; }
 .product-desc-table { margin-top: 4px; }
-.product-description { white-space: pre-wrap; line-height: 1.6; color: #606266; max-height: 160px; overflow-y: auto; }
+.product-description { white-space: pre-wrap; line-height: 1.6; color: #555b63; max-height: 160px; overflow-y: auto; }
 
 /* 订单弹窗 - 人员卡片 */
 .order-people {
@@ -952,7 +992,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 24px;
   padding: 16px;
-  background: #f5f7fa;
+  background: #f5f6f7;
   border-radius: 8px;
 }
 .person-card {
@@ -961,21 +1001,21 @@ onUnmounted(() => {
   gap: 10px;
 }
 .person-info {}
-.person-label { font-size: 12px; color: #909399; }
-.person-name { font-size: 14px; font-weight: 500; color: #303133; margin-top: 2px; }
-.person-arrow { font-size: 20px; color: #c0c4cc; }
+.person-label { font-size: 12px; color: #73777e; }
+.person-name { font-size: 14px; font-weight: 500; color: #17191c; margin-top: 2px; }
+.person-arrow { font-size: 20px; color: #b9bdc4; }
 
 /* 订单弹窗 - 进度时间线 */
 .order-progress-section { margin-top: 20px; }
-.section-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #409eff; }
-.progress-content { font-size: 14px; color: #303133; }
-.progress-remark { font-size: 12px; color: #909399; margin-top: 2px; }
+.section-title { font-size: 15px; font-weight: 600; color: #17191c; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #17191c; }
+.progress-content { font-size: 14px; color: #17191c; }
+.progress-remark { font-size: 12px; color: #73777e; margin-top: 2px; }
 .progress-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .progress-image { width: 72px; height: 72px; border-radius: 6px; overflow: hidden; }
-.empty-progress { text-align: center; padding: 20px; color: #c0c4cc; font-size: 13px; }
+.empty-progress { text-align: center; padding: 20px; color: #b9bdc4; font-size: 13px; }
 
 .empty-chat { flex: 1; display: flex; align-items: center; justify-content: center; }
-.empty-tip { text-align: center; padding: 20px; color: #c0c4cc; font-size: 13px; }
+.empty-tip { text-align: center; padding: 20px; color: #b9bdc4; font-size: 13px; }
 
 /* 商品选择弹窗 */
 .picker-search { margin-bottom: 16px; }
@@ -988,7 +1028,7 @@ onUnmounted(() => {
   padding: 2px;
 }
 .picker-card {
-  border: 1px solid #e4e7ed;
+  border: 1px solid #e6e7e9;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -996,20 +1036,20 @@ onUnmounted(() => {
   background: #fff;
 }
 .picker-card:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+  border-color: #17191c;
+  box-shadow: 0 4px 12px rgba(23, 25, 28, 0.15);
   transform: translateY(-2px);
 }
 .picker-card-cover {
   width: 100%;
   height: 140px;
-  background: #f5f7fa;
+  background: #f5f6f7;
   overflow: hidden;
 }
 .picker-card-noimg {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  color: #c0c4cc; font-size: 13px;
+  color: #b9bdc4; font-size: 13px;
 }
 .picker-card-body {
   padding: 10px 12px;
@@ -1017,7 +1057,7 @@ onUnmounted(() => {
 .picker-card-name {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: #17191c;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1032,10 +1072,44 @@ onUnmounted(() => {
 .picker-card-price {
   font-size: 16px;
   font-weight: bold;
-  color: #e6a23c;
+  color: #996b30;
 }
 .picker-empty {
   grid-column: 1 / -1;
   padding: 20px 0;
+}
+@media (max-width: 1024px) {
+  .chat-service { height: 100%; }
+  .session-panel { width: 100%; border-right: 0; min-height: 0; }
+  .chat-header { padding: 8px; gap: 8px; flex-wrap: wrap; max-height: 30%; overflow-y: auto; }
+  .chat-title { min-width: 0; overflow-wrap: anywhere; word-break: break-word; flex: 1; }
+  .order-link { font-size: 12px; overflow-wrap: anywhere; }
+  .chat-messages { padding: 12px 10px; }
+  .msg-bubble { max-width: 92%; padding: 10px; white-space: pre-wrap; }
+  .msg-bubble :deep(.el-image) { max-width: 100% !important; }
+  .card-msg { width: 260px; min-width: 0; max-width: 100%; flex-wrap: wrap; }
+  .card-info { min-width: 0; }
+  .card-name, .card-sub { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+  .card-meta, .selected-info, .product-price-row { flex-wrap: wrap; }
+  .chat-input { flex-direction: column; align-items: stretch; padding: 8px; gap: 6px; }
+  .chat-tools { gap: 6px; }
+  .chat-tools .el-button { min-height: 32px; padding: 5px 8px; }
+  .chat-compose { width: 100%; flex: none; gap: 8px; }
+  .chat-compose :deep(.el-input__wrapper) { min-height: 38px; }
+  .quick-reply-bar { min-height: 0; max-height: 25%; flex-shrink: 0; }
+  .qr-header { padding: 4px 10px; flex-shrink: 0; }
+  .qr-list { min-height: 0; padding: 6px 10px; }
+  .qr-item { max-width: 100%; white-space: normal; word-break: break-word; }
+  .order-people { flex-wrap: wrap; justify-content: flex-start; gap: 12px; padding: 12px; }
+  .person-card, .person-info { min-width: 0; }
+  .person-name { overflow-wrap: anywhere; word-break: break-word; }
+  .person-card { flex: 1 1 180px; }
+  .picker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; }
+  .picker-card-cover { height: 110px; }
+  .picker-card-name { white-space: normal; overflow-wrap: anywhere; }
+  .picker-card-bottom { flex-wrap: wrap; gap: 6px; }
+}
+@media (max-width: 360px) {
+  .picker-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

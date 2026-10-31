@@ -51,7 +51,7 @@ public class PayController {
     private final WxPayConfiguration wxPayConfiguration;
     private final UserService userService;
 
-    @Value("${file.upload.path:/data/upload}")
+    @Value("${wx.pay.key-store-path:/www/data/private/wxpay}")
     private String uploadPath;
 
     @PostMapping("/wx/{orderId}")
@@ -73,7 +73,7 @@ public class PayController {
                     payment, user.getOpenid(), description);
 
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
-            paymentService.updateById(payment);
+            paymentService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>().eq(Payment::getId,payment.getId()).set(Payment::getWxPrepayId,payment.getWxPrepayId()));
 
             Map<String, String> payParams = new HashMap<>();
             payParams.put("timeStamp", response.getTimeStamp());
@@ -111,7 +111,7 @@ public class PayController {
             PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
                     payment, user.getOpenid(), "余额充值");
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
-            paymentService.updateById(payment);
+            paymentService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>().eq(Payment::getId,payment.getId()).set(Payment::getWxPrepayId,payment.getWxPrepayId()));
             Map<String, String> payParams = new HashMap<>();
             payParams.put("paymentNo", payment.getPaymentNo());
             payParams.put("timeStamp", response.getTimeStamp());
@@ -147,7 +147,7 @@ public class PayController {
             request.setNotifyUrl(clients.getConfig().notifyUrl());
             com.wechat.pay.java.service.payments.h5.model.Amount amount =
                     new com.wechat.pay.java.service.payments.h5.model.Amount();
-            amount.setTotal(payment.getAmount().multiply(new BigDecimal("100")).intValue());
+            amount.setTotal(com.delta.common.utils.Money.cents(payment.getAmount()));
             amount.setCurrency("CNY");
             request.setAmount(amount);
             SceneInfo sceneInfo = new SceneInfo();
@@ -195,7 +195,7 @@ public class PayController {
 
             com.wechat.pay.java.service.payments.h5.model.Amount amount =
                     new com.wechat.pay.java.service.payments.h5.model.Amount();
-            amount.setTotal(payment.getAmount().multiply(new BigDecimal("100")).intValue());
+            amount.setTotal(com.delta.common.utils.Money.cents(payment.getAmount()));
             amount.setCurrency("CNY");
             request.setAmount(amount);
 
@@ -226,6 +226,7 @@ public class PayController {
 
     @PostMapping("/balance/{orderId}")
     public R<Payment> balancePay(@PathVariable Long orderId) {
+        if(!paymentService.closeWxPayment(orderId,SecurityUtils.getUserId())) return R.fail(4010,"该订单已通过微信支付，请刷新订单");
         return R.ok(paymentService.createBalancePayment(orderId, SecurityUtils.getUserId()));
     }
 
@@ -247,7 +248,7 @@ public class PayController {
             PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
                     payment, user.getOpenid(), "打手入驻押金");
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
-            paymentService.updateById(payment);
+            paymentService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>().eq(Payment::getId,payment.getId()).set(Payment::getWxPrepayId,payment.getWxPrepayId()));
             Map<String, Object> result = new HashMap<>();
             result.put("paymentNo", payment.getPaymentNo());
             result.put("timeStamp", response.getTimeStamp());
@@ -266,7 +267,7 @@ public class PayController {
     }
 
     @PostMapping("/wx/notify")
-    public Map<String, String> wxNotify(HttpServletRequest httpRequest, @RequestBody String jsonData) {
+    public org.springframework.http.ResponseEntity<Map<String, String>> wxNotify(HttpServletRequest httpRequest, @RequestBody String jsonData) {
         Map<String, String> response = new HashMap<>();
         try {
             String serial = httpRequest.getHeader("Wechatpay-Serial");
@@ -280,12 +281,21 @@ public class PayController {
 
             response.put("code", "SUCCESS");
             response.put("message", "成功");
+            return org.springframework.http.ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("处理微信支付V3回调失败", e);
             response.put("code", "FAIL");
             response.put("message", "处理失败");
+            return org.springframework.http.ResponseEntity.status(500).body(response);
         }
-        return response;
+    }
+
+    @PostMapping("/wx/refund-notify")
+    public org.springframework.http.ResponseEntity<Map<String,String>> refundNotify(HttpServletRequest request,@RequestBody String body) {
+        try {
+            paymentService.handleWxRefundV3Notify(body,request.getHeader("Wechatpay-Serial"),request.getHeader("Wechatpay-Nonce"),request.getHeader("Wechatpay-Timestamp"),request.getHeader("Wechatpay-Signature"));
+            return org.springframework.http.ResponseEntity.ok(Map.of("code","SUCCESS"));
+        } catch(Exception e){log.error("微信退款通知处理失败",e);return org.springframework.http.ResponseEntity.status(500).body(Map.of("code","FAIL","message","处理失败"));}
     }
 
     @GetMapping("/transactions")
@@ -309,7 +319,7 @@ public class PayController {
         request.setNotifyUrl(wxPayConfiguration.notifyUrl());
 
         Amount amount = new Amount();
-        amount.setTotal(payment.getAmount().multiply(new BigDecimal("100")).intValue());
+        amount.setTotal(com.delta.common.utils.Money.cents(payment.getAmount()));
         amount.setCurrency("CNY");
         request.setAmount(amount);
 
@@ -339,11 +349,16 @@ public class PayController {
             return R.fail("仅支持 pem、key 或 txt 格式的证书文件");
         }
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        Path dir = Paths.get(uploadPath, "wxpay", datePath);
+        String text=new String(file.getBytes(),java.nio.charset.StandardCharsets.US_ASCII);
+        if("wx.pay.private-key-path".equals(configKey) ? !text.contains("-----BEGIN PRIVATE KEY-----") : !text.contains("-----BEGIN PUBLIC KEY-----"))
+            return R.fail(400,"证书内容不符合要求，请上传对应的PEM密钥");
+        Path dir = Paths.get(uploadPath, datePath);
         Files.createDirectories(dir);
+        try {Files.setPosixFilePermissions(dir,java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));} catch(UnsupportedOperationException ignored) {}
         String ext = lowerName.substring(lowerName.lastIndexOf('.'));
         Path target = dir.resolve(UUID.randomUUID().toString().replace("-", "") + ext);
         file.transferTo(target.toFile());
+        try {Files.setPosixFilePermissions(target,java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));} catch(UnsupportedOperationException ignored) {}
         return R.ok(target.toAbsolutePath().toString());
     }
 

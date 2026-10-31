@@ -72,11 +72,11 @@ async function submit() {
 }
 </script>
 <style lang="scss" scoped>
-.complaint-page { padding: 24rpx; background: #f8fafc; min-height: 100vh; }
-.order-card { background: #ffffff; border: 1rpx solid #e2e8f0; padding: 24rpx; border-radius: 12rpx; margin-bottom: 24rpx; }
-.card-title { font-size: 28rpx; font-weight: bold; color: #4f46e5; display: block; margin-bottom: 16rpx; }
-.info-row { display: flex; align-items: center; padding: 6rpx 0; .label { font-size: 26rpx; color: #94a3b8; width: 100rpx; } .value { font-size: 26rpx; color: #1e293b; flex: 1; } .price { color: #4f46e5; font-weight: bold; } }
-.form-item { background: #ffffff; border: 1rpx solid #edf1f7; padding: 24rpx; border-radius: 16rpx; margin-bottom: 20rpx; .label { font-size: 26rpx; color: #64748b; margin-bottom: 12rpx; display: block; } .picker { height: 60rpx; line-height: 60rpx; background: #f8fafc; padding: 0 24rpx; border-radius: 8rpx; color: #1e293b; } }
-.content-input { width: 100%; height: 200rpx; background: #f8fafc; border: none; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; color: #1e293b; }
-.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; margin-top: 40rpx; &.disabled { opacity: 0.6; } }
+.complaint-page { padding: 24rpx; background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
+.order-card { background: #ffffff; border: 1rpx solid #e6e7e9; padding: 24rpx; border-radius: 12rpx; margin-bottom: 24rpx; }
+.card-title { font-size: 28rpx; font-weight: bold; color: #17191c; display: block; margin-bottom: 16rpx; }
+.info-row { display: flex; align-items: center; padding: 6rpx 0; .label { font-size: 26rpx; color: #73777e; width: 100rpx; } .value { font-size: 26rpx; color: #17191c; flex: 1; } .price { color: #17191c; font-weight: bold; } }
+.form-item { background: #ffffff; border: 1rpx solid #eeeff1; padding: 24rpx; border-radius: 16rpx; margin-bottom: 20rpx; .label { font-size: 26rpx; color: #666b73; margin-bottom: 12rpx; display: block; } .picker { height: 60rpx; line-height: 60rpx; background: #f7f8f9; padding: 0 24rpx; border-radius: 8rpx; color: #17191c; } }
+.content-input { width: 100%; height: 200rpx; background: #f7f8f9; border: none; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; color: #17191c; }
+.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; margin-top: 40rpx; &.disabled { opacity: 0.6; } }
 </style>

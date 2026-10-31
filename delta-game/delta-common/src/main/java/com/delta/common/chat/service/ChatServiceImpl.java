@@ -44,7 +44,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSession>
     }
 
     public Page<ChatMessage> listMessages(Long sessionId, int page, int size) {
-        return chatMessageMapper.selectPage(new Page<>(page, size),
+        return chatMessageMapper.selectPage(new Page<>(Math.max(1,page), Math.max(1,Math.min(size,100))),
                 new LambdaQueryWrapper<ChatMessage>().eq(ChatMessage::getSessionId, sessionId)
                         .orderByDesc(ChatMessage::getCreatedAt));
     }

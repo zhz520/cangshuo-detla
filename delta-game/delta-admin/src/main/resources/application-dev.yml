@@ -48,7 +48,7 @@ jwt:
 
 auth:
   h5:
-    login-code: ${AUTH_H5_LOGIN_CODE:change_login_code}
+    otp-required: true
 
 # WeChat Mini Program
 wx:

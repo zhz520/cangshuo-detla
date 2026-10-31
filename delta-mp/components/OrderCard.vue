@@ -12,13 +12,13 @@
     </view>
     <!-- 接单员信息（用户端看到） -->
     <view v-if="order.playerId && !isPlayerView" class="person-row">
-      <image class="person-avatar" :src="order.playerAvatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+      <AppImage :width="160" class="person-avatar" :src="order.playerAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
       <text class="person-name">{{ order.playerName || '接单员' + order.playerId }}</text>
       <text class="person-label">服务人员</text>
     </view>
     <!-- 用户信息（接单员端看到） -->
     <view v-if="order.userNickname && isPlayerView" class="person-row">
-      <image class="person-avatar" :src="order.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+      <AppImage :width="160" class="person-avatar" :src="order.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
       <text class="person-name">{{ order.userNickname }}</text>
       <text class="person-label">下单用户</text>
     </view>
@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { computed } from 'vue'
 import StatusTag from './StatusTag.vue'
 
@@ -114,11 +115,11 @@ function goChat() {
 <style lang="scss" scoped>
 .order-card {
   background: #ffffff;
-  border: 1rpx solid #edf1f7;
+  border: 1rpx solid #eeeff1;
   border-radius: 20rpx;
   padding: 28rpx 28rpx 24rpx;
   margin-bottom: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8rpx 24rpx rgba(23, 25, 28, 0.04);
   &.order-card--embed {
     background: transparent;
     border: none;
@@ -136,7 +137,7 @@ function goChat() {
     flex: 1;
     font-size: 30rpx;
     font-weight: bold;
-    color: #1e293b;
+    color: #17191c;
     margin-right: 16rpx;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -149,15 +150,15 @@ function goChat() {
   .spec {
     display: inline-block;
     font-size: 24rpx;
-    color: #64748b;
-    background: #e2e8f0;
+    color: #666b73;
+    background: #e6e7e9;
     padding: 4rpx 14rpx;
     border-radius: 6rpx;
     margin-right: 12rpx;
   }
   .order-no {
     font-size: 22rpx;
-    color: #94a3b8;
+    color: #73777e;
   }
 }
 
@@ -166,7 +167,7 @@ function goChat() {
   align-items: center;
   margin-top: 16rpx;
   padding: 14rpx 16rpx;
-  background: #f1f5f9;
+  background: #f4f5f6;
   border-radius: 12rpx;
   .person-avatar {
     width: 48rpx;
@@ -177,20 +178,20 @@ function goChat() {
   }
   .person-name {
     font-size: 26rpx;
-    color: #1e293b;
+    color: #17191c;
     font-weight: 500;
     flex: 1;
   }
   .person-label {
     font-size: 20rpx;
-    color: #94a3b8;
+    color: #73777e;
     flex-shrink: 0;
   }
 }
 
 .divider {
   height: 1rpx;
-  background: #f1f5f9;
+  background: #f4f5f6;
   margin: 20rpx 0 16rpx;
 }
 
@@ -204,17 +205,17 @@ function goChat() {
     gap: 8rpx;
     .amount-label {
       font-size: 24rpx;
-      color: #4f46e5;
+      color: #17191c;
       font-weight: bold;
     }
     .amount {
       font-size: 34rpx;
-      color: #4f46e5;
+      color: #17191c;
       font-weight: bold;
     }
     .time {
       font-size: 22rpx;
-      color: #94a3b8;
+      color: #73777e;
       margin-left: 8rpx;
     }
   }
@@ -224,7 +225,7 @@ function goChat() {
     gap: 12rpx;
     .btn-chat {
       font-size: 24rpx;
-      color: #07c160;
+      color: #347a5b;
       padding: 6rpx 20rpx;
       border: 1rpx solid rgba(7, 193, 96, 0.5);
       border-radius: 999rpx;
@@ -234,7 +235,7 @@ function goChat() {
       color: #fff;
       font-weight: 500;
       padding: 6rpx 20rpx;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: linear-gradient(135deg, #17191c, #30343a);
       border: none;
       border-radius: 999rpx;
     }
@@ -243,9 +244,9 @@ function goChat() {
 .income-row {
   margin-top: 12rpx;
   padding-top: 12rpx;
-  border-top: 1rpx solid #e2e8f0;
-  .income-label { font-size: 24rpx; color: #64748b; }
-  .income-value { font-size: 26rpx; color: #ee0a24; font-weight: bold; }
-  .income-hint { font-size: 22rpx; color: #94a3b8; margin-left: 8rpx; }
+  border-top: 1rpx solid #e6e7e9;
+  .income-label { font-size: 24rpx; color: #666b73; }
+  .income-value { font-size: 26rpx; color: #d44955; font-weight: bold; }
+  .income-hint { font-size: 22rpx; color: #73777e; margin-left: 8rpx; }
 }
 </style>

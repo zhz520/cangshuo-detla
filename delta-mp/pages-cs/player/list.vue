@@ -11,7 +11,7 @@
     </scroll-view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card">
-        <image class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <view class="name-row">
             <text class="name">{{ p.nickname || p.realName }}</text>
@@ -58,6 +58,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -122,15 +123,15 @@ function formatTime(t) {
 </script>
 
 <style lang="scss" scoped>
-.player-list { background: #ffffff; min-height: 100vh; overflow: hidden; }
+.player-list { background: #ffffff; min-height: var(--app-page-height, 100vh); overflow: hidden; }
 
 .search-bar { padding: 16rpx 24rpx; }
 .search-input { background: rgba(0,0,0,0.05); padding: 24rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
 
 .filter-bar { white-space: nowrap; padding: 12rpx 24rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04); }
-.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } }
+.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } }
 
-.list { height: calc(100vh - 200rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
+.list { height: calc(var(--app-page-height, 100vh) - 200rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
 
 .player-card {
   display: flex; align-items: center; gap: 16rpx;
@@ -146,24 +147,24 @@ function formatTime(t) {
     .name { font-size: 28rpx; font-weight: bold; color: rgba(0,0,0,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .status-tag {
       font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 4rpx; flex-shrink: 0;
-      &.frozen { color: #ee0a24; background: rgba(238,10,36,0.12); }
-      &.pending { color: #ff9900; background: rgba(255,153,0,0.12); }
+      &.frozen { color: #d44955; background: rgba(201, 79, 89, 0.12); }
+      &.pending { color: #996b30; background: rgba(255,153,0,0.12); }
     }
     .tags { display: flex; gap: 8rpx; margin-top: 8rpx; flex-wrap: wrap; }
     .tag {
       font-size: 22rpx; color: rgba(0,0,0,0.55);
       background: rgba(0,0,0,0.05); padding: 4rpx 12rpx; border-radius: 4rpx;
-      &.active-tag { color: #ee6723; }
+      &.active-tag { color: #17191c; }
     }
-    .frozen-tip { font-size: 22rpx; color: #ee0a24; margin-top: 6rpx; display: block; }
+    .frozen-tip { font-size: 22rpx; color: #d44955; margin-top: 6rpx; display: block; }
   }
 
   .card-actions {
     flex-shrink: 0;
     .action-btn {
       font-size: 26rpx; padding: 10rpx 24rpx; border-radius: 999rpx;
-      &.gold { color: #ff4544; border: 1rpx solid rgba(255,69,68,0.15); }
-      &.danger { color: #ee0a24; border: 1rpx solid rgba(238,10,36,0.3); }
+      &.gold { color: #17191c; border: 1rpx solid rgba(23, 25, 28, 0.15); }
+      &.danger { color: #d44955; border: 1rpx solid rgba(201, 79, 89, 0.3); }
     }
   }
 }
@@ -172,8 +173,8 @@ function formatTime(t) {
 
 /* 冻结弹窗 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-body { width: 85%; background: #ffffff; border: 1rpx solid rgba(255,69,68,0.15); border-radius: 16rpx; padding: 40rpx; }
-.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #ff4544; margin-bottom: 16rpx; }
+.modal-body { width: 85%; background: #ffffff; border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 16rpx; padding: 40rpx; }
+.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #17191c; margin-bottom: 16rpx; }
 .modal-desc { font-size: 26rpx; color: rgba(0,0,0,0.55); text-align: center; display: block; margin-bottom: 32rpx; }
 .modal-label { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 16rpx; }
 
@@ -183,7 +184,7 @@ function formatTime(t) {
     padding: 16rpx 32rpx; background: rgba(0,0,0,0.05);
     border-radius: 8rpx; font-size: 26rpx; color: rgba(0,0,0,0.7);
     text-align: center; min-width: 120rpx;
-    &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight: bold; }
+    &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; }
   }
 }
 
@@ -191,6 +192,6 @@ function formatTime(t) {
 .modal-btn {
   flex: 1; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx;
   &.cancel { background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.55); }
-  &.confirm { background: #ee0a24; color: #fff; font-weight: bold; }
+  &.confirm { background: #d44955; color: #fff; font-weight: bold; }
 }
 </style>

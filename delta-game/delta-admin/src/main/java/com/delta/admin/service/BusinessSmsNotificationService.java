@@ -68,8 +68,9 @@ public class BusinessSmsNotificationService {
 
         aliyunSmsService.sendTemplate(endpoint, accessKeyId, accessKeySecret, signName,
                 templateCode, phone, Map.of());
+        String maskedPhone=phone.length()>=7 ? phone.substring(0,3)+"****"+phone.substring(phone.length()-4) : "***";
         log.info("business sms sent, eventType={}, playerId={}, phone={}",
-                event.getEventType(), event.getUserId(), phone);
+                event.getEventType(), event.getUserId(), maskedPhone);
     }
 
     private String getConfig(String key, String defaultValue) {

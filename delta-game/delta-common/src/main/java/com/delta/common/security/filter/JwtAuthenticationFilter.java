@@ -30,7 +30,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (claims != null) {
                 String uuid = claims.get("uuid", String.class);
                 Map<String, Object> userContext = tokenService.getUserContext(uuid);
-                if (userContext != null) {
+                if (userContext != null && String.valueOf(userContext.get("userId")).equals(String.valueOf(claims.get("userId")))
+                        && userContext.get("userType").equals(claims.get("userType"))) {
                     // 根据 userType 构建角色权限
                     List<org.springframework.security.core.GrantedAuthority> authorities = buildAuthorities(
                             (String) userContext.get("userType"));
@@ -48,7 +49,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return switch (userType.toUpperCase()) {
             case "ADMIN" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"));
             case "CS" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CS"));
-            case "USER", "PLAYER" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"));
+            case "USER" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"));
+            case "PLAYER" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_PLAYER"));
             default -> Collections.emptyList();
         };
     }

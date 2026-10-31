@@ -7,6 +7,9 @@ export function adminUserList(params) {
 export function adminUserDetail(id) {
   return request({ url: `/admin/user/${id}`, method: 'get' })
 }
+export const adminUserCreate = data => request.post('/admin/user',data)
+export const adminUserUpdate = (id,data) => request.put(`/admin/user/${id}`,data)
+export const adminUserDelete = id => request.delete(`/admin/user/${id}`)
 export function adminUserUpdateStatus(id, status) {
   return request({ url: `/admin/user/${id}/status`, method: 'put', params: { status } })
 }
@@ -50,6 +53,12 @@ export function adminPlayerUnfreeze(id) {
 }
 export function adminPlayerUpdate(id, data) {
   return request({ url: `/admin/player/${id}`, method: 'put', data })
+}
+export function adminReviewList(params) {
+  return request({ url: '/admin/review/list', method: 'get', params })
+}
+export function adminReviewDelete(id) {
+  return request({ url: `/admin/review/${id}`, method: 'delete' })
 }
 export function csPlayerList(params) {
   return request({ url: '/cs/player/list', method: 'get', params })
@@ -205,6 +214,11 @@ export function csRelayReject(id, reason) {
 }
 
 // ==================== 文件上传 ====================
+export const playerLevelList = () => request({url:'/admin/player-level/list',method:'get'})
+export const playerLevelCreate = data => request({url:'/admin/player-level',method:'post',data})
+export const playerLevelUpdate = (id,data) => request({url:`/admin/player-level/${id}`,method:'put',data})
+export const playerLevelDelete = id => request({url:`/admin/player-level/${id}`,method:'delete'})
+export function uploadProfileAudio(file){const data=new FormData();data.append('file',file);return request({url:'/common/file/profile-audio',method:'post',data,headers:{'Content-Type':'multipart/form-data'}})}
 export function uploadFile(file) {
   const formData = new FormData()
   formData.append('file', file)

@@ -11,10 +11,7 @@ export const useUserStore = defineStore('user', () => {
   const role = ref(getUserInfo()?.role || '')
 
   async function login(loginForm) {
-    // 发送标准化角色: admin → "ADMIN", cs → "CS"
-    const payload = { ...loginForm }
-    payload.role = payload.role === 'admin' ? 'ADMIN' : 'CS'
-    const res = await loginApi(payload)
+    const res = await loginApi({ username: loginForm.username.trim(), password: loginForm.password })
     const { token: t, adminId: id, nickname: name, avatar: av, role: r } = res.data
     // 后端返回有效角色 ADMIN/CS，映射为前端值 admin/cs (兼容旧值 BOTH)
     const mappedRole = (r === 'ADMIN' || r === 'BOTH') ? 'admin' : 'cs'

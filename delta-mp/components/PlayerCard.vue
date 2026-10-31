@@ -1,6 +1,6 @@
 <template>
   <view class="player-card" @click="$emit('click', player)">
-    <image class="avatar" :src="player.avatar" mode="aspectFill" lazy-load />
+    <AppImage :width="160" class="avatar" :src="player.avatar" mode="aspectFill" />
     <view class="info">
       <text class="name">{{ player.nickname }}</text>
       <view class="meta">
@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 defineProps({
   player: { type: Object, required: true }
 })
@@ -23,8 +24,8 @@ defineEmits(['click'])
 .player-card {
   display: flex;
   align-items: center;
-  background: #f1f5f9;
-  border: 1rpx solid #e2e8f0;
+  background: #f4f5f6;
+  border: 1rpx solid #e6e7e9;
   padding: 24rpx;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
@@ -34,7 +35,7 @@ defineEmits(['click'])
     height: 88rpx;
     border-radius: 50%;
     margin-right: 20rpx;
-    border: 2rpx solid #cbd5e1;
+    border: 2rpx solid #b9bdc4;
   }
 
   .info {
@@ -42,19 +43,19 @@ defineEmits(['click'])
 
     .name {
       font-size: 30rpx;
-      color: #1e293b;
+      color: #17191c;
       font-weight: 500;
     }
 
     .meta {
       margin-top: 8rpx;
       font-size: 24rpx;
-      color: #94a3b8;
+      color: #73777e;
       display: flex;
       gap: 20rpx;
 
       .level {
-        color: #ff9900;
+        color: #996b30;
         font-weight: 500;
       }
     }

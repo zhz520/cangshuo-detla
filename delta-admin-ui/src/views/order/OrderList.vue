@@ -26,7 +26,7 @@
           <template #default="{ row }"><el-tag :type="orderTagType(row.status)" size="small">{{ orderStatusLabel(row.status) }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="createdAt" label="下单时间" width="170" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="220" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button v-if="canAssign(row)" link type="warning" @click="openAssignDialog(row)">{{ row.status === 'ASSIGNED' ? '重新指派' : '指派' }}</el-button>
@@ -38,12 +38,15 @@
     </el-card>
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="订单详情" width="700px">
-      <el-descriptions :column="2" border v-if="detail" v-loading="detailLoading">
+      <el-descriptions :column="isNarrow ? 1 : 2" border v-if="detail" v-loading="detailLoading">
         <el-descriptions-item label="订单号">{{ detail.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="状态"><el-tag :type="orderTagType(detail.status)" size="small">{{ orderStatusLabel(detail.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="商品">{{ detail.productName }}</el-descriptions-item>
         <el-descriptions-item label="规格">{{ detail.specInfo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="金额">¥{{ detail.amount }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.playerLevelName" label="打手等级">{{ detail.playerLevelName }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.baseAmount != null" label="商品原价">¥{{ detail.baseAmount }}</el-descriptions-item>
+        <el-descriptions-item v-if="Number(detail.priceIncreaseRate)>0" label="打手涨价">{{ Number(detail.priceIncreaseRate) }}%（¥{{ detail.priceIncreaseAmount }}）</el-descriptions-item>
         <el-descriptions-item label="用户">{{ detail.userNickname || ('ID: ' + detail.userId) }}</el-descriptions-item>
         <el-descriptions-item label="打手">{{ detail.playerName || (detail.playerId ? 'ID: ' + detail.playerId : '未指派') }}</el-descriptions-item>
         <el-descriptions-item label="游戏账号">{{ detail.gameAccount || '-' }}</el-descriptions-item>
@@ -69,7 +72,7 @@
             <span>{{ p.content || p.description || orderStatusLabel(p.toStatus) || p.toStatus }}</span>
             <span v-if="p.operatorType" style="margin-left:8px;color:#909399;font-size:12px">({{ { USER: '用户', PLAYER: '打手', CS: '客服', SYSTEM: '系统', ADMIN: '管理员' }[p.operatorType] || p.operatorType }})</span>
             <div v-if="p.images" class="progress-images">
-              <el-image
+              <el-image lazy
                 v-for="(img, imgIdx) in p.images.split(',')"
                 :key="img + imgIdx"
                 :src="img"
@@ -109,11 +112,14 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+const { isCompact, isNarrow } = useResponsive()
+
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
 // 兼容后端大写和前端小写枚举

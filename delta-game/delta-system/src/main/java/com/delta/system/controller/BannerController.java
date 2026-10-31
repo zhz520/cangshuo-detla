@@ -2,6 +2,7 @@ package com.delta.system.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.system.entity.Banner;
@@ -34,12 +35,15 @@ public class BannerController {
         return R.ok(bannerService.list(wrapper));
     }
 
+    @OpLog(module = "system", operation = "新增轮播图")
     @PostMapping
     public R<Void> add(@RequestBody Banner banner) { bannerService.save(banner); return R.ok(); }
 
+    @OpLog(module = "system", operation = "编辑轮播图")
     @PutMapping
     public R<Void> update(@RequestBody Banner banner) { bannerService.updateById(banner); return R.ok(); }
 
+    @OpLog(module = "system", operation = "删除轮播图")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { bannerService.removeById(id); return R.ok(); }
 }

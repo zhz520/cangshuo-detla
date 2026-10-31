@@ -2,7 +2,7 @@
   <view class="chat-list tab-page">
     <scroll-view scroll-y class="session-scroll tab-page-scroll" :show-scrollbar="false">
       <view v-for="s in sessions" :key="s.id" class="session-item" @click="goRoom(s)">
-        <image v-if="s.avatar" class="avatar" :src="s.avatar" mode="aspectFill" lazy-load />
+        <AppImage :width="160" v-if="s.avatar" class="avatar" :src="s.avatar" mode="aspectFill" />
         <view v-else class="avatar avatar-placeholder">{{ firstChar(s.targetName || s.nickname || '') }}</view>
         <view class="session-info">
           <view class="top-row">
@@ -21,6 +21,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -64,13 +65,13 @@ function goRoom(s) {
 </script>
 <style lang="scss" scoped>
 .chat-list {
-  background: #f1f5f9;
-  height: 100vh;
+  background: #f4f5f6;
+  height: var(--app-page-height, 100vh);
   position: relative;
   overflow: hidden;
 }
 .session-scroll {
-  height: calc(100vh - 110rpx - env(safe-area-inset-bottom));
+  height: calc(var(--app-page-height, 100vh) - 110rpx - var(--app-safe-bottom, env(safe-area-inset-bottom)));
   position: relative;
   z-index: 1;
   padding: 20rpx 24rpx;
@@ -82,7 +83,7 @@ function goRoom(s) {
   align-items: center;
   padding: 24rpx 28rpx;
   background: #ffffff;
-  border: 1rpx solid #e2e8f0;
+  border: 1rpx solid #e6e7e9;
   border-radius: 16rpx;
   margin-bottom: 20rpx;
   position: relative;
@@ -96,13 +97,13 @@ function goRoom(s) {
   border-radius: 50%;
   margin-right: 20rpx;
   flex-shrink: 0;
-  border: 2rpx solid rgba(99, 102, 241, 0.1);
+  border: 2rpx solid rgba(23, 25, 28, 0.1);
 }
 .avatar-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #94a3b8, #64748b);
+  background: linear-gradient(135deg, #73777e, #666b73);
   color: #fff;
   font-size: 36rpx;
   font-weight: bold;
@@ -112,15 +113,15 @@ function goRoom(s) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  .name { font-size: 28rpx; color: #1e293b; font-weight: 500; flex: 1; }
-  .time { font-size: 22rpx; color: #94a3b8; flex-shrink: 0; margin-left: 16rpx; }
+  .name { font-size: 28rpx; color: #17191c; font-weight: 500; flex: 1; }
+  .time { font-size: 22rpx; color: #73777e; flex-shrink: 0; margin-left: 16rpx; }
 }
 .bottom-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 8rpx;
-  .last-msg { font-size: 24rpx; color: #94a3b8; flex: 1; }
+  .last-msg { font-size: 24rpx; color: #73777e; flex: 1; }
 }
 .badge {
   min-width: 32rpx;
@@ -129,7 +130,7 @@ function goRoom(s) {
   padding: 0 8rpx;
   font-size: 20rpx;
   color: #fff;
-  background: #ee0a24;
+  background: #d44955;
   border-radius: 32rpx;
   text-align: center;
   flex-shrink: 0;

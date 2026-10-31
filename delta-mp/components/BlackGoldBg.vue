@@ -18,23 +18,25 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(180rpx);
-  opacity: 0.12;
+  opacity: 0;
+  animation: none !important;
+  background: none !important;
 }
 .bg-glow-1 {
   width: 600rpx; height: 600rpx;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(23, 25, 28, 0.25) 0%, transparent 70%);
   top: -100rpx; left: -100rpx;
   animation: drift1 8s ease-in-out infinite alternate;
 }
 .bg-glow-2 {
   width: 500rpx; height: 500rpx;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(23, 25, 28, 0.2) 0%, transparent 70%);
   bottom: 200rpx; right: -120rpx;
   animation: drift2 10s ease-in-out infinite alternate;
 }
 .bg-glow-3 {
   width: 400rpx; height: 400rpx;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(23, 25, 28, 0.15) 0%, transparent 70%);
   top: 50%; left: 40%;
   animation: drift3 12s ease-in-out infinite alternate;
 }

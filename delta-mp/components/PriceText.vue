@@ -10,7 +10,7 @@ import { computed } from 'vue'
 const props = defineProps({
   value: { type: [Number, String], default: 0 },
   size: { type: Number, default: 32 },
-  color: { type: String, default: '#4f46e5' }
+  color: { type: String, default: '#17191c' }
 })
 
 const formatValue = computed(() => Number(props.value || 0).toFixed(2))

@@ -33,7 +33,7 @@
         <el-table-column label="状态" width="100">
           <template #default="{ row }"><el-switch v-model="row.enabled" /></template>
         </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right">
+        <el-table-column label="操作" width="90" :fixed="isCompact ? false : 'right'">
           <template #default="{ $index }"><el-button link type="danger" @click="removePackage($index)">删除</el-button></template>
         </el-table-column>
       </el-table>
@@ -43,9 +43,12 @@
 </template>
 
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getRechargePackages, updateRechargePackages } from '@/api/system'
+
+const { isCompact } = useResponsive()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -85,7 +88,7 @@ onMounted(fetchData)
 
 <style scoped>
 .card-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.header-tip { margin-left: 14px; color: #94a3b8; font-size: 12px; }
+.header-tip { margin-left: 14px; color: #73777e; font-size: 12px; }
 .header-actions { display: flex; gap: 10px; }
-.total { color: #f59e0b; font-weight: 700; }
+.total { color: #996b30; font-weight: 700; }
 </style>

@@ -44,8 +44,8 @@ function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; 
 </script>
 <style lang="scss" scoped>
 .player-order-list { width: 100%; overflow: hidden; box-sizing: border-box; background: #ffffff; position: relative; }
-.tabs { background: #f1f5f9; border-bottom:1rpx solid #f1f5f9; white-space:nowrap; }
+.tabs { background: #f4f5f6; border-bottom:1rpx solid #f4f5f6; white-space:nowrap; }
 .tabs-inner { display:inline-flex; padding:0 12rpx; }
-.tab { padding:24rpx 24rpx; font-size:26rpx; color: #64748b; flex-shrink:0; &.active { color: #ff4544; border-bottom:4rpx solid rgba(255,69,68,0.5); } }
-.list { height: calc(100vh - 190rpx - env(safe-area-inset-bottom)); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
+.tab { padding:24rpx 24rpx; font-size:26rpx; color: #666b73; flex-shrink:0; &.active { color: #17191c; border-bottom:4rpx solid rgba(23, 25, 28, 0.5); } }
+.list { height: calc(var(--app-page-height, 100vh) - 190rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
 </style>

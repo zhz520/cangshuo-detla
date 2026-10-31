@@ -24,18 +24,31 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/user")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
     private final UserService userService;
     private final WalletService walletService;
     private final OrderService orderService;
     private final TransactionService transactionService;
+    private final com.delta.admin.service.UserManagementService management;
+
+    @OpLog(module = "user", operation = "新增用户")
+    @PostMapping
+    public R<User> create(@jakarta.validation.Valid @RequestBody com.delta.admin.service.UserManagementService.UserRequest body) { return R.ok(management.save(null,body)); }
+    @OpLog(module = "user", operation = "编辑用户")
+    @PutMapping("/{id}")
+    public R<User> update(@PathVariable Long id,@jakarta.validation.Valid @RequestBody com.delta.admin.service.UserManagementService.UserRequest body) { return R.ok(management.save(id,body)); }
+    @OpLog(module = "user", operation = "删除用户")
+    @DeleteMapping("/{id}")
+    public R<Void> delete(@PathVariable Long id) {management.delete(id);return R.ok();}
 
     @GetMapping("/list")
     public R<Page<User>> list(PageQuery query,
                               @RequestParam(value = "keyword", required = false) String keyword,
                               @RequestParam(value = "status", required = false) Integer status) {
+        if(keyword!=null&&keyword.length()>64) return R.fail(400,"搜索内容过长");
         LambdaQueryWrapper<User> w = new LambdaQueryWrapper<User>()
-                .like(keyword != null && !keyword.isEmpty(), User::getNickname, keyword)
+                .and(keyword != null && !keyword.isBlank(), q->q.like(User::getNickname,keyword).or().like(User::getPhone,keyword))
                 .eq(status != null, User::getStatus, status)
                 .orderByDesc(User::getCreatedAt);
         Page<User> page = userService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
@@ -59,10 +72,7 @@ public class AdminUserController {
     @OpLog(module = "user", operation = "更新用户状态")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam("status") Integer status) {
-        User user = new User();
-        user.setId(id);
-        user.setStatus(status);
-        userService.updateById(user);
+        management.setStatus(id,status);
         return R.ok();
     }
 

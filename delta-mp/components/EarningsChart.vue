@@ -30,7 +30,7 @@ const props = defineProps({
    */
   data: { type: Array, default: () => [] },
   /** 柱状图颜色 */
-  barColor: { type: String, default: '#6366f1' },
+  barColor: { type: String, default: '#17191c' },
   /** 最大柱高(rpx) */
   maxBarHeight: { type: Number, default: 200 }
 })
@@ -56,8 +56,8 @@ function formatAmount(val) {
 
 <style lang="scss" scoped>
 .earnings-chart {
-  background: #f1f5f9;
-  border: 1rpx solid #e2e8f0;
+  background: #f4f5f6;
+  border: 1rpx solid #e6e7e9;
   border-radius: 12rpx;
   padding: 24rpx;
 }
@@ -67,7 +67,7 @@ function formatAmount(val) {
   .chart-title {
     font-size: 28rpx;
     font-weight: bold;
-    color: #6366f1;
+    color: #17191c;
   }
 }
 
@@ -101,13 +101,13 @@ function formatAmount(val) {
 
 .bar-value {
   font-size: 20rpx;
-  color: #64748b;
+  color: #666b73;
   margin-top: 8rpx;
 }
 
 .bar-label {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
   margin-top: 8rpx;
 }
 
@@ -117,6 +117,6 @@ function formatAmount(val) {
   justify-content: center;
   height: 200rpx;
   font-size: 26rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 </style>

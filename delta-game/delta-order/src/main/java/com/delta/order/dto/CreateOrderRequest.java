@@ -12,5 +12,6 @@ public class CreateOrderRequest {
     private String contact;
     private String remark;
     private Long designatedPlayerId;
+    private Integer playerLevelId;
     private java.util.Map<String, String> extraFields;
 }

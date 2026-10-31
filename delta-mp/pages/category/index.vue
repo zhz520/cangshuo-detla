@@ -34,6 +34,7 @@
             </view>
           </view>
         </scroll-view>
+        <view class="category-sort"><ProductSortPicker v-model="currentSort" @update:model-value="refreshProducts" /></view>
         <!-- 商品列表（横向卡片） -->
         <view class="product-section">
           <view
@@ -41,7 +42,7 @@
             class="product-row"
             @click="goProductDetail(p.id)"
           >
-            <image class="product-cover" :src="p.coverImage" mode="aspectFill" lazy-load />
+            <AppImage class="product-cover" :src="p.coverImage" mode="aspectFill" />
             <view class="product-info">
               <text class="product-name">{{ p.name }}</text>
               <text v-if="p.subtitle" class="product-subtitle">{{ p.subtitle }}</text>
@@ -61,9 +62,12 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import ProductSortPicker from '@/components/ProductSortPicker.vue'
+import { productSortParams } from '@/utils/product-sort'
 import { getCategoryTree } from '@/api/category'
 import { getProductList } from '@/api/product'
 const categoryTree = ref([])
@@ -75,6 +79,8 @@ const products = ref([])
 const productLoading = ref(false)
 const productFinished = ref(false)
 const productPageNum = ref(1)
+const currentSort = ref('default')
+let productGeneration = 0
 
 const parentCategories = computed(() => categoryTree.value)
 
@@ -151,6 +157,8 @@ function selectChild(childId) {
 }
 
 function refreshProducts() {
+  productGeneration++
+  productLoading.value = false
   productPageNum.value = 1
   products.value = []
   productFinished.value = false
@@ -160,21 +168,22 @@ function refreshProducts() {
 async function loadProducts() {
   if (productLoading.value) return
   productLoading.value = true
+  const generation = productGeneration, page = productPageNum.value
   try {
-    const params = { pageNum: productPageNum.value, pageSize: 10 }
+    const params = { pageNum: page, pageSize: 10, ...productSortParams(currentSort.value) }
     if (queryCategoryId.value) {
       params.categoryId = queryCategoryId.value
     } else if (queryParentCategoryId.value) {
       params.parentCategoryId = queryParentCategoryId.value
     }
     const res = await getProductList(params)
+    if (generation !== productGeneration) return
     const list = res.data?.records || res.data?.rows || []
     if (list.length < 10) productFinished.value = true
-    products.value = productPageNum.value === 1 ? list : [...products.value, ...list]
+    products.value = page === 1 ? list : [...products.value, ...list]
   } catch (e) {
-    products.value = productPageNum.value === 1 ? [] : products.value
-  }
-  productLoading.value = false
+    if (generation === productGeneration && page > 1) productPageNum.value = page - 1
+  } finally { if (generation === productGeneration) productLoading.value = false }
 }
 
 function goProductDetail(id) {
@@ -191,8 +200,8 @@ function loadMoreProducts() {
 
 <style lang="scss" scoped>
 .category-page {
-  height: 100vh;
-  background: #f8fafc;
+  height: var(--app-page-height, 100vh);
+  background: #f7f8f9;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -204,7 +213,7 @@ function loadMoreProducts() {
   position: absolute;
   top: 0;
   right: 0;
-  bottom: calc(110rpx + env(safe-area-inset-bottom));
+  bottom: calc(110rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
   left: 0;
   display: flex;
   overflow: hidden;
@@ -223,7 +232,7 @@ function loadMoreProducts() {
 .side-item {
   padding: 28rpx 16rpx;
   font-size: 26rpx;
-  color: #64748b;
+  color: #666b73;
   text-align: center;
   position: relative;
   box-sizing: border-box;
@@ -236,10 +245,10 @@ function loadMoreProducts() {
   }
 
   &.active {
-    background: #f1f5f9;
-    color: #4f46e5;
+    background: #f4f5f6;
+    color: #17191c;
     font-weight: 600;
-    border-left: 6rpx solid #4f46e5;
+    border-left: 6rpx solid #17191c;
   }
 }
 
@@ -279,27 +288,28 @@ function loadMoreProducts() {
   display: inline-block;
   padding: 14rpx 28rpx;
   font-size: 24rpx;
-  color: #64748b;
+  color: #666b73;
   background: #ffffff;
   border-radius: 999rpx;
-  box-shadow: 0 2rpx 10rpx rgba(99, 102, 241, 0.06);
+  box-shadow: 0 2rpx 10rpx rgba(23, 25, 28, 0.04);
   white-space: nowrap;
   flex-shrink: 0;
 
   &.active {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
-    color: #4f46e5;
+    background: #17191c;
+    border-color: #17191c;
+    color: #ffffff;
     font-weight: 600;
   }
 
   &:active {
-    background: rgba(99, 102, 241, 0.08);
-    border-color: rgba(99, 102, 241, 0.3);
-    color: #4f46e5;
+    background: rgba(23, 25, 28, 0.08);
+    border-color: rgba(23, 25, 28, 0.3);
+    color: #17191c;
   }
 }
 
+.category-sort { margin-bottom: 20rpx; }
 .product-section {
   min-height: 200rpx;
   overflow: hidden;
@@ -312,7 +322,7 @@ function loadMoreProducts() {
   background: #ffffff;
   border-radius: 16rpx;
   margin-bottom: 16rpx;
-  box-shadow: 0 4rpx 16rpx rgba(99, 102, 241, 0.06);
+  box-shadow: 0 4rpx 16rpx rgba(23, 25, 28, 0.04);
   overflow: hidden;
 }
 
@@ -334,7 +344,7 @@ function loadMoreProducts() {
 
 .product-name {
   font-size: 26rpx;
-  color: #1e293b;
+  color: #17191c;
   font-weight: 600;
   line-height: 1.4;
   display: -webkit-box;
@@ -345,7 +355,7 @@ function loadMoreProducts() {
 
 .product-subtitle {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
   margin-top: 6rpx;
   display: block;
   width: 100%;
@@ -364,19 +374,19 @@ function loadMoreProducts() {
 .product-price {
   font-size: 32rpx;
   font-weight: bold;
-  color: #4f46e5;
+  color: #17191c;
 }
 
 .product-sales {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 
 .loading-tip {
   text-align: center;
   padding: 32rpx;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 
 .empty-tip {
@@ -384,6 +394,6 @@ function loadMoreProducts() {
   text-align: center;
   padding: 60rpx;
   font-size: 26rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 </style>

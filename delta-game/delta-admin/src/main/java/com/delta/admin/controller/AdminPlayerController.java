@@ -13,6 +13,9 @@ import com.delta.pay.service.TransactionService;
 import com.delta.player.entity.Player;
 import com.delta.player.entity.PlayerWallet;
 import com.delta.player.service.PlayerService;
+import com.delta.player.service.PlayerLevelService;
+import com.delta.player.dto.PlayerAdminUpdateRequest;
+import jakarta.validation.Valid;
 import com.delta.player.service.PlayerWalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,16 +28,22 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class AdminPlayerController {
     private final PlayerService playerService;
+    private final PlayerLevelService levelService;
     private final PlayerWalletService playerWalletService;
     private final OrderService orderService;
     private final TransactionService transactionService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.delta.system.service.FeatureAuditService featureAudit;
 
     @GetMapping("/list")
     public R<Page<Player>> list(PageQuery query,
-                                @RequestParam(value = "status", required = false) String status) {
+                                @RequestParam(value = "status", required = false) String status,
+                                @RequestParam(value = "keyword", required = false) String keyword,
+                                @RequestParam(value = "level", required = false) Integer level) {
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
                 .eq(status != null && !status.isEmpty(), Player::getStatus, status)
+                .like(keyword != null && !keyword.isBlank(), Player::getNickname, keyword)
+                .eq(level != null, Player::getLevel, level)
                 .orderByDesc(Player::getCreatedAt);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
         for (Player p : page.getRecords()) {
@@ -122,6 +131,7 @@ public class AdminPlayerController {
         return R.ok();
     }
 
+    @OpLog(module = "player", operation = "更新打手状态")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
         Player p = new Player();
@@ -133,12 +143,25 @@ public class AdminPlayerController {
 
     @OpLog(module = "player", operation = "更新打手信息")
     @PutMapping("/{id}")
-    public R<Void> updatePlayer(@PathVariable Long id, @RequestBody Player body) {
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
+    public R<Void> updatePlayer(@PathVariable Long id, @Valid @RequestBody PlayerAdminUpdateRequest body) {
+        if(playerService.getById(id)==null) return R.fail(404,"打手不存在");
+        if(body.getLevel()!=null&&levelService.getById(body.getLevel())==null) return R.fail(400,"等级分类不存在");
         Player p = new Player();
         p.setId(id);
-        p.setNickname(body.getNickname());
+        body.applyTo(p);
         p.setRealName(body.getRealName());
+        p.setLevel(body.getLevel());
+        p.setGrabCaptchaOverride(body.getGrabCaptchaOverride());
+        p.setPriceIncreaseRate(body.getPriceIncreaseRate());
+        Player before=playerService.getById(id);
         playerService.updateById(p);
+        featureAudit.record("修改打手涨价比例",id,
+                before.getPriceIncreaseRate()==null?new java.math.BigDecimal("-1"):before.getPriceIncreaseRate(),
+                p.getPriceIncreaseRate()==null?before.getPriceIncreaseRate():p.getPriceIncreaseRate());
+        featureAudit.record("修改打手等级及验证覆盖",id,
+                java.util.Map.of("level",before.getLevel()==null?1:before.getLevel(),"grabCaptchaOverride",before.getGrabCaptchaOverride()==null?-1:before.getGrabCaptchaOverride()),
+                java.util.Map.of("level",p.getLevel()==null?(before.getLevel()==null?1:before.getLevel()):p.getLevel(),"grabCaptchaOverride",p.getGrabCaptchaOverride()==null?(before.getGrabCaptchaOverride()==null?-1:before.getGrabCaptchaOverride()):p.getGrabCaptchaOverride()));
         return R.ok();
     }
 }

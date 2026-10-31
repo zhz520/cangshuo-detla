@@ -17,6 +17,11 @@ public class Order {
     private String productName;
     private String specInfo;
     private BigDecimal amount;
+    private BigDecimal baseAmount;
+    private BigDecimal priceIncreaseRate;
+    private BigDecimal priceIncreaseAmount;
+    private Integer requestedPlayerLevelId;
+    private String playerLevelName;
     /** 下单时快照的抽佣比例（0~1，如 0.1 表示 10%），来自 sys_config settlement.commission_rate */
     private BigDecimal commissionRate;
     private String gameAccount;

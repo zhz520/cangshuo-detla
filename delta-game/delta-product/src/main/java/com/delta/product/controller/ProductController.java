@@ -2,6 +2,7 @@ package com.delta.product.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
@@ -10,6 +11,7 @@ import com.delta.product.entity.Product;
 import com.delta.product.entity.RecommendCategory;
 import com.delta.product.service.CategoryService;
 import com.delta.product.service.ProductService;
+import com.delta.product.service.ProductSort;
 import com.delta.product.service.RecommendCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -30,9 +32,10 @@ public class ProductController {
                                   @RequestParam(value = "parentCategoryId", required = false) Long parentCategoryId,
                                   @RequestParam(value = "keyword", required = false) String keyword,
                                   @RequestParam(value = "status", required = false) Integer status,
-                                  @RequestParam(value = "orderBy", required = false, defaultValue = "sort") String orderBy) {
+                                  @RequestParam(value = "orderBy", defaultValue = "sort") String orderBy,
+                                  @RequestParam(value = "orderDir", defaultValue = "asc") String orderDir) {
         Integer resolvedStatus = status;
-        if (resolvedStatus == null && !isPrivilegedRequest()) {
+        if (!isPrivilegedRequest()) {
             resolvedStatus = 1;
         }
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<Product>()
@@ -57,12 +60,7 @@ public class ProductController {
             }
         }
         // 支持多排序
-        switch (orderBy) {
-            case "sales" -> wrapper.orderByDesc(Product::getSalesCount);
-            case "newest" -> wrapper.orderByDesc(Product::getCreatedAt);
-            case "price" -> wrapper.orderByAsc(Product::getPrice);
-            default -> wrapper.orderByAsc(Product::getSortOrder);
-        }
+        ProductSort.apply(wrapper, orderBy, orderDir);
         return R.ok(productService.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper));
     }
 
@@ -75,10 +73,12 @@ public class ProductController {
     /** 热门推荐商品，categoryId 为空或不传则查全部推荐，否则只查该分类下的推荐 */
     @GetMapping("/recommend")
     public R<java.util.List<Product>> recommend(
-            @RequestParam(value = "categoryId", required = false) Long categoryId) {
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "orderBy", defaultValue = "sort") String orderBy,
+            @RequestParam(value = "orderDir", defaultValue = "asc") String orderDir) {
         LambdaQueryWrapper<Product> w = new LambdaQueryWrapper<Product>()
-                .eq(Product::getStatus, 1).eq(Product::getIsRecommend, 1)
-                .orderByAsc(Product::getSortOrder).last("LIMIT 20");
+                .eq(Product::getStatus, 1).eq(Product::getIsRecommend, 1).last("LIMIT 20");
+        ProductSort.apply(w, orderBy, orderDir);
         if (categoryId != null) {
             w.eq(Product::getRecommendCategoryId, categoryId);
         }
@@ -97,24 +97,28 @@ public class ProductController {
         return R.ok(product);
     }
 
+    @OpLog(module = "product", operation = "新增商品")
     @PostMapping
     public R<Void> add(@RequestBody Product product) {
         productService.save(product);
         return R.ok();
     }
 
+    @OpLog(module = "product", operation = "编辑商品")
     @PutMapping
     public R<Void> update(@RequestBody Product product) {
         productService.updateById(product);
         return R.ok();
     }
 
+    @OpLog(module = "product", operation = "更新商品状态")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam("status") Integer status) {
         productService.updateStatus(id, status);
         return R.ok();
     }
 
+    @OpLog(module = "product", operation = "删除商品")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { productService.removeById(id); return R.ok(); }
 

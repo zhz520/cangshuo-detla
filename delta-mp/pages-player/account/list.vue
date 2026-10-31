@@ -2,7 +2,7 @@
   <view class="account-page">
     <view v-for="a in accounts" :key="a.id" class="account-card">
       <view class="card-top">
-        <image class="type-icon" :src="a.type === 'ALIPAY' ? '/static/icons/钞票.svg' : a.type === 'WECHAT' ? '/static/icons/钞票.svg' : '/static/icons/理财.svg'" mode="aspectFit" />
+        <AppImage class="type-icon" :src="a.type === 'ALIPAY' ? '/static/icons/钞票.svg' : a.type === 'WECHAT' ? '/static/icons/钞票.svg' : '/static/icons/理财.svg'" mode="aspectFit" />
         <text class="type-name">{{ a.type === 'ALIPAY' ? '支付宝' : a.type === 'WECHAT' ? '微信' : '银行卡' }}</text>
         <view v-if="a.isDefault" class="default-tag">默认</view>
       </view>
@@ -18,6 +18,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -40,17 +41,17 @@ function doDelete(id) {
 }
 </script>
 <style lang="scss" scoped>
-.account-page { background: #ffffff; min-height: 100vh; padding: 24rpx; }
-.account-card { background: #f1f5f9; border-radius: 12rpx; padding: 24rpx; margin-bottom: 20rpx;
+.account-page { background: #ffffff; min-height: var(--app-page-height, 100vh); padding: 24rpx; }
+.account-card { background: #f4f5f6; border-radius: 12rpx; padding: 24rpx; margin-bottom: 20rpx;
   .card-top { display: flex; align-items: center; gap: 8rpx; margin-bottom: 12rpx;
     .type-icon { width: 36rpx; height: 36rpx; } .type-name { font-size: 28rpx; font-weight: bold; }
-    .default-tag { font-size: 20rpx; color: #ff4544; background: #f0f5ff; padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: auto; }
+    .default-tag { font-size: 20rpx; color: #17191c; background: #f7f7f8; padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: auto; }
   }
-  .account-no { font-size: 32rpx; color: #1e293b; letter-spacing: 2rpx; display: block; }
-  .real-name { font-size: 24rpx; color: #94a3b8; display: block; margin-top: 4rpx; }
-  .card-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9;
-    .action-btn { font-size: 26rpx; color: #ff4544; &.danger { color: #ee0a24; } }
+  .account-no { font-size: 32rpx; color: #17191c; letter-spacing: 2rpx; display: block; }
+  .real-name { font-size: 24rpx; color: #73777e; display: block; margin-top: 4rpx; }
+  .card-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f4f5f6;
+    .action-btn { font-size: 26rpx; color: #17191c; &.danger { color: #d44955; } }
   }
 }
-.add-btn { text-align: center; padding: 24rpx; background: #f1f5f9; border-radius: 12rpx; font-size: 28rpx; color: #ff4544; margin-top: 20rpx; }
+.add-btn { text-align: center; padding: 24rpx; background: #f4f5f6; border-radius: 12rpx; font-size: 28rpx; color: #17191c; margin-top: 20rpx; }
 </style>

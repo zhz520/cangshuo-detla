@@ -8,7 +8,7 @@
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="item in records" :key="item.id" class="invite-card">
         <view class="card-top">
-          <image class="avatar" :src="(tab==='received' ? item.fromAvatar : item.toAvatar) || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+          <AppImage :width="160" class="avatar" :src="(tab==='received' ? item.fromAvatar : item.toAvatar) || '/static/images/default-avatar.png'" mode="aspectFill" />
           <view class="info">
             <text class="name">{{ tab === 'received' ? item.fromNickname : item.toNickname }}</text>
             <text class="order-no">订单：{{ item.orderNo || item.orderId }}</text>
@@ -27,6 +27,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -86,21 +87,21 @@ async function doReject(item) {
 }
 </script>
 <style lang="scss" scoped>
-.invite-list-page { background: #ffffff; min-height: 100vh; }
-.tabs { display: flex; background: #f1f5f9; border-bottom: 1rpx solid #f1f5f9;
-  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #64748b; position: relative;
-    &.active { color: #ff4544; &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: linear-gradient(135deg, #ff4544, #e63939, #e63939); border-radius: 2rpx; } }
+.invite-list-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
+.tabs { display: flex; background: #f4f5f6; border-bottom: 1rpx solid #f4f5f6;
+  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #666b73; position: relative;
+    &.active { color: #17191c; &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: linear-gradient(135deg, #17191c, #30343a, #30343a); border-radius: 2rpx; } }
   }
 }
-.list { height: calc(100vh - 100rpx); padding: 20rpx 24rpx; }
-.invite-card { background: #f1f5f9; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
+.list { height: calc(var(--app-page-height, 100vh) - 100rpx); padding: 20rpx 24rpx; }
+.invite-card { background: #f4f5f6; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; align-items: center; gap: 16rpx; }
   .avatar { width: 72rpx; height: 72rpx; border-radius: 50%; }
-  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; } }
+  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } }
   .status-label { font-size: 24rpx; font-weight: 500; white-space: nowrap; }
-  .card-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9; }
-  .btn-accept { padding: 10rpx 32rpx; background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; }
-  .btn-reject { padding: 10rpx 32rpx; border: 1rpx solid #ee0a24; color: #ee0a24; font-size: 26rpx; border-radius: 999rpx; }
+  .card-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f4f5f6; }
+  .btn-accept { padding: 10rpx 32rpx; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; }
+  .btn-reject { padding: 10rpx 32rpx; border: 1rpx solid #d44955; color: #d44955; font-size: 26rpx; border-radius: 999rpx; }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #94a3b8; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
 </style>

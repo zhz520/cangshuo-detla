@@ -3,7 +3,7 @@
     <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
       <!-- 用户信息 -->
       <view class="user-header">
-        <image class="avatar" :src="playerStore.playerInfo?.avatar||'/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="playerStore.playerInfo?.avatar||'/static/images/default-avatar.png'" mode="aspectFill" />
         <text class="name">{{playerStore.playerInfo?.nickname||'接单员'}}</text>
       </view>
       <!-- 在线状态 -->
@@ -32,6 +32,7 @@
       </view>
       <!-- 菜单 -->
       <view class="menu-list">
+        <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" /><text>提现记录</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现账户</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages-player/invite/list')">
@@ -56,15 +57,18 @@
         <OrderCard v-for="o in recentOrders" :key="o.id" :order="o" detail-path="/pages-player/order/detail" />
       </view>
       <view class="switch-btn" @click="backToUser">返回用户端</view>
+      <TechSupportFooter />
       <view class="tab-page-bottom-spacer" />
     </scroll-view>
     <CustomTabBar :current="3" />
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import TechSupportFooter from '@/components/TechSupportFooter.vue'
 import OrderCard from '@/components/OrderCard.vue'
 import { usePlayerStore } from '@/store/player'
 import { useAppStore } from '@/store/app'
@@ -111,20 +115,20 @@ function backToUser() {
 </script>
 <style lang="scss" scoped>
 .player-mine { background: #ffffff; position: relative; }
-.online-bar { display:flex; align-items:center; justify-content:space-between; padding:24rpx 32rpx; margin:0 24rpx; background:#f8fafc; border-radius:12rpx; .online-label { font-size:28rpx; color:#334155; font-weight:500; } .online-right { display:flex; align-items:center; gap:16rpx; } .online-status-text { font-size:26rpx; &.on { color:#22c55e; } &.off { color:#94a3b8; } } }
-.user-header { display:flex; align-items:center; padding:48rpx 32rpx; background: #f1f5f9; .avatar { width:100rpx; height:100rpx; border-radius:50%; margin-right:24rpx; } .name { font-size:32rpx; font-weight:bold; } }
+.online-bar { display:flex; align-items:center; justify-content:space-between; padding:24rpx 32rpx; margin:0 24rpx; background:#f7f8f9; border-radius:12rpx; .online-label { font-size:28rpx; color:#41464e; font-weight:500; } .online-right { display:flex; align-items:center; gap:16rpx; } .online-status-text { font-size:26rpx; &.on { color:#347a5b; } &.off { color:#73777e; } } }
+.user-header { display:flex; align-items:center; padding:48rpx 32rpx; background: #f4f5f6; .avatar { width:100rpx; height:100rpx; border-radius:50%; margin-right:24rpx; } .name { font-size:32rpx; font-weight:bold; } }
 .stat-cards { display:flex; gap:20rpx; padding:24rpx;
-  .card { flex:1; background: #f1f5f9; padding:24rpx; border-radius:12rpx; text-align:center;
-    .num { font-size:36rpx; font-weight:bold; color: #ff4544; display:block; }
-    .label { font-size:24rpx; color: #94a3b8; margin-top:8rpx; display:block; }
+  .card { flex:1; background: #f4f5f6; padding:24rpx; border-radius:12rpx; text-align:center;
+    .num { font-size:36rpx; font-weight:bold; color: #17191c; display:block; }
+    .label { font-size:24rpx; color: #73777e; margin-top:8rpx; display:block; }
   }
 }
 .quick-actions { display:grid; grid-template-columns:repeat(4, 1fr); gap:20rpx; padding:0 24rpx;
-  .action { background: #f1f5f9; padding:24rpx 0; text-align:center; border-radius:12rpx; font-size:24rpx; color: #1e293b; display:flex; flex-direction:column; align-items:center; gap:8rpx; .action-icon { width:48rpx; height:48rpx; } }
+  .action { background: #f4f5f6; padding:24rpx 0; text-align:center; border-radius:12rpx; font-size:24rpx; color: #17191c; display:flex; flex-direction:column; align-items:center; gap:8rpx; .action-icon { width:48rpx; height:48rpx; } }
 }
-.menu-list { margin-top:20rpx; background: #f1f5f9; }
-.menu-item { display:flex; align-items:center; padding:32rpx 24rpx; border-bottom:1rpx solid #f1f5f9; font-size:28rpx; .menu-icon { width:40rpx; height:40rpx; margin-right:16rpx; flex-shrink:0; } text:not(.arrow) { flex:1; } .badge { min-width:32rpx; height:32rpx; line-height:32rpx; padding:0 8rpx; font-size:20rpx; color:#fff; background:#ee0a24; border-radius:32rpx; text-align:center; margin-right:8rpx; flex-shrink:0; } .arrow { color: #cbd5e1; flex-shrink:0; margin-left:auto; } }
+.menu-list { margin-top:20rpx; background: #f4f5f6; }
+.menu-item { display:flex; align-items:center; padding:32rpx 24rpx; border-bottom:1rpx solid #f4f5f6; font-size:28rpx; .menu-icon { width:40rpx; height:40rpx; margin-right:16rpx; flex-shrink:0; } text:not(.arrow) { flex:1; } .badge { min-width:32rpx; height:32rpx; line-height:32rpx; padding:0 8rpx; font-size:20rpx; color:#fff; background:#d44955; border-radius:32rpx; text-align:center; margin-right:8rpx; flex-shrink:0; } .arrow { color: #b9bdc4; flex-shrink:0; margin-left:auto; } }
 .section { padding:24rpx; }
-.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16rpx; .section-title { font-size:28rpx; font-weight:bold; } .more { font-size:24rpx; color: #94a3b8; } }
-.switch-btn { margin:40rpx 24rpx; height:88rpx; line-height:88rpx; text-align:center; background: #f1f5f9; color: #ff4544; font-size:30rpx; border-radius:12rpx; border:1rpx solid rgba(255,69,68,0.5); }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16rpx; .section-title { font-size:28rpx; font-weight:bold; } .more { font-size:24rpx; color: #73777e; } }
+.switch-btn { margin:40rpx 24rpx; height:88rpx; line-height:88rpx; text-align:center; background: #f4f5f6; color: #17191c; font-size:30rpx; border-radius:12rpx; border:1rpx solid rgba(23, 25, 28, 0.5); }
 </style>

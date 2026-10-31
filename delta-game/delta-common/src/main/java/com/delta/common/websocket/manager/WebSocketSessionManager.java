@@ -15,6 +15,7 @@ public class WebSocketSessionManager {
     public WebSocketSession get(String key) { return sessions.get(key); }
     public boolean isOnline(String key) { return sessions.containsKey(key); }
     public int getOnlineCount() { return sessions.size(); }
+    public java.util.Collection<WebSocketSession> getAll() { return sessions.values(); }
 
     public static String buildKey(String userType, Long userId) {
         return userType + ":" + userId;

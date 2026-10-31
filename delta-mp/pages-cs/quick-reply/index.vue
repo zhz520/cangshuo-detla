@@ -41,7 +41,7 @@
         </view>
         <view class="form-item row">
           <text class="form-label">启用</text>
-          <switch :checked="form.status === 1" @change="form.status = $event.detail.value ? 1 : 0" color="#ff4544" />
+          <switch :checked="form.status === 1" @change="form.status = $event.detail.value ? 1 : 0" color="#17191c" />
         </view>
         <view class="modal-btns">
           <view class="modal-btn cancel" @click="showModal = false">取消</view>
@@ -151,7 +151,7 @@ async function handleDelete() {
 onShow(() => { fetchList() })
 </script>
 <style lang="scss" scoped>
-.qr-page { background: #ffffff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.qr-page { background: #ffffff; min-height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; }
 
 .qr-list { flex: 1; padding: 20rpx 24rpx; padding-bottom: 140rpx; box-sizing: border-box; }
 .qr-item {
@@ -163,37 +163,37 @@ onShow(() => { fetchList() })
 .qr-content { flex: 1; overflow: hidden; margin-right: 16rpx; }
 .qr-text { font-size: 28rpx; color: rgba(0,0,0,0.85); display: block; line-height: 1.5; word-break: break-all; }
 .qr-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
-.qr-category { font-size: 22rpx; color: #ff4544; background: rgba(255,69,68,0.1); padding: 2rpx 12rpx; border-radius: 4rpx; }
+.qr-category { font-size: 22rpx; color: #17191c; background: rgba(23, 25, 28, 0.1); padding: 2rpx 12rpx; border-radius: 4rpx; }
 .qr-disabled { font-size: 22rpx; color: rgba(0,0,0,0.3); }
 
 .qr-actions { display: flex; gap: 16rpx; flex-shrink: 0; }
 .action-btn {
   font-size: 24rpx; padding: 8rpx 20rpx; border-radius: 8rpx;
-  &.edit { color: #ff4544; background: rgba(255,69,68,0.1); border: 1rpx solid rgba(255,69,68,0.15); }
-  &.delete { color: #ee0a24; background: rgba(238,10,36,0.08); border: 1rpx solid rgba(238,10,36,0.15); }
+  &.edit { color: #17191c; background: rgba(23, 25, 28, 0.1); border: 1rpx solid rgba(23, 25, 28, 0.15); }
+  &.delete { color: #d44955; background: rgba(201, 79, 89, 0.08); border: 1rpx solid rgba(201, 79, 89, 0.15); }
 }
 
 .empty-tip { text-align: center; padding: 120rpx 0; color: rgba(0,0,0,0.3); font-size: 28rpx; }
 
 .bottom-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  padding: 20rpx 24rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  padding: 20rpx 24rpx; padding-bottom: calc(20rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
   background: rgba(255,255,255,0.95); border-top: 1rpx solid rgba(0,0,0,0.06);
 }
 .add-btn {
   height: 88rpx; line-height: 88rpx; text-align: center;
-  background: linear-gradient(135deg, #ff4544, #e63939);
+  background: linear-gradient(135deg, #17191c, #30343a);
   color: #ffffff; font-weight: bold; font-size: 30rpx; border-radius: 999rpx;
 }
 
 /* 弹窗 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .modal-body {
-  width: 85%; background: #ffffff; border: 1rpx solid rgba(255,69,68,0.15);
+  width: 85%; background: #ffffff; border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 16rpx; padding: 40rpx;
   &.small { width: 75%; }
 }
-.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #ff4544; margin-bottom: 32rpx; }
+.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #17191c; margin-bottom: 32rpx; }
 
 .form-item {
   margin-bottom: 24rpx;
@@ -217,8 +217,8 @@ onShow(() => { fetchList() })
 .modal-btn {
   flex: 1; height: 76rpx; line-height: 76rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx;
   &.cancel { background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.55); }
-  &.confirm { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight: bold; }
-  &.danger { background: #ee0a24; color: #fff; font-weight: bold; }
+  &.confirm { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; }
+  &.danger { background: #d44955; color: #fff; font-weight: bold; }
 }
 
 .delete-msg { font-size: 28rpx; color: rgba(0,0,0,0.7); text-align: center; display: block; }

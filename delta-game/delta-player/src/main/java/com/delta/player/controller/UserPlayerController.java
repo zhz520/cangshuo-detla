@@ -29,22 +29,31 @@ public class UserPlayerController {
     private final OrderService orderService;
     private final CrossModuleMapper crossModuleMapper;
     private final SysConfigService sysConfigService;
+    private final com.delta.player.service.PlayerDirectoryService directory;
+    private final com.delta.order.service.OrderPricingService pricing;
 
     @GetMapping("/available-players")
     public R<Map<String, Object>> availablePlayers(PageQuery query,
                                                     @RequestParam(value = "keyword", required = false) String keyword) {
-        LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
-                .eq(Player::getStatus, "ACTIVE")
+        LambdaQueryWrapper<Player> w = directory.visibleQuery()
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword))
                 .orderByDesc(Player::getAvgRating);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
-        for (Player p : page.getRecords()) {
-            p.setCompletedOrders(crossModuleMapper.selectPlayerCompletedOrders(p.getId()));
-            p.setActiveOrders(crossModuleMapper.selectPlayerActiveOrders(p.getId()));
-        }
+        // 使用公开字段白名单，避免将打手身份和财务资料返回给下单用户。
+        java.util.List<Map<String,Object>> records=page.getRecords().stream().map(p -> {
+            Map<String,Object> row=new java.util.LinkedHashMap<>();
+            var view=directory.view(p);
+            row.put("id",p.getId());row.put("nickname",p.getNickname());row.put("avatar",p.getAvatar());
+            row.put("levelName",view.getLevelName());row.put("priceIncreaseRate",view.getPriceIncreaseRate());
+            row.put("isOnline",p.getIsOnline());row.put("avgRating",p.getAvgRating());
+            row.put("completedOrders",crossModuleMapper.selectPlayerCompletedOrders(p.getId()));
+            row.put("activeOrders",crossModuleMapper.selectPlayerActiveOrders(p.getId()));
+            return row;
+        }).toList();
         int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
         Map<String, Object> result = new HashMap<>();
-        result.put("players", page);
+        Page<Map<String,Object>> safePage=new Page<>(page.getCurrent(),page.getSize(),page.getTotal());
+        safePage.setRecords(records);result.put("players", safePage);
         result.put("maxConcurrent", maxConcurrent);
         return R.ok(result);
     }
@@ -60,6 +69,10 @@ public class UserPlayerController {
         if (order.getPlayerId() != null) return R.fail("订单已分配打手，无需重复指定");
         Long playerId = body.get("playerId");
         if (playerId == null) return R.fail("请选择打手");
+        var quote=pricing.quote(order.getProductId(),playerId,null);
+        java.math.BigDecimal paidRate=order.getPriceIncreaseRate()==null?java.math.BigDecimal.ZERO:order.getPriceIncreaseRate();
+        if(quote.getPriceIncreaseRate().compareTo(paidRate)>0)
+            return R.fail(400,"所选打手需要加价，请在下单时选择该打手");
         orderService.assignOrder(id, playerId);
         return R.ok();
     }

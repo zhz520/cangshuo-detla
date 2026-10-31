@@ -37,9 +37,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User getByPhone(String phone) {
-        return getOne(new LambdaQueryWrapper<User>()
+        var matches=list(new LambdaQueryWrapper<User>()
                 .eq(User::getPhone, phone)
-                .last("LIMIT 1"));
+                .last("LIMIT 2"));
+        if(matches.size()>1) throw new com.delta.common.exception.BusinessException(409,"手机号状态异常，请联系客服");
+        return matches.isEmpty()?null:matches.get(0);
     }
 
     @Override
@@ -63,6 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User loginOrRegisterByPhone(String phone) {
         User user = getByPhone(phone);
         if (user == null) {
+            if(baseMapper.countReservedPhone(phone,null)>0) throw new com.delta.common.exception.BusinessException(403,"账号暂不可用，请联系客服");
             user = new User();
             user.setOpenid("h5:" + phone);
             user.setNickname(generateRandomNickname());

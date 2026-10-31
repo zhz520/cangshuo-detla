@@ -3,7 +3,7 @@
     <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
       <view class="profile-card" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()" @longtap="onLongPress">
         <view class="profile-main">
-          <image class="avatar" :src="userStore.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+          <AppImage :width="160" class="avatar" :src="userStore.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
           <view class="profile-info" v-if="userStore.isLoggedIn">
             <text class="name">{{ userStore.nickname }}</text>
             <text class="phone" v-if="userStore.phone">{{ formatPhone(userStore.phone) }}</text>
@@ -67,25 +67,27 @@
       </view>
 
       <view v-if="userStore.isLoggedIn" class="logout" @click="userStore.logout()">退出登录</view>
+      <TechSupportFooter />
       <view class="tab-page-bottom-spacer"></view>
     </scroll-view>
     <CustomTabBar :current="4" />
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { useAppStore } from '@/store/app'
-import { usePlayerStore } from '@/store/player'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
 import { switchToPlayerToken } from '@/api/auth'
+import { getPlayerApplicationStatus } from '@/api/player'
 import { createCsSession } from '@/api/chat'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import TechSupportFooter from '@/components/TechSupportFooter.vue'
 const userStore = useUserStore()
 const appStore = useAppStore()
-const playerStore = usePlayerStore()
 const chatStore = useChatStore()
 const longPressCount = ref(0)
 const systemUnread = computed(() => chatStore.messageUnreadCount)
@@ -102,7 +104,7 @@ onShow(() => {
   }
 })
 
-const TAB_PAGES = ['/pages/index/index', '/pages/category/index', '/pages/order/list', '/pages/chat/list', '/pages/mine/index']
+const TAB_PAGES = ['/pages/index/index', '/pages/category/index', '/pages/players/index', '/pages/chat/list', '/pages/mine/index']
 function go(url) {
   if (TAB_PAGES.includes(url)) {
     uni.switchTab({ url })
@@ -118,20 +120,24 @@ function formatPhone(p) {
 async function goPlayer() {
   if (!userStore.checkLogin()) return
   try {
-    const profile = await playerStore.fetchProfile({ role: 'user' })
-    if (!profile) {
+    const { data } = await getPlayerApplicationStatus()
+    if (!data?.registered) {
       uni.navigateTo({ url: '/pages-player/apply/index' })
-    } else if (profile.status === 'PENDING') {
+    } else if (data.status === 'PENDING') {
       uni.showToast({ title: '审核中，请耐心等待', icon: 'none' })
-    } else if (profile.status === 'ACTIVE') {
+    } else if (data.status === 'ACTIVE') {
       const res = await switchToPlayerToken()
       if (res?.data?.token) {
         setPlayerToken(res.data.token)
         useChatStore().disconnect()
         appStore.switchToPlayer()
       }
-    } else {
+    } else if (data.status === 'FROZEN') {
+      uni.showToast({ title: '接单账号已冻结，请联系客服', icon: 'none' })
+    } else if (data.status === 'REJECTED') {
       uni.navigateTo({ url: '/pages-player/apply/index' })
+    } else {
+      uni.showToast({ title: '接单账号状态异常，请联系客服', icon: 'none' })
     }
   } catch (e) {
     const msg = e?.data?.msg || e?.message
@@ -159,14 +165,14 @@ function onLongPress() {
 </script>
 <style lang="scss" scoped>
 .mine-page {
-  background: #f8fafc;
-  height: 100vh;
+  background: #f7f8f9;
+  height: var(--app-page-height, 100vh);
   position: relative;
   overflow: hidden;
   padding-bottom: 0;
 }
 .mine-scroll {
-  height: calc(100vh - 110rpx - env(safe-area-inset-bottom));
+  height: calc(var(--app-page-height, 100vh) - 110rpx - var(--app-safe-bottom, env(safe-area-inset-bottom)));
   position: relative;
   z-index: 1;
   overflow: hidden;
@@ -184,10 +190,10 @@ function onLongPress() {
 .profile-card {
   margin: 24rpx 24rpx 0;
   padding: 30rpx;
-  background: linear-gradient(135deg, #ffffff, #f5f3ff);
-  border: 1rpx solid rgba(99, 102, 241, 0.14);
+  background: linear-gradient(135deg, #ffffff, #f8f8f9);
+  border: 1rpx solid rgba(23, 25, 28, 0.14);
   border-radius: 24rpx;
-  box-shadow: 0 12rpx 34rpx rgba(15, 23, 42, 0.07);
+  box-shadow: 0 12rpx 34rpx rgba(23, 25, 28, 0.04);
   position: relative;
   z-index: 1;
 }
@@ -200,7 +206,7 @@ function onLongPress() {
   height: 128rpx;
   border-radius: 50%;
   background: #ffffff;
-  border: 4rpx solid rgba(99, 102, 241, 0.14);
+  border: 4rpx solid rgba(23, 25, 28, 0.14);
   margin-right: 24rpx;
   flex-shrink: 0;
 }
@@ -213,18 +219,18 @@ function onLongPress() {
   display: block;
   font-size: 36rpx;
   font-weight: 800;
-  color: #111827;
+  color: #17191c;
   line-height: 1.25;
 }
 .phone {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #7c8aa0;
+  color: #73777e;
   line-height: 1.35;
 }
 .profile-arrow {
-  color: #cbd5e1;
+  color: #b9bdc4;
   font-size: 32rpx;
   flex-shrink: 0;
   margin-left: 12rpx;
@@ -238,7 +244,7 @@ function onLongPress() {
   padding: 24rpx 10rpx;
   background: #ffffff;
   border-radius: 22rpx;
-  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
   position: relative;
   z-index: 1;
 }
@@ -249,7 +255,7 @@ function onLongPress() {
   align-items: center;
   gap: 12rpx;
   font-size: 24rpx;
-  color: #334155;
+  color: #41464e;
   font-weight: 600;
 }
 .quick-icon-wrap {
@@ -269,7 +275,7 @@ function onLongPress() {
   padding: 0 8rpx;
   font-size: 20rpx;
   color: #fff;
-  background: #ee0a24;
+  background: #d44955;
   border-radius: 32rpx;
   text-align: center;
 }
@@ -279,10 +285,10 @@ function onLongPress() {
   align-items: center;
   margin: 22rpx 24rpx 0;
   padding: 26rpx 24rpx;
-  background: linear-gradient(135deg, #eef2ff, #ffffff);
-  border: 1rpx solid rgba(99, 102, 241, 0.16);
+  background: linear-gradient(135deg, #17191c, #30343a);
+  border: 1rpx solid rgba(23, 25, 28, 0.16);
   border-radius: 22rpx;
-  box-shadow: 0 10rpx 30rpx rgba(99, 102, 241, 0.1);
+  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
   position: relative;
   z-index: 1;
 }
@@ -290,7 +296,7 @@ function onLongPress() {
   width: 72rpx;
   height: 72rpx;
   border-radius: 18rpx;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -309,14 +315,14 @@ function onLongPress() {
 .settle-title {
   display: block;
   font-size: 28rpx;
-  color: #1f2937;
+  color: #ffffff;
   font-weight: 800;
 }
 .settle-desc {
   display: block;
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #c4c7cc;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -324,8 +330,8 @@ function onLongPress() {
 .settle-action {
   margin-left: 18rpx;
   padding: 10rpx 22rpx;
-  color: #ffffff;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #17191c;
+  background: #ffffff;
   border-radius: 999rpx;
   font-size: 24rpx;
   font-weight: 700;
@@ -337,7 +343,7 @@ function onLongPress() {
   padding-top: 8rpx;
   background: #ffffff;
   border-radius: 22rpx;
-  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
   overflow: hidden;
   position: relative;
   z-index: 1;
@@ -346,24 +352,24 @@ function onLongPress() {
   display: block;
   padding: 22rpx 24rpx 10rpx;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
   font-weight: 700;
 }
 .menu-item {
   display: flex;
   align-items: center;
   padding: 30rpx 24rpx;
-  border-bottom: 1rpx solid #f1f5f9;
+  border-bottom: 1rpx solid #f4f5f6;
   font-size: 28rpx;
-  color: #334155;
+  color: #41464e;
   .menu-icon { width: 40rpx; height: 40rpx; margin-right: 16rpx; flex-shrink: 0; }
   text { flex: 1; }
   .badge {
     min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx;
-    font-size: 20rpx; color: #fff; background: #ee0a24; border-radius: 32rpx;
+    font-size: 20rpx; color: #fff; background: #d44955; border-radius: 32rpx;
     text-align: center; margin-right: 8rpx; flex-shrink: 0;
   }
-  .arrow { color: #cbd5e1; flex: none; }
+  .arrow { color: #b9bdc4; flex: none; }
   &:last-child { border-bottom: none; }
 }
 .logout {
@@ -372,10 +378,10 @@ function onLongPress() {
   line-height: 88rpx;
   text-align: center;
   background: #ffffff;
-  color: #ee5555;
+  color: #c94f59;
   font-size: 30rpx;
   border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(238, 10, 36, 0.08);
+  box-shadow: 0 4rpx 20rpx rgba(201, 79, 89, 0.08);
   position: relative;
   z-index: 1;
 }

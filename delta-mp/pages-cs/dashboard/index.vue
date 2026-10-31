@@ -193,7 +193,7 @@ function formatTime(t) {
 
 .section-more {
   font-size: 24rpx;
-  color: #ff4544;
+  color: #17191c;
 }
 
 .stat-cards {
@@ -209,7 +209,7 @@ function formatTime(t) {
     text-align: center;
 
     &.alert .num {
-      color: #ee6723;
+      color: #17191c;
     }
 
     .num {
@@ -220,7 +220,7 @@ function formatTime(t) {
       line-height: 1.2;
 
       &.gold {
-        color: #ff4544;
+        color: #17191c;
         font-size: 32rpx;
       }
     }
@@ -261,7 +261,7 @@ function formatTime(t) {
   .order-amount {
     font-size: 28rpx;
     font-weight: bold;
-    color: #ff4544;
+    color: #17191c;
     margin-left: 16rpx;
   }
 
@@ -315,7 +315,7 @@ function formatTime(t) {
       padding: 0 8rpx;
       font-size: 20rpx;
       color: #ffffff;
-      background: #ee0a24;
+      background: #d44955;
       border-radius: 32rpx;
       text-align: center;
     }

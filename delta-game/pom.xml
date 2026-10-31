@@ -17,16 +17,21 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <delta.version>1.0.0</delta.version>
-        <spring-boot.version>3.2.0</spring-boot.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
-        <druid.version>1.2.20</druid.version>
-        <knife4j.version>4.3.0</knife4j.version>
-        <hutool.version>5.8.23</hutool.version>
-        <weixin-java.version>4.6.0</weixin-java.version>
+        <druid.version>1.2.28</druid.version>
+        <knife4j.version>4.5.0</knife4j.version>
+        <hutool.version>5.8.48</hutool.version>
+        <weixin-java.version>4.8.6-20261010.094603</weixin-java.version>
         <aliyun-dysmsapi.version>4.4.0</aliyun-dysmsapi.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <fastjson.version>2.0.43</fastjson.version>
-        <easyexcel.version>3.3.3</easyexcel.version>
+        <fastjson.version>2.0.66</fastjson.version>
+        <easyexcel.version>4.0.3</easyexcel.version>
+        <commons-compress.version>1.28.0</commons-compress.version>
+        <bouncycastle.version>1.86</bouncycastle.version>
+        <jackson-fixed.version>2.21.7</jackson-fixed.version>
+        <netty-fixed.version>4.1.137.Final</netty-fixed.version>
+        <log4j-fixed.version>2.25.5</log4j-fixed.version>
         <jjwt.version>0.12.3</jjwt.version>
     </properties>
 
@@ -45,7 +50,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Boot -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -53,7 +57,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
+            <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>${jackson-fixed.version}</version></dependency>
+            <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-core</artifactId><version>${jackson-fixed.version}</version></dependency>
+            <dependency><groupId>io.netty</groupId><artifactId>netty-bom</artifactId><version>${netty-fixed.version}</version><type>pom</type><scope>import</scope></dependency>
+            <dependency><groupId>io.netty</groupId><artifactId>netty-handler</artifactId><version>${netty-fixed.version}</version></dependency>
+            <dependency><groupId>io.netty</groupId><artifactId>netty-codec</artifactId><version>${netty-fixed.version}</version></dependency>
+            <dependency><groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId><version>3.18.0</version></dependency>
+            <dependency><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId><version>${log4j-fixed.version}</version></dependency>
             <!-- MyBatis-Plus -->
             <dependency>
                 <groupId>com.baomidou</groupId>
@@ -116,6 +126,9 @@
                 <artifactId>easyexcel</artifactId>
                 <version>${easyexcel.version}</version>
             </dependency>
+            <dependency><groupId>org.apache.commons</groupId><artifactId>commons-compress</artifactId><version>${commons-compress.version}</version></dependency>
+            <dependency><groupId>org.bouncycastle</groupId><artifactId>bcprov-jdk18on</artifactId><version>${bouncycastle.version}</version></dependency>
+            <dependency><groupId>org.bouncycastle</groupId><artifactId>bcpkix-jdk18on</artifactId><version>${bouncycastle.version}</version></dependency>
 
             <!-- JWT -->
             <dependency>
@@ -187,6 +200,11 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

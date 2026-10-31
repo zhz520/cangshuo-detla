@@ -2,6 +2,7 @@ package com.delta.system.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.system.entity.QuickReply;
@@ -32,12 +33,15 @@ public class QuickReplyController {
                 .orderByAsc(QuickReply::getSortOrder)));
     }
 
+    @OpLog(module = "system", operation = "新增快捷回复")
     @PostMapping
     public R<Void> add(@RequestBody QuickReply reply) { quickReplyService.save(reply); return R.ok(); }
 
+    @OpLog(module = "system", operation = "编辑快捷回复")
     @PutMapping
     public R<Void> update(@RequestBody QuickReply reply) { quickReplyService.updateById(reply); return R.ok(); }
 
+    @OpLog(module = "system", operation = "删除快捷回复")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { quickReplyService.removeById(id); return R.ok(); }
 }

@@ -54,14 +54,17 @@
             <el-form-item label="商品图片" class="image-form-item">
               <div class="multi-images">
                 <div v-for="(img, idx) in imageList" :key="idx" class="img-item">
-                  <el-image :src="img" fit="cover" class="product-image" />
+                  <el-image lazy :src="img" fit="cover" class="product-image" />
                   <el-button circle type="danger" size="small" class="img-del" @click="imageList.splice(idx, 1)">×</el-button>
                 </div>
                 <ImageUpload v-model="newImage" @update:model-value="onImageAdd" />
               </div>
             </el-form-item>
             <el-form-item label="描述">
-              <el-input v-model="form.description" type="textarea" :rows="5" placeholder="请输入商品详情、下单说明或注意事项" />
+              <div class="description-editor">
+                <RichTextEditor v-model="form.description" :rows="8" />
+                <span class="form-tip">支持字号、颜色、对齐、列表、图片和链接，用户端会按此样式展示</span>
+              </div>
             </el-form-item>
           </div>
         </section>
@@ -147,12 +150,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail, addProduct, updateProduct, getCategoryTree, getRecommendCategories } from '@/api/product'
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 const route = useRoute(), router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const pageLoading = ref(false), submitting = ref(false), formRef = ref(null), categoryTree = ref([]), recommendCategories = ref([])
 const limitTypeOptions = [
   { label: '不限购', value: 0 },
   { label: '永久限购一次', value: 1 },
+  { label: '一日限购一次', value: 4 },
   { label: '一周限购一次', value: 2 },
   { label: '一月限购一次', value: 3 }
 ]
@@ -173,7 +178,7 @@ function onImageAdd(url) {
 }
 function normalizePerUserLimitType(product) {
   const type = Number(product?.perUserLimitType)
-  return [0, 1, 2, 3].includes(type)
+  return [0, 1, 2, 3, 4].includes(type)
     ? type
     : (product?.perUserLimitEnabled === 1 ? 1 : 0)
 }
@@ -244,7 +249,7 @@ onMounted(async () => {
 
 .product-form-header p {
   margin-top: 4px;
-  color: #7b8798;
+  color: #73777e;
   font-size: 13px;
   font-weight: 400;
 }
@@ -254,7 +259,7 @@ onMounted(async () => {
 }
 
 .form-section {
-  border: 1px solid #e3eaf3;
+  border: 1px solid #e6e7e9;
   border-radius: 8px;
   background: #fff;
   overflow: hidden;
@@ -269,17 +274,17 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid #edf2f7;
-  background: #f8fafc;
+  border-bottom: 1px solid #eeeff1;
+  background: #f7f8f9;
 }
 
 .section-title strong {
-  color: #172033;
+  color: #17191c;
   font-size: 15px;
 }
 
 .section-title span {
-  color: #7b8798;
+  color: #73777e;
   font-size: 13px;
 }
 
@@ -305,6 +310,14 @@ onMounted(async () => {
   gap: 14px;
 }
 
+.description-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
 .multi-images {
   display: flex;
   flex-wrap: wrap;
@@ -319,8 +332,8 @@ onMounted(async () => {
   height: 92px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e3eaf3;
-  background: #f8fafc;
+  border: 1px solid #e6e7e9;
+  background: #f7f8f9;
 }
 
 .product-image {
@@ -336,17 +349,17 @@ onMounted(async () => {
   height: 22px;
   min-height: 22px;
   padding: 0;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 6px 14px rgba(23, 25, 28, 0.18);
 }
 
 .is-parent-node {
   font-weight: 600;
-  color: #172033;
+  color: #17191c;
 }
 
 .form-tip,
 .inline-tip {
-  color: #7b8798;
+  color: #73777e;
   font-size: 12px;
   line-height: 1.7;
 }
@@ -361,9 +374,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 0 12px;
-  border: 1px solid #e3eaf3;
+  border: 1px solid #e6e7e9;
   border-radius: 7px;
-  background: #f8fafc;
+  background: #f7f8f9;
 }
 
 .form-actions {
@@ -375,15 +388,15 @@ onMounted(async () => {
   gap: 10px;
   margin-top: 18px;
   padding: 14px 18px;
-  border: 1px solid #e3eaf3;
+  border: 1px solid #e6e7e9;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 -10px 24px rgba(20, 32, 54, 0.06);
+  box-shadow: 0 -10px 24px rgba(23, 25, 28, 0.06);
   backdrop-filter: blur(8px);
 }
 
 :deep(.el-form-item__label) {
-  color: #42526e;
+  color: #555b63;
   font-weight: 600;
 }
 
@@ -401,5 +414,12 @@ onMounted(async () => {
   .upload-field {
     flex-direction: column;
   }
+}
+@media (max-width: 768px) {
+  .section-title { flex-wrap: wrap; gap: 6px; padding: 12px; }
+  .section-body { padding: 12px 12px 0; }
+  .section-title span, .inline-tip, .form-tip { overflow-wrap: anywhere; word-break: break-word; }
+  .form-actions { padding: 10px 12px calc(10px + var(--app-safe-bottom)); }
+  .form-actions > .el-button { flex: 1; margin-left: 0; }
 }
 </style>

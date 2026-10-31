@@ -19,6 +19,7 @@
       <view v-if="loading" class="loading-tip">加载中...</view>
 <EmptyState v-if="!loading && orders.length===0" text="暂无可接订单" image="/static/icons/暂无项目.svg" />
     </scroll-view>
+<GrabAcceptDialog ref="grabDialog" @accepted="refresh" />
 <CustomTabBar :current="0" />
   </view>
 </template>
@@ -28,7 +29,9 @@ import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import OrderCard from '@/components/OrderCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { getOrderHall, acceptOrder } from '@/api/player'
+import { getOrderHall } from '@/api/player'
+import GrabAcceptDialog from '@/components/GrabAcceptDialog.vue'
+const grabDialog=ref(null)
 import { getAllCategories } from '@/api/category'
 import { useRemindStore } from '@/store/remind'
 
@@ -106,29 +109,19 @@ async function loadData() {
   loading.value = false
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
-async function doAccept(id) {
-  uni.showModal({ title: '提示', content: '确定接受该订单？', success: async (r) => {
-    if (r.confirm) {
-      try {
-        await acceptOrder(id)
-        uni.showToast({ title: '接单成功' })
-        refresh()
-      } catch (e) { /* API error handled by request */ }
-    }
-  }})
-}
+function doAccept(id) { grabDialog.value?.open(id) }
 </script>
 <style lang="scss" scoped>
 .hall-page { background: #ffffff; position: relative; }
-.filter-bar { white-space: nowrap; padding: 16rpx 24rpx; background: #f1f5f9; border-bottom: 1rpx solid #f1f5f9; }
-.filter-item { display: inline-block; padding: 12rpx 24rpx; margin-right: 16rpx; font-size: 26rpx; color: #64748b; background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; } }
-.list { height: calc(100vh - 190rpx - env(safe-area-inset-bottom)); padding: 20rpx 24rpx; overflow-x: hidden; box-sizing: border-box; }
-.order-card-wrap { margin-bottom: 20rpx; overflow: hidden; border-radius: 16rpx; background: #e2e8f0; border: 1rpx solid #cbd5e1; }
-.accept-bar { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx; background: #e2e8f0; border-radius: 0 0 16rpx 16rpx; width: 100%; box-sizing: border-box; }
+.filter-bar { white-space: nowrap; padding: 16rpx 24rpx; background: #f4f5f6; border-bottom: 1rpx solid #f4f5f6; }
+.filter-item { display: inline-block; padding: 12rpx 24rpx; margin-right: 16rpx; font-size: 26rpx; color: #666b73; background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; } }
+.list { height: calc(var(--app-page-height, 100vh) - 190rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; overflow-x: hidden; box-sizing: border-box; }
+.order-card-wrap { margin-bottom: 20rpx; overflow: hidden; border-radius: 16rpx; background: #e6e7e9; border: 1rpx solid #b9bdc4; }
+.accept-bar { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx; background: #e6e7e9; border-radius: 0 0 16rpx 16rpx; width: 100%; box-sizing: border-box; }
 .amount-block { display: flex; flex-direction: column; gap: 4rpx; }
-.order-amount { font-size: 28rpx; color: #1e293b; font-weight: 600; display: block; }
-.income-line { font-size: 28rpx; color: #ee0a24; font-weight: bold; display: block; }
-.commission-hint { font-size: 22rpx; color: #64748b; display: block; }
-.btn-accept { padding: 12rpx 32rpx; background: linear-gradient(135deg, #ff4544, #e63939, #e63939); color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #94a3b8; }
+.order-amount { font-size: 28rpx; color: #17191c; font-weight: 600; display: block; }
+.income-line { font-size: 28rpx; color: #d44955; font-weight: bold; display: block; }
+.commission-hint { font-size: 22rpx; color: #666b73; display: block; }
+.btn-accept { padding: 12rpx 32rpx; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
 </style>

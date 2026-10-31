@@ -8,7 +8,7 @@
       </view>
       <text class="content">{{ complaint.content }}</text>
       <view v-if="complaint.images" class="images">
-        <image v-for="(img,i) in complaint.images.split(',')" :key="i" :src="img" mode="aspectFill" class="img" lazy-load @click="previewImg(complaint.images.split(','),i)" />
+        <AppImage v-for="(img,i) in complaint.images.split(',')" :key="i" :src="img" mode="aspectFill" class="img" @click="previewImg(complaint.images.split(','),i)" />
       </view>
       <view class="info-row"><text class="label">投诉人</text><text class="value">{{ userNickname || complaint.userId }}</text></view>
       <view v-if="order" class="info-row"><text class="label">订单号</text><text class="value">{{ order.orderNo }}</text></view>
@@ -67,6 +67,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, reactive } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
@@ -130,16 +131,16 @@ function formatTime(t) {
 }
 </script>
 <style lang="scss" scoped>
-.handle-page { background: #ffffff; min-height: 100vh; padding-bottom: 40rpx; }
+.handle-page { background: #ffffff; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
 .card { margin: 20rpx 24rpx; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx; box-sizing: border-box; }
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; .type { font-size: 30rpx; font-weight: bold; } }
-.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: #ff4544; }
+.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: #17191c; }
 .content { font-size: 28rpx; color: rgba(0,0,0,0.85); line-height: 1.6; display: block; margin-bottom: 16rpx; word-break: break-all; }
 .images { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; .img { width: 160rpx; height: 160rpx; border-radius: 8rpx; } }
-.info-row { display: flex; padding: 8rpx 0; .label { font-size: 24rpx; color: rgba(0,0,0,0.3); width: 140rpx; flex-shrink: 0; } .value { font-size: 24rpx; color: rgba(0,0,0,0.85); flex: 1; word-break: break-all; &.gold { color: #ff4544; font-weight: bold; } } }
+.info-row { display: flex; padding: 8rpx 0; .label { font-size: 24rpx; color: rgba(0,0,0,0.3); width: 140rpx; flex-shrink: 0; } .value { font-size: 24rpx; color: rgba(0,0,0,0.85); flex: 1; word-break: break-all; &.gold { color: #17191c; font-weight: bold; } } }
 .form-item { margin-bottom: 24rpx; .label { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 12rpx; } .input { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); } }
 .textarea { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; width: 100%; height: 160rpx; color: rgba(0,0,0,0.85); box-sizing: border-box; }
-.result-options { display: flex; gap: 16rpx; flex-wrap: wrap; .opt { padding: 12rpx 24rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 26rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } } }
-.submit-btn { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; text-align: center; padding: 20rpx; border-radius: 999rpx; font-size: 28rpx; margin-top: 16rpx; }
-.result-card { border: 1rpx solid rgba(99,102,241,0.1); }
+.result-options { display: flex; gap: 16rpx; flex-wrap: wrap; .opt { padding: 12rpx 24rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 26rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } } }
+.submit-btn { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; text-align: center; padding: 20rpx; border-radius: 999rpx; font-size: 28rpx; margin-top: 16rpx; }
+.result-card { border: 1rpx solid rgba(23, 25, 28, 0.1); }
 </style>

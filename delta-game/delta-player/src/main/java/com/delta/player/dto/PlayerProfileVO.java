@@ -12,6 +12,14 @@ public class PlayerProfileVO {
     private String phone;
     private String status;
     private String gameLevel;
+    private Integer level;
+    private String introduction;
+    private String levelName;
+    private String coverImage;
+    private java.util.List<String> albumImages;
+    private String story;
+    private String voiceUrl;
+    private Integer voiceDuration;
     private BigDecimal avgRating;
     private Integer orderCount;
     private BigDecimal completeRate;

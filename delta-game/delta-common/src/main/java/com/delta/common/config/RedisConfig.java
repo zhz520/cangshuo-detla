@@ -22,7 +22,11 @@ public class RedisConfig {
 
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        om.activateDefaultTyping(com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType(java.lang.Number.class).allowIfSubType(java.lang.String.class)
+                .allowIfSubType(java.lang.Boolean.class)
+                .allowIfSubType(java.util.HashMap.class).allowIfSubType(java.util.LinkedHashMap.class)
+                .allowIfSubType(java.util.ArrayList.class).allowIfSubType("java.time.").build(), ObjectMapper.DefaultTyping.NON_FINAL);
         om.registerModule(new JavaTimeModule());
 
         GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(om);

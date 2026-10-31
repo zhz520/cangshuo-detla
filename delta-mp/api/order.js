@@ -2,6 +2,7 @@ import { get, post } from './request'
 
 /** 创建订单 */
 export const createOrder = (data) => post('/order', data)
+export const getOrderQuote = (params) => get('/order/quote', params, { loading: false, toast: false })
 
 /** 订单列表 */
 export const getOrderList = (params, opts = {}) => get('/order/my', params, opts)
@@ -21,8 +22,8 @@ export const cancelOrder = (id) => post(`/order/${id}/cancel`)
 /** 申请换人 */
 export const requestReplace = (id, data) => post(`/order/${id}/replace`, data)
 
-/** 可用接单员列表（复用 cs/player/assign-list 接口，返回结构：{ players: { records }, maxConcurrent }） */
-export const getAvailablePlayers = (params) => get('/cs/player/assign-list', params)
+/** 下单可选接单员，仅返回公开展示字段。 */
+export const getAvailablePlayers = (params) => get('/order/available-players', params)
 
 /** 指定接单员 */
 export const designatePlayer = (id, playerId) => post(`/order/${id}/designate-player`, { playerId })

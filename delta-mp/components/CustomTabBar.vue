@@ -8,7 +8,7 @@
       @click="switchTab(tab, index)"
     >
       <view class="tabbar-icon">
-        <image class="icon-img" :src="currentIndex === index ? tab.iconActive : tab.icon" mode="aspectFit" />
+        <AppImage class="icon-img" :src="currentIndex === index ? tab.iconActive : tab.icon" mode="aspectFit" :eager="true" />
         <view v-if="tabBadgeCount(tab) > 0" class="badge">
           {{ tabBadgeCount(tab) > 99 ? '99+' : tabBadgeCount(tab) }}
         </view>
@@ -20,6 +20,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { useAppStore } from '@/store/app'
@@ -101,7 +102,7 @@ function unlockH5PageScroll() {
 const TAB_BAR_PAGES = [
   '/pages/index/index',
   '/pages/category/index',
-  '/pages/order/list',
+  '/pages/players/index',
   '/pages/chat/list',
   '/pages/mine/index'
 ]
@@ -127,7 +128,7 @@ function switchTab(tab, index) {
   height: 110rpx;
   box-sizing: content-box;
   background: rgba(255, 255, 255, 0.98);
-  border-top: 1rpx solid #e2e8f0;
+  border-top: 1rpx solid #e6e7e9;
   backdrop-filter: blur(20rpx);
   z-index: 999;
 }
@@ -146,6 +147,7 @@ function switchTab(tab, index) {
     .icon-img {
       width: 48rpx;
       height: 48rpx;
+      background-color: transparent !important;
     }
 
     .badge {
@@ -158,7 +160,7 @@ function switchTab(tab, index) {
       padding: 0 8rpx;
       font-size: 20rpx;
       color: #fff;
-      background: #ee0a24;
+      background: #d44955;
       border-radius: 32rpx;
       text-align: center;
     }
@@ -168,7 +170,7 @@ function switchTab(tab, index) {
       right: -4rpx;
       width: 16rpx;
       height: 16rpx;
-      background: #ee0a24;
+      background: #d44955;
       border-radius: 50%;
       border: 2rpx solid #fff;
     }
@@ -176,19 +178,16 @@ function switchTab(tab, index) {
 
   .tabbar-text {
     font-size: 20rpx;
-    color: #94a3b8;
+    color: #73777e;
     margin-top: 4rpx;
   }
 
   &.active {
     .tabbar-icon {
-      color: #4f46e5;
-      .icon-img {
-        filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(101%);
-      }
+      color: #17191c;
     }
     .tabbar-text {
-      color: #4f46e5;
+      color: #17191c;
       font-weight: bold;
     }
   }

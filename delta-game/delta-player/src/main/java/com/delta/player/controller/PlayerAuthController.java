@@ -69,7 +69,7 @@ public class PlayerAuthController {
             return R.ok(resp);
         } catch (Exception e) {
             log.error("打手微信登录失败", e);
-            return R.fail("登录失败: " + e.getMessage());
+            return R.fail("登录失败，请重试");
         }
     }
 
@@ -104,7 +104,7 @@ public class PlayerAuthController {
             return R.ok();
         } catch (Exception e) {
             log.error("打手入驻申请失败", e);
-            return R.fail("申请失败: " + e.getMessage());
+            return R.fail("申请失败，请重试");
         }
     }
 }

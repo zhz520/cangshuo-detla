@@ -12,6 +12,23 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public org.springframework.http.ResponseEntity<R<?>> handleResponseStatus(org.springframework.web.server.ResponseStatusException e) {
+        return org.springframework.http.ResponseEntity.status(e.getStatusCode()).body(R.fail(e.getStatusCode().value(), "请求的资源不可用"));
+    }
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public R<?> handleUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        // Do not log parser excerpts: authentication request bodies can contain passwords or setup tickets.
+        return R.fail(400,"请求内容格式不正确");
+    }
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public R<?> handleConstraintViolation(jakarta.validation.ConstraintViolationException e) {
+        return R.fail(400, "参数不符合要求");
+    }
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public R<?> handleAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        return R.fail(403, "无权限访问");
+    }
 
     @ExceptionHandler(BusinessException.class)
     public R<?> handleBusiness(BusinessException e, HttpServletRequest req) {
@@ -40,7 +57,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public R<?> handleException(Exception e, HttpServletRequest req) {
         log.error("系统异常: {} URI: {}", e.getMessage(), req.getRequestURI(), e);
-        String detail = e.getClass().getSimpleName() + ": " + e.getMessage();
-        return R.fail(500, detail);
+        return R.fail(500, "服务暂时不可用，请稍后重试");
     }
 }

@@ -12,6 +12,32 @@ import java.time.LocalDateTime;
  */
 @Mapper
 public interface CrossModuleMapper {
+    @Select("SELECT p.id AS player_id,p.level AS level_id,l.name AS level_name," +
+            "COALESCE(NULLIF(p.price_increase_rate,-1),l.price_increase_rate,0) AS price_increase_rate " +
+            "FROM player p JOIN player_level l ON l.id=p.level AND l.status=1 AND l.deleted=0 " +
+            "WHERE p.id=#{id} AND p.status='ACTIVE' AND p.deleted=0 AND p.is_online=1")
+    com.delta.common.domain.PlayerPriceConfig selectOrderablePlayerPrice(@Param("id") Long id);
+
+    @Select("SELECT id AS level_id,name AS level_name,COALESCE(price_increase_rate,0) AS price_increase_rate " +
+            "FROM player_level WHERE id=#{id} AND status=1 AND deleted=0")
+    com.delta.common.domain.PlayerPriceConfig selectEnabledLevelPrice(@Param("id") Integer id);
+
+    @Select("SELECT level FROM player WHERE id=#{id} AND deleted=0")
+    Integer selectPlayerLevel(@Param("id") Long id);
+
+    @Select("SELECT id FROM player WHERE id=#{id} AND status='ACTIVE' AND deleted=0 FOR UPDATE")
+    Long lockActivePlayer(@Param("id") Long id);
+
+    @Select("SELECT COALESCE(NULLIF(p.grab_captcha_override,-1),l.grab_captcha_required,1) FROM player p LEFT JOIN player_level l ON l.id=p.level AND l.deleted=0 WHERE p.id=#{id} AND p.deleted=0")
+    Integer selectGrabCaptchaRequired(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM `order` o WHERE o.status IN ('ASSIGNED','ACCEPTED','IN_PROGRESS','WAITING_TEAMMATE') AND (o.player_id=#{id} OR EXISTS (SELECT 1 FROM order_player op WHERE op.order_id=o.id AND op.player_id=#{id} AND op.status='ACCEPTED'))")
+    int countActivePlayerOrders(@Param("id") Long id);
+    @Update("UPDATE player SET openid=#{newOpenid},phone=#{phone} WHERE openid=#{oldOpenid} AND deleted=0")
+    int syncVerifiedIdentity(@Param("oldOpenid") String oldOpenid,@Param("newOpenid") String newOpenid,@Param("phone") String phone);
+
+    @Select("SELECT COUNT(*) FROM player p JOIN player_level l ON l.id=p.level AND l.status=1 AND l.deleted=0 WHERE p.id=#{id} AND p.status='ACTIVE' AND p.deleted=0 AND p.is_online=1")
+    int countOrderablePlayer(@Param("id") Long id);
 
     @Select("SELECT status FROM player WHERE id = #{playerId}")
     String selectPlayerStatus(@Param("playerId") Long playerId);
@@ -22,7 +48,7 @@ public interface CrossModuleMapper {
     @Select("SELECT avatar FROM player WHERE id = #{playerId}")
     String selectPlayerAvatar(@Param("playerId") Long playerId);
 
-    @Update("UPDATE player SET avg_rating = (SELECT COALESCE(AVG(rating),0) FROM review WHERE player_id = #{playerId}) WHERE id = #{playerId}")
+    @Update("UPDATE player SET avg_rating = (SELECT COALESCE(AVG(rating),0) FROM review WHERE player_id = #{playerId} AND deleted = 0) WHERE id = #{playerId}")
     int updatePlayerAvgRating(@Param("playerId") Long playerId);
 
     @Select("SELECT COUNT(*) FROM complaint WHERE player_id = #{playerId} AND status IN ('PENDING','PROCESSING')")

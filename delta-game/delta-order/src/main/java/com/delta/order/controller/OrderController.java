@@ -25,11 +25,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;
+    private final com.delta.order.service.OrderPricingService orderPricing;
     private final OrderPlayerService orderPlayerService;
     private final OrderProgressService orderProgressService;
     private final PlayerReplaceRequestService replaceRequestService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.common.mapper.CrossModuleMapper crossModuleMapper;
+
+    @GetMapping("/quote")
+    public R<com.delta.order.dto.OrderQuote> quote(@RequestParam Long productId,
+            @RequestParam(required=false) Long designatedPlayerId,@RequestParam(required=false) Integer playerLevelId,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control","no-store, private");
+        return R.ok(orderPricing.quote(productId,designatedPlayerId,playerLevelId));
+    }
 
     @PostMapping
     public R<Order> create(@RequestBody CreateOrderRequest request) {
@@ -51,6 +60,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public R<Order> detail(@PathVariable Long id) {
         Order order = orderService.getById(id);
+        requireOwner(order);
         if (order != null) {
             if (order.getPlayerId() != null) {
                 order.setPlayerName(crossModuleMapper.selectPlayerNickname(order.getPlayerId()));
@@ -94,8 +104,14 @@ public class OrderController {
 
     @GetMapping("/{id}/progress")
     public R<List<OrderProgress>> progress(@PathVariable Long id) {
+        requireOwner(orderService.getById(id));
         return R.ok(orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
                 .eq(OrderProgress::getOrderId, id).orderByAsc(OrderProgress::getCreatedAt)));
+    }
+
+    private void requireOwner(Order order) {
+        if(order==null || !SecurityUtils.getUserId().equals(order.getUserId()))
+            throw new com.delta.common.exception.BusinessException(404,"订单不存在");
     }
 
     @PostMapping("/{id}/cancel")
@@ -112,6 +128,8 @@ public class OrderController {
 
     @PostMapping("/{id}/replace")
     public R<Void> requestReplace(@PathVariable Long id, @RequestBody PlayerReplaceRequest req) {
+        PlayerReplaceRequest supplied=req;req=new PlayerReplaceRequest();req.setReason(supplied.getReason());
+        if(req.getReason()==null || req.getReason().isBlank() || req.getReason().length()>1000) return R.fail(400,"换人原因长度不符合要求");
         Long userId = SecurityUtils.getUserId();
         Order order = orderService.getById(id);
         if (order == null) return R.fail("订单不存在");

@@ -10,7 +10,7 @@
       </el-form>
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="80"><template #default="{ row }"><el-image v-if="row.coverImage" :src="row.coverImage" style="width:50px;height:50px" fit="cover" /></template></el-table-column>
+        <el-table-column label="图片" width="80"><template #default="{ row }"><el-image lazy v-if="row.coverImage" :src="row.coverImage" style="width:50px;height:50px" fit="cover" /></template></el-table-column>
         <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
         <el-table-column label="价格" width="120"><template #default="{ row }">{{ row.price != null ? '¥' + Number(row.price).toFixed(2) : '-' }}</template></el-table-column>
         <el-table-column label="分类" width="120"><template #default="{ row }">{{ getCategoryName(row.categoryId) }}</template></el-table-column>
@@ -21,7 +21,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="170" />
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="150" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="$router.push(`/product/edit/${row.id}`)">编辑</el-button>
             <el-popconfirm title="确认删除？" @confirm="handleDelete(row.id)"><template #reference><el-button link type="danger">删除</el-button></template></el-popconfirm>
@@ -33,10 +33,13 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { getProductList, deleteProduct, updateProductStatus, getAllCategories } from '@/api/product'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+const { isCompact } = useResponsive()
+
 const loading = ref(false), list = ref([]), total = ref(0), categories = ref([])
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', categoryId: '', status: '' })
 function getCategoryName(cid) { const c = categories.value.find(i => i.id === cid); return c ? c.name : '-' }

@@ -1,12 +1,11 @@
 <template>
-  <view class="order-list-page tab-page">
-    <scroll-view scroll-y class="list tab-page-scroll" :show-scrollbar="false" @scrolltolower="loadMore">
+  <view class="order-list-page">
+    <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
       <OrderCard v-for="o in orders" :key="o.id" :order="o" />
       <view v-if="loading" class="loading-tip">加载中...</view>
       <EmptyState v-if="!loading && orders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
       <view class="order-list-bottom-space"></view>
     </scroll-view>
-    <CustomTabBar :current="2" />
   </view>
 </template>
 <script setup>
@@ -14,7 +13,6 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import OrderCard from '@/components/OrderCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import CustomTabBar from '@/components/CustomTabBar.vue'
 import { getOrderList } from '@/api/order'
 const orders = ref([])
 const pageNum = ref(1)
@@ -37,11 +35,12 @@ function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; 
 </script>
 <style lang="scss" scoped>
 .order-list-page {
-  background: #f8fafc;
-  height: 100vh;
+  background: #f7f8f9;
+  height: var(--app-page-height, 100vh);
   position: relative;
 }
 .list {
+  height: var(--app-page-height, 100vh);
   padding: 20rpx 24rpx;
   position: relative;
   z-index: 1;
@@ -49,15 +48,15 @@ function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; 
 }
 .list :deep(.order-card) {
   background: #ffffff;
-  border: 1rpx solid #edf1f7;
+  border: 1rpx solid #eeeff1;
 }
 .loading-tip {
   text-align: center;
   padding: 32rpx;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
 }
 .order-list-bottom-space {
-  height: calc(140rpx + env(safe-area-inset-bottom));
+  height: calc(140rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
 }
 </style>

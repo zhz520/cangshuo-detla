@@ -63,8 +63,8 @@ function goHandle(id) { uni.navigateTo({ url: '/pages-cs/complaint/handle?id=' +
 <style lang="scss" scoped>
 .complaint-list { background: #ffffff; overflow: hidden; position: relative; }
 .filter-bar { white-space: nowrap; padding: 12rpx 24rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04); }
-.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; } }
-.list { height: calc(100vh - 200rpx - env(safe-area-inset-bottom)); padding: 20rpx 24rpx; box-sizing: border-box; }
+.filter-item { display: inline-block; padding: 10rpx 20rpx; margin-right: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.55); background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; } }
+.list { height: calc(var(--app-page-height, 100vh) - 200rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; box-sizing: border-box; }
 .complaint-card {
   background: rgba(0,0,0,0.04); border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
   box-sizing: border-box; overflow: hidden;

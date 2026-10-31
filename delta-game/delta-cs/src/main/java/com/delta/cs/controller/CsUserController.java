@@ -63,10 +63,9 @@ public class CsUserController {
             }
         }
         if (status == null) return R.fail("status参数不能为空");
-        User user = new User();
-        user.setId(id);
-        user.setStatus(status);
-        userService.updateById(user);
+        if(status<0||status>1) return R.fail(400,"状态无效");
+        userService.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<User>()
+                .eq(User::getId,id).set(User::getStatus,status).setSql("auth_version = auth_version + 1"));
         return R.ok();
     }
 }

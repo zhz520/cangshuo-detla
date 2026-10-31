@@ -78,6 +78,10 @@ public class MessageController {
 
     @PostMapping("/read/{id}")
     public R<Void> markRead(@PathVariable Long id) {
+        SystemNotification existing=systemNotificationService.getById(id);
+        String type=resolveReceiverType();
+        if(existing==null || !type.equals(existing.getReceiverType()) || !SecurityUtils.getUserId().equals(existing.getReceiverId()))
+            return R.fail(404,"通知不存在");
         SystemNotification n = new SystemNotification();
         n.setId(id);
         n.setIsRead(1);
@@ -88,8 +92,7 @@ public class MessageController {
     @PostMapping("/read-all")
     public R<Void> markAllRead(@RequestBody(required = false) Map<String, String> body,
                                @RequestParam(value = "userType", required = false) String userTypeParam) {
-        String receiverType = userTypeParam != null ? userTypeParam : (body != null ? body.getOrDefault("type", body.getOrDefault("userType", null)) : null);
-        if (receiverType == null || receiverType.isEmpty()) return R.fail("type参数不能为空");
+        String receiverType = resolveReceiverType();
         Long receiverId = SecurityUtils.getUserId();
         systemNotificationService.markAllRead(receiverType, receiverId);
         return R.ok();

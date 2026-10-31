@@ -32,7 +32,7 @@
         </el-table-column>
         <el-table-column prop="icon" label="图标" width="80">
           <template #default="{ row }">
-            <el-image v-if="row.icon" :src="row.icon" style="width:30px;height:30px" fit="cover" />
+            <el-image lazy v-if="row.icon" :src="row.icon" style="width:30px;height:30px" fit="cover" />
           </template>
         </el-table-column>
         <el-table-column prop="sortOrder" label="排序" width="80" />
@@ -196,6 +196,8 @@ onMounted(fetchData)
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .parent-name {
   font-weight: 600;
@@ -205,7 +207,7 @@ onMounted(fetchData)
 }
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
   margin-top: 4px;
 }
 </style>

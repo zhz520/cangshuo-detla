@@ -38,15 +38,15 @@ onLoad(async (opts) => {
 })
 </script>
 <style lang="scss" scoped>
-.detail-page { background: #ffffff; min-height: 100vh; }
+.detail-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .status-header { padding: 40rpx; text-align: center; color: #fff;
-  &.pending { background: #ff9900; } &.approved, &.completed { background: #07c160; } &.rejected { background: #ee0a24; }
+  &.pending { background: #996b30; } &.approved, &.completed { background: #347a5b; } &.rejected { background: #d44955; }
   .status-text { font-size: 36rpx; font-weight: bold; display: block; }
   .reject-reason { font-size: 24rpx; opacity: 0.9; display: block; margin-top: 8rpx; }
 }
-.amount-section { text-align: center; padding: 48rpx; background: #f1f5f9; .amount { font-size: 56rpx; font-weight: bold; color: #1e293b; } }
-.info-card { margin: 24rpx; background: #f1f5f9; border-radius: 12rpx; padding: 8rpx 24rpx; }
-.info-row { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid #f1f5f9;
-  .label { font-size: 26rpx; color: #94a3b8; } .value { font-size: 26rpx; color: #1e293b; }
+.amount-section { text-align: center; padding: 48rpx; background: #f4f5f6; .amount { font-size: 56rpx; font-weight: bold; color: #17191c; } }
+.info-card { margin: 24rpx; background: #f4f5f6; border-radius: 12rpx; padding: 8rpx 24rpx; }
+.info-row { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid #f4f5f6;
+  .label { font-size: 26rpx; color: #73777e; } .value { font-size: 26rpx; color: #17191c; }
 }
 </style>

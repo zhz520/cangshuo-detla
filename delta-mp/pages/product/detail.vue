@@ -4,7 +4,7 @@
     <view class="banner-wrap">
       <swiper class="banner" autoplay :interval="3000" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
         <swiper-item v-for="(img,i) in images" :key="i">
-          <image :src="img" mode="aspectFill" class="banner-img" lazy-load @click="previewImg(i)" />
+          <AppImage :src="img" mode="aspectFill" class="banner-img" @click="previewImg(i)" />
         </swiper-item>
       </swiper>
       <!-- 自定义指示器 -->
@@ -24,12 +24,7 @@
       </view>
       <view class="price-extra">
         <!-- <text class="sales-badge">已售 {{ product.salesCount || 0 }}</text> -->
-        <text
-          v-if="product.perUserLimitEnabled === 1 && product.perUserLimitCount"
-          class="limit-tag"
-        >
-          限购 {{ product.perUserLimitCount }} 次
-        </text>
+        <text v-if="limitLabel" class="limit-tag">{{ limitLabel }}</text>
       </view>
     </view>
 
@@ -43,9 +38,9 @@
           <text class="tag-text">{{ product.categoryName }}</text>
         </view>
       </view>
-      <view class="desc-wrap" v-if="product.description">
+      <view class="desc-wrap" v-if="descriptionHtml">
         <view class="desc-divider"></view>
-        <text class="desc">{{ product.description }}</text>
+        <view class="desc"><rich-text :nodes="descriptionHtml" /></view>
       </view>
     </view>
 
@@ -72,14 +67,17 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import PriceText from '@/components/PriceText.vue'
+import { productDescriptionHtml } from '@/utils/product-content'
 import { getProductRichDetail, getProductDetail } from '@/api/product'
 import { createCsSession, sendChatMessage } from '@/api/chat'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
+const designatedPlayerId=ref('')
 const product = ref(null)
 const swiperIdx = ref(0)
 
@@ -112,6 +110,20 @@ const priceDec = computed(() => {
   const p = Number(product.value?.price || 0).toFixed(2)
   return p.split('.')[1]
 })
+const limitLabel = computed(() => {
+  const type = Number(product.value?.perUserLimitType || 0)
+  const labels = {
+    1: '永久限购 1 次',
+    2: '7 天内限购 1 次',
+    3: '30 天内限购 1 次',
+    4: '24 小时内限购 1 次'
+  }
+  if (labels[type]) return labels[type]
+  return product.value?.perUserLimitEnabled === 1 && product.value?.perUserLimitCount
+    ? `限购 ${product.value.perUserLimitCount} 次`
+    : ''
+})
+const descriptionHtml = computed(() => productDescriptionHtml(product.value?.description))
 
 const images = computed(() => {
   if (!product.value) return []
@@ -126,6 +138,7 @@ const images = computed(() => {
 function previewImg(idx) { uni.previewImage({ urls: images.value, current: idx }) }
 
 onLoad(async (opts) => {
+  designatedPlayerId.value=opts.playerId || ''
   try {
     const res = await getProductRichDetail(opts.id)
     const d = res.data
@@ -154,13 +167,13 @@ async function goChat() {
 function goBuy() {
   const price = product.value?.price || 0
   const name = encodeURIComponent(product.value.name)
-  uni.navigateTo({ url: `/pages/order/create?productId=${product.value.id}&amount=${price}&productName=${name}` })
+  uni.navigateTo({ url: `/pages/order/create?productId=${product.value.id}&amount=${price}&productName=${name}${designatedPlayerId.value ? `&playerId=${designatedPlayerId.value}` : ''}` })
 }
 </script>
 <style lang="scss" scoped>
 .product-detail {
-  background: #f8fafc;
-  min-height: 100vh;
+  background: #f7f8f9;
+  min-height: var(--app-page-height, 100vh);
   padding-bottom: 140rpx;
 }
 
@@ -197,12 +210,12 @@ function goBuy() {
     width: 12rpx;
     height: 12rpx;
     border-radius: 50%;
-    background: #cbd5e1;
+    background: #b9bdc4;
     transition: all 0.3s;
     &.active {
       width: 32rpx;
       border-radius: 6rpx;
-      background: #4f46e5;
+      background: #17191c;
     }
   }
 }
@@ -217,14 +230,9 @@ function goBuy() {
   border-radius: 20rpx;
 }
 
-/* ---- 价格卡片 ---- */
+/* ---- 价格栏 ---- */
 .price-card {
-  margin: -20rpx 24rpx 0;
-  position: relative;
-  z-index: 2;
-  background: linear-gradient(135deg, rgba(255, 69, 68, 0.18), rgba(255, 69, 68, 0.08));
-  border: 1rpx solid rgba(255, 69, 68, 0.22);
-  border-radius: 20rpx;
+  margin: 0 24rpx;
   padding: 28rpx 32rpx;
   display: flex;
   align-items: center;
@@ -235,19 +243,19 @@ function goBuy() {
   align-items: baseline;
   .yen {
     font-size: 30rpx;
-    color: #4f46e5;
+    color: #17191c;
     font-weight: bold;
     margin-right: 4rpx;
   }
   .price-int {
     font-size: 56rpx;
-    color: #4f46e5;
+    color: #17191c;
     font-weight: 800;
     line-height: 1;
   }
   .price-dec {
     font-size: 30rpx;
-    color: #4f46e5;
+    color: #17191c;
     font-weight: bold;
   }
 }
@@ -258,14 +266,14 @@ function goBuy() {
 }
 .sales-badge {
   font-size: 22rpx;
-  color: #94a3b8;
-  background: #f8fafc;
+  color: #73777e;
+  background: #f7f8f9;
   padding: 6rpx 18rpx;
   border-radius: 20rpx;
 }
 .limit-tag {
   font-size: 22rpx;
-  color: #b91c1c;
+  color: #ac3e49;
   background: rgba(248, 113, 113, 0.16);
   padding: 6rpx 18rpx;
   border-radius: 20rpx;
@@ -275,20 +283,20 @@ function goBuy() {
 .info-card {
   margin: 20rpx 24rpx 0;
   padding: 28rpx 32rpx;
-  background: #f8fafc;
-  border: 1rpx solid #edf1f7;
+  background: #f7f8f9;
+  border: 1rpx solid #eeeff1;
   border-radius: 20rpx;
 }
 .product-name {
   font-size: 34rpx;
   font-weight: bold;
   display: block;
-  color: #1e293b;
+  color: #17191c;
   line-height: 1.5;
 }
 .product-subtitle {
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
   display: block;
   margin-top: 8rpx;
   line-height: 1.4;
@@ -304,14 +312,14 @@ function goBuy() {
   align-items: center;
   gap: 8rpx;
   font-size: 22rpx;
-  color: #4f46e5;
-  background: rgba(212, 175, 55, 0.1);
+  color: #17191c;
+  background: rgba(23, 25, 28, 0.1);
   padding: 6rpx 16rpx;
   border-radius: 8rpx;
-  border: 1rpx solid rgba(255, 69, 68, 0.15);
+  border: 1rpx solid rgba(23, 25, 28, 0.15);
   .tag-dot {
     font-size: 14rpx;
-    color: #4f46e5;
+    color: #17191c;
   }
 }
 .desc-wrap {
@@ -319,21 +327,22 @@ function goBuy() {
 }
 .desc-divider {
   height: 1rpx;
-  background: #f8fafc;
+  background: #f7f8f9;
   margin-bottom: 20rpx;
 }
 .desc {
   font-size: 26rpx;
-  color: #64748b;
+  color: #666b73;
   display: block;
   line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 
 /* ---- 详情区域 ---- */
 .detail-section {
   margin: 20rpx 24rpx 0;
-  background: #f8fafc;
-  border: 1rpx solid #edf1f7;
+  background: #f7f8f9;
+  border: 1rpx solid #eeeff1;
   border-radius: 20rpx;
   overflow: hidden;
 }
@@ -347,12 +356,12 @@ function goBuy() {
 .section-line {
   flex: 1;
   height: 1rpx;
-  background: linear-gradient(to right, transparent, rgba(255, 69, 68, 0.3), transparent);
+  background: linear-gradient(to right, transparent, rgba(23, 25, 28, 0.3), transparent);
 }
 .section-title {
   font-size: 28rpx;
   font-weight: bold;
-  color: #4f46e5;
+  color: #17191c;
   white-space: nowrap;
 }
 .detail-body {
@@ -367,9 +376,9 @@ function goBuy() {
   right: 0;
   display: flex;
   padding: 16rpx 24rpx;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(16rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
   background: rgba(255, 255, 255, 0.96);
-  border-top: 1rpx solid #e2e8f0;
+  border-top: 1rpx solid #e6e7e9;
   gap: 20rpx;
   backdrop-filter: blur(20px);
 }
@@ -380,8 +389,8 @@ function goBuy() {
   align-items: center;
   justify-content: center;
   gap: 8rpx;
-  border: 1rpx solid rgba(255, 69, 68, 0.4);
-  color: #4f46e5;
+  border: 1rpx solid rgba(23, 25, 28, 0.4);
+  color: #17191c;
   border-radius: 999rpx;
   font-size: 26rpx;
   .btn-icon {
@@ -394,7 +403,7 @@ function goBuy() {
   height: 84rpx;
   line-height: 84rpx;
   text-align: center;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #17191c, #30343a);
   color: #ffffff;
   font-weight: bold;
   border-radius: 999rpx;

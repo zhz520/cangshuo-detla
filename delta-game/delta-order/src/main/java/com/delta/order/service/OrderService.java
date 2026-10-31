@@ -11,6 +11,7 @@ public interface OrderService extends IService<Order> {
     void assignOrder(Long orderId, Long playerId);
     void assignOrder(Long orderId, Long playerId, String operatorType, Long operatorId);
     void acceptOrder(Long orderId, Long playerId);
+    void acceptOrder(Long orderId, Long playerId, String captchaId, String captchaCode, String device, String agent, String ip);
     void rejectAssign(Long orderId, Long playerId, String reason);
     void startOrder(Long orderId, Long playerId);
     void completeOrder(Long orderId, Long playerId, String endServiceImages);

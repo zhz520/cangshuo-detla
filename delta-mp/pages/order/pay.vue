@@ -33,7 +33,7 @@ import { getSiteConfig } from '@/api/config'
 import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
-import { isMpWeixin, isH5 } from '@/utils/platform'
+import { isMpWeixin, isH5, canStartH5WechatPayment } from '@/utils/platform'
 
 const orderId = ref(0)
 const amount = ref(0)
@@ -144,6 +144,7 @@ async function handlePay() {
         return uni.showToast({ title: '微信支付未开启，请使用余额支付', icon: 'none' })
       }
       if (isH5()) {
+        if (!canStartH5WechatPayment()) return
         const res = await createH5Payment(orderId.value)
         const h5Url = res.data?.h5Url
         if (!h5Url) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
@@ -176,17 +177,17 @@ async function handlePay() {
 }
 </script>
 <style lang="scss" scoped>
-.pay-page { padding: 40rpx 24rpx; background: #f8fafc; min-height: 100vh; }
+.pay-page { padding: 40rpx 24rpx; background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
 .amount-area { text-align: center; padding: 60rpx 0;
-  .label { font-size: 28rpx; color: #64748b; display: block; margin-bottom: 20rpx; }
-  .countdown { font-size: 26rpx; color: #ff9900; display: block; margin-top: 16rpx; &.expired { color: #ee0a24; } }
+  .label { font-size: 28rpx; color: #666b73; display: block; margin-bottom: 20rpx; }
+  .countdown { font-size: 26rpx; color: #996b30; display: block; margin-top: 16rpx; &.expired { color: #d44955; } }
 }
-.pay-methods { background: #ffffff; border: 1rpx solid #e2e8f0; border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
-.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid #edf1f7; gap: 16rpx;
+.pay-methods { background: #ffffff; border: 1rpx solid #e6e7e9; border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
+.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid #eeeff1; gap: 16rpx;
   .method-icon { width: 40rpx; height: 40rpx; flex-shrink: 0; }
-  .method-name { font-size: 28rpx; color: #1e293b; flex: 1; }
-  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; } }
-  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #cbd5e1; border-radius: 50%; &.checked { border-color: #4f46e5; background: #4f46e5; } }
+  .method-name { font-size: 28rpx; color: #17191c; flex: 1; }
+  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } }
+  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #b9bdc4; border-radius: 50%; &.checked { border-color: #17191c; background: #17191c; } }
 }
-.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #e2e8f0; color: #94a3b8; } }
+.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #e6e7e9; color: #73777e; } }
 </style>

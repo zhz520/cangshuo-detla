@@ -44,8 +44,15 @@ public class ChatController {
     /** 根据两个参与者编码ID创建/查找会话（前端可传 id1/id2 或 userId+userType 等） */
     @PostMapping("/session/create")
     public R<ChatSession> createSession(@RequestParam long id1, @RequestParam long id2) {
-        ChatSession s = chatService.findOrCreate(id1, id2);
         long myEncodedId = getMyEncodedId(null);
+        if(id1==id2 || id1!=myEncodedId && id2!=myEncodedId) return R.fail(403,"无权限创建该会话");
+        long other=id1==myEncodedId?id2:id1;
+        int entity=ChatParticipantId.getEntityType(other);
+        long raw=ChatParticipantId.getRawId(other);
+        String table=switch(entity){case 1 -> "`user`";case 2 -> "player";case 3 -> "admin";default -> null;};
+        if(table==null || raw<=0 || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM "+table+" WHERE id=? AND deleted=0",Long.class,raw)==0)
+            return R.fail(404,"对方账号不存在");
+        ChatSession s = chatService.findOrCreate(id1, id2);
         enrichSession(s, myEncodedId);
         return R.ok(s);
     }
@@ -65,6 +72,7 @@ public class ChatController {
         long playerId = playerIdNum.longValue();
         long encoded1 = ChatParticipantId.encodeUser(userId);
         long encoded2 = ChatParticipantId.encodePlayer(playerId);
+        if(myEncodedId!=encoded1 && myEncodedId!=encoded2) return R.fail(403,"无权限查看该会话");
         ChatSession s = chatService.findOrCreate(encoded1, encoded2);
         if (!isSessionMember(s, myEncodedId)) return R.fail("无权限查看该会话");
         enrichSession(s, myEncodedId);
@@ -109,9 +117,9 @@ public class ChatController {
     @PostMapping("/session/cs")
     public R<ChatSession> createCsSession() {
         long userId = SecurityUtils.getUserId();
-        long encodedUser = ChatParticipantId.encodeUser(userId);
+        long encodedUser = getMyEncodedId(null);
         List<java.util.Map<String, Object>> csList = jdbcTemplate.queryForList(
-                "SELECT id FROM admin WHERE role = 'CS' AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
+                "SELECT id FROM admin WHERE role IN ('CS','BOTH','ADMIN') AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
         if (csList.isEmpty()) return R.fail("暂无可用客服，请稍后再试");
         long csId = ((Number) csList.get(0).get("id")).longValue();
         long encodedCs = ChatParticipantId.encodeCs(csId);
@@ -124,8 +132,11 @@ public class ChatController {
     public R<?> send(@RequestBody ChatMessage msg, @RequestParam(required = false) String chatRole) {
         Long userId = SecurityUtils.getUserId();
         String userType = resolveChatRole(chatRole);
-        if (userType == null) userType = SecurityUtils.getUserType();
-        if (msg.getSenderType() == null) msg.setSenderType(userType != null && (userType.equals("CS") || userType.equals("ADMIN")) ? "CS" : (userType != null ? userType : "USER"));
+        com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(msg.getSessionId()),getMyEncodedId(chatRole));
+        if(msg.getSenderType()!=null && !userType.equals(msg.getSenderType())) return R.fail(403,"聊天身份不匹配");
+        com.delta.common.chat.util.ChatIdentity.validateMessage(msg.getType(),msg.getContent());
+        msg.setId(null);
+        msg.setSenderType(userType);
         msg.setSenderId(userId);
         msg.setIsRead(0);
         msg.setCreatedAt(LocalDateTime.now());
@@ -144,20 +155,11 @@ public class ChatController {
     private long getMyEncodedId(String chatRole) {
         Long rawId = SecurityUtils.getUserId();
         String type = resolveChatRole(chatRole);
-        if (type == null) type = SecurityUtils.getUserType();
-        if ("PLAYER".equals(type)) {
-            Long playerId = crossModuleMapper.selectPlayerIdByUserId(rawId);
-            return ChatParticipantId.encodePlayer(playerId != null ? playerId : rawId);
-        }
-        if ("CS".equals(type) || "ADMIN".equals(type)) return ChatParticipantId.encodeCs(rawId);
-        return ChatParticipantId.encodeUser(rawId);
+        return com.delta.common.chat.util.ChatIdentity.encoded(type,rawId);
     }
 
     private static String resolveChatRole(String chatRole) {
-        if (chatRole == null) return null;
-        if ("USER".equals(chatRole) || "PLAYER".equals(chatRole) || "CS".equals(chatRole)) return chatRole;
-        if ("ADMIN".equals(chatRole)) return "CS";
-        return null;
+        return com.delta.common.chat.util.ChatIdentity.role(SecurityUtils.getUserType(),chatRole);
     }
 
     private boolean isSessionMember(ChatSession s, long myEncodedId) {

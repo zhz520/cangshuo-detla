@@ -16,6 +16,12 @@ public class User extends BaseEntity {
     private String nickname;
     private String avatar;
     private String phone;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @lombok.ToString.Exclude
+    private String password;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long authVersion;
+    public boolean isPasswordSet() { return password!=null && !password.isBlank(); }
     private Integer status;
     @TableLogic
     private Integer deleted;

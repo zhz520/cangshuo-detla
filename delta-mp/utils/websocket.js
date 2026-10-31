@@ -8,7 +8,12 @@
  *   - 发送消息前检查 state，CONNECTING 时自动排队
  */
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8080/ws/chat'
+const configuredWs = import.meta.env.VITE_WS_BASE_URL
+const WS_BASE_URL = configuredWs && !configuredWs.includes('your-domain.example')
+  ? configuredWs
+  : (typeof window !== 'undefined' && window.location
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`
+    : 'ws://localhost:8080/ws/chat')
 const HEARTBEAT_INTERVAL = 30000
 const MAX_RECONNECT = 5
 
@@ -94,24 +99,29 @@ export function isWsConnected()  { return state === 'CONNECTED' }
 
 function _doConnect() {
   state = 'CONNECTING'
-  let url = `${WS_BASE_URL}?token=${currentToken}`
-  if (currentChatRole) url += `&chatRole=${encodeURIComponent(currentChatRole)}`
+  const url = WS_BASE_URL
 
-  console.log(`[WS] connecting → ${url}`)
+  console.log('[WS] connecting')
   socketTask = uni.connectSocket({ url, success() {} })
 
   socketTask.onOpen(() => {
-    console.log('[WS] connected')
-    state = 'CONNECTED'
-    reconnectCount = 0
-    _startHeartbeat()
-    callbacks.onConnect && callbacks.onConnect()
-    _flushQueue()
+    socketTask.send({ data: JSON.stringify({ type: 'auth', token: currentToken, chatRole: currentChatRole }) })
   })
 
   socketTask.onMessage((res) => {
     try {
       const data = JSON.parse(res.data)
+      if (data.type === 'auth') {
+        if (data.success) {
+          console.log('[WS] authenticated')
+          state = 'CONNECTED'
+          reconnectCount = 0
+          _startHeartbeat()
+          callbacks.onConnect && callbacks.onConnect()
+          _flushQueue()
+        } else closeWebSocket()
+        return
+      }
       if (data.type !== 'pong') {
         callbacks.onMessage && callbacks.onMessage(data)
       }

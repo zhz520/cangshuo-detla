@@ -44,6 +44,10 @@ public class PlayerEarningsController {
         data.put("balance", wallet != null ? wallet.getBalance() : BigDecimal.ZERO);
         data.put("frozenAmount", wallet != null ? wallet.getFrozenAmount() : BigDecimal.ZERO);
         data.put("totalIncome", wallet != null ? wallet.getTotalIncome() : BigDecimal.ZERO);
+        BigDecimal rewardIncome = transactionService.getObj(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Transaction>()
+                .select("COALESCE(SUM(amount),0)").eq("user_type","PLAYER").eq("user_id",playerId)
+                .in("type","REWARD_INCOME","REWARD_REVERSAL"),value->new BigDecimal(value.toString()));
+        data.put("rewardIncome",rewardIncome);
 
         // 今日收益
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
@@ -51,7 +55,7 @@ public class PlayerEarningsController {
         List<Transaction> todayTxns = transactionService.list(new LambdaQueryWrapper<Transaction>()
                 .eq(Transaction::getUserType, "PLAYER")
                 .eq(Transaction::getUserId, playerId)
-                .eq(Transaction::getType, "INCOME")
+                .in(Transaction::getType, "INCOME", "REWARD_INCOME", "REWARD_REVERSAL")
                 .between(Transaction::getCreatedAt, todayStart, todayEnd));
         BigDecimal todayIncome = todayTxns.stream()
                 .map(Transaction::getAmount)
@@ -64,7 +68,7 @@ public class PlayerEarningsController {
         List<Transaction> weekTxns = transactionService.list(new LambdaQueryWrapper<Transaction>()
                 .eq(Transaction::getUserType, "PLAYER")
                 .eq(Transaction::getUserId, playerId)
-                .eq(Transaction::getType, "INCOME")
+                .in(Transaction::getType, "INCOME", "REWARD_INCOME", "REWARD_REVERSAL")
                 .between(Transaction::getCreatedAt, LocalDateTime.of(weekStart, LocalTime.MIN), todayEnd));
         BigDecimal weekIncome = weekTxns.stream()
                 .map(Transaction::getAmount)
@@ -76,7 +80,7 @@ public class PlayerEarningsController {
         List<Transaction> monthTxns = transactionService.list(new LambdaQueryWrapper<Transaction>()
                 .eq(Transaction::getUserType, "PLAYER")
                 .eq(Transaction::getUserId, playerId)
-                .eq(Transaction::getType, "INCOME")
+                .in(Transaction::getType, "INCOME", "REWARD_INCOME", "REWARD_REVERSAL")
                 .between(Transaction::getCreatedAt, monthStart, todayEnd));
         BigDecimal monthIncome = monthTxns.stream()
                 .map(Transaction::getAmount)
@@ -100,7 +104,7 @@ public class PlayerEarningsController {
         // 单均收益
         BigDecimal totalIncomeVal = wallet != null && wallet.getTotalIncome() != null ? wallet.getTotalIncome() : BigDecimal.ZERO;
         BigDecimal avgOrderAmount = totalOrders > 0
-                ? totalIncomeVal.divide(BigDecimal.valueOf(totalOrders), 2, java.math.RoundingMode.HALF_UP)
+                ? totalIncomeVal.subtract(rewardIncome).divide(BigDecimal.valueOf(totalOrders), 2, java.math.RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         data.put("avgOrderAmount", avgOrderAmount);
 

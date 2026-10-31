@@ -194,7 +194,7 @@
         <el-col :span="12">
           <el-card shadow="hover" v-loading="playerLoading">
             <template #header><span>打手统计</span></template>
-            <el-descriptions :column="2" border size="small">
+            <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
               <el-descriptions-item label="总打手数">{{ playerStats.totalPlayers ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="活跃打手">{{ playerStats.activePlayers ?? '-' }}</el-descriptions-item>
             </el-descriptions>
@@ -358,6 +358,7 @@
 </template>
 
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { getAdminDashboard, getCsDashboard, getStatisticsUser, getStatisticsPlayer } from '@/api/dashboard'
@@ -365,6 +366,8 @@ import {
   List, Money, User, Avatar, Warning, Wallet, Clock, Loading,
   EditPen, ChatDotRound, CircleCheck
 } from '@element-plus/icons-vue'
+
+const { isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.role === 'admin')
@@ -477,7 +480,7 @@ onMounted(() => {
   padding-left: 12px;
   font-size: 22px;
   line-height: 1.25;
-  color: #172033;
+  color: #17191c;
   font-weight: 800;
   &::before {
     content: "";
@@ -487,7 +490,7 @@ onMounted(() => {
     width: 4px;
     height: 22px;
     border-radius: 999px;
-    background: #1d4ed8;
+    background: #17191c;
   }
 }
 .section-label {
@@ -495,7 +498,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #64748b;
+  color: #666b73;
   margin: 20px 0 10px;
   font-weight: 700;
   letter-spacing: 0;
@@ -503,7 +506,7 @@ onMounted(() => {
     content: "";
     flex: 1;
     height: 1px;
-    background: #e3eaf3;
+    background: #e6e7e9;
   }
   &:first-of-type { margin-top: 0; }
 }
@@ -513,7 +516,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   margin-bottom: 0;
-  border: 1px solid #e3eaf3;
+  border: 1px solid #e6e7e9;
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -524,11 +527,11 @@ onMounted(() => {
     padding: 18px;
     width: 100%;
     min-height: 104px;
-    background: linear-gradient(180deg, #ffffff, #fbfdff);
+    background: linear-gradient(180deg, #ffffff, #fafafb);
   }
   &:hover {
     transform: translateY(-2px);
-    border-color: #cbd8e8;
+    border-color: #d8dadd;
   }
   &.mini :deep(.el-card__body) {
     justify-content: center;
@@ -537,7 +540,7 @@ onMounted(() => {
   }
 }
 .alert-card.has-alert {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid #c94f59;
 }
 .stat-icon {
   width: 52px;
@@ -549,13 +552,13 @@ onMounted(() => {
   color: #fff;
   flex-shrink: 0;
 }
-.bg-blue { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
-.bg-green { background: linear-gradient(135deg, #16a34a, #15803d); }
-.bg-purple { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
-.bg-cyan { background: linear-gradient(135deg, #0891b2, #0e7490); }
-.bg-red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-.bg-orange { background: linear-gradient(135deg, #f59e0b, #b45309); }
-.bg-yellow { background: linear-gradient(135deg, #eab308, #ca8a04); }
+.bg-blue { background: #f3f4f5; color: #17191c; }
+.bg-green { background: #f3f4f5; color: #17191c; }
+.bg-purple { background: #f3f4f5; color: #17191c; }
+.bg-cyan { background: #f3f4f5; color: #17191c; }
+.bg-red { background: #f3f4f5; color: #17191c; }
+.bg-orange { background: #f3f4f5; color: #17191c; }
+.bg-yellow { background: #f3f4f5; color: #17191c; }
 
 .stat-info {
   flex: 1;
@@ -565,46 +568,53 @@ onMounted(() => {
   font-size: 27px;
   font-weight: 800;
   line-height: 1.2;
-  color: #172033;
+  color: #17191c;
 }
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: #666b73;
   margin-top: 4px;
   font-weight: 600;
 }
 .stat-compare {
   font-size: 12px;
-  color: #94a3b8;
+  color: #73777e;
   margin-top: 2px;
 }
-.diff-up { color: #f56c6c; margin-left: 4px; }
-.diff-down { color: #67c23a; margin-left: 4px; }
+.diff-up { color: #c94f59; margin-left: 4px; }
+.diff-down { color: #347a5b; margin-left: 4px; }
 
-.text-danger { color: #f56c6c !important; }
-.text-warning { color: #e6a23c !important; }
-.text-primary { color: #409eff !important; }
+.text-danger { color: #c94f59 !important; }
+.text-warning { color: #996b30 !important; }
+.text-primary { color: #17191c !important; }
+
+.stat-value.text-danger,
+.stat-value.text-warning {
+  color: #17191c !important;
+}
+.has-alert .stat-value.text-danger { color: #c94f59 !important; }
+.has-alert .stat-value.text-warning { color: #996b30 !important; }
 
 // 趋势条
 .bar-wrapper {
-  background: #eef3f9;
+  background: #eeeff1;
   border-radius: 999px;
   height: 14px;
   overflow: hidden;
 }
 .bar {
   height: 100%;
-  background: linear-gradient(90deg, #60a5fa, #1d4ed8);
+  background: linear-gradient(90deg, #555b63, #17191c);
   border-radius: 999px;
   min-width: 4px;
   transition: width 0.3s;
   &.bar-purple {
-    background: linear-gradient(90deg, #a78bfa, #6d28d9);
+    background: linear-gradient(90deg, #7b8087, #41464e);
   }
 }
 .stat-extra {
   padding: 8px 0 12px;
-  color: #42526e;
+  color: #555b63;
   font-size: 13px;
 }
 
@@ -622,5 +632,26 @@ onMounted(() => {
     flex: 0 0 50%;
     margin-bottom: 12px;
   }
+}
+@media (max-width: 1024px) {
+  :deep(.el-col-14), :deep(.el-col-10), :deep(.el-col-12) {
+    max-width: 100%;
+    flex: 0 0 100%;
+    margin-bottom: 12px;
+  }
+  .stat-value { overflow-wrap: anywhere; word-break: break-word; }
+}
+@media (max-width: 600px) {
+  .dashboard-title { font-size: 20px; }
+  .stat-card :deep(.el-card__body) { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; }
+  .stat-card.mini :deep(.el-card__body) { align-items: center; }
+  .stat-icon { width: 40px; height: 40px; }
+  .stat-info { width: 100%; }
+  .stat-value { font-size: 22px; }
+  .stat-compare { overflow-wrap: anywhere; word-break: break-word; }
+}
+@media (max-width: 360px) {
+  :deep(.el-col-6) { max-width: 100%; flex: 0 0 100%; }
+  .stat-card :deep(.el-card__body) { flex-direction: row; align-items: center; }
 }
 </style>

@@ -37,7 +37,7 @@ const currentValue = computed(() => props.modelValue || 0)
     color: #ddd;
     transition: color 0.15s;
 
-    &.active { color: #ff9900; }
+    &.active { color: #996b30; }
   }
 
   &:not(.readonly) .star { cursor: pointer; }
@@ -45,7 +45,7 @@ const currentValue = computed(() => props.modelValue || 0)
   .rating-text {
     margin-left: 8rpx;
     font-size: 26rpx;
-    color: #ff9900;
+    color: #996b30;
     font-weight: 500;
   }
 }

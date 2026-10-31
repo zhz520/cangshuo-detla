@@ -18,7 +18,7 @@
       <text class="card-title">投诉内容</text>
       <text class="content-text">{{ complaint.content }}</text>
       <view v-if="complaint.images" class="evidence-images">
-        <image v-for="(img, idx) in complaint.images.split(',')" :key="idx" :src="img" mode="aspectFill" class="ev-img" lazy-load @click="previewImg(complaint.images.split(','), idx)" />
+        <AppImage v-for="(img, idx) in complaint.images.split(',')" :key="idx" :src="img" mode="aspectFill" class="ev-img" @click="previewImg(complaint.images.split(','), idx)" />
       </view>
       <view v-if="complaint.expectedResult" class="expected">
         <text class="label">期望结果</text>
@@ -80,6 +80,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
@@ -119,19 +120,19 @@ async function submitAppeal() {
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 </script>
 <style lang="scss" scoped>
-.complaint-detail { background: #f8fafc; min-height: 100vh; }
-.card { margin-top: 20rpx; padding: 24rpx; background: #ffffff; border: 1rpx solid #edf1f7; }
-.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: #6366f1; }
-.info-row { display: flex; align-items: center; padding: 8rpx 0; .label { font-size: 26rpx; color: #94a3b8; width: 140rpx; } .value { font-size: 26rpx; color: #1e293b; &.refund { color: #ee0a24; font-weight: bold; } } }
-.content-text { font-size: 28rpx; color: #1e293b; line-height: 1.6; display: block; }
+.complaint-detail { background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
+.card { margin-top: 20rpx; padding: 24rpx; background: #ffffff; border: 1rpx solid #eeeff1; }
+.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: #17191c; }
+.info-row { display: flex; align-items: center; padding: 8rpx 0; .label { font-size: 26rpx; color: #73777e; width: 140rpx; } .value { font-size: 26rpx; color: #17191c; &.refund { color: #d44955; font-weight: bold; } } }
+.content-text { font-size: 28rpx; color: #17191c; line-height: 1.6; display: block; }
 .evidence-images { display: flex; gap: 12rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .ev-img { width: 160rpx; height: 160rpx; border-radius: 8rpx; }
-.expected { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #edf1f7; }
+.expected { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #eeeff1; }
 .actions { padding: 40rpx 24rpx; }
-.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; }
+.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; }
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-body { width: 80%; background: #ffffff; border: 1rpx solid rgba(99, 102, 241, 0.15); border-radius: 16rpx; padding: 40rpx; textarea { width: 100%; height: 200rpx; background: #f1f5f9; border: 1rpx solid #e2e8f0; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; margin: 20rpx 0; color: #1e293b; } }
-.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #6366f1; }
+.modal-body { width: 80%; background: #ffffff; border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 16rpx; padding: 40rpx; textarea { width: 100%; height: 200rpx; background: #f4f5f6; border: 1rpx solid #e6e7e9; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; margin: 20rpx 0; color: #17191c; } }
+.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #17191c; }
 .modal-btns { display: flex; gap: 24rpx; }
-.modal-btn { flex: 1; height: 76rpx; line-height: 76rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx; &.cancel { background: #f1f5f9; color: #64748b; } &.confirm { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; font-weight: bold; } }
+.modal-btn { flex: 1; height: 76rpx; line-height: 76rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx; &.cancel { background: #f4f5f6; color: #666b73; } &.confirm { background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; } }
 </style>

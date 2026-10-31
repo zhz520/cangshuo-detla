@@ -49,6 +49,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     private final WxPayConfiguration wxPayConfiguration;
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -58,6 +59,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
             throw new BusinessException("订单状态不允许支付");
         if (!order.getUserId().equals(userId)) throw new BusinessException("无权操作");
+        com.delta.common.utils.Money.positive(order.getAmount());
         if (order.getPayDeadline() != null && order.getPayDeadline().isBefore(LocalDateTime.now()))
             throw new BusinessException("订单已超时，请重新下单");
 
@@ -91,7 +93,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Payment createPlayerDepositPayment(Long userId) {
+        lockUser(userId);
         BigDecimal amount = getPlayerDepositAmount();
+        com.delta.common.utils.Money.positive(amount);
         Payment existing = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getUserId, userId)
                 .eq(Payment::getBizType, "PLAYER_DEPOSIT")
@@ -123,10 +127,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Payment createRechargePayment(String packageId, Long userId) {
+        lockUser(userId);
         RechargePackage rechargePackage = sysConfigService.getRechargePackages(true).stream()
                 .filter(item -> packageId != null && packageId.equals(item.getId()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("充值套餐不存在或已下架"));
+        com.delta.common.utils.Money.positive(rechargePackage.getAmount());
+        if(rechargePackage.getBonus()==null || rechargePackage.getBonus().signum()<0 || rechargePackage.getBonus().compareTo(new BigDecimal("1000000"))>0
+                || rechargePackage.getBonus().stripTrailingZeros().scale()>2) throw new BusinessException(400,"充值赠送金额无效");
 
         Payment existing = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getUserId, userId)
@@ -165,6 +173,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Payment createBalancePayment(Long orderId, Long userId) {
         Order order = orderService.getById(orderId);
         if (order == null) throw new BusinessException("订单不存在");
@@ -174,19 +183,13 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         if (order.getPayDeadline() != null && order.getPayDeadline().isBefore(LocalDateTime.now()))
             throw new BusinessException("订单已超时，请重新下单");
 
-        String lockKey = "wallet:" + userId;
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1",
-                java.time.Duration.ofSeconds(10));
-        if (Boolean.FALSE.equals(locked)) throw new BusinessException("操作太频繁，请稍后重试");
-        try {
-            return doBalancePay(orderId, userId, order);
-        } finally {
-            redisTemplate.delete(lockKey);
-        }
+        com.delta.common.utils.Money.positive(order.getAmount());
+        if(count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING").eq(Payment::getPayMethod,"WECHAT"))>0)
+            throw new BusinessException(409,"订单已发起微信支付，请关闭该笔微信支付后再使用余额");
+        return doBalancePay(orderId, userId, order);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public Payment doBalancePay(Long orderId, Long userId, Order order) {
+    private Payment doBalancePay(Long orderId, Long userId, Order order) {
         Wallet wallet = walletService.getByUserId(userId);
         if (wallet == null) throw new BusinessException("钱包不存在");
         BigDecimal available = wallet.getBalance().subtract(wallet.getFrozenAmount());
@@ -258,6 +261,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
             Transaction transaction = notificationParser.parse(requestParam, Transaction.class);
 
+            applyVerifiedTransaction(transaction,clients);
+        } catch (Exception e) {
+            log.error("处理微信支付V3回调失败", e);
+            throw new BusinessException("回调处理失败");
+        }
+    }
+
+    private void applyVerifiedTransaction(Transaction transaction,WxPayConfiguration.CachedClients clients) {
             String outTradeNo = transaction.getOutTradeNo();
             String transactionId = transaction.getTransactionId();
             Transaction.TradeStateEnum tradeState = transaction.getTradeState();
@@ -271,7 +282,32 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
             Payment payment = getOne(new LambdaQueryWrapper<Payment>()
                     .eq(Payment::getPaymentNo, outTradeNo));
-            if (payment == null || "PAID".equals(payment.getStatus())) return;
+            if(payment==null) throw new BusinessException("支付单不存在");
+            if(payment.getOrderId()!=null) orderService.getById(payment.getOrderId()); else lockUser(payment.getUserId());
+            payment=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getId,payment.getId()).last("FOR UPDATE"));
+            var config=clients.getConfig();
+            if(!config.appId().equals(transaction.getAppid()) || !config.mchId().equals(transaction.getMchid())
+                    || transaction.getAmount()==null || !"CNY".equals(transaction.getAmount().getCurrency())
+                    || transaction.getAmount().getTotal()==null || transaction.getAmount().getTotal()!=com.delta.common.utils.Money.cents(payment.getAmount())
+                    || transactionId==null || transactionId.isBlank() || !"WECHAT".equals(payment.getPayMethod()))
+                throw new BusinessException("支付通知与本地支付单不一致");
+            if("PAID".equals(payment.getStatus())) {
+                if(!transactionId.equals(payment.getWxTransactionId())) throw new BusinessException("支付交易号不一致");
+                return;
+            }
+            if(!"PAYING".equals(payment.getStatus())) throw new BusinessException("支付单状态不允许入账，请核查订单");
+            if(count(new LambdaQueryWrapper<Payment>().eq(Payment::getWxTransactionId,transactionId).ne(Payment::getId,payment.getId()))>0)
+                throw new BusinessException("支付交易号已使用");
+            if("ORDER".equals(payment.getBizType())) {
+                Order local=orderService.getById(payment.getOrderId());
+                if(local==null || !local.getUserId().equals(payment.getUserId()) || local.getAmount().compareTo(payment.getAmount())!=0)
+                    throw new BusinessException("订单状态或金额不匹配，等待支付对账处理");
+                if(java.util.Set.of("CANCELLED","REFUNDING","REFUNDED").contains(local.getStatus()) || count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,payment.getOrderId()).eq(Payment::getStatus,"PAID"))>0) {
+                    payment.setStatus("PAID");payment.setWxTransactionId(transactionId);payment.setPaidAt(LocalDateTime.now());updateById(payment);
+                    processRefund(payment,payment.getAmount(),"迟到或重复支付自动原路退款",false);return;
+                }
+                if(!OrderStatusEnum.PENDING_PAYMENT.name().equals(local.getStatus())) throw new BusinessException("订单状态异常，等待支付对账处理");
+            } else if(!java.util.Set.of("RECHARGE","PLAYER_DEPOSIT").contains(payment.getBizType())) throw new BusinessException("支付业务类型无效");
 
             payment.setStatus("PAID");
             payment.setWxTransactionId(transactionId);
@@ -308,102 +344,124 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                     }
                 }
             }
-        } catch (Exception e) {
-            log.error("处理微信支付V3回调失败", e);
-            throw new BusinessException("回调处理失败");
-        }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void refund(Long paymentId, BigDecimal refundAmount, String reason) {
-        Payment payment = getById(paymentId);
-        if (payment == null) throw new BusinessException("支付记录不存在");
-        if (!"PAID".equals(payment.getStatus())) throw new BusinessException("该支付记录不可退款");
-        if (refundAmount.compareTo(payment.getAmount()) > 0) throw new BusinessException("退款金额不可超过支付金额");
-
-        processRefund(payment, refundAmount, reason);
-
-        Order order = orderService.getById(payment.getOrderId());
-        String fromStatus = order.getStatus();
-        order.setStatus(OrderStatusEnum.REFUNDING.name());
-        order.setUpdatedAt(LocalDateTime.now());
-        orderService.updateById(order);
-        recordProgress(order.getId(), fromStatus, OrderStatusEnum.REFUNDING.name(), "SYSTEM", null, "退款处理中: " + reason);
-
-        order.setStatus(OrderStatusEnum.REFUNDED.name());
-        order.setUpdatedAt(LocalDateTime.now());
-        orderService.updateById(order);
-        recordProgress(order.getId(), OrderStatusEnum.REFUNDING.name(), OrderStatusEnum.REFUNDED.name(), "SYSTEM", null, "退款完成: " + reason);
+        Payment payment=lockPayment(paymentId);
+        if(!"PAID".equals(payment.getStatus())) throw new BusinessException("该支付记录不可退款");
+        com.delta.common.utils.Money.positive(refundAmount);
+        if(refundAmount.compareTo(payment.getAmount())>0) throw new BusinessException("退款金额不可超过支付金额");
+        processRefund(payment,refundAmount,reason,true);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void refundByOrderId(Long orderId, String reason) {
-        Payment payment = getOne(new LambdaQueryWrapper<Payment>()
-                .eq(Payment::getOrderId, orderId)
-                .eq(Payment::getStatus, "PAID")
-                .last("LIMIT 1"));
-        if (payment == null) {
-            log.warn("退款跳过: 未找到已支付记录, orderId={}", orderId);
-            return;
-        }
+        orderService.getById(orderId);
+        Payment payment=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAID").last("LIMIT 1 FOR UPDATE"));
+        if(payment!=null) processRefund(payment,payment.getAmount(),reason,true);
+    }
 
-        processRefund(payment, payment.getAmount(), reason);
+    private Payment lockPayment(Long id) {
+        Payment candidate=getById(id);
+        if(candidate==null) throw new BusinessException("支付记录不存在");
+        if(candidate.getOrderId()!=null) orderService.getById(candidate.getOrderId()); else lockUser(candidate.getUserId());
+        return getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getId,id).last("FOR UPDATE"));
+    }
 
-        Order order = orderService.getById(orderId);
-        if (order != null) {
-            String fromStatus = order.getStatus();
-            order.setStatus(OrderStatusEnum.REFUNDED.name());
-            order.setUpdatedAt(LocalDateTime.now());
-            orderService.updateById(order);
-            recordProgress(orderId, fromStatus, OrderStatusEnum.REFUNDED.name(), "SYSTEM", null, "退款完成: " + reason);
-            eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_REFUNDED", "USER", order.getUserId(), orderId, "订单已退款"));
+    private void processRefund(Payment payment, BigDecimal refundAmount, String reason, boolean refreshOrder) {
+        com.delta.common.utils.Money.positive(refundAmount);
+        payment.setRefundNo(IdGenerator.nextPaymentNo());payment.setRefundAmount(refundAmount);payment.setRefundReason(reason);
+        if("BALANCE".equals(payment.getPayMethod())) {
+            Wallet wallet=walletService.getByUserId(payment.getUserId());
+            if(wallet==null) throw new BusinessException("钱包不存在");
+            BigDecimal before=wallet.getBalance();wallet.setBalance(before.add(refundAmount));walletService.updateById(wallet);
+            transactionService.record("REFUND","USER",payment.getUserId(),refundAmount,before,wallet.getBalance(),payment.getOrderId(),payment.getId(),null,"退款: "+reason);
+            payment.setStatus("REFUNDED");payment.setRefundTime(LocalDateTime.now());
+        } else if("WECHAT".equals(payment.getPayMethod())) {
+            // This row is a durable outbox. External calls happen only after the DB transaction commits.
+            payment.setStatus("REFUNDING");
+        } else throw new BusinessException("支付方式无效");
+        updateById(payment);if(refreshOrder) updateRefundOrder(payment);
+    }
+
+    private void updateRefundOrder(Payment payment) {
+        if(payment.getOrderId()==null) return;
+        if(count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,payment.getOrderId()).eq(Payment::getStatus,"PAID").ne(Payment::getId,payment.getId()))>0) return;
+        Order order=orderService.getById(payment.getOrderId());if(order==null) return;
+        String next="REFUNDED".equals(payment.getStatus())?"REFUNDED":"REFUNDING";
+        String previous=order.getStatus();if(next.equals(previous)) return;
+        order.setStatus(next);orderService.updateById(order);
+        recordProgress(order.getId(),previous,next,"SYSTEM",null,"REFUNDED".equals(next)?"退款成功":"退款处理中");
+        if("REFUNDED".equals(next)) eventPublisher.publishEvent(new BusinessEvent(this,"ORDER_REFUNDED","USER",order.getUserId(),order.getId(),"订单已退款"));
+    }
+
+    @Override
+    @Transactional(rollbackFor=Exception.class)
+    public void handleWxRefundV3Notify(String body,String serial,String nonce,String timestamp,String signature) {
+        var clients=wxPayConfiguration.getClients();if(clients==null) throw new BusinessException("支付配置不可用");
+        var request=new RequestParam.Builder().serialNumber(serial).nonce(nonce).signature(signature).timestamp(timestamp).body(body).build();
+        var notification=clients.getNotificationParser().parse(request,com.wechat.pay.java.service.refund.model.RefundNotification.class);
+        applyRefundResult(notification.getOutTradeNo(),notification.getOutRefundNo(),notification.getTransactionId(),notification.getRefundStatus(),notification.getAmount());
+    }
+
+    @Override
+    @Transactional(rollbackFor=Exception.class)
+    public void acceptRefundResult(com.wechat.pay.java.service.refund.model.Refund result) {
+        applyRefundResult(result.getOutTradeNo(),result.getOutRefundNo(),result.getTransactionId(),result.getStatus(),result.getAmount());
+    }
+
+    private void applyRefundResult(String paymentNo,String refundNo,String transactionId,com.wechat.pay.java.service.refund.model.Status status,com.wechat.pay.java.service.refund.model.Amount amount) {
+        Payment candidate=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getPaymentNo,paymentNo));
+        if(candidate==null) throw new BusinessException("退款支付单不存在");
+        Payment payment=lockPayment(candidate.getId());
+        if(!"WECHAT".equals(payment.getPayMethod()) || !java.util.Objects.equals(refundNo,payment.getRefundNo())
+                || transactionId==null || !transactionId.equals(payment.getWxTransactionId()) || amount==null || payment.getRefundAmount()==null
+                || !"CNY".equals(amount.getCurrency()) || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
+                || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund()))
+            throw new BusinessException("退款通知与本地退款单不一致");
+        if("REFUNDED".equals(payment.getStatus())) return;
+        if(!"REFUNDING".equals(payment.getStatus())) throw new BusinessException("退款状态不允许处理");
+        if(status==com.wechat.pay.java.service.refund.model.Status.SUCCESS) {
+            payment.setStatus("REFUNDED");payment.setRefundTime(LocalDateTime.now());updateById(payment);updateRefundOrder(payment);
+        } else if(status==com.wechat.pay.java.service.refund.model.Status.CLOSED || status==com.wechat.pay.java.service.refund.model.Status.ABNORMAL) {
+            payment.setStatus("REFUND_FAILED");updateById(payment);log.error("微信退款需人工核查: paymentId={}, status={}",payment.getId(),status);
         }
     }
 
-    private void processRefund(Payment payment, BigDecimal refundAmount, String reason) {
-        payment.setRefundNo(IdGenerator.nextPaymentNo());
-        payment.setRefundAmount(refundAmount);
-        payment.setRefundReason(reason);
-        payment.setRefundTime(LocalDateTime.now());
+    @Override
+    @Transactional(rollbackFor=Exception.class)
+    public void reconcilePayment(Long paymentId) {
+        Payment payment=lockPayment(paymentId);
+        if(!"PAYING".equals(payment.getStatus()) || !"WECHAT".equals(payment.getPayMethod())) return;
+        var clients=wxPayConfiguration.getClients();if(clients==null) return;
+        var query=new com.wechat.pay.java.service.payments.jsapi.model.QueryOrderByOutTradeNoRequest();query.setMchid(clients.getConfig().mchId());query.setOutTradeNo(payment.getPaymentNo());
+        Transaction transaction=clients.getJsapiService().queryOrderByOutTradeNo(query);
+        if(transaction.getTradeState()==Transaction.TradeStateEnum.SUCCESS) applyVerifiedTransaction(transaction,clients);
+    }
 
-        if ("BALANCE".equals(payment.getPayMethod())) {
-            Wallet wallet = walletService.getByUserId(payment.getUserId());
-            BigDecimal balanceBefore = wallet.getBalance();
-            wallet.setBalance(wallet.getBalance().add(refundAmount));
-            walletService.updateById(wallet);
-            transactionService.record("REFUND", "USER", payment.getUserId(), refundAmount,
-                    balanceBefore, wallet.getBalance(), payment.getOrderId(), payment.getId(), null, "退款: " + reason);
-            log.info("余额退款完成: orderId={}, amount={}", payment.getOrderId(), refundAmount);
-        } else if ("WECHAT".equals(payment.getPayMethod())) {
-            WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
-            if (clients == null) {
-                throw new BusinessException("微信支付未启用，无法发起微信退款");
-            }
-            RefundService refundService = clients.getRefundService();
+    @Override
+    @Transactional(rollbackFor=Exception.class)
+    public boolean closeWxPayment(Long orderId,Long userId) {
+        Order order=orderService.getById(orderId);
+        if(order==null || !userId.equals(order.getUserId())) throw new BusinessException(404,"订单不存在");
+        var pending=list(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING").eq(Payment::getPayMethod,"WECHAT").last("FOR UPDATE"));
+        if(pending.isEmpty()) return true;
+        var clients=wxPayConfiguration.getClients();if(clients==null) throw new BusinessException(503,"暂时无法确认微信支付状态，请稍后重试");
+        for(Payment payment:pending) {
             try {
-                CreateRequest refundRequest = new CreateRequest();
-                refundRequest.setOutTradeNo(payment.getPaymentNo());
-                refundRequest.setOutRefundNo(payment.getRefundNo());
-                refundRequest.setReason(reason);
-
-                AmountReq amountReq = new AmountReq();
-                amountReq.setRefund(refundAmount.multiply(new BigDecimal("100")).longValue());
-                amountReq.setTotal(payment.getAmount().multiply(new BigDecimal("100")).longValue());
-                amountReq.setCurrency("CNY");
-                refundRequest.setAmount(amountReq);
-
-                refundService.create(refundRequest);
-                log.info("微信退款请求已提交: orderId={}, refundNo={}", payment.getOrderId(), payment.getRefundNo());
-            } catch (Exception e) {
-                log.error("微信退款请求失败: orderId={}", payment.getOrderId(), e);
-                throw new BusinessException("微信退款请求失败");
+                var query=new com.wechat.pay.java.service.payments.jsapi.model.QueryOrderByOutTradeNoRequest();query.setMchid(clients.getConfig().mchId());query.setOutTradeNo(payment.getPaymentNo());
+                var result=clients.getJsapiService().queryOrderByOutTradeNo(query);
+                if(result.getTradeState()==Transaction.TradeStateEnum.SUCCESS){applyVerifiedTransaction(result,clients);return false;}
+                var close=new com.wechat.pay.java.service.payments.jsapi.model.CloseOrderRequest();close.setMchid(clients.getConfig().mchId());close.setOutTradeNo(payment.getPaymentNo());clients.getJsapiService().closeOrder(close);
+            } catch(com.wechat.pay.java.core.exception.ServiceException e) {
+                if(!"ORDER_NOT_EXIST".equals(e.getErrorCode()) && !"RESOURCE_NOT_EXISTS".equals(e.getErrorCode())) throw new BusinessException(503,"暂时无法确认微信支付状态，请稍后重试");
             }
+            Payment update=new Payment();update.setId(payment.getId());update.setStatus("CLOSED");updateById(update);
         }
-
-        payment.setStatus("REFUNDED");
-        updateById(payment);
+        return true;
     }
 
     private void creditRecharge(Payment payment) {
@@ -422,6 +480,11 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 balanceBefore, wallet.getBalance(), null, payment.getId(), null,
                 "余额充值：充" + payment.getAmount().stripTrailingZeros().toPlainString()
                         + "送" + bonus.stripTrailingZeros().toPlainString());
+    }
+
+    private void lockUser(Long userId) {
+        if(jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 FOR UPDATE",userId).isEmpty())
+            throw new BusinessException("用户不存在");
     }
 
     private void incrementSalesCount(Long productId) {

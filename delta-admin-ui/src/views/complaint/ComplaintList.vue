@@ -23,7 +23,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="170" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="200" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button v-if="row.status === 'PENDING'" link type="primary" @click="handleProcess(row)">受理</el-button>
             <el-button v-if="row.status === 'PROCESSING' || row.status === 'APPEALING'" link type="success" @click="openResolveDialog(row)">仲裁</el-button>
@@ -36,7 +36,7 @@
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="投诉详情" width="720px">
       <div v-if="detailData">
-        <el-descriptions :column="2" border>
+        <el-descriptions :column="isNarrow ? 1 : 2" border>
           <el-descriptions-item label="投诉ID">{{ detailData.complaint.id }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="STATUS_TAG_TYPE[detailData.complaint.status] || 'info'" size="small">
@@ -74,7 +74,7 @@
             {{ detailData.complaint.expectedResult || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="证据图片" v-if="detailData.complaint.images" :span="2">
-            <el-image
+            <el-image lazy
               v-for="(img, i) in detailData.complaint.images.split(',')"
               :key="i"
               :src="img"
@@ -194,10 +194,13 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csComplaintList, csComplaintProcess, csComplaintResolve, csComplaintCreate, csUserList, csOrderList, csComplaintDetail } from '@/api/business'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+
+const { isCompact, isNarrow } = useResponsive()
 
 const STATUS_TEXT = { PENDING: '待处理', PROCESSING: '处理中', RESOLVED: '已解决', APPEALING: '申诉中' }
 const STATUS_TAG_TYPE = { PENDING: 'danger', PROCESSING: 'warning', RESOLVED: 'success', APPEALING: 'danger' }

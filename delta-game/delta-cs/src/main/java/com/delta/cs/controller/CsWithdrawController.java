@@ -49,7 +49,9 @@ public class CsWithdrawController {
                     w.setPlayerPhone(player.getPhone());
                 }
             }
-            if (w.getAccountId() != null) {
+            if(w.getAccountNoSnapshot()!=null) {
+                w.setAccountType(w.getAccountTypeSnapshot());w.setAccountNo(w.getAccountNoSnapshot());w.setAccountName(w.getAccountNameSnapshot());w.setQrcodeUrl(w.getAccountQrcodeSnapshot());
+            } else if (w.getAccountId() != null) {
                 PlayerAccount account = playerAccountService.getById(w.getAccountId());
                 if (account != null) {
                     w.setAccountType(account.getType());
@@ -71,7 +73,7 @@ public class CsWithdrawController {
     @PutMapping("/{id}/approve")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> approve(@PathVariable Long id, @RequestBody Withdraw w) {
-        Withdraw withdraw = withdrawService.getById(id);
+        Withdraw withdraw = withdrawService.getOne(new LambdaQueryWrapper<Withdraw>().eq(Withdraw::getId,id).last("FOR UPDATE"));
         if (withdraw == null || !"PENDING".equals(withdraw.getStatus())) {
             throw new BusinessException("提现记录不存在或已处理");
         }
@@ -109,7 +111,7 @@ public class CsWithdrawController {
     @Transactional(rollbackFor = Exception.class)
     public R<Void> reject(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
         String reason = body != null ? body.getOrDefault("reason", "") : "";
-        Withdraw withdraw = withdrawService.getById(id);
+        Withdraw withdraw = withdrawService.getOne(new LambdaQueryWrapper<Withdraw>().eq(Withdraw::getId,id).last("FOR UPDATE"));
         if (withdraw == null || !"PENDING".equals(withdraw.getStatus())) {
             throw new BusinessException("提现记录不存在或已处理");
         }

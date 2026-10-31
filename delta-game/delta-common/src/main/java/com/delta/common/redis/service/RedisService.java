@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class RedisService {
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ThreadLocal<java.util.Map<String,String>> ownedLocks=ThreadLocal.withInitial(java.util.HashMap::new);
 
     public void set(String key, Object value) { redisTemplate.opsForValue().set(key, value); }
     public void set(String key, Object value, long timeout, TimeUnit unit) { redisTemplate.opsForValue().set(key, value, timeout, unit); }
@@ -25,8 +26,15 @@ public class RedisService {
     public void deleteObject(String key) { redisTemplate.delete(key); }
 
     public boolean tryLock(String key, long timeout, TimeUnit unit) {
-        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, "1", timeout, unit);
+        String owner=java.util.UUID.randomUUID().toString();
+        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, owner, timeout, unit);
+        if(Boolean.TRUE.equals(result)) ownedLocks.get().put(key,owner);
         return Boolean.TRUE.equals(result);
     }
-    public void unlock(String key) { redisTemplate.delete(key); }
+    public void unlock(String key) {
+        String owner=ownedLocks.get().remove(key);
+        if(owner!=null) redisTemplate.execute(new org.springframework.data.redis.core.script.DefaultRedisScript<Long>(
+                "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end",Long.class),java.util.List.of(key),owner);
+        if(ownedLocks.get().isEmpty()) ownedLocks.remove();
+    }
 }

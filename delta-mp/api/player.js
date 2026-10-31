@@ -1,11 +1,22 @@
 import { get, post, put, del } from './request'
 
+// ========== 公开打手目录 ==========
+export const getPublicPlayerLevels = () => get('/app/players/levels', {}, { auth: false, loading: false })
+export const getPlayerCategories = () => get('/app/players/categories', {}, { auth: false, loading: false })
+export const createPlayerChat = (id) => post(`/app/players/${id}/chat`, {}, { role: 'user' })
+export const updatePlayerHomepage = (data) => put('/player/homepage', data, { role: 'player' })
+export const getPublicPlayers = (params) => get('/app/players', params, { auth: false, loading: false })
+export const getPublicPlayer = (id) => get(`/app/players/${id}`, {}, { auth: false, loading: false })
+export const getPublicPlayerReviews = (id, params) => get(`/app/players/${id}/reviews`, params, { auth: false, loading: false })
+export const getPlayerReviewableOrders = (id) => get(`/app/players/${id}/reviewable-orders`, {}, { role: 'user', loading: false })
+
 // ========== 接单员资料 ==========
 /** opts.role: 'user' 用用户token校验（切换前），'player' 用接单员token（接单员端） */
 export const getPlayerProfile = (opts = {}) => get('/player/profile', {}, { role: opts.role || 'player', ...opts })
 export const updatePlayerProfile = (data) => put('/player/profile', data, { role: 'player' })
 export const toggleOnlineStatus = (online) => post(`/player/online-status?online=${online}`, {}, { role: 'player' })
-export const applyPlayer = (data) => post('/player/apply', data)
+export const getPlayerApplicationStatus = () => get('/player/apply/status', {}, { role: 'user', loading: false })
+export const applyPlayer = (data) => post('/player/apply', data, { role: 'user' })
 
 // ========== 接单员首页 ==========
 export const getPlayerHome = () => get('/player/home', {}, { role: 'player' })
@@ -14,7 +25,9 @@ export const getPlayerRemind = (opts = {}) => get('/player/remind', {}, { role: 
 
 // ========== 接单员订单 ==========
 export const getOrderHall = (params) => get('/player/order/hall', params, { role: 'player' })
-export const acceptOrder = (id) => post(`/player/order/${id}/accept`, {}, { role: 'player' })
+export const getPlayerOrderDetail = id => get(`/player/work/${id}`, {}, {role:'player'})
+export const acceptOrder = (id, data = {}) => post(`/player/order/${id}/accept`, data, { role: 'player' })
+export const getAcceptChallenge = (id, deviceId) => get(`/player/order/${id}/accept-challenge`, {deviceId}, {role:'player',loading:false})
 export const startOrder = (id) => post(`/player/order/${id}/start`, {}, { role: 'player' })
 export const completeOrder = (id, data = {}) => post(`/player/order/${id}/complete`, data, { role: 'player' })
 export const getPlayerOrderProgress = (id) => get(`/player/order/${id}/progress`, {}, { role: 'player' })

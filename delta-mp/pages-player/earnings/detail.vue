@@ -5,6 +5,7 @@
         <view class="left">
           <text class="desc">{{ item.type === 'INCOME' ? '订单收益' : TX_TYPE_MAP[item.type] || item.type }}</text>
           <text class="time">{{ item.createdAt }}</text>
+          <text v-if="item.type.startsWith('REWARD_')" class="time">来源订单 {{ item.relatedOrderId }} · {{ item.remark }}</text>
           <view v-if="item.remarkInfo" class="remark-info">
             <text>订单金额: ¥{{ item.remarkInfo.orderAmount }}</text>
             <text>抽成: {{ item.remarkInfo.commissionRate }}% (¥{{ item.remarkInfo.commissionAmount }})</text>
@@ -25,7 +26,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
 import { getEarningsDetail } from '@/api/player'
 
-const TX_TYPE_MAP = { PAY: '支付', REFUND: '退款', WITHDRAW: '提现', INCOME: '订单收益', RECHARGE: '充值' }
+const TX_TYPE_MAP = { REWARD_PAY:'打赏支出', REWARD_INCOME:'打赏收入', REWARD_REFUND:'打赏退款', REWARD_REVERSAL:'打赏冲正', PAY: '支付', REFUND: '退款', WITHDRAW: '提现', INCOME: '订单收益', RECHARGE: '充值' }
 const records = ref([])
 const pageNum = ref(1)
 const loading = ref(false)
@@ -60,13 +61,13 @@ async function loadData() {
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 </script>
 <style lang="scss" scoped>
-.detail-page { background: #ffffff; min-height: 100vh; }
-.list { height: 100vh; }
-.record-item { display: flex; justify-content: space-between; align-items: center; padding: 24rpx; background: #f1f5f9; border-bottom: 1rpx solid #f1f5f9;
-  .left { flex: 1; .desc { font-size: 28rpx; color: #1e293b; display: block; } .time { font-size: 22rpx; color: #94a3b8; display: block; margin-top: 4rpx; }
-    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: #64748b; line-height: 1.6; } }
+.detail-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
+.list { height: var(--app-page-height, 100vh); }
+.record-item { display: flex; justify-content: space-between; align-items: center; padding: 24rpx; background: #f4f5f6; border-bottom: 1rpx solid #f4f5f6;
+  .left { flex: 1; .desc { font-size: 28rpx; color: #17191c; display: block; } .time { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
+    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: #666b73; line-height: 1.6; } }
   }
-  .amount { font-size: 30rpx; color: #1e293b; font-weight: bold; &.income { color: #07c160; } }
+  .amount { font-size: 30rpx; color: #17191c; font-weight: bold; &.income { color: #347a5b; } }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #94a3b8; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
 </style>

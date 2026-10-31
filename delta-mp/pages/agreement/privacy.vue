@@ -77,8 +77,8 @@ const siteStore = useSiteStore()
 <style lang="scss" scoped>
 .agreement-page {
   padding: 32rpx;
-  background: #f1f5f9;
-  min-height: 100vh;
+  background: #f4f5f6;
+  min-height: var(--app-page-height, 100vh);
 }
 .section {
   margin-bottom: 32rpx;
@@ -87,14 +87,14 @@ const siteStore = useSiteStore()
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #ff4544;
+  color: #17191c;
   text-align: center;
   margin-bottom: 8rpx;
 }
 .update-time {
   display: block;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #73777e;
   text-align: center;
   margin-bottom: 16rpx;
 }
@@ -102,13 +102,13 @@ const siteStore = useSiteStore()
   display: block;
   font-size: 30rpx;
   font-weight: bold;
-  color: #0f172a;
+  color: #17191c;
   margin-bottom: 12rpx;
 }
 .content {
   display: block;
   font-size: 28rpx;
-  color: #64748b;
+  color: #666b73;
   line-height: 1.8;
   margin-bottom: 8rpx;
 }

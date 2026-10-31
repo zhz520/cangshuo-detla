@@ -13,24 +13,26 @@ public interface ScheduledTaskMapper {
 
     // ========== OrderAutoAssignTask ==========
 
-    @Select("SELECT id, required_player_count FROM `order` WHERE status = 'PAID' " +
+    @Select("SELECT id, required_player_count, requested_player_level_id FROM `order` WHERE status = 'PAID' " +
             "AND player_id IS NULL AND designated_player_id IS NULL " +
             "AND created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE) LIMIT 20")
     List<Map<String, Object>> selectUnassignedOrders();
 
-    @Select("SELECT p.id FROM player p WHERE p.status = 'ACTIVE' AND p.deleted = 0 " +
+    @Select("SELECT p.id FROM player p JOIN player_level l ON l.id=p.level AND l.status=1 AND l.deleted=0 WHERE p.status = 'ACTIVE' AND p.deleted = 0 " +
             "AND p.is_online = 1 " +
+            "AND (#{levelId} IS NULL OR p.level=#{levelId}) " +
             "AND (p.frozen_until IS NULL OR p.frozen_until < NOW()) " +
             "AND (SELECT COUNT(*) FROM `order` o WHERE o.player_id = p.id " +
-            "AND o.status IN ('ACCEPTED','IN_PROGRESS','WAITING_TEAMMATE')) < #{maxActive} " +
+            "AND o.status IN ('ASSIGNED','ACCEPTED','IN_PROGRESS','WAITING_TEAMMATE')) < #{maxActive} " +
             "ORDER BY p.avg_rating DESC LIMIT 1")
-    List<Map<String, Object>> selectAvailablePlayers(@Param("maxActive") int maxActive);
+    List<Map<String, Object>> selectAvailablePlayers(@Param("maxActive") int maxActive,@Param("levelId") Integer levelId);
 
     @Select("SELECT config_value FROM sys_config WHERE config_key = #{key}")
     String selectConfigValue(@Param("key") String key);
 
     @Update("UPDATE `order` SET player_id = #{playerId}, assign_time = NOW(), " +
-            "status = 'ASSIGNED', updated_at = NOW() WHERE id = #{orderId} AND status = 'PAID'")
+            "status = 'ASSIGNED', updated_at = NOW() WHERE id = #{orderId} AND status = 'PAID' AND player_id IS NULL " +
+            "AND designated_player_id IS NULL AND (requested_player_level_id IS NULL OR requested_player_level_id=(SELECT level FROM player WHERE id=#{playerId}))")
     int assignOrderToPlayer(@Param("orderId") Long orderId, @Param("playerId") Long playerId);
 
     // ========== OrderAutoCancelTask ==========

@@ -8,4 +8,6 @@ public class LoginResponse {
     private Long userId;
     private String nickname;
     private String avatar;
+    private Boolean passwordSetupRequired;
+    private String setupToken;
 }

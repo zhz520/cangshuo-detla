@@ -65,9 +65,9 @@ async function doReject() {
 }
 </script>
 <style lang="scss" scoped>
-.handle-page { background: #ffffff; min-height: 100vh; }
+.handle-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .status-header { padding: 40rpx; text-align: center; color: #fff;
-  &.pending { background: #ff9900; } &.approved, &.completed { background: #07c160; } &.rejected { background: #ee0a24; }
+  &.pending { background: #996b30; } &.approved, &.completed { background: #347a5b; } &.rejected { background: #d44955; }
   .status-text { font-size: 36rpx; font-weight: bold; }
 }
 .amount-section { text-align: center; padding: 48rpx; background: rgba(0,0,0,0.04); .amount { font-size: 56rpx; font-weight: bold; color: rgba(0,0,0,0.85); } }
@@ -77,7 +77,7 @@ async function doReject() {
 .form-item { margin-bottom: 24rpx; .label { font-size: 26rpx; color: rgba(0,0,0,0.85); display: block; margin-bottom: 12rpx; } }
 .textarea { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; font-size: 26rpx; width: 100%; height: 160rpx; color: rgba(0,0,0,0.85); }
 .btn-group { display: flex; gap: 20rpx; }
-.btn-approve { flex: 1; text-align: center; padding: 20rpx; background: #07c160; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
-.btn-reject { flex: 1; text-align: center; padding: 20rpx; background: #ee0a24; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
-.reject-text { font-size: 26rpx; color: #ee0a24; }
+.btn-approve { flex: 1; text-align: center; padding: 20rpx; background: #347a5b; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.btn-reject { flex: 1; text-align: center; padding: 20rpx; background: #d44955; color: #fff; border-radius: 999rpx; font-size: 28rpx; }
+.reject-text { font-size: 26rpx; color: #d44955; }
 </style>

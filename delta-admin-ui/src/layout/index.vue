@@ -1,48 +1,20 @@
 <template>
   <el-container class="layout-container">
-    <el-aside :width="isCollapse ? '64px' : '220px'" class="layout-aside">
-      <div class="logo">
-        <div class="logo-mark">{{ logoInitial }}</div>
-        <h1 v-if="!isCollapse">{{ siteStore.adminTitle }}</h1>
-      </div>
-      <el-menu
-        :default-active="activeMenu"
-        :collapse="isCollapse"
-        :router="true"
-        class="layout-menu"
-      >
-        <template v-for="route in menuRoutes" :key="route.path">
-          <!-- 单级菜单 -->
-          <el-menu-item
-            v-if="route.children?.length === 1 && !route.children[0].children"
-            :index="resolveMenuPath(route.path, route.children[0].path)"
-          >
-            <el-icon><component :is="route.children[0].meta?.icon || route.meta?.icon" /></el-icon>
-            <template #title>{{ route.children[0].meta?.title }}</template>
-          </el-menu-item>
-          <!-- 多级菜单 -->
-          <el-sub-menu v-else :index="route.path">
-            <template #title>
-              <el-icon><component :is="route.meta?.icon" /></el-icon>
-              <span>{{ route.meta?.title }}</span>
-            </template>
-            <el-menu-item
-              v-for="child in visibleChildren(route.children)"
-              :key="child.path"
-              :index="route.path + '/' + child.path"
-            >
-              {{ child.meta?.title }}
-            </el-menu-item>
-          </el-sub-menu>
-        </template>
-      </el-menu>
+    <el-aside v-if="!isCompact" :width="isCollapse ? '64px' : '220px'" class="layout-aside">
+      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :routes="menuRoutes" :title="siteStore.adminTitle" :initial="logoInitial" />
     </el-aside>
 
-    <el-container>
+    <el-drawer v-model="navigationOpen" direction="ltr" size="300px" :with-header="false" title="主导航" append-to-body class="mobile-navigation">
+      <SidebarNavigation :active="activeMenu" :routes="menuRoutes" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
+        <template #action><button class="navigation-close" type="button" aria-label="关闭导航" @click="navigationOpen = false"><el-icon><Close /></el-icon></button></template>
+      </SidebarNavigation>
+    </el-drawer>
+
+    <el-container class="layout-body">
       <el-header class="layout-header">
         <div class="header-left">
-          <button class="collapse-btn" type="button" @click="isCollapse = !isCollapse">
-            <Fold v-if="!isCollapse" />
+          <button class="collapse-btn" type="button" :aria-label="isCompact ? '打开导航' : (isCollapse ? '展开导航' : '收起导航')" :aria-expanded="isCompact ? navigationOpen : !isCollapse" @click="toggleNavigation">
+            <Fold v-if="!isCompact && !isCollapse" />
             <Expand v-else />
           </button>
           <!-- 面包屑 -->
@@ -53,17 +25,17 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <div class="chat-notify" @click="goChat" title="客服消息">
+          <button class="chat-notify" type="button" @click="goChat" title="客服消息" :aria-label="`客服消息，${chatStore.globalUnread || 0}条未读`">
             <el-icon :size="20"><ChatDotRound /></el-icon>
             <span v-if="chatStore.globalUnread > 0" class="notify-badge">{{ chatStore.globalUnread > 99 ? '99+' : chatStore.globalUnread }}</span>
-          </div>
+          </button>
           <el-tag :type="role === 'admin' ? 'danger' : 'warning'" size="small" class="role-tag">
             {{ role === 'admin' ? '管理员' : '客服' }}
           </el-tag>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-avatar v-if="userStore.avatar" :src="userStore.avatar" :size="28" style="margin-right:8px" />
-              {{ nickname }} <el-icon><ArrowDown /></el-icon>
+              <span class="user-name" :title="nickname">{{ nickname }}</span> <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -86,9 +58,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
+import SidebarNavigation from './SidebarNavigation.vue'
+import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
 import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
 import { useChatStore } from '@/stores/chat'
@@ -101,6 +75,14 @@ const chatStore = useChatStore()
 const siteStore = useSiteStore()
 
 const isCollapse = ref(false)
+const navigationOpen = ref(false)
+const { isCompact } = useResponsive()
+function toggleNavigation() {
+  if (isCompact.value) navigationOpen.value = !navigationOpen.value
+  else isCollapse.value = !isCollapse.value
+}
+watch(() => route.fullPath, () => { navigationOpen.value = false })
+watch(isCompact, compact => { if (!compact) navigationOpen.value = false })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
 const logoInitial = computed(() => {
@@ -111,12 +93,6 @@ const logoInitial = computed(() => {
 const activeMenu = computed(() => route.path)
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
 
-// 拼接菜单路径，避免双斜杠
-function resolveMenuPath(parentPath, childPath) {
-  if (!childPath) return parentPath
-  return (parentPath + '/' + childPath).replace(/\/+/g, '/')
-}
-
 // 根据角色过滤路由，生成菜单
 const menuRoutes = computed(() => {
   return router.options.routes.filter((r) => {
@@ -126,10 +102,6 @@ const menuRoutes = computed(() => {
     return !roles || roles.includes(role.value)
   })
 })
-
-function visibleChildren(children) {
-  return (children || []).filter((c) => !c.meta?.hidden)
-}
 
 const profileDialogVisible = ref(false)
 
@@ -162,89 +134,22 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .layout-container {
-  height: 100vh;
-  background: #f4f7fb;
+  height: var(--app-viewport-height);
+  min-height: 0;
+  background: #f5f6f7;
 }
+.layout-body { min-width: 0; min-height: 0; }
 .layout-aside {
-  background: #172033;
-  box-shadow: 8px 0 28px rgba(20, 32, 54, 0.14);
+  background: #17191c;
+  box-shadow: 1px 0 0 rgba(23, 25, 28, 0.08);
   transition: width 0.24s ease;
   overflow: hidden;
-  .logo {
-    height: 64px;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #f8fafc;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    .logo-mark {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: #172033;
-      font-size: 17px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #f7c948, #f59e0b);
-      box-shadow: 0 10px 24px rgba(245, 158, 11, 0.24);
-    }
-    h1 {
-      font-size: 15px;
-      line-height: 1.2;
-      font-weight: 700;
-      margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-}
-.layout-menu {
-  border-right: none;
-  height: calc(100vh - 64px);
-  overflow-y: auto;
-  padding: 12px 10px 18px;
-  background: transparent;
-
-  :deep(.el-menu) {
-    background: transparent;
-  }
-  :deep(.el-menu-item),
-  :deep(.el-sub-menu__title) {
-    height: 42px;
-    margin: 4px 0;
-    border-radius: 9px;
-    color: #aeb9cc;
-    transition: background 0.18s ease, color 0.18s ease;
-  }
-  :deep(.el-menu-item:hover),
-  :deep(.el-sub-menu__title:hover) {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-  }
-  :deep(.el-menu-item.is-active) {
-    color: #172033;
-    font-weight: 700;
-    background: linear-gradient(135deg, #f7c948, #f59e0b);
-    box-shadow: 0 10px 22px rgba(245, 158, 11, 0.18);
-  }
-  :deep(.el-sub-menu .el-menu-item) {
-    padding-left: 42px !important;
-  }
-  :deep(.el-menu--collapse .el-sub-menu__title),
-  :deep(.el-menu--collapse .el-menu-item) {
-    justify-content: center;
-  }
 }
 .layout-header {
   height: 64px;
   background: rgba(255, 255, 255, 0.94);
-  border-bottom: 1px solid #e7edf5;
-  box-shadow: 0 8px 24px rgba(20, 32, 54, 0.05);
+  border-bottom: 1px solid #eceef0;
+  box-shadow: none;
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
@@ -257,19 +162,19 @@ onUnmounted(() => {
     .collapse-btn {
       width: 34px;
       height: 34px;
-      border: 1px solid #dce5f0;
+      border: 1px solid #e6e7e9;
       border-radius: 8px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #42526e;
+      color: #555b63;
       background: #fff;
       cursor: pointer;
       transition: all 0.18s ease;
       &:hover {
-        color: #1d4ed8;
-        border-color: #bfdbfe;
-        background: #eff6ff;
+        color: #17191c;
+        border-color: #d8dadd;
+        background: #f4f5f6;
       }
       svg {
         width: 18px;
@@ -277,11 +182,11 @@ onUnmounted(() => {
       }
     }
     :deep(.el-breadcrumb__inner) {
-      color: #64748b;
+      color: #666b73;
       font-weight: 500;
     }
     :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-      color: #172033;
+      color: #17191c;
       font-weight: 700;
     }
   }
@@ -297,13 +202,14 @@ onUnmounted(() => {
       justify-content: center;
       width: 34px;
       height: 34px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #e6e7e9;
       border-radius: 8px;
+      background: #fff;
       transition: background 0.2s;
-      color: #475569;
+      color: #555b63;
       &:hover {
-        background: #eff6ff;
-        color: #1d4ed8;
+        background: #f4f5f6;
+        color: #17191c;
       }
       .notify-badge {
         position: absolute;
@@ -315,13 +221,16 @@ onUnmounted(() => {
         padding: 0 4px;
         font-size: 10px;
         color: #fff;
-        background: #f56c6c;
+        background: #c94f59;
         border-radius: 10px;
         text-align: center;
       }
     }
     .role-tag {
       margin-right: 4px;
+      color: #555b63;
+      border-color: #e6e7e9;
+      background: #f5f6f7;
     }
     .user-info {
       cursor: pointer;
@@ -331,18 +240,67 @@ onUnmounted(() => {
       min-height: 34px;
       padding: 0 10px 0 6px;
       border-radius: 999px;
-      color: #172033;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      color: #17191c;
+      background: #f7f8f9;
+      border: 1px solid #e6e7e9;
     }
   }
 }
 .layout-main {
-  height: calc(100vh - 64px);
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background:
-    linear-gradient(180deg, rgba(234, 241, 250, 0.82) 0%, rgba(244, 247, 251, 0) 210px),
-    #f4f7fb;
+    linear-gradient(180deg, rgba(245, 246, 247, 0.82) 0%, rgba(245, 246, 247, 0) 210px),
+    #f5f6f7;
   padding: 22px 24px 28px;
+}
+.user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navigation-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  color: #f7f8f9;
+  background: transparent;
+  border: 1px solid #555b63;
+  border-radius: 8px;
+  cursor: pointer;
+}
+@media (max-width: 1024px) {
+  .layout-header {
+    height: auto;
+    min-height: calc(56px + var(--app-safe-top));
+    padding: calc(6px + var(--app-safe-top)) calc(12px + var(--app-safe-right)) 6px calc(12px + var(--app-safe-left));
+    gap: 8px;
+  }
+  .layout-header .header-left { min-width: 0; gap: 10px; flex: 1; }
+  .header-left :deep(.el-breadcrumb) { min-width: 0; font-size: 13px; line-height: 1.5; }
+  .header-left :deep(.el-breadcrumb__item) { float: none; display: inline; overflow-wrap: anywhere; }
+  .layout-header .header-left .collapse-btn { width: 40px; height: 40px; flex-shrink: 0; }
+  .layout-header .header-right { min-width: 0; gap: 6px; }
+  .header-right :deep(.el-dropdown) { min-width: 0; max-width: calc(100% - 104px); }
+  .layout-header .header-right .chat-notify { width: 38px; height: 38px; flex-shrink: 0; }
+  .layout-header .header-right .role-tag { margin-right: 0; }
+  .layout-header .header-right .user-info { min-height: 38px; max-width: 150px; padding: 0 6px; }
+  .layout-header .header-right .user-info { min-width: 0; }
+  .user-info :deep(.el-avatar), .user-info :deep(.el-icon) { flex-shrink: 0; }
+  .layout-main {
+    padding: 12px calc(12px + var(--app-safe-right)) calc(12px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
+  }
+}
+@media (max-width: 480px) {
+  .layout-header { flex-wrap: wrap; }
+  .layout-header .header-left { flex-basis: 100%; }
+  .layout-header .header-right { width: 100%; justify-content: flex-end; }
+  .layout-header .header-right .user-info { max-width: 220px; }
+}
+@media (max-width: 1024px) and (max-height: 500px) {
+  .layout-header { flex-wrap: nowrap; min-height: 48px; }
+  .layout-header .header-left { flex-basis: auto; }
+  .layout-header .header-right { width: auto; }
+  .layout-main { padding-top: 8px; padding-bottom: calc(8px + var(--app-safe-bottom)); }
 }
 </style>

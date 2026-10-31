@@ -49,6 +49,7 @@ public class SettlementEventListener {
             log.warn("结算跳过: 订单已结算, orderId={}", orderId);
             return;
         }
+        if(!java.util.Set.of("CONFIRMED","REVIEWED").contains(order.getStatus())) return;
 
         // 优先使用订单下单时快照的抽佣比例，否则从系统配置读取
         BigDecimal commissionRate;
@@ -60,6 +61,8 @@ public class SettlementEventListener {
         }
 
         BigDecimal orderAmount = order.getAmount();
+        com.delta.common.utils.Money.positive(orderAmount);
+        if(commissionRate.signum()<0 || commissionRate.compareTo(BigDecimal.ONE)>0) throw new com.delta.common.exception.BusinessException("抽佣比例无效");
         BigDecimal commission = orderAmount.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal playerTotalIncome = orderAmount.subtract(commission);
 
@@ -72,6 +75,8 @@ public class SettlementEventListener {
                 .eq(OrderPlayer::getStatus, "ACCEPTED"));
 
         BigDecimal primaryIncome = playerTotalIncome; // 默认全归主打手
+        BigDecimal totalTeammates=teammates.stream().map(tm -> calcTeammateIncome(playerTotalIncome,tm,teammates.size())).reduce(BigDecimal.ZERO,BigDecimal::add);
+        if(totalTeammates.signum()<0 || totalTeammates.compareTo(playerTotalIncome)>0) throw new com.delta.common.exception.BusinessException("队友分成总额超过可结算收益");
 
         // 给每位队友结算
         for (OrderPlayer tm : teammates) {

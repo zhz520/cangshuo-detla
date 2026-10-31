@@ -11,8 +11,8 @@
 
       <!-- 轮播图 -->
       <swiper class="banner" :autoplay="true" :interval="4000" circular indicator-dots>
-        <swiper-item v-for="item in banners" :key="item.id" @click="onBannerClick(item)">
-          <image :src="item.imageUrl" mode="aspectFill" class="banner-img" />
+        <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
+          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFill" class="banner-img" />
         </swiper-item>
       </swiper>
 
@@ -65,7 +65,7 @@
           class="category-item"
           @click="goCategory(cat.id)"
         >
-          <image class="category-icon" :src="cat.icon || '/static/icons/分类.svg'" mode="aspectFill" lazy-load />
+          <AppImage :width="160" class="category-icon" :src="cat.icon || '/static/icons/分类.svg'" mode="aspectFill" />
           <text class="category-name">{{ cat.name }}</text>
         </view>
       </view>
@@ -84,6 +84,7 @@
               {{ tab.name }}
             </view>
           </scroll-view>
+          <ProductSortPicker class="recommend-sort" v-model="currentSort" @update:model-value="loadRecommendProducts" />
         </view>
         <view class="product-grid">
           <ProductCard v-for="p in recommendProducts" :key="p.id" :product="p" />
@@ -96,9 +97,7 @@
     <CustomTabBar :current="0" />
 
     <!-- 悬浮客服按钮 -->
-    <view class="cs-float-btn" @click="goCustomerService">
-      <image src="/static/icons/客服.svg" mode="aspectFit" class="cs-icon" />
-    </view>
+    <DraggableSupport @activate="goCustomerService" />
 
     <!-- 公告弹窗 - 支持多公告叠加 -->
     <view class="notice-popup" v-if="showNoticePopup" @click="closeNoticePopup">
@@ -132,10 +131,15 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow, onPullDownRefresh, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import ProductCard from '@/components/ProductCard.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import DraggableSupport from '@/components/DraggableSupport.vue'
+import ProductSortPicker from '@/components/ProductSortPicker.vue'
+import { productSortParams } from '@/utils/product-sort'
+import { bannerAction } from '@/utils/banner'
 import { getRecommendProducts, getRecommendCategories } from '@/api/product'
 import { getActiveBanners } from '@/api/banner'
 import { getActiveNotices } from '@/api/notice'
@@ -164,10 +168,17 @@ const recommendProducts = ref([])
 /** 热门推荐 Tab：全部 + 接口返回的分类（护航专区推荐、热门推荐等） */
 const recommendTabs = ref([])
 const currentRecommendCategoryId = ref('')
+const currentSort = ref('default')
+let recommendRequest = 0
 const showNoticePopup = ref(false)
 const popupNotices = ref([])
 const popupCurrentIndex = ref(0)
 const showNoticeList = ref(false)
+
+function noticeRevision(notice) {
+  // A new admin revision (content, status or popup toggle) gets a new acknowledgement key.
+  return `${notice.id}:${notice.updatedAt || notice.createdAt || ''}`
+}
 
 function formatTime(t) {
   if (!t) return ''
@@ -178,6 +189,9 @@ function formatTime(t) {
 async function loadData() {
   const _t = Date.now()
   try {
+    // Wait for the current public setting before deciding whether a dismissed
+    // notice should be shown again on this page entry.
+    await siteStore.fetchSiteConfig()
     const opts = { loading: false }
     const [bannerRes, noticeRes, catRes, categoriesRes] = await Promise.all([
       getActiveBanners(opts),
@@ -198,9 +212,15 @@ async function loadData() {
       const popupList = list.filter(n => n.popupDisplay === 1)
       if (popupList.length > 0) {
         const seenIds = uni.getStorageSync('seenNoticeIds') || []
-        const unseenList = popupList.filter(n => !seenIds.includes(String(n.id)))
-        if (unseenList.length > 0) {
-          popupNotices.value = unseenList
+        const unseenList = popupList.filter(n => !seenIds.includes(noticeRevision(n)))
+        // In every-refresh mode one JS session may render the home tab many times;
+        // switching tabs must not reopen it. A real browser refresh recreates the store.
+        const displayList = siteStore.noticePopupEveryVisit
+          ? (siteStore.hasShownNoticePopupThisSession() ? [] : popupList)
+          : unseenList
+        if (displayList.length > 0) {
+          siteStore.markNoticePopupShownThisSession()
+          popupNotices.value = displayList
           popupCurrentIndex.value = 0
           showNoticePopup.value = true
         }
@@ -218,11 +238,7 @@ async function loadData() {
       }
     }
     // 推荐商品
-    const productParams = currentRecommendCategoryId.value ? { categoryId: currentRecommendCategoryId.value } : {}
-    const productRes = await getRecommendProducts(productParams, opts)
-    if (productRes.data) {
-      recommendProducts.value = productRes.data.records || productRes.data || []
-    }
+    await loadRecommendProducts()
   } catch (e) {
     console.error('load home data error', e)
   }
@@ -248,10 +264,17 @@ onPullDownRefresh(async () => {
 function switchRecommendCategory(id) {
   if (currentRecommendCategoryId.value === id) return
   currentRecommendCategoryId.value = id
-  const params = id ? { categoryId: id } : {}
-  getRecommendProducts(params, { loading: false }).then(res => {
-    recommendProducts.value = res.data?.records || res.data || []
-  }).catch(() => {})
+  loadRecommendProducts()
+}
+
+async function loadRecommendProducts() {
+  const request = ++recommendRequest
+  const params = { ...productSortParams(currentSort.value) }
+  if (currentRecommendCategoryId.value) params.categoryId = currentRecommendCategoryId.value
+  try {
+    const res = await getRecommendProducts(params, { loading: false })
+    if (request === recommendRequest) recommendProducts.value = res.data?.records || res.data || []
+  } catch {}
 }
 
 function goSearch() {
@@ -259,11 +282,18 @@ function goSearch() {
 }
 
 function onBannerClick(item) {
-  if (item.linkType === 'product' && item.linkValue) {
-    uni.navigateTo({ url: `/pages/product/detail?id=${item.linkValue}` })
-  } else if (item.linkType === 'url' && item.linkValue) {
-    // 外部链接可通过webview打开
-  }
+  const action = bannerAction(item)
+  if (action.type === 'preview') {
+    if (action.url) uni.previewImage({ current: action.url, urls: [action.url] })
+  } else if (action.type === 'page') uni.navigateTo({ url: action.url })
+  else if (action.type === 'tab') uni.switchTab({ url: action.url })
+  else if (action.type === 'external') {
+    // #ifdef H5
+    window.location.assign(action.url)
+    return
+    // #endif
+    uni.setClipboardData({ data: action.url, success: () => uni.showToast({ title: '链接已复制，请在浏览器打开', icon: 'none' }) })
+  } else uni.showToast({ title: '跳转链接无效，请联系客服', icon: 'none' })
 }
 
 function goCategory(id) {
@@ -282,11 +312,12 @@ function closeNoticePopup() {
   // 记录已看过的弹窗公告ID
   const seenIds = uni.getStorageSync('seenNoticeIds') || []
   popupNotices.value.forEach(n => {
-    if (n.id && !seenIds.includes(String(n.id))) {
-      seenIds.push(String(n.id))
+    const revision = noticeRevision(n)
+    if (n.id && !seenIds.includes(revision)) {
+      seenIds.push(revision)
     }
   })
-  uni.setStorageSync('seenNoticeIds', seenIds)
+  uni.setStorageSync('seenNoticeIds', seenIds.slice(-100))
 }
 
 async function goCustomerService() {
@@ -303,8 +334,8 @@ async function goCustomerService() {
 
 <style lang="scss" scoped>
 .home-page {
-  background: #f8fafc;
-  min-height: 100vh;
+  background: #f7f8f9;
+  min-height: var(--app-page-height, 100vh);
   position: relative;
   overflow: hidden;
 }
@@ -324,14 +355,14 @@ async function goCustomerService() {
   .search-inner {
     height: 80rpx;
     background: #ffffff;
-    border: 1rpx solid #e2e8f0;
+    border: 1rpx solid #e6e7e9;
     border-radius: 999rpx;
     display: flex;
     align-items: center;
     padding: 0 34rpx;
-    box-shadow: 0 8rpx 28rpx rgba(15, 23, 42, 0.12);
+    box-shadow: 0 8rpx 28rpx rgba(23, 25, 28, 0.04);
   }
-  .search-placeholder { font-size: 28rpx; color: #64748b; }
+  .search-placeholder { font-size: 28rpx; color: #666b73; }
 }
 .search-bar-placeholder { display: none; }
 
@@ -354,7 +385,7 @@ async function goCustomerService() {
   background: #ffffff;
   border-radius: 12rpx;
   overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(255, 69, 68, 0.08);
+  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
 }
 .notice-label {
   display: flex;
@@ -363,13 +394,13 @@ async function goCustomerService() {
   flex-shrink: 0;
   margin-right: 16rpx;
   padding-right: 16rpx;
-  border-right: 1rpx solid #e2e8f0;
+  border-right: 1rpx solid #e6e7e9;
   .notice-label-icon {
     width: 32rpx;
     height: 32rpx;
-    filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(101%);
+    filter: brightness(0);
   }
-  .notice-label-text { font-size: 24rpx; color: #4f46e5; font-weight: 600; }
+  .notice-label-text { font-size: 24rpx; color: #17191c; font-weight: 600; }
 }
 .notice-swiper {
   flex: 1;
@@ -382,7 +413,7 @@ async function goCustomerService() {
 }
 .notice-title {
   font-size: 24rpx;
-  color: #4f46e5;
+  color: #17191c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -390,7 +421,7 @@ async function goCustomerService() {
 .notice-more {
   flex-shrink: 0;
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
   margin-left: 12rpx;
 }
 /* 公告列表弹窗 */
@@ -417,9 +448,9 @@ async function goCustomerService() {
   align-items: center;
   justify-content: space-between;
   padding: 32rpx 36rpx 24rpx;
-  border-bottom: 1rpx solid #e2e8f0;
-  .notice-list-title { font-size: 32rpx; font-weight: bold; color: #4f46e5; }
-  .notice-list-close { font-size: 36rpx; color: #94a3b8; padding: 0 8rpx; }
+  border-bottom: 1rpx solid #e6e7e9;
+  .notice-list-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
+  .notice-list-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
 }
 .notice-list-body {
   height: 50vh;
@@ -429,13 +460,13 @@ async function goCustomerService() {
   display: flex;
   align-items: center;
   padding: 28rpx 36rpx;
-  border-bottom: 1rpx solid #edf1f7;
+  border-bottom: 1rpx solid #eeeff1;
 }
 .notice-list-dot {
   width: 12rpx;
   height: 12rpx;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #17191c;
   flex-shrink: 0;
   margin-right: 20rpx;
 }
@@ -445,7 +476,7 @@ async function goCustomerService() {
 }
 .notice-list-name {
   font-size: 28rpx;
-  color: #1e293b;
+  color: #17191c;
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -453,12 +484,12 @@ async function goCustomerService() {
 }
 .notice-list-time {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: #73777e;
   display: block;
   margin-top: 6rpx;
 }
 .notice-list-arrow {
-  color: #cbd5e1;
+  color: #b9bdc4;
   font-size: 26rpx;
   flex-shrink: 0;
   margin-left: 12rpx;
@@ -473,7 +504,7 @@ async function goCustomerService() {
   background: #ffffff;
   margin: 20rpx 24rpx;
   border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(255, 69, 68, 0.08);
+  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
 }
 .category-item {
   display: flex;
@@ -486,11 +517,11 @@ async function goCustomerService() {
   width: 96rpx;
   height: 96rpx;
   border-radius: 24rpx;
-  background: #f8fafc;
+  background: #f7f8f9;
 }
 .category-name {
   font-size: 24rpx;
-  color: #475569;
+  color: #555b63;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -506,30 +537,37 @@ async function goCustomerService() {
   align-items: center;
   gap: 24rpx;
   margin-bottom: 20rpx;
+  min-width: 0;
   .section-title {
     font-size: 32rpx;
     font-weight: bold;
-    color: #4f46e5;
+    color: #17191c;
     flex-shrink: 0;
   }
 }
 .recommend-tabs {
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   height: 56rpx;
+}
+.recommend-sort {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  align-self: center;
 }
 .recommend-tab {
   display: inline-block;
   padding: 12rpx 24rpx;
   font-size: 24rpx;
-  color: #64748b;
-  background: #f8fafc;
+  color: #666b73;
+  background: #f7f8f9;
   border-radius: 999rpx;
   margin-right: 16rpx;
 
   &.active {
     color: #fff;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #17191c, #30343a);
   }
 }
 
@@ -565,22 +603,22 @@ async function goCustomerService() {
     align-items: center;
     justify-content: space-between;
     padding: 28rpx 32rpx;
-    border-bottom: 1rpx solid #e2e8f0;
+    border-bottom: 1rpx solid #e6e7e9;
 
-    .popup-title { font-size: 32rpx; font-weight: bold; color: #4f46e5; }
-    .popup-close { font-size: 36rpx; color: #94a3b8; padding: 0 8rpx; }
+    .popup-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
+    .popup-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
   }
 
   .popup-body {
     padding: 32rpx;
     max-height: 50vh;
 
-    .popup-notice-title { font-size: 30rpx; font-weight: bold; color: #0f172a; display: block; margin-bottom: 20rpx; }
+    .popup-notice-title { font-size: 30rpx; font-weight: bold; color: #17191c; display: block; margin-bottom: 20rpx; }
   }
 
   .popup-footer {
     padding: 24rpx 32rpx;
-    border-top: 1rpx solid #e2e8f0;
+    border-top: 1rpx solid #e6e7e9;
 
     .popup-nav {
       display: flex;
@@ -590,14 +628,14 @@ async function goCustomerService() {
 
       .popup-nav-btn {
         font-size: 26rpx;
-        color: #4f46e5;
+        color: #17191c;
         padding: 8rpx 24rpx;
-        border: 1rpx solid rgba(99, 102, 241, 0.15);
+        border: 1rpx solid rgba(23, 25, 28, 0.15);
         border-radius: 999rpx;
 
         &.disabled {
-          color: #cbd5e1;
-          border-color: #e2e8f0;
+          color: #b9bdc4;
+          border-color: #e6e7e9;
         }
       }
     }
@@ -606,7 +644,7 @@ async function goCustomerService() {
       height: 76rpx;
       line-height: 76rpx;
       text-align: center;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: linear-gradient(135deg, #17191c, #30343a);
       color: #ffffff;
       font-weight: bold;
       border-radius: 999rpx;
@@ -621,11 +659,11 @@ async function goCustomerService() {
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #17191c, #30343a);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(255, 107, 43, 0.4);
+  box-shadow: 0 8rpx 24rpx rgba(23, 25, 28, 0.04);
   z-index: 100;
 
   .cs-icon {

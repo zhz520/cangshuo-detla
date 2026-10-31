@@ -13,7 +13,9 @@ public class WalletServiceImpl extends ServiceImpl<WalletMapper, Wallet> impleme
 
     @Override
     public Wallet getByUserId(Long userId) {
-        return getOne(new LambdaQueryWrapper<Wallet>().eq(Wallet::getUserId, userId));
+        var query=new LambdaQueryWrapper<Wallet>().eq(Wallet::getUserId, userId);
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) query.last("FOR UPDATE");
+        return getOne(query);
     }
 
     @Override

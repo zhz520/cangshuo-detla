@@ -17,7 +17,7 @@
           </div>
           <div class="msg-bubble">
             <template v-if="m.type === 'TEXT'">{{ m.content }}</template>
-            <el-image v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
+            <el-image lazy v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
             <span v-else-if="m.type === 'PRODUCT'">[商品卡片]</span>
             <span v-else-if="m.type === 'ORDER'">[订单卡片]</span>
             <span v-else>{{ m.content }}</span>
@@ -76,12 +76,19 @@ onMounted(fetchMessages)
 
 <style scoped>
 .detail-header { display: flex; align-items: center; gap: 16px; }
-.session-title { font-size: 14px; color: #606266; }
+.session-title { font-size: 14px; color: #555b63; }
 .message-list { min-height: 200px; padding: 12px 0; }
 .msg-row { margin-bottom: 16px; }
-.msg-row.self .msg-bubble { background: #ecf5ff; margin-left: 0; margin-right: 40px; }
+.msg-row.self .msg-bubble { background: #f3f4f5; margin-left: 0; margin-right: 40px; }
 .msg-meta { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-.msg-time { font-size: 12px; color: #909399; }
+.msg-time { font-size: 12px; color: #73777e; }
 .msg-bubble { display: inline-block; max-width: 70%; padding: 8px 12px; background: #f4f4f5; border-radius: 8px; font-size: 14px; margin-left: 40px; }
-.empty-tip { text-align: center; color: #909399; padding: 40px; }
+.empty-tip { text-align: center; color: #73777e; padding: 40px; }
+@media (max-width: 768px) {
+  .detail-header { flex-wrap: wrap; gap: 8px; }
+  .session-title { overflow-wrap: anywhere; word-break: break-word; }
+  .msg-meta { flex-wrap: wrap; }
+  .msg-bubble, .msg-row.self .msg-bubble { max-width: 100%; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  .msg-bubble :deep(.el-image) { max-width: 100% !important; }
+}
 </style>

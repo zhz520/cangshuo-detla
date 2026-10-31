@@ -5,7 +5,7 @@
     :before-upload="beforeUpload"
     accept="image/*"
   >
-    <img v-if="modelValue" :src="modelValue" class="upload-image" />
+    <img loading="lazy" decoding="async" v-if="modelValue" :src="modelValue" class="upload-image" />
     <el-icon v-else class="upload-icon"><Plus /></el-icon>
   </el-upload>
 </template>
@@ -56,7 +56,7 @@ async function handleUpload({ file }) {
   cursor: pointer;
 }
 .upload-icon:hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: #17191c;
+  color: #17191c;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <view class="product-card" :class="{ dense }" @click="goDetail">
-    <image class="cover" :src="product.coverImage" mode="aspectFill" lazy-load :style="{ height: coverHeight + 'rpx' }" />
+    <AppImage class="cover" :src="product.coverImage" mode="aspectFill" :style="{ height: coverHeight + 'rpx' }" />
     <view class="info">
       <text class="name text-ellipsis-2">{{ product.name }}</text>
       <view v-if="product.subtitle" class="subtitle-wrap">
@@ -14,12 +14,14 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { computed } from 'vue'
 
 const props = defineProps({
   product: { type: Object, required: true },
   coverHeight: { type: Number, default: 340 },
-  dense: { type: Boolean, default: false }
+  dense: { type: Boolean, default: false },
+  designatedPlayerId: { type: [String,Number], default: '' }
 })
 
 const displayPrice = computed(() => {
@@ -27,7 +29,7 @@ const displayPrice = computed(() => {
 })
 
 function goDetail() {
-  uni.navigateTo({ url: `/pages/product/detail?id=${props.product.id}` })
+  uni.navigateTo({ url: `/pages/product/detail?id=${props.product.id}${props.designatedPlayerId ? `&playerId=${props.designatedPlayerId}` : ''}` })
 }
 </script>
 
@@ -37,8 +39,8 @@ function goDetail() {
   border-radius: 20rpx;
   overflow: hidden;
   min-width: 0;
-  border: 1rpx solid #edf1f7;
-  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.06);
+  border: 1rpx solid #eeeff1;
+  box-shadow: 0 8rpx 24rpx rgba(23, 25, 28, 0.04);
 
   .cover {
     width: 100%;
@@ -53,7 +55,7 @@ function goDetail() {
     .name {
       font-size: 26rpx;
       font-weight: bold;
-      color: #1e293b;
+      color: #17191c;
       line-height: 1.4;
     }
 
@@ -64,7 +66,7 @@ function goDetail() {
     }
     .subtitle {
       font-size: 22rpx;
-      color: #94a3b8;
+      color: #73777e;
       display: block;
       overflow: hidden;
       white-space: nowrap;
@@ -82,11 +84,11 @@ function goDetail() {
       .price {
         font-size: 32rpx;
         font-weight: bold;
-        color: #4f46e5;
+        color: #17191c;
       }
       .sales {
         font-size: 22rpx;
-        color: #94a3b8;
+        color: #73777e;
       }
     }
   }
@@ -95,7 +97,7 @@ function goDetail() {
     .info { padding: 14rpx 16rpx 16rpx; }
     .info .name { font-size: 24rpx; }
     .info .bottom { margin-top: 10rpx; }
-    .info .bottom .price { font-size: 30rpx; color: #4f46e5; }
+    .info .bottom .price { font-size: 30rpx; color: #17191c; }
     .info .bottom .sales { font-size: 20rpx; }
   }
 }

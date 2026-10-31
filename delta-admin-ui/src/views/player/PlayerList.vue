@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <el-card>
-      <template #header><span>打手管理</span></template>
+      <template #header><div class="player-header"><span>打手管理</span><el-button v-if="isAdmin" @click="$router.push('/player-level')">管理等级分类</el-button></div></template>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item><el-input v-model="query.keyword" placeholder="搜索打手" clearable @keyup.enter="fetchData" /></el-form-item>
         <el-form-item>
@@ -22,7 +22,7 @@
         <el-table-column prop="nickname" label="昵称" width="140" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="realName" label="真实姓名" width="100" />
-        <el-table-column prop="level" label="等级" width="80" />
+        <el-table-column prop="level" label="等级" width="90"><template #default="{ row }"><el-tag type="info" size="small">{{ levelLabel(row.level) }}</el-tag></template></el-table-column>
         <el-table-column prop="completedOrders" label="完成订单" width="100" />
         <el-table-column prop="balance" label="余额" width="100"><template #default="{ row }">¥{{ row.balance || 0 }}</template></el-table-column>
         <el-table-column prop="depositPaymentNo" label="押金订单号" width="200" show-overflow-tooltip>
@@ -35,11 +35,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="操作" width="360" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button link type="primary" @click="openEditDialog(row)">{{ isAdmin ? '编辑' : '改名' }}</el-button>
             <el-button link type="info" @click="showPlayerOrders(row)">订单</el-button>
+            <el-button v-if="isAdmin" link type="primary" @click="showPlayerReviews(row)">评价</el-button>
             <template v-if="row.status === 'PENDING'">
               <el-button link type="success" @click="handleApprove(row.id)">通过</el-button>
               <el-button link type="danger" @click="openRejectDialog(row.id)">驳回</el-button>
@@ -74,9 +75,10 @@
             </div>
           </div>
         </div>
-        <el-descriptions :column="2" border size="small" style="margin-top:16px">
+        <el-descriptions :column="isNarrow ? 1 : 2" border size="small" style="margin-top:16px">
           <el-descriptions-item label="手机号">{{ detailData.phone || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="等级">{{ detailData.level || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="等级">{{ levelLabel(detailData.level) }}</el-descriptions-item>
+          <el-descriptions-item label="个人简介" :span="2"><span class="introduction-text">{{ detailData.introduction || '暂未填写' }}</span></el-descriptions-item>
           <el-descriptions-item label="余额">¥{{ detailData.balance || 0 }}</el-descriptions-item>
           <el-descriptions-item label="完成订单">{{ detailData.completedOrders || 0 }}</el-descriptions-item>
           <el-descriptions-item label="评分">{{ detailData.avgRating || '-' }}</el-descriptions-item>
@@ -88,6 +90,7 @@
             {{ detailData.rejectReason }}
           </el-descriptions-item>
         </el-descriptions>
+        <GrabVerificationStats v-if="isAdmin" :player-id="detailData.id" />
         <el-divider content-position="left">金额变化详情</el-divider>
         <el-table :data="playerTransactions" v-loading="transactionLoading" stripe size="small" max-height="360">
           <el-table-column prop="createdAt" label="时间" width="170" />
@@ -117,7 +120,7 @@
       </div>
     </el-dialog>
     <!-- 打手编辑弹窗 -->
-    <el-dialog v-model="editVisible" :title="isAdmin ? '编辑打手信息' : '修改昵称'" width="400px">
+    <el-dialog v-model="editVisible" :title="isAdmin ? '编辑打手信息' : '修改昵称'" width="720px" destroy-on-close>
       <el-form :model="editForm" label-width="80px">
         <el-form-item label="昵称">
           <el-input v-model="editForm.nickname" placeholder="请输入昵称" maxlength="20" />
@@ -126,14 +129,26 @@
           <el-form-item label="真实姓名">
             <el-input v-model="editForm.realName" placeholder="请输入真实姓名" maxlength="20" />
           </el-form-item>
+          <el-form-item label="抢单验证"><el-select v-model="editForm.grabCaptchaOverride"><el-option label="跟随等级" :value="-1"/><el-option label="必须图形验证" :value="1"/><el-option label="免验证" :value="0"/></el-select></el-form-item>
           <el-form-item label="等级">
-            <el-input v-model.number="editForm.level" type="number" placeholder="等级" min="0" />
+            <el-select v-model="editForm.level" placeholder="请选择等级分类"><el-option v-for="level in levelOptions" :key="level.id" :label="level.name + (level.status===0?'（已停用）':'')" :value="level.id"/></el-select>
           </el-form-item>
+          <el-form-item label="下单涨价">
+            <el-select :model-value="editForm.priceIncreaseRate < 0 ? 'level' : 'custom'" @update:model-value="editForm.priceIncreaseRate=$event==='level'?-1:0">
+              <el-option label="跟随等级涨价" value="level"/><el-option label="单独设置涨价" value="custom"/>
+            </el-select>
+            <div v-if="editForm.priceIncreaseRate >= 0" style="margin-top:8px;width:100%"><el-input-number v-model="editForm.priceIncreaseRate" :min="0" :max="100" :precision="2"/> %</div>
+            <div style="width:100%;color:#858992;font-size:12px">仅指定该打手下单时生效，0% 表示不涨价；已有订单金额不变。</div>
+          </el-form-item>
+          <el-form-item label="个人简介">
+            <el-input v-model="editForm.introduction" type="textarea" :rows="5" maxlength="1000" show-word-limit placeholder="公开展示在打手个人主页" />
+          </el-form-item>
+          <PlayerHomepageFields :model="editForm" @busy="mediaBusy=$event"/>
         </template>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editSaving" @click="handleEditSave">保存</el-button>
+        <el-button type="primary" :loading="editSaving" :disabled="mediaBusy" @click="handleEditSave">保存</el-button>
       </template>
     </el-dialog>
     <!-- 打手订单弹窗 -->
@@ -155,6 +170,16 @@
       <Pagination :total="ordersTotal" v-model:page="ordersQuery.pageNum" v-model:limit="ordersQuery.pageSize" @pagination="fetchPlayerOrders" />
     </el-dialog>
     <!-- 冻结弹窗 -->
+    <el-dialog v-if="isAdmin" v-model="reviewsVisible" :title="reviewsPlayerName + ' 的评价'" width="850px" destroy-on-close>
+      <el-table :data="playerReviews" v-loading="reviewsLoading" stripe empty-text="暂无评价">
+        <el-table-column prop="userNickname" label="评价用户" width="100" />
+        <el-table-column prop="rating" label="评分" width="70"><template #default="{ row }">{{ row.rating }} 星</template></el-table-column>
+        <el-table-column prop="content" label="评价内容" min-width="240"><template #default="{ row }"><span class="introduction-text">{{ row.content }}</span></template></el-table-column>
+        <el-table-column prop="createdAt" label="评价时间" width="170" />
+        <el-table-column label="操作" width="90"><template #default="{ row }"><el-button link type="danger" @click="deleteReview(row)">删除</el-button></template></el-table-column>
+      </el-table>
+      <Pagination :total="reviewsTotal" v-model:page="reviewsQuery.pageNum" v-model:limit="reviewsQuery.pageSize" @pagination="fetchPlayerReviews" />
+    </el-dialog>
     <el-dialog v-model="freezeVisible" title="冻结打手" width="450px">
       <p v-if="freezeRow" style="margin-bottom:16px">打手：<b>{{ freezeRow.nickname }}</b>（{{ freezeRow.phone || '-' }}）</p>
       <el-form label-width="100px">
@@ -181,13 +206,23 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
+import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerUpdate, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { adminReviewList, adminReviewDelete } from '@/api/business'
 import Pagination from '@/components/Pagination.vue'
+import PlayerHomepageFields from '@/components/PlayerHomepageFields.vue'
+import {playerLevelList} from '@/api/business'
+const { isCompact, isNarrow } = useResponsive()
+
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
+const levelOptions=ref([]),mediaBusy=ref(false)
+function levelLabel(id){return levelOptions.value.find(l=>l.id===id)?.name || `Lv.${id||1}`}
+onMounted(async()=>{if(isAdmin)levelOptions.value=(await playerLevelList()).data||[]})
 const loading = ref(false), list = ref([]), total = ref(0)
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '' })
 const statusMap = { PENDING: '待审核', ACTIVE: '正常', REJECTED: '已驳回', FROZEN: '已冻结' }
@@ -248,6 +283,7 @@ const playerTransactions = ref([])
 const transactionTotal = ref(0)
 const transactionQuery = reactive({ pageNum: 1, pageSize: 5, playerId: null })
 const transactionTypeMap = {
+  REWARD_PAY:'打赏支出', REWARD_INCOME:'打赏收入', REWARD_REFUND:'打赏退款', REWARD_REVERSAL:'打赏冲正',
   ADMIN_RECHARGE: '管理员充值',
   ADMIN_DEDUCT: '管理员扣款',
   INCOME: '收益入账',
@@ -302,12 +338,18 @@ async function showDetail(id) {
 // 编辑打手
 const editVisible = ref(false)
 const editSaving = ref(false)
-const editForm = reactive({ id: null, nickname: '', realName: '', level: null })
+const editForm = reactive({ id: null, nickname: '', realName: '', level: 1, grabCaptchaOverride:-1, priceIncreaseRate:-1, introduction: '', avatar:'',coverImage:'',albumImages:[],story:'',voiceUrl:'',voiceDuration:0 })
 function openEditDialog(row) {
   editForm.id = row.id
   editForm.nickname = row.nickname || ''
   editForm.realName = row.realName || ''
-  editForm.level = row.level ?? null
+  editForm.level = row.level || 1
+  editForm.grabCaptchaOverride=row.grabCaptchaOverride??-1
+  editForm.priceIncreaseRate=Number(row.priceIncreaseRate??-1)
+  editForm.introduction = row.introduction || ''
+  for(const key of ['avatar','coverImage','story','voiceUrl'])editForm[key]=row[key]||''
+  editForm.voiceDuration=row.voiceDuration||0
+  try{editForm.albumImages=Array.isArray(row.albumImages)?[...row.albumImages]:JSON.parse(row.albumImages||'[]')}catch(_){editForm.albumImages=[]}
   editVisible.value = true
 }
 async function handleEditSave() {
@@ -318,7 +360,8 @@ async function handleEditSave() {
       await adminPlayerUpdate(editForm.id, {
         nickname: editForm.nickname,
         realName: editForm.realName,
-        level: editForm.level
+        level: editForm.level, grabCaptchaOverride:editForm.grabCaptchaOverride, priceIncreaseRate:editForm.priceIncreaseRate,
+        introduction: editForm.introduction,avatar:editForm.avatar,coverImage:editForm.coverImage,albumImages:editForm.albumImages.filter(Boolean),story:editForm.story,voiceUrl:editForm.voiceUrl,voiceDuration:editForm.voiceDuration
       })
     } else {
       await csPlayerUpdateNickname(editForm.id, editForm.nickname)
@@ -335,6 +378,31 @@ async function handleEditSave() {
 }
 
 // 打手订单
+const reviewsVisible = ref(false), reviewsLoading = ref(false), reviewsPlayerName = ref('')
+const playerReviews = ref([]), reviewsTotal = ref(0)
+const reviewsQuery = reactive({ pageNum: 1, pageSize: 10, playerId: null })
+function showPlayerReviews(row) {
+  reviewsPlayerName.value = row.nickname || ('ID: ' + row.id)
+  reviewsQuery.playerId = row.id; reviewsQuery.pageNum = 1
+  playerReviews.value = []; reviewsTotal.value = 0; reviewsVisible.value = true
+  fetchPlayerReviews()
+}
+async function fetchPlayerReviews() {
+  reviewsLoading.value = true
+  try {
+    const res = await adminReviewList(reviewsQuery)
+    playerReviews.value = res.data?.records || []; reviewsTotal.value = Number(res.data?.total || 0)
+  } finally { reviewsLoading.value = false }
+}
+async function deleteReview(review) {
+  try { await ElMessageBox.confirm('删除后该评价将不再公开显示，打手和商品评分会重新计算。', '删除评价', { type: 'warning' }) }
+  catch (_) { return }
+  await adminReviewDelete(review.id)
+  ElMessage.success('评价已删除')
+  if (playerReviews.value.length === 1 && reviewsQuery.pageNum > 1) reviewsQuery.pageNum--
+  await Promise.all([fetchPlayerReviews(), fetchData()])
+  if (detailVisible.value && detailData.value?.id === reviewsQuery.playerId) showDetail(reviewsQuery.playerId)
+}
 const orderStatusMap = {
   PENDING_PAYMENT: '待支付', PAID: '待接单', ASSIGNED: '已指派', ACCEPTED: '已接单',
   WAITING_TEAMMATE: '组队中', IN_PROGRESS: '进行中', COMPLETED: '待确认',
@@ -376,12 +444,15 @@ async function fetchPlayerOrders() {
 
 onMounted(fetchData)
 </script>
-<style scoped>.search-form { margin-bottom: 16px; }</style>
+<style scoped>
+.search-form { margin-bottom: 16px; }</style>
 
 <style scoped>
+.player-header{display:flex;justify-content:space-between;align-items:center}
 .player-detail {
   padding: 4px 0;
 }
+.introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .player-detail-header {
   display: flex;
   align-items: center;
@@ -399,13 +470,19 @@ onMounted(fetchData)
 .player-detail-sub {
   margin-top: 4px;
   font-size: 12px;
-  color: #909399;
+  color: #73777e;
   display: flex;
   align-items: center;
 }
 .player-detail-id {
   font-size: 12px;
 }
-.amount-positive { color: #f56c6c; font-weight: 600; }
-.amount-negative { color: #67c23a; font-weight: 600; }
+.amount-positive { color: #c94f59; font-weight: 600; }
+.amount-negative { color: #347a5b; font-weight: 600; }
+@media (max-width: 768px) {
+  .player-detail-header { gap: 10px; }
+  .player-detail-main { min-width: 0; }
+  .player-detail-name, .player-detail-id { overflow-wrap: anywhere; word-break: break-word; }
+  .player-detail-sub { flex-wrap: wrap; gap: 6px; }
+}
 </style>

@@ -9,7 +9,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card" :class="{ full: isFull(p), offline: !isPlayerOnline(p) }">
-        <image class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" lazy-load />
+        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <view class="name-row">
             <text class="name">{{ p.nickname }}</text>
@@ -32,6 +32,7 @@
 </template>
 
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -109,7 +110,7 @@ function doAssign(p) {
 </script>
 
 <style lang="scss" scoped>
-.assign-page { background: #ffffff; min-height: 100vh; }
+.assign-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
 
 .limit-tip {
   padding: 16rpx 24rpx;
@@ -117,16 +118,16 @@ function doAssign(p) {
   color: rgba(0,0,0,0.45);
   background: rgba(0,0,0,0.04);
   text-align: center;
-  .gold { color: #ff4544; font-weight: bold; }
+  .gold { color: #17191c; font-weight: bold; }
 }
 
 .search-bar {
   display: flex; gap: 16rpx; padding: 16rpx 24rpx;
   .search-input { flex: 1; background: rgba(0,0,0,0.05); padding: 16rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
-  .search-btn { padding: 16rpx 32rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; }
+  .search-btn { padding: 16rpx 32rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; }
 }
 
-.list { height: calc(100vh - 260rpx); padding: 20rpx 24rpx; }
+.list { height: calc(var(--app-page-height, 100vh) - 260rpx); padding: 20rpx 24rpx; }
 
 .player-card {
   display: flex; align-items: center; gap: 16rpx;
@@ -143,29 +144,29 @@ function doAssign(p) {
     .name-row { display: flex; align-items: center; gap: 8rpx; }
     .name { font-size: 28rpx; font-weight: bold; color: rgba(0,0,0,0.9); }
     .online-badge {
-      font-size: 20rpx; color: #22c55e; background: rgba(34,197,94,0.15);
+      font-size: 20rpx; color: #347a5b; background: rgba(34,197,94,0.15);
       padding: 2rpx 10rpx; border-radius: 4rpx;
     }
     .offline-badge {
-      font-size: 20rpx; color: #94a3b8; background: rgba(148,163,184,0.15);
+      font-size: 20rpx; color: #73777e; background: rgba(148,163,184,0.15);
       padding: 2rpx 10rpx; border-radius: 4rpx;
     }
     .full-badge {
-      font-size: 20rpx; color: #ee6723; background: rgba(238,103,35,0.15);
+      font-size: 20rpx; color: #17191c; background: rgba(23, 25, 28, 0.15);
       padding: 2rpx 10rpx; border-radius: 4rpx;
     }
     .tags { display: flex; gap: 8rpx; margin-top: 8rpx; flex-wrap: wrap; }
     .tag {
       font-size: 22rpx; color: rgba(0,0,0,0.55);
       background: rgba(0,0,0,0.05); padding: 4rpx 12rpx; border-radius: 4rpx;
-      &.done { color: #07c160; }
-      &.active-tag { color: #ee6723; }
+      &.done { color: #347a5b; }
+      &.active-tag { color: #17191c; }
     }
   }
 
   .assign-btn {
     padding: 12rpx 32rpx;
-    background: linear-gradient(135deg, #ff4544, #e63939);
+    background: linear-gradient(135deg, #17191c, #30343a);
     color: #ffffff; font-weight:bold; font-size: 26rpx;
     border-radius: 999rpx; flex-shrink: 0;
     &.disabled { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.3); }

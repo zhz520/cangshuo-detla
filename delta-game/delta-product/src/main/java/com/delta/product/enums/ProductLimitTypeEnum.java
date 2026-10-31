@@ -6,7 +6,8 @@ public enum ProductLimitTypeEnum {
     NONE(0, "不限购"),
     PERMANENT(1, "永久限购一次"),
     WEEK(2, "一周限购一次"),
-    MONTH(3, "一月限购一次");
+    MONTH(3, "一月限购一次"),
+    DAILY(4, "一日限购一次");
 
     private final int code;
     private final String label;
@@ -30,6 +31,7 @@ public enum ProductLimitTypeEnum {
 
     public LocalDateTime resolveWindowStart(LocalDateTime now) {
         return switch (this) {
+            case DAILY -> now.minusDays(1);
             case WEEK -> now.minusWeeks(1);
             case MONTH -> now.minusMonths(1);
             default -> null;
@@ -39,6 +41,7 @@ public enum ProductLimitTypeEnum {
     public String getExceededMessage() {
         return switch (this) {
             case PERMANENT -> "该商品为永久限购商品，每个用户仅可购买一次";
+            case DAILY -> "该商品24小时内仅可购买一次，请稍后再试";
             case WEEK -> "该商品一周内仅可购买一次，请稍后再试";
             case MONTH -> "该商品一个月内仅可购买一次，请稍后再试";
             default -> "该商品不可重复购买";

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserToken, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
-import { userLogin, h5Login } from '@/api/auth'
+import { userLogin, h5Login, setupUserPassword, userPasswordLogin } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
 
@@ -31,9 +31,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /** H5 手机号验证码登录 */
-  async function loginByPhone(phone, code) {
+  async function loginByPhone(phone, code, requestId) {
     try {
-      const { data } = await h5Login({ phone, code })
+      const { data } = await h5Login({ phone, code, requestId })
+      if(data.passwordSetupRequired) {token.value='';userInfo.value=null;removeUserToken();removePlayerToken();useChatStore().disconnect();return { success:false, passwordSetupRequired:true, data }}
       applyLoginResult(data)
       return { success: true, code: 200, data }
     } catch (e) {
@@ -46,11 +47,18 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function applyLoginResult(data) {
+    if(!data?.token) throw new Error('登录凭据无效')
     token.value = data.token
     setUserToken(data.token)
     userInfo.value = data
     const chatStore = useChatStore()
     chatStore.fetchMessageUnreadCount()
+  }
+  async function completePasswordSetup(data) {
+    const response=await setupUserPassword(data);applyLoginResult(response.data);return response.data
+  }
+  async function loginWithPassword(data) {
+    const response=await userPasswordLogin(data);applyLoginResult(response.data);return response.data
   }
 
   /** 获取用户资料 */
@@ -91,6 +99,8 @@ export const useUserStore = defineStore('user', () => {
     phone,
     login,
     loginByPhone,
+    completePasswordSetup,
+    loginWithPassword,
     fetchProfile,
     logout,
     checkLogin

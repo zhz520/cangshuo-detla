@@ -38,6 +38,7 @@ public class WithdrawController {
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final SysConfigService sysConfigService;
+    private final com.delta.player.service.PlayerAccountService accounts;
 
     @GetMapping({"" , "/list"})
     public R<Page<Withdraw>> list(PageQuery query) {
@@ -57,13 +58,15 @@ public class WithdrawController {
     }
 
     @PostMapping
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> apply(@RequestBody WithdrawRequest req) {
         Long playerId = SecurityUtils.getUserId();
+        com.delta.common.utils.Money.positive(req.getAmount());
+        if(playerWalletService.getByPlayerId(playerId)==null) throw new BusinessException("钱包不存在");
 
         // 0. 冻结期间不允许提现
         Player player = playerService.getById(playerId);
-        if (player != null && "FROZEN".equals(player.getStatus())
-                && player.getFrozenUntil() != null && player.getFrozenUntil().isAfter(LocalDateTime.now())) {
+        if (player == null || !"ACTIVE".equals(player.getStatus())) {
             throw new BusinessException("账号已被冻结，冻结期间无法提现");
         }
 
@@ -84,22 +87,14 @@ public class WithdrawController {
             throw new BusinessException("每日最多提现" + maxDailyCount + "次");
         }
 
-        // 2. 分布式锁，防止并发提现
-        String lockKey = "withdraw:" + playerId;
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofSeconds(10));
-        if (Boolean.FALSE.equals(locked)) {
-            throw new BusinessException("操作太频繁，请稍后重试");
-        }
-        try {
-            doWithdraw(playerId, req);
-        } finally {
-            redisTemplate.delete(lockKey);
-        }
+        doWithdraw(playerId, req);
         return R.ok();
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void doWithdraw(Long playerId, WithdrawRequest req) {
+    private void doWithdraw(Long playerId, WithdrawRequest req) {
+        var account=req.getAccountId()==null?null:accounts.getOne(new LambdaQueryWrapper<com.delta.player.entity.PlayerAccount>()
+                .eq(com.delta.player.entity.PlayerAccount::getId,req.getAccountId()).eq(com.delta.player.entity.PlayerAccount::getPlayerId,playerId).last("FOR UPDATE"));
+        if(account==null) throw new BusinessException(404,"收款账户不存在");
         // 3. 校验余额
         PlayerWallet wallet = playerWalletService.getByPlayerId(playerId);
         if (wallet == null || wallet.getBalance().compareTo(req.getAmount()) < 0) {
@@ -117,6 +112,8 @@ public class WithdrawController {
         Withdraw withdraw = new Withdraw();
         withdraw.setPlayerId(playerId);
         withdraw.setAccountId(req.getAccountId());
+        withdraw.setAccountTypeSnapshot(account.getType());withdraw.setAccountNameSnapshot(account.getAccountName());
+        withdraw.setAccountNoSnapshot(account.getAccountNo());withdraw.setAccountQrcodeSnapshot(account.getQrcodeUrl());
         withdraw.setAmount(req.getAmount());
         withdraw.setStatus("PENDING");
         withdrawService.save(withdraw);

@@ -6,7 +6,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in products" :key="p.id" class="product-card" @click="goEdit(p.id)">
-        <image class="cover" :src="p.coverImage || p.image" mode="aspectFill" lazy-load />
+        <AppImage class="cover" :src="p.coverImage || p.image" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ p.name }}</text>
           <text class="price">¥{{ Number(p.price || p.minPrice || 0).toFixed(2) }}</text>
@@ -22,6 +22,7 @@
   </view>
 </template>
 <script setup>
+import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -51,12 +52,12 @@ function goAdd() { uni.navigateTo({ url: '/pages-cs/product/edit' }) }
 function goEdit(id) { uni.navigateTo({ url: '/pages-cs/product/edit?id=' + id }) }
 </script>
 <style lang="scss" scoped>
-.product-list { background: #ffffff; min-height: 100vh; overflow: hidden; }
+.product-list { background: #ffffff; min-height: var(--app-page-height, 100vh); overflow: hidden; }
 .search-bar { display: flex; gap: 16rpx; padding: 16rpx 24rpx;
 .search-input { flex: 1; background: rgba(0,0,0,0.05); padding: 24rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
-  .add-btn { padding: 16rpx 32rpx; background: linear-gradient(135deg, #ff4544, #e63939); color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; flex-shrink: 0; }
+  .add-btn { padding: 16rpx 32rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; flex-shrink: 0; }
 }
-.list { height: calc(100vh - 120rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
+.list { height: calc(var(--app-page-height, 100vh) - 120rpx); padding: 20rpx 24rpx; box-sizing: border-box; }
 .product-card {
   display: flex; gap: 16rpx; padding: 20rpx;
   background: rgba(0,0,0,0.04); border-radius: 12rpx; margin-bottom: 16rpx;
@@ -64,8 +65,8 @@ function goEdit(id) { uni.navigateTo({ url: '/pages-cs/product/edit?id=' + id })
   .cover { width: 160rpx; height: 160rpx; border-radius: 8rpx; flex-shrink: 0; }
   .info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
     .name { font-size: 28rpx; font-weight: bold; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: rgba(0,0,0,0.85); }
-    .price { font-size: 30rpx; color: #ee0a24; font-weight: bold; }
-    .meta { display: flex; justify-content: space-between; .sales { font-size: 22rpx; color: rgba(0,0,0,0.3); } .status-text { font-size: 22rpx; &.on { color: #07c160; } &.off { color: #ee0a24; } } }
+    .price { font-size: 30rpx; color: #d44955; font-weight: bold; }
+    .meta { display: flex; justify-content: space-between; .sales { font-size: 22rpx; color: rgba(0,0,0,0.3); } .status-text { font-size: 22rpx; &.on { color: #347a5b; } &.off { color: #d44955; } } }
   }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }

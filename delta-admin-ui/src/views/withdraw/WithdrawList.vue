@@ -31,7 +31,7 @@
         </el-table-column>
         <el-table-column label="收款码" width="80" align="center">
           <template #default="{ row }">
-            <el-image v-if="row.qrcodeUrl" :src="row.qrcodeUrl" :preview-src-list="[row.qrcodeUrl]" preview-teleported fit="cover" style="width:40px;height:40px;border-radius:4px;cursor:pointer" />
+            <el-image lazy v-if="row.qrcodeUrl" :src="row.qrcodeUrl" :preview-src-list="[row.qrcodeUrl]" preview-teleported fit="cover" style="width:40px;height:40px;border-radius:4px;cursor:pointer" />
             <span v-else style="color:#999;font-size:12px">无</span>
           </template>
         </el-table-column>
@@ -43,7 +43,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="申请时间" width="170" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="200" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <template v-if="row.status === 'PENDING'">
               <el-button link type="success" @click="openApproveDialog(row)">同意打款</el-button>
@@ -68,7 +68,7 @@
         <p>提现金额：<b>¥{{ approveRow.amount }}</b></p>
         <div v-if="approveRow.qrcodeUrl" style="margin-top:8px">
           <p style="margin-bottom:4px">收款码：</p>
-          <el-image :src="approveRow.qrcodeUrl" :preview-src-list="[approveRow.qrcodeUrl]" preview-teleported fit="contain" style="max-width:200px;max-height:200px;border:1px solid #eee;border-radius:4px" />
+          <el-image lazy :src="approveRow.qrcodeUrl" :preview-src-list="[approveRow.qrcodeUrl]" preview-teleported fit="contain" style="max-width:200px;max-height:200px;border:1px solid #eee;border-radius:4px" />
         </div>
       </div>
       <el-form label-width="100px" style="margin-top:16px">
@@ -90,7 +90,7 @@
         </el-descriptions>
         <div style="margin-top:16px">
           <p style="margin-bottom:8px;font-weight:bold">打款凭证：</p>
-          <el-image v-if="proofRow.proofImage" :src="proofRow.proofImage" :preview-src-list="[proofRow.proofImage]" preview-teleported fit="contain" style="max-width:100%;max-height:400px" />
+          <el-image lazy v-if="proofRow.proofImage" :src="proofRow.proofImage" :preview-src-list="[proofRow.proofImage]" preview-teleported fit="contain" style="max-width:100%;max-height:400px" />
           <span v-else style="color:#999">无凭证</span>
         </div>
       </div>
@@ -99,12 +99,15 @@
   </div>
 </template>
 <script setup>
+import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { adminWithdrawList, adminWithdrawProcess, adminWithdrawReject, csWithdrawList, csWithdrawApprove, csWithdrawReject } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 import ImageUpload from '@/components/ImageUpload.vue'
+const { isCompact } = useResponsive()
+
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
 const loading = ref(false), list = ref([]), total = ref(0)
