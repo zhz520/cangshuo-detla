@@ -4,7 +4,7 @@
 
 `package_release.py D:\CodexData\outputs\detla-release` 将已验证的后端、后台、H5 产物打为三个 ZIP。上传至对应版本 GitHub Release；授权中心通过 Releases API 读取 GitHub 提供的 SHA-256 digest。无 digest、预览版、草稿和未配置更新内容的版本不能安装。
 
-`worker.py /absolute/path/worker.json` 由宿主机 systemd 管理，不监听新端口。配置由运维写入，包括 `root`、`state_dir`、`customer_id`、`product_id`、`repository`、`compose_directory`、`compose_files`、`mysql_container`、`containers`（backend/admin/h5）和 `backup_paths`。客户端仅向自己的状态目录提交签名计划，不能提供服务器命令或路径。
+`worker.py /absolute/path/worker.json` 由宿主机 systemd 管理，不监听新端口。配置由运维写入，包括 `root`、`state_dir`、`customer_id`、`product_id`、`repository`、`compose_directory`、`compose_files`、`mysql_container`、`containers`（backend/admin/h5）和 `backup_paths`、`authority_url` 和可选的 `verifier_image`。客户端仅向自己的状态目录提交签名计划，不能提供服务器命令或路径。
 
 执行器先验证 Ed25519 签名、实例绑定、有效期和组件版本，再下载并检查摘要、归档路径和内部版本。安装前暂停新业务、备份 MySQL 与客户文件；通过额外 Compose 挂载独立发布目录，保留原环境变量、支付配置、业务数据、域名和品牌。健康检查失败自动回退；回退失败保留业务暂停标记，防止继续运行损坏程序。执行意外中断后按宿主私有日志恢复。备份目录仅 root 可访问。
 
@@ -13,3 +13,5 @@
 各组件分别记录已安装版本和更新项，项目当前版本取组件的最低版本，避免先更新后端后隐藏尚未更新的后台/H5 内容。未确认在途订单规则的现有项目保留 PENDING 策略，不自动启用到期拦截。选择策略后，到期依据本地签名维护凭据执行，续期同步后恢复。
 
 其他 Web/H5/小程序项目可在授权中心登记各自软件、仓库、项目、实例、维护期、模块与支付配置，并导出实例接入凭据。新客户端须实现 `/api/client/report` 协议、公钥验签、域名和维护期校验；此 Delta Java 执行器不会自动兼容不同技术栈。
+
+私有仓库令牌只保存在授权中心。客户端通过短期签名计划请求中心转发更新包，不保存 GitHub 令牌。旧版 Linux 主机通过 Node 容器验签和下载，避免旧版系统 OpenSSL 缺少 Ed25519 和根证书的问题。
