@@ -72,21 +72,41 @@ def verify(envelope, scratch):
     uuid.UUID(plan['id'])
     return plan
 
-def download(package, target):
+def download(package, target, envelope=None):
     prefix='https://github.com/'+CONFIG['repository']+'/releases/download/'
     if not package['url'].startswith(prefix) or not re.fullmatch(r'[0-9a-f]{64}',package['sha256']):
         raise ValueError('Untrusted update artifact')
-    request=urllib.request.Request(package['url'],headers={'User-Agent':'Cangshuo-Updater'})
     digest=hashlib.sha256();size=0
-    with urllib.request.urlopen(request,timeout=60) as source, target.open('wb') as output:
-        if not source.url.startswith(('https://github.com/','https://release-assets.githubusercontent.com/','https://objects.githubusercontent.com/')):
-            raise ValueError('Untrusted artifact redirect')
-        while True:
-            data=source.read(1024*1024)
-            if not data:break
-            size+=len(data)
-            if size>500_000_000:raise ValueError('Artifact too large')
-            digest.update(data);output.write(data)
+    if package.get('downloadPath'):
+        if package['downloadPath']!='/api/client/artifact' or not CONFIG.get('authority_url','').startswith('https://') or not envelope:
+            raise ValueError('Invalid authority artifact endpoint')
+        endpoint=CONFIG['authority_url'].rstrip('/')+package['downloadPath']
+        request_data={'url':endpoint,'body':{'plan':envelope,'component':package['component']}}
+        request_file=target.with_suffix('.request.json');request_file.write_text(json.dumps(request_data))
+        try:
+            if CONFIG.get('verifier_image'):
+                script="import{readFileSync,createWriteStream}from'node:fs';import{Readable,Transform}from'node:stream';import{pipeline}from'node:stream/promises';process.umask(0o077);const q=JSON.parse(readFileSync('/data/"+request_file.name+"'));const r=await fetch(q.url,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify(q.body),signal:AbortSignal.timeout(300000)});if(!r.ok)throw Error('artifact_http_'+r.status);let n=0;await pipeline(Readable.fromWeb(r.body),new Transform({transform(c,e,cb){n+=c.length;cb(n>500000000?Error('too_large'):null,c)}}),createWriteStream('/data/"+target.name+"'));"
+                run(['docker','run','--rm','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','0:0','-v',str(target.parent)+':/data:rw','--entrypoint','node',CONFIG['verifier_image'],'--input-type=module','-e',script],timeout=330)
+            else:
+                request=urllib.request.Request(endpoint,data=json.dumps(request_data['body']).encode(),headers={'Content-Type':'application/json'})
+                with urllib.request.urlopen(request,timeout=300) as source,target.open('wb') as output:shutil.copyfileobj(source,output)
+        finally:remove(request_file)
+        with target.open('rb') as source:
+            while True:
+                data=source.read(1024*1024)
+                if not data:break
+                size+=len(data);digest.update(data)
+    else:
+        request=urllib.request.Request(package['url'],headers={'User-Agent':'Cangshuo-Updater'})
+        with urllib.request.urlopen(request,timeout=60) as source, target.open('wb') as output:
+            if not source.url.startswith(('https://github.com/','https://release-assets.githubusercontent.com/','https://objects.githubusercontent.com/')):
+                raise ValueError('Untrusted artifact redirect')
+            while True:
+                data=source.read(1024*1024)
+                if not data:break
+                size+=len(data)
+                if size>500_000_000:raise ValueError('Artifact too large')
+                digest.update(data);output.write(data)
     if size!=package['size'] or digest.hexdigest()!=package['sha256']:
         raise ValueError('Artifact checksum mismatch')
 
@@ -138,7 +158,7 @@ def health(services):
         if healthy:
             # Verify the new Java app is serving requests, not merely accepting TCP.
             try:
-                result=run(['docker','exec',CONFIG['containers']['backend'],'bash','-c',"exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /api/system/config/site HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3; head -1 <&3"],timeout=10)
+                result=run(['docker','exec',CONFIG['containers']['backend'],'bash','-c',"exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /system/config/site HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3; head -1 <&3"],timeout=10)
                 if b'200' in result.stdout:return
             except Exception:pass
         time.sleep(3)
@@ -150,7 +170,7 @@ def process(job):
     prior=override.read_bytes() if override.exists() else None
     changed=False;job_id=None;retain_gate=False
     try:
-        plan=verify(json.loads(job.read_text()),scratch);job_id=plan['id']
+        envelope=json.loads(job.read_text());plan=verify(envelope,scratch);job_id=plan['id']
         versions_file=STATE/'component-versions.json'
         versions=json.loads(versions_file.read_text()) if versions_file.exists() else {component:plan['fromVersion'] for component in ['backend','admin','h5']}
         numeric=lambda version:tuple(int(number) for number in version.split('.'))
@@ -165,7 +185,7 @@ def process(job):
         for package in plan['packages']:
             component=package['component']
             if component not in ('backend','admin','h5') or component in destinations:raise ValueError('Invalid component')
-            zipped=scratch/(component+'.zip');download(package,zipped)
+            zipped=scratch/(component+'.zip');download(package,zipped,envelope)
             target=scratch/component;extract(zipped,target,package);destinations[component]=target
             if component in ('admin','h5'):
                 container=CONFIG['containers'][component]
@@ -181,6 +201,7 @@ def process(job):
                     except subprocess.CalledProcessError:pass
         (STATE/'updating').write_text(job_id)
         status('BACKING_UP');backup(backup_dir)
+        if instant(plan['expiresAt'])<=datetime.now(timezone.utc):raise ValueError('Update plan expired before installation')
         status('INSTALLING')
         release_dir=ROOT/'self-update-releases'/job_id;release_dir.parent.mkdir(exist_ok=True);release_dir.parent.chmod(0o755);shutil.copytree(scratch,release_dir)
         release_dir.chmod(0o755)

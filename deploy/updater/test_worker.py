@@ -51,7 +51,7 @@ class UpdaterTests(unittest.TestCase):
     def test_failed_health_check_restores_previous_compose_and_keeps_private_backup(self):
         override=self.directory/'compose.self-update.json';original=json.dumps({'services':{'admin':{'volumes':['old:/usr/share/nginx/html:ro']}}});override.write_text(original)
         job=self.state/'update-job.json';job.write_text(json.dumps(self.envelope()))
-        def download(package,target):
+        def download(package,target,envelope=None):
             with zipfile.ZipFile(target,'w') as zipped:
                 zipped.writestr('index.html','test');zipped.writestr('cangshuo-version.json',json.dumps({'component':'admin','version':'1.2.0'}))
         with patch.object(self.worker,'run',side_effect=self.openssl),patch.object(self.worker,'download',side_effect=download),patch.object(self.worker,'backup',side_effect=lambda path:path.mkdir(parents=True)),patch.object(self.worker,'compose') as compose,patch.object(self.worker,'health',side_effect=[RuntimeError('failed'),None]):
