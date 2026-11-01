@@ -21,6 +21,21 @@ CONFIG = json.loads(Path(sys.argv[1]).read_text())
 STATE = Path(CONFIG['state_dir']).resolve()
 ROOT = Path(CONFIG['root']).resolve()
 
+def inside(path, parent):
+    try:path.resolve().relative_to(parent.resolve());return True
+    except ValueError:return False
+
+def remove(path):
+    try:path.unlink()
+    except FileNotFoundError:pass
+
+def instant(value):
+    value=re.sub(r'\+00:00$','Z',value)
+    for pattern in ['%Y-%m-%dT%H:%M:%S.%fZ','%Y-%m-%dT%H:%M:%SZ']:
+        try:return datetime.strptime(value,pattern).replace(tzinfo=timezone.utc)
+        except ValueError:pass
+    raise ValueError('Invalid UTC timestamp')
+
 def run(args, **kwargs):
     return subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=kwargs.pop('timeout', 180), **kwargs)
 
@@ -38,13 +53,19 @@ def verify(envelope, scratch):
     message = scratch/'message'; signed = scratch/'signature'
     message.write_bytes(('cangshuo-update-v1.'+payload).encode())
     signed.write_bytes(base64.urlsafe_b64decode(signature+'='*(-len(signature)%4)))
-    run(['openssl','pkeyutl','-verify','-pubin','-inkey',str(STATE/'license-public.pem'),'-rawin','-in',str(message),'-sigfile',str(signed)])
+    if CONFIG.get('verifier_image'):
+        # Supports hosts whose system OpenSSL predates Ed25519. No network or signing private key is mounted.
+        run(['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','0:0',
+             '-v',str(STATE/'license-public.pem')+':/verify/public.pem:ro','-v',str(scratch)+':/verify/data:ro','--entrypoint','node',CONFIG['verifier_image'],'--input-type=module','-e',
+             "import{readFileSync as r}from'node:fs';import{verify,createPublicKey}from'node:crypto';if(!verify(null,r('/verify/data/message'),createPublicKey(r('/verify/public.pem')),r('/verify/data/signature')))process.exit(1)"])
+    else:
+        run(['openssl','pkeyutl','-verify','-pubin','-inkey',str(STATE/'license-public.pem'),'-rawin','-in',str(message),'-sigfile',str(signed)])
     plan=json.loads(base64.urlsafe_b64decode(payload+'='*(-len(payload)%4)))
     current=json.loads((STATE/'state.json').read_text())
     now=datetime.now(timezone.utc)
     if plan['instanceId'] != current['instanceId'] or plan['customerId'] != CONFIG['customer_id'] or plan['productId'] != CONFIG['product_id']:
         raise ValueError('Wrong update instance')
-    if datetime.fromisoformat(plan['expiresAt'].replace('Z','+00:00'))<=now or (now-datetime.fromisoformat(plan['issuedAt'].replace('Z','+00:00'))).total_seconds()< -300:
+    if instant(plan['expiresAt'])<=now or (now-instant(plan['issuedAt'])).total_seconds()< -300:
         raise ValueError('Update plan expired')
     if plan['schemaVersion'] != 1 or not 1 <= len(plan['packages']) <= 3:
         raise ValueError('Unsupported database schema or package count')
@@ -75,7 +96,7 @@ def extract(source, destination, package):
         if sum(item.file_size for item in archive.infolist())>1_000_000_000:raise ValueError('Expanded archive too large')
         for item in archive.infolist():
             target=(destination/item.filename).resolve()
-            if not target.is_relative_to(destination.resolve()) or '\\' in item.filename or stat.S_ISLNK(item.external_attr>>16):
+            if not inside(target,destination) or '\\' in item.filename or stat.S_ISLNK(item.external_attr>>16):
                 raise ValueError('Unsafe archive path')
             if item.filename.startswith('.') or any(part.startswith('.') for part in Path(item.filename).parts):
                 raise ValueError('Hidden config files are forbidden')
@@ -93,6 +114,7 @@ def extract(source, destination, package):
 
 def compose(files, services):
     command=['docker','compose','--project-directory',CONFIG['compose_directory']]
+    if CONFIG.get('env_file'):command+=['--env-file',CONFIG['env_file']]
     for file in files:command+=['-f',file]
     return run(command+['up','-d','--no-deps']+services,timeout=300)
 
@@ -152,7 +174,7 @@ def process(job):
                     try:
                         # Only fixed presentation/config files, never business uploads or arbitrary paths.
                         data=run(['docker','exec',container,'test','-e','/usr/share/nginx/html/'+preserved])
-                        if not old.resolve().is_relative_to(scratch.resolve()):raise ValueError('Preserved asset escaped staging')
+                        if not inside(old,scratch):raise ValueError('Preserved asset escaped staging')
                         if old.is_dir():shutil.rmtree(old)
                         elif old.exists():old.unlink()
                         run(['docker','cp',container+':/usr/share/nginx/html/'+preserved,str(old)])
@@ -180,7 +202,7 @@ def process(job):
         rolled_back=False
         if changed:
             try:
-                if prior is None:override.unlink(missing_ok=True)
+                if prior is None:remove(override)
                 else:override.write_bytes(prior)
                 compose(CONFIG['compose_files']+([str(override)] if prior else []),list(destinations));health(list(destinations));rolled_back=True
             except Exception:pass
@@ -189,20 +211,20 @@ def process(job):
         write_json(STATE/'update-result.json',{'id':job_id,'status':'ROLLED_BACK' if rolled_back else 'FAILED','error':type(error).__name__,'message':'更新失败，已回退原程序' if rolled_back else '更新失败，请联系维护人员检查','backup':str(backup_dir) if backup_dir.exists() else None})
     finally:
         if not retain_gate:
-            (ROOT/'update-journal.json').unlink(missing_ok=True)
-            (STATE/'updating').unlink(missing_ok=True)
-        job.unlink(missing_ok=True)
+            remove(ROOT/'update-journal.json')
+            remove(STATE/'updating')
+        remove(job)
 
 def main():
     STATE.mkdir(parents=True,exist_ok=True)
     journal=ROOT/'update-journal.json'
     if journal.exists():
         interrupted=json.loads(journal.read_text());override=ROOT/'compose.self-update.json'
-        if interrupted['previous'] is None:override.unlink(missing_ok=True)
+        if interrupted['previous'] is None:remove(override)
         else:override.write_text(interrupted['previous'])
         compose(CONFIG['compose_files']+([str(override)] if interrupted['previous'] else []),interrupted['services']);health(interrupted['services'])
         write_json(STATE/'update-result.json',{'id':interrupted['id'],'status':'ROLLED_BACK','message':'上次更新意外中断，已回退原程序'})
-        journal.unlink();(STATE/'updating').unlink(missing_ok=True);(STATE/'update-job.json').unlink(missing_ok=True)
+        journal.unlink();remove(STATE/'updating');remove(STATE/'update-job.json')
     (STATE/'installer-ready').touch()
     while True:
         pending=STATE/'update-job.json'
