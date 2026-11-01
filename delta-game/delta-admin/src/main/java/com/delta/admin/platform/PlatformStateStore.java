@@ -9,7 +9,13 @@ import java.util.UUID;
 
 /** Instance-local commercial state, separate from customer business tables. */
 final class PlatformStateStore {
-    record State(int formatVersion, String instanceId, PlatformLicense.Envelope license, Set<String> enabledFeatures) {}
+    record State(int formatVersion, String instanceId, PlatformLicense.Envelope license, Set<String> enabledFeatures,
+                 Set<String> updateComponents) {
+        State {
+            enabledFeatures = enabledFeatures == null ? Set.of() : Set.copyOf(enabledFeatures);
+            updateComponents = updateComponents == null ? null : Set.copyOf(updateComponents);
+        }
+    }
     private final Path path;
     private final ObjectMapper json;
 
@@ -20,14 +26,14 @@ final class PlatformStateStore {
 
     State load() {
         if (!Files.exists(path)) {
-            var state = new State(1, UUID.randomUUID().toString(), null, Set.of());
+            var state = new State(1, UUID.randomUUID().toString(), null, Set.of(), null);
             save(state);
             return state;
         }
         try {
             if (Files.size(path) > 65536) throw new IOException("State too large");
             var state = json.readValue(path.toFile(), State.class);
-            if (state.formatVersion() != 1 || state.enabledFeatures() == null) throw new IOException("Invalid state");
+            if (state.formatVersion() != 1) throw new IOException("Invalid state");
             UUID.fromString(state.instanceId());
             return state;
         } catch (Exception error) {

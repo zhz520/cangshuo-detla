@@ -35,7 +35,11 @@ public class PlatformService {
                            boolean verifierConfigured, String licenseStatus, String licenseId, Instant expiresAt,
                            String purchaseMode, String updateMode, List<String> allowedDomains) {}
     public record UpdateInfo(String version, String channel, int schemaVersion, List<String> releaseNotes,
-                             boolean automaticUpdateAvailable, String status, String message) {}
+                             boolean automaticUpdateAvailable, String status, String message,
+                             String sourceUrl, List<UpdateOption> components) {}
+    public record UpdateOption(String id, String name, String description, boolean selected) {}
+    public record ReportPayload(String customerId, String instanceId, String version,
+                                PlatformLicense.Envelope license) {}
 
     public synchronized Overview overview() {
         var state = store.load();
@@ -53,8 +57,31 @@ public class PlatformService {
     }
 
     public UpdateInfo updates() {
+        var selected = store.load().updateComponents();
+        var components = List.of(
+                option("core_platform", "基础业务与安全", "后端、数据库迁移和基础安全修复", selected),
+                option("admin_console", "管理后台", "管理员页面与运营配置界面", selected),
+                option("mobile_client", "移动端/H5", "用户端、接单员端和客服端页面", selected),
+                option("image_rendering", "多比例图片显示", "商品、分类、轮播和聊天图片完整显示", selected),
+                option("advanced_income_reports", "收益对比分析", "付费扩展模块与每日汇总导出", selected));
         return new UpdateInfo(catalog.version(), catalog.channel(), catalog.schemaVersion(), catalog.releaseNotes(),
-                false, "NOT_CONFIGURED", "尚未连接正式版本源与更新代理，请由维护人员执行版本更新。");
+                false, "VERSION_REPORTED", "客户端版本由实例自动上报；更新安装仍由维护人员执行。",
+                "https://github.com/zhz520/cangshuo-detla/releases/tag/v" + catalog.version(), components);
+    }
+    public synchronized UpdateInfo setUpdateComponents(List<String> requested) {
+        if (requested == null || requested.size() > 20) throw new BusinessException(400, "更新内容选择不正确");
+        var allowed = Set.of("core_platform","admin_console","mobile_client","image_rendering","advanced_income_reports");
+        if (!allowed.containsAll(requested) || new HashSet<>(requested).size() != requested.size())
+            throw new BusinessException(400, "更新内容包含未知项目");
+        var state = store.load();
+        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), state.enabledFeatures(), Set.copyOf(requested)));
+        return updates();
+    }
+    public synchronized ReportPayload reportPayload() {
+        var state = store.load();
+        var claims = claims(state);
+        if (claims == null) return null;
+        return new ReportPayload(properties.getCustomerId(), state.instanceId(), catalog.version(), state.license());
     }
 
     public synchronized Overview importLicense(PlatformLicense.Envelope envelope) {
@@ -68,7 +95,7 @@ public class PlatformService {
             throw new BusinessException(409, "不能使用旧授权覆盖当前授权，请联系维护人员重新签发");
         var enabled = new HashSet<>(state.enabledFeatures());
         enabled.retainAll(next.features());
-        store.save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled));
+        store.save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled, state.updateComponents()));
         return overview();
     }
 
@@ -88,7 +115,7 @@ public class PlatformService {
             throw new BusinessException(409, "请先关闭依赖此模块的功能");
         var selected = new HashSet<>(state.enabledFeatures());
         if (enabled) selected.add(id); else selected.remove(id);
-        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected));
+        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected, state.updateComponents()));
         return features();
     }
 
@@ -141,6 +168,9 @@ public class PlatformService {
     }
     private Instant featureExpiry(PlatformLicense.Claims claims, String id) {
         return claims.featureExpiresAt() == null ? claims.expiresAt() : claims.featureExpiresAt().get(id);
+    }
+    private UpdateOption option(String id, String name, String description, Set<String> selected) {
+        return new UpdateOption(id, name, description, selected == null || selected.contains(id));
     }
     private boolean domainAllowed(PlatformLicense.Claims claims, String requestDomain) {
         if (claims == null || claims.allowedDomains() == null || claims.allowedDomains().isEmpty()) return true;

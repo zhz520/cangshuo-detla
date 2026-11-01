@@ -8,7 +8,8 @@
           <el-descriptions-item label="客户编号">{{ overview.customerId }}</el-descriptions-item>
           <el-descriptions-item label="当前版本">{{ overview.version }} <el-tag size="small" type="info">{{ overview.channel === 'preview' ? '预览版' : '正式版' }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="实例编号">{{ overview.instanceId }}</el-descriptions-item>
-          <el-descriptions-item label="授权状态">{{ licenseLabels[overview.licenseStatus] || overview.licenseStatus }}<span v-if="overview.expiresAt"> · 到期 {{ formatTime(overview.expiresAt) }}</span></el-descriptions-item>
+          <el-descriptions-item label="授权状态">{{ licenseLabels[overview.licenseStatus] || overview.licenseStatus }}</el-descriptions-item>
+          <el-descriptions-item label="维护期至">{{ overview.expiresAt ? formatTime(overview.expiresAt) : '—' }}</el-descriptions-item>
           <el-descriptions-item label="授权域名">{{ (overview.allowedDomains || []).join('、') || '未配置' }}</el-descriptions-item>
         </el-descriptions>
         <div class="license-actions"><el-button @click="activationVisible = true">查看开通信息</el-button><el-button type="primary" :disabled="!overview.verifierConfigured" @click="licenseVisible = true">导入授权</el-button></div>

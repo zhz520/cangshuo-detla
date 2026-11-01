@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0-preview.2",
-  "channel": "preview",
+  "version": "1.1.0",
+  "channel": "stable",
   "schemaVersion": 1,
   "features": [
     {
@@ -18,7 +18,7 @@
       "name": "收益对比分析",
       "description": "按结算日期比较当前与上一等长周期，查看订单金额、打手收入和平台抽成变化。",
       "paid": true,
-      "minVersion": "1.1.0-preview.2",
+      "minVersion": "1.1.0",
       "dependencies": ["core_platform"],
       "entryPath": "/platform/income-analysis",
       "capabilities": ["等长周期对比", "客单价与变化率", "每日汇总 CSV 导出"]

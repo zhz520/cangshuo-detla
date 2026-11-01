@@ -91,6 +91,15 @@ class PlatformServiceTest {
         assertThatThrownBy(() -> platform.importLicense(grant)).isInstanceOf(BusinessException.class);
         assertThat(report().entitled()).isFalse(); assertThat(platform.updates().automaticUpdateAvailable()).isFalse();
     }
+    @Test void updateContentSelectionIsValidatedPersistedAndDefaultsSafely() {
+        assertThat(platform.updates().components()).allMatch(PlatformService.UpdateOption::selected);
+        platform.setUpdateComponents(List.of("core_platform", "admin_console")); platform = service(now);
+        assertThat(platform.updates().components()).filteredOn(PlatformService.UpdateOption::selected)
+                .extracting(PlatformService.UpdateOption::id).containsExactly("core_platform","admin_console");
+        assertThatThrownBy(() -> platform.setUpdateComponents(List.of("unknown"))).isInstanceOf(BusinessException.class);
+        platform.setUpdateComponents(List.of());
+        assertThat(platform.updates().components()).noneMatch(PlatformService.UpdateOption::selected);
+    }
     @Test void individualModuleExpiresEvenWhenTheEnvelopeHasALaterExpiration() throws Exception {
         var claims = new PlatformLicense.Claims(UUID.randomUUID().toString(), "742", platform.overview().instanceId(),
                 now, now, now.plusSeconds(3600), List.of("advanced_income_reports"), Map.of("advanced_income_reports", now.plusSeconds(60)), null);

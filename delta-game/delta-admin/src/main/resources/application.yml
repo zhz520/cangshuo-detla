@@ -13,3 +13,4 @@ platform:
   customer-id: ${PLATFORM_CUSTOMER_ID:unconfigured}
   state-path: ${PLATFORM_STATE_PATH:./.local/platform/state.json}
   public-key-path: ${PLATFORM_PUBLIC_KEY_PATH:}
+  report-url: ${PLATFORM_REPORT_URL:}

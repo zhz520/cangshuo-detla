@@ -20,10 +20,16 @@ public class PlatformController {
     private final PlatformService platform;
     private final IncomeAnalysisService analysis;
     public record EnableRequest(@NotNull Boolean enabled) {}
+    public record UpdateSelectionRequest(List<String> components) {}
 
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
     @GetMapping("/features") public R<List<PlatformService.FeatureView>> features() { return R.ok(platform.features()); }
     @GetMapping("/updates") public R<PlatformService.UpdateInfo> updates() { return R.ok(platform.updates()); }
+    @PutMapping("/updates/selection")
+    @OpLog(module="platform", operation="选择客户端更新内容")
+    public R<PlatformService.UpdateInfo> updateSelection(@RequestBody UpdateSelectionRequest body) {
+        return R.ok(platform.setUpdateComponents(body.components()));
+    }
 
     // License payloads are deliberately excluded from the generic request-body operation logger.
     @PostMapping("/license/import")

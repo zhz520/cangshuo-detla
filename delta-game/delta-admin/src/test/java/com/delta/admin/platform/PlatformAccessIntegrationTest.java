@@ -50,6 +50,6 @@ class PlatformAccessIntegrationTest {
         mvc.perform(get("/admin/platform/reports/income").param("startDate","2026-10-01").param("endDate","2026-10-02").with(user("admin").roles("ADMIN")))
                 .andExpect(jsonPath("$.code").value(403));
         mvc.perform(get("/admin/platform/updates").with(user("admin").roles("ADMIN")))
-                .andExpect(jsonPath("$.data.automaticUpdateAvailable").value(false)).andExpect(jsonPath("$.data.status").value("NOT_CONFIGURED"));
+                .andExpect(jsonPath("$.data.automaticUpdateAvailable").value(false)).andExpect(jsonPath("$.data.status").value("VERSION_REPORTED"));
     }
 }

@@ -11,4 +11,5 @@ public class PlatformProperties {
     private String customerId = "unconfigured";
     private String statePath = "./.local/platform/state.json";
     private String publicKeyPath = "";
+    private String reportUrl = "";
 }
