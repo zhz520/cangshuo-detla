@@ -1130,6 +1130,7 @@ CREATE TABLE `user` (
   `nickname` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '微信用户' COMMENT '昵称',
   `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '头像URL',
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '手机号',
+  `phone_unique` varchar(20) GENERATED ALWAYS AS (NULLIF(`phone`,'')) STORED COMMENT '非空手机号唯一索引',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常 0-封禁',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除: 0-未删除 1-已删除',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

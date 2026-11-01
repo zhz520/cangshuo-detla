@@ -12,7 +12,7 @@
       <!-- 轮播图 -->
       <swiper class="banner" :autoplay="true" :interval="4000" circular indicator-dots>
         <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
-          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFill" class="banner-img" />
+          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFit" class="banner-img" />
         </swiper-item>
       </swiper>
 
@@ -65,7 +65,7 @@
           class="category-item"
           @click="goCategory(cat.id)"
         >
-          <AppImage :width="160" class="category-icon" :src="cat.icon || '/static/icons/分类.svg'" mode="aspectFill" />
+          <AppImage :width="160" class="category-icon" :src="cat.icon || '/static/icons/分类.svg'" mode="aspectFit" />
           <text class="category-name">{{ cat.name }}</text>
         </view>
       </view>

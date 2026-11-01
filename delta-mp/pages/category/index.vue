@@ -42,7 +42,7 @@
             class="product-row"
             @click="goProductDetail(p.id)"
           >
-            <AppImage class="product-cover" :src="p.coverImage" mode="aspectFill" />
+            <AppImage class="product-cover" :src="p.coverImage" mode="aspectFit" />
             <view class="product-info">
               <text class="product-name">{{ p.name }}</text>
               <text v-if="p.subtitle" class="product-subtitle">{{ p.subtitle }}</text>

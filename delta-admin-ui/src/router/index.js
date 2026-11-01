@@ -219,6 +219,17 @@ const routes = [
       }
     ]
   },
+  {
+    path: '/platform',
+    component: Layout,
+    redirect: '/platform/features',
+    meta: { title: '功能与更新', icon: 'Box', roles: ['admin'] },
+    children: [
+      { path: 'features', name: 'FeatureMarket', component: () => import('@/views/platform/FeatureMarket.vue'), meta: { title: '功能商城', roles: ['admin'] } },
+      { path: 'updates', name: 'SystemUpdates', component: () => import('@/views/platform/SystemUpdates.vue'), meta: { title: '系统更新', roles: ['admin'] } },
+      { path: 'income-analysis', name: 'IncomeAnalysis', component: () => import('@/views/platform/IncomeAnalysis.vue'), meta: { title: '收益对比分析', roles: ['admin'] } }
+    ]
+  },
   // 系统管理 (仅 admin)
   {
     path: '/system',

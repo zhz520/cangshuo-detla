@@ -6,7 +6,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in products" :key="p.id" class="product-card" @click="goEdit(p.id)">
-        <AppImage class="cover" :src="p.coverImage || p.image" mode="aspectFill" />
+        <AppImage class="cover" :src="p.coverImage || p.image" mode="aspectFit" />
         <view class="info">
           <text class="name">{{ p.name }}</text>
           <text class="price">¥{{ Number(p.price || p.minPrice || 0).toFixed(2) }}</text>

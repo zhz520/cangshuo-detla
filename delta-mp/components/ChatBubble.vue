@@ -11,7 +11,7 @@
       <AppImage v-else-if="msg.type === 'IMAGE'" class="msg-image" :src="msg.content" mode="widthFix" @click="previewImage" />
       <!-- 商品卡片 -->
       <view v-else-if="msg.type === 'PRODUCT'" class="card-msg product-card" @click="goProduct(cardData)">
-        <AppImage class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFill" />
+        <AppImage class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFit" />
         <view class="card-info">
           <text class="card-name text-ellipsis">{{ cardData.name }}</text>
           <text class="card-price">¥{{ Number(cardData.price || 0).toFixed(2) }}</text>

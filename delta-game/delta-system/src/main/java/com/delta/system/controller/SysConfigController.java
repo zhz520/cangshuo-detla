@@ -208,6 +208,15 @@ public class SysConfigController {
             try{var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.stripTrailingZeros().scale()>2 || n.compareTo(new java.math.BigDecimal("1000000"))>0)throw new IllegalArgumentException();}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"金额配置无效");}
         }
+        if(java.util.Set.of("withdraw.max_daily_count","order.auto_confirm_hours",
+                "order.pay_deadline_minutes","order.max_active_per_player").contains(key)) {
+            try {
+                int n = Integer.parseInt(value);
+                if (n < 1 || n > 1000) throw new IllegalArgumentException();
+            } catch (Exception e) {
+                throw new com.delta.common.exception.BusinessException(400,"次数与时长须为1至1000之间的整数");
+            }
+        }
         SysConfig update=new SysConfig();update.setId(old.getId());update.setConfigValue(value);sysConfigService.updateById(update);
     }
 

@@ -21,9 +21,7 @@ let currentChatRole = ''
 function getWsUrl() {
   const loc = window.location
   const path = '/ws/chat'
-  const base = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1'
-    ? 'ws://localhost:8080'
-    : `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`
+  const base = `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`
   return `${base}${path}`
 }
 

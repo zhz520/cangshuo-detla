@@ -4,7 +4,7 @@
     <view class="banner-wrap">
       <swiper class="banner" autoplay :interval="3000" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
         <swiper-item v-for="(img,i) in images" :key="i">
-          <AppImage :src="img" mode="aspectFill" class="banner-img" @click="previewImg(i)" />
+          <AppImage :src="img" mode="aspectFit" class="banner-img" @click="previewImg(i)" />
         </swiper-item>
       </swiper>
       <!-- 自定义指示器 -->

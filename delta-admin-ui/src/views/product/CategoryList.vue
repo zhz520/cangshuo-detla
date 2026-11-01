@@ -32,7 +32,7 @@
         </el-table-column>
         <el-table-column prop="icon" label="图标" width="80">
           <template #default="{ row }">
-            <el-image lazy v-if="row.icon" :src="row.icon" style="width:30px;height:30px" fit="cover" />
+            <el-image lazy v-if="row.icon" :src="row.icon" style="width:50px;height:50px" fit="contain" :preview-src-list="[row.icon]" preview-teleported />
           </template>
         </el-table-column>
         <el-table-column prop="sortOrder" label="排序" width="80" />

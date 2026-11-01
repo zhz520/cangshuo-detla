@@ -48,13 +48,13 @@
             <el-form-item label="封面图" class="image-form-item">
               <div class="upload-field">
                 <ImageUpload v-model="form.coverImage" />
-                <span class="form-tip">建议使用清晰横图或正方形图片，作为商品列表主图展示</span>
+                <span class="form-tip">支持任意宽高比，用户端会按原比例完整展示商品主图</span>
               </div>
             </el-form-item>
             <el-form-item label="商品图片" class="image-form-item">
               <div class="multi-images">
                 <div v-for="(img, idx) in imageList" :key="idx" class="img-item">
-                  <el-image lazy :src="img" fit="cover" class="product-image" />
+                  <el-image lazy :src="img" fit="contain" class="product-image" :preview-src-list="imageList" :initial-index="idx" preview-teleported />
                   <el-button circle type="danger" size="small" class="img-del" @click="imageList.splice(idx, 1)">×</el-button>
                 </div>
                 <ImageUpload v-model="newImage" @update:model-value="onImageAdd" />

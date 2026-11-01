@@ -1,7 +1,7 @@
 <template>
   <view class="image-uploader">
     <view v-for="(img, index) in modelValue" :key="index" class="preview-item">
-      <AppImage :src="img" mode="aspectFill" @click="previewImage(index)" />
+      <AppImage :src="img" mode="aspectFit" @click="previewImage(index)" />
       <view class="remove-btn" @click.stop="removeImage(index)">×</view>
     </view>
     <view v-if="modelValue.length < max" class="add-btn" :class="{ uploading }" @click="chooseImage">

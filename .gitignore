@@ -1,4 +1,9 @@
 /.local-deploy/
+/.local/
+**/.env.local
+**/*.license.json
+*.pem
+*.key
 /.local-ui/
 /.local-feature/
 /.local-security/

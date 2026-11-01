@@ -1,6 +1,6 @@
 <template>
   <view class="product-card" :class="{ dense }" @click="goDetail">
-    <AppImage class="cover" :src="product.coverImage" mode="aspectFill" :style="{ height: coverHeight + 'rpx' }" />
+    <AppImage class="cover" :src="product.coverImage" mode="aspectFit" :style="{ height: coverHeight + 'rpx' }" />
     <view class="info">
       <text class="name text-ellipsis-2">{{ product.name }}</text>
       <view v-if="product.subtitle" class="subtitle-wrap">

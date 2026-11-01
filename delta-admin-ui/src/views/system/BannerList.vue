@@ -4,7 +4,7 @@
       <template #header><div class="card-header"><span>轮播图管理</span><el-button type="primary" @click="openDialog()">新增</el-button></div></template>
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="120"><template #default="{ row }"><el-image lazy :src="row.imageUrl" style="width:80px;height:45px" fit="cover" :preview-src-list="[row.imageUrl]" /></template></el-table-column>
+        <el-table-column label="图片" width="120"><template #default="{ row }"><el-image lazy :src="row.imageUrl" style="width:80px;height:60px" fit="contain" :preview-src-list="[row.imageUrl]" preview-teleported /></template></el-table-column>
         <el-table-column label="点击行为"><template #default="{ row }">{{ !row.linkValue || row.linkType === 'none' ? '放大图片' : row.linkType === 'product' ? '跳转商品' : '跳转链接' }}</template></el-table-column>
         <el-table-column prop="linkValue" label="跳转地址 / 商品ID" show-overflow-tooltip />
         <el-table-column prop="sortOrder" label="排序" width="80" />

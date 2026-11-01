@@ -29,7 +29,7 @@
         <view class="picker-header"><text class="picker-title">选择商品发送</text><text class="picker-close" @click="showProductPopup = false">✕</text></view>
         <scroll-view scroll-y class="picker-list">
           <view v-for="p in productList" :key="p.id" class="picker-item" @click="doSendProduct(p)">
-            <AppImage class="picker-cover" :src="p.coverImage || p.image" mode="aspectFill" />
+            <AppImage class="picker-cover" :src="p.coverImage || p.image" mode="aspectFit" />
             <view class="picker-info"><text class="picker-name text-ellipsis">{{ p.name }}</text><text class="picker-price">¥{{ Number(p.price || 0).toFixed(2) }}</text></view>
           </view>
           <view v-if="productList.length === 0" class="picker-empty">暂无商品</view>
