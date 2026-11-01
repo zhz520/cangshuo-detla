@@ -1,3 +1,4 @@
+import { clientStorage } from '@/utils/client-storage'
 /**
  * 统一请求封装
  * 自动注入token、统一错误处理、loading管理
@@ -32,7 +33,7 @@ function hideLoading() {
  * 获取当前角色（从Storage读取，避免循环依赖store）
  */
 function getCurrentRole() {
-  return uni.getStorageSync('app_role') || 'user'
+  return clientStorage.get('app_role') || 'user'
 }
 
 /**
@@ -100,6 +101,13 @@ export function request(options) {
         console.log(`[REQ] <<< ${method} ${url} ${Date.now() - _startTime}ms`)
         const { statusCode, data: resData } = res
 
+        if (statusCode === 503 && resData?.maintenance) {
+          finishLoading()
+          const pages = getCurrentPages()
+          if (pages[pages.length-1]?.route !== 'pages/maintenance/index') uni.reLaunch({ url: '/pages/maintenance/index' })
+          reject(resData)
+          return
+        }
         if (statusCode === 200) {
           // 业务层code判断
           if (resData.code === 0 || resData.code === 200) {
@@ -146,11 +154,11 @@ function handleUnauthorized(role) {
   _handlingUnauthorized = true
 
   if (role === 'cs') {
-    uni.removeStorageSync('cs_token')
+    clientStorage.remove('cs_token')
   } else if (role === 'player') {
-    uni.removeStorageSync('player_token')
+    clientStorage.remove('player_token')
   } else {
-    uni.removeStorageSync('user_token')
+    clientStorage.remove('user_token')
   }
 
   uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
@@ -160,7 +168,7 @@ function handleUnauthorized(role) {
     if (role === 'cs') {
       uni.reLaunch({ url: '/pages/login/index' })
     } else if (role === 'player') {
-      uni.setStorageSync('app_role', 'user')
+      clientStorage.set('app_role', 'user')
       uni.reLaunch({ url: '/pages/mine/index' })
     } else {
       uni.reLaunch({ url: '/pages/login/index' })

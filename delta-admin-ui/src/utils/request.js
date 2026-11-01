@@ -42,6 +42,9 @@ service.interceptors.response.use(
         removeToken()
         router.push('/login')
         ElMessage.error('登录已过期，请重新登录')
+      } else if (status === 503 && error.response.data?.maintenance) {
+        ElMessage.warning(error.response.data.msg)
+        if (!router.currentRoute.value.path.startsWith('/platform/')) router.push('/platform/updates')
       } else if (status === 403) {
         ElMessage.error('没有权限执行此操作')
       } else {

@@ -19,6 +19,7 @@
   </view>
 </template>
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
@@ -53,7 +54,7 @@ async function onTap(m) {
 const chatStore = useChatStore()
 async function markAllReadClick() {
   try {
-    const role = uni.getStorageSync('app_role') || 'user'
+    const role = clientStorage.get('app_role') || 'user'
     const userType = role === 'cs' ? 'CS' : role === 'player' ? 'PLAYER' : 'USER'
     await markAllRead(userType)
     uni.showToast({ title: '已全部标为已读', icon: 'none' })

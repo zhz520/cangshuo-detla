@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
@@ -102,8 +103,8 @@ const queryParentCategoryId = computed(() => {
 const inited = ref(false)
 
 onShow(async () => {
-  const storedId = uni.getStorageSync('selectedCategoryId')
-  if (storedId) uni.removeStorageSync('selectedCategoryId')
+  const storedId = clientStorage.get('selectedCategoryId')
+  if (storedId) clientStorage.remove('selectedCategoryId')
 
   if (!inited.value) {
     loading.value = true

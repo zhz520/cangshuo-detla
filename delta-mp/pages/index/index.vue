@@ -131,6 +131,7 @@
 </template>
 
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow, onPullDownRefresh, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
@@ -211,7 +212,7 @@ async function loadData() {
       // 筛选出需要弹窗展示的公告
       const popupList = list.filter(n => n.popupDisplay === 1)
       if (popupList.length > 0) {
-        const seenIds = uni.getStorageSync('seenNoticeIds') || []
+        const seenIds = clientStorage.get('seenNoticeIds') || []
         const unseenList = popupList.filter(n => !seenIds.includes(noticeRevision(n)))
         // In every-refresh mode one JS session may render the home tab many times;
         // switching tabs must not reopen it. A real browser refresh recreates the store.
@@ -297,7 +298,7 @@ function onBannerClick(item) {
 }
 
 function goCategory(id) {
-  if (id) uni.setStorageSync('selectedCategoryId', id)
+  if (id) clientStorage.set('selectedCategoryId', id)
   uni.switchTab({ url: '/pages/category/index' })
 }
 
@@ -310,14 +311,14 @@ function openNoticeDetail(item) {
 function closeNoticePopup() {
   showNoticePopup.value = false
   // 记录已看过的弹窗公告ID
-  const seenIds = uni.getStorageSync('seenNoticeIds') || []
+  const seenIds = clientStorage.get('seenNoticeIds') || []
   popupNotices.value.forEach(n => {
     const revision = noticeRevision(n)
     if (n.id && !seenIds.includes(revision)) {
       seenIds.push(revision)
     }
   })
-  uni.setStorageSync('seenNoticeIds', seenIds.slice(-100))
+  clientStorage.set('seenNoticeIds', seenIds.slice(-100))
 }
 
 async function goCustomerService() {

@@ -37,6 +37,12 @@ jobs:
       - name: Test and build backend
         working-directory: delta-game
         run: mvn --batch-mode --settings ../.github/maven-settings.xml -pl delta-admin -am verify
+      - name: Validate signed installer and rollback
+        env:
+          TEMP: ${{ runner.temp }}
+        run: |
+          python -m pip install cryptography==46.0.5
+          python deploy/updater/test_worker.py
       - name: Install admin dependencies
         working-directory: delta-admin-ui
         run: npm ci

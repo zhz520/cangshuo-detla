@@ -15,13 +15,14 @@
   </view>
 </template>
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref, onBeforeUnmount } from 'vue'
 import { getAcceptChallenge, acceptOrder } from '@/api/player'
 const emit=defineEmits(['accepted'])
 const visible=ref(false),busy=ref(false),required=ref(false),challenge=ref({}),code=ref(''),error=ref(''),retryIn=ref(0)
 let orderId=null,device='',nextRefresh=0,timer=null,generation=0
-function deviceId(){if(!device){device=uni.getStorageSync('grab_device_id');if(!device){device=`device-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;uni.setStorageSync('grab_device_id',device)}}return device}
+function deviceId(){if(!device){device=clientStorage.get('grab_device_id');if(!device){device=`device-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;clientStorage.set('grab_device_id',device)}}return device}
 function close(){if(busy.value)return;visible.value=false;generation++;clearInterval(timer);timer=null}
 function tick(){retryIn.value=Math.max(0,Math.ceil((nextRefresh-Date.now())/1000))}
 async function open(id){if(busy.value||visible.value)return;orderId=id;nextRefresh=0;retryIn.value=0;error.value='';challenge.value={};code.value='';required.value=false;visible.value=true;await refresh()}

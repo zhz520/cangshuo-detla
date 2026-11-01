@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'delta_admin_token'
-const USER_KEY = 'delta_admin_user'
+const TOKEN_KEY = globalThis.__CANGSHUO_INSTANCE__?.adminTokenKey || 'delta_admin_token'
+const USER_KEY = globalThis.__CANGSHUO_INSTANCE__?.adminUserKey || 'delta_admin_user'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)

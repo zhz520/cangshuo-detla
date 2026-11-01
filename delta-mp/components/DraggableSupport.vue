@@ -6,6 +6,7 @@
   </view>
 </template>
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 const emit = defineEmits(['activate'])
 const position = ref(null)
@@ -27,7 +28,7 @@ function measure() {
   return bounds
 }
 function restore() {
-  const b = measure(), saved = uni.getStorageSync(key)
+  const b = measure(), saved = clientStorage.get(key)
   position.value = saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)
     ? { x: b.minX + clamp(saved.x, 0, 1) * (b.maxX - b.minX), y: b.minY + clamp(saved.y, 0, 1) * (b.maxY - b.minY) }
     : { x: b.maxX, y: b.maxY }
@@ -53,7 +54,7 @@ function finish() {
   if (gesture.moved) {
     suppressUntil = Date.now() + 500
     const b = bounds
-    uni.setStorageSync(key, { x: (position.value.x - b.minX) / (b.maxX - b.minX || 1), y: (position.value.y - b.minY) / (b.maxY - b.minY || 1) })
+    clientStorage.set(key, { x: (position.value.x - b.minX) / (b.maxX - b.minX || 1), y: (position.value.y - b.minY) / (b.maxY - b.minY || 1) })
   }
   gesture = null
 }

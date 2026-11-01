@@ -1,7 +1,7 @@
 <template>
   <div class="platform-page" v-loading="loading">
     <el-card shadow="never">
-      <template #header><div class="section-heading"><div><h2>功能商城</h2><p>按需开通扩展功能，现有业务功能继续使用。</p></div><el-button @click="load">刷新</el-button></div></template>
+      <template #header><div class="section-heading"><div><h2>功能商城</h2><p>按需开通扩展功能，维护期与项目授权同步。</p></div><el-button @click="load">刷新</el-button></div></template>
       <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
       <template v-if="overview">
         <el-descriptions :column="isCompact ? 1 : 2" border>
@@ -54,7 +54,7 @@ import { getPlatformOverview, getPlatformFeatures, importPlatformLicense, setPla
 const { isCompact } = useResponsive()
 const overview = ref(null), features = ref([]), loading = ref(false), error = ref(''), changing = ref('')
 const activationVisible = ref(false), licenseVisible = ref(false), importing = ref(false), licenseText = ref('')
-const licenseLabels = { NONE: '尚未导入授权', VALID: '授权有效', INVALID: '授权验证失败', EXPIRED: '授权已到期', NOT_YET_VALID: '授权尚未生效' }
+const licenseLabels = { NONE: '尚未导入授权', VALID: '维护有效', INVALID: '授权验证失败', EXPIRED: '维护已到期', NOT_YET_VALID: '授权尚未生效' }
 const statusLabels = { INCLUDED: '已包含', ENABLED: '已启用', DISABLED: '已授权，未启用', EXPIRED: '已到期', NOT_PURCHASED: '待开通' }
 const identityText = computed(() => overview.value ? `客户编号：${overview.value.customerId}\n实例编号：${overview.value.instanceId}\n当前版本：${overview.value.version}` : '')
 function formatTime(value) { return new Date(value).toLocaleString('zh-CN', { hour12: false }) }

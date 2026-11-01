@@ -1,3 +1,4 @@
+import { clientStorage } from '@/utils/client-storage'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ROLE } from '@/utils/constants'
@@ -10,7 +11,7 @@ export const useAppStore = defineStore('app', () => {
 
   /** 从Storage恢复角色 */
   function restoreRole() {
-    const saved = uni.getStorageSync(ROLE_KEY)
+    const saved = clientStorage.get(ROLE_KEY)
     if (saved && Object.values(ROLE).includes(saved)) {
       role.value = saved
     }
@@ -18,7 +19,7 @@ export const useAppStore = defineStore('app', () => {
 
   /** 持久化角色 */
   function _saveRole() {
-    uni.setStorageSync(ROLE_KEY, role.value)
+    clientStorage.set(ROLE_KEY, role.value)
   }
 
   /** 切换到用户端 */

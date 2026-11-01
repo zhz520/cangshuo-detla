@@ -67,6 +67,7 @@
 </template>
 
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
@@ -186,7 +187,7 @@ function switchWechatMode() {
 
 function completeWechatLogin() {
   needPhoneAuth.value = false
-  uni.setStorageSync('app_role','user');appStore.restoreRole();chatStore.disconnect()
+  clientStorage.set('app_role','user');appStore.restoreRole();chatStore.disconnect()
   chatStore.connect()
   uni.reLaunch({ url: '/pages/index/index' })
 }

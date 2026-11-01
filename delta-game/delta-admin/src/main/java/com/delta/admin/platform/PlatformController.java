@@ -18,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlatformController {
     private final PlatformService platform;
+    private final PlatformRemote remote;
     private final IncomeAnalysisService analysis;
     public record EnableRequest(@NotNull Boolean enabled) {}
     public record UpdateSelectionRequest(List<String> components) {}
@@ -30,6 +31,10 @@ public class PlatformController {
     public R<PlatformService.UpdateInfo> updateSelection(@RequestBody UpdateSelectionRequest body) {
         return R.ok(platform.setUpdateComponents(body.components()));
     }
+
+    @GetMapping("/updates/remote") public R<com.fasterxml.jackson.databind.JsonNode> remoteStatus() { return R.ok(remote.status()); }
+    @PostMapping("/updates/check") public R<com.fasterxml.jackson.databind.JsonNode> checkUpdates() { return R.ok(remote.refresh()); }
+    @PostMapping("/updates/install") public R<com.fasterxml.jackson.databind.JsonNode> install(@RequestBody com.fasterxml.jackson.databind.JsonNode body) { return R.ok(remote.install(body.path("selection"))); }
 
     // License payloads are deliberately excluded from the generic request-body operation logger.
     @PostMapping("/license/import")

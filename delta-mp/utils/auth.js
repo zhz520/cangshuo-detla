@@ -1,3 +1,4 @@
+import { clientStorage } from '@/utils/client-storage'
 /**
  * Token 存取管理
  * - user_token：用户端专用
@@ -12,52 +13,52 @@ const CS_TOKEN_KEY = 'cs_token'
 
 // ========== 用户 Token ==========
 export function getUserToken() {
-  return uni.getStorageSync(USER_TOKEN_KEY) || ''
+  return clientStorage.get(USER_TOKEN_KEY) || ''
 }
 
 export function setUserToken(token) {
-  uni.setStorageSync(USER_TOKEN_KEY, token)
+  clientStorage.set(USER_TOKEN_KEY, token)
 }
 
 export function removeUserToken() {
-  uni.removeStorageSync(USER_TOKEN_KEY)
+  clientStorage.remove(USER_TOKEN_KEY)
 }
 
 // ========== 接单员 Token（切换接单员端时获取并保存） ==========
 export function getPlayerToken() {
-  return uni.getStorageSync(PLAYER_TOKEN_KEY) || ''
+  return clientStorage.get(PLAYER_TOKEN_KEY) || ''
 }
 
 export function setPlayerToken(token) {
-  uni.setStorageSync(PLAYER_TOKEN_KEY, token)
+  clientStorage.set(PLAYER_TOKEN_KEY, token)
 }
 
 export function removePlayerToken() {
-  uni.removeStorageSync(PLAYER_TOKEN_KEY)
+  clientStorage.remove(PLAYER_TOKEN_KEY)
 }
 
 // ========== 客服Token ==========
 const CS_INFO_KEY = 'cs_info'
 
 export function getCsToken() {
-  return uni.getStorageSync(CS_TOKEN_KEY) || ''
+  return clientStorage.get(CS_TOKEN_KEY) || ''
 }
 
 export function setCsToken(token) {
-  uni.setStorageSync(CS_TOKEN_KEY, token)
+  clientStorage.set(CS_TOKEN_KEY, token)
 }
 
 export function getCsInfo() {
-  return uni.getStorageSync(CS_INFO_KEY) || null
+  return clientStorage.get(CS_INFO_KEY) || null
 }
 
 export function setCsInfo(info) {
-  uni.setStorageSync(CS_INFO_KEY, info)
+  clientStorage.set(CS_INFO_KEY, info)
 }
 
 export function removeCsToken() {
-  uni.removeStorageSync(CS_TOKEN_KEY)
-  uni.removeStorageSync(CS_INFO_KEY)
+  clientStorage.remove(CS_TOKEN_KEY)
+  clientStorage.remove(CS_INFO_KEY)
 }
 
 // ========== 按角色取 token ==========

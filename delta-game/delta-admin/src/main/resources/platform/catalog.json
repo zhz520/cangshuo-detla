@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "channel": "stable",
   "schemaVersion": 1,
   "features": [
@@ -11,7 +11,10 @@
       "minVersion": "1.0.0",
       "dependencies": [],
       "entryPath": "/dashboard",
-      "capabilities": ["现有功能继续使用", "独立品牌与业务数据"]
+      "capabilities": [
+        "现有功能继续使用",
+        "独立品牌与业务数据"
+      ]
     },
     {
       "id": "advanced_income_reports",
@@ -19,14 +22,20 @@
       "description": "按结算日期比较当前与上一等长周期，查看订单金额、打手收入和平台抽成变化。",
       "paid": true,
       "minVersion": "1.1.0",
-      "dependencies": ["core_platform"],
+      "dependencies": [
+        "core_platform"
+      ],
       "entryPath": "/platform/income-analysis",
-      "capabilities": ["等长周期对比", "客单价与变化率", "每日汇总 CSV 导出"]
+      "capabilities": [
+        "等长周期对比",
+        "客单价与变化率",
+        "每日汇总 CSV 导出"
+      ]
     }
   ],
   "releaseNotes": [
-    "新增管理员功能商城、授权导入和系统版本页面。",
-    "新增收益对比分析试点模块，未授权时由后端拒绝访问。",
-    "现有功能保持可用；此预览版不提供在线付款与自动安装。"
+    "按项目同步维护凭据，续期后自动更新授权。",
+    "连接 GitHub 正式版，逐版本选择更新内容、依赖与组件。",
+    "新增带签名校验、备份和失败回退的更新执行器。"
   ]
 }

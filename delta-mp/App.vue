@@ -1,4 +1,5 @@
 <script setup>
+import { clientStorage } from '@/utils/client-storage'
 import { onLaunch, onShow } from '@dcloudio/uni-app'
 import { useAppStore } from '@/store/app'
 import { useUserStore } from '@/store/user'
@@ -12,7 +13,7 @@ import { installViewportAdapter } from '@/utils/viewport'
 // #endif
 
 function shouldConnectChat() {
-  const role = uni.getStorageSync('app_role') || 'user'
+  const role = clientStorage.get('app_role') || 'user'
   const token = getTokenByRole(role)
   return !!token
 }

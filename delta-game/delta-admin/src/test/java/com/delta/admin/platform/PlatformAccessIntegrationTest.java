@@ -28,7 +28,7 @@ class PlatformAccessIntegrationTest {
     @Configuration
     @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
     @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,
-            GlobalExceptionHandler.class,PlatformProperties.class,PlatformService.class,PlatformController.class,IncomeAnalysisService.class})
+            GlobalExceptionHandler.class,PlatformProperties.class,PlatformService.class,PlatformRemote.class,PlatformController.class,IncomeAnalysisService.class})
     static class Config {}
     @MockBean TokenService tokens;
     @MockBean StatsMapper statistics;
