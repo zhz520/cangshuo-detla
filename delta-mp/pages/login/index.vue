@@ -78,6 +78,7 @@
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
@@ -91,6 +92,7 @@ const appStore = useAppStore()
 const siteStore = useSiteStore()
 
 const loginMode = ref('wechat')
+const redirectUrl=ref('/pages/index/index')
 const resetting=ref(false)
 const phone = ref('')
 const setupToken=ref(''),newPassword=ref(''),confirmPassword=ref(''),userPassword=ref(''),loggingIn=ref(false)
@@ -119,6 +121,11 @@ async function submitReset(){
   loggingIn.value=true;try{await resetPassword({phone:phone.value,code:verifyCode.value,requestId:smsRequestId.value,password:newPassword.value,confirmation:confirmPassword.value});userStore.logout();resetting.value=false;loginMode.value='password';userPassword.value='';newPassword.value='';confirmPassword.value='';smsRequestId.value='';uni.showToast({title:'密码已重置，请重新登录',icon:'none'});loadCaptcha()}catch(_){}finally{loggingIn.value=false}
 }
 onMounted(loadCaptcha)
+onLoad(options=>{
+  const target=decodeURIComponent(options?.redirect||'')
+  if(/^\/(pages|pages-player|pages-cs)\//.test(target))redirectUrl.value=target
+  if(options?.expired==='1')uni.showToast({title:'登录已过期，请重新登录',icon:'none'})
+})
 onUnmounted(()=>clearInterval(countdownTimer))
 const agreed = ref(false)
 const needPhoneAuth = ref(false)
@@ -203,7 +210,7 @@ function completeWechatLogin() {
   needPhoneAuth.value = false
   clientStorage.set('app_role','user');appStore.restoreRole();chatStore.disconnect()
   chatStore.connect()
-  uni.reLaunch({ url: '/pages/index/index' })
+  uni.reLaunch({ url: redirectUrl.value })
 }
 
 function toggleAgree() {

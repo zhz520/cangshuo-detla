@@ -162,18 +162,17 @@ function handleUnauthorized(role) {
   }
 
   uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
-
-  setTimeout(() => {
-    _handlingUnauthorized = false
-    if (role === 'cs') {
-      uni.reLaunch({ url: '/pages/login/index' })
-    } else if (role === 'player') {
-      clientStorage.set('app_role', 'user')
-      uni.reLaunch({ url: '/pages/mine/index' })
-    } else {
-      uni.reLaunch({ url: '/pages/login/index' })
-    }
-  }, 1500)
+  const current=getCurrentPages().slice(-1)[0]?.route
+  const redirect=current&&!current.startsWith('pages/login/')?'/'+current:''
+  if (role === 'cs') {
+    uni.reLaunch({ url: '/pages/login/index?expired=1'+(redirect?'&redirect='+encodeURIComponent(redirect):'') })
+  } else if (role === 'player') {
+    clientStorage.set('app_role', 'user')
+    uni.reLaunch({ url: '/pages/mine/index' })
+  } else {
+    uni.reLaunch({ url: '/pages/login/index?expired=1'+(redirect?'&redirect='+encodeURIComponent(redirect):'') })
+  }
+  setTimeout(() => { _handlingUnauthorized = false }, 1500)
 }
 
 /**
