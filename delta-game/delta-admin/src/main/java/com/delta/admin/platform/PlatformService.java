@@ -208,7 +208,16 @@ public class PlatformService {
     public synchronized boolean featureEnabled(String id) {
         var state = store.load();
         return catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
-                .map(feature -> view(feature, state, claims(state)).enabled()).orElse(false);
+                .map(feature -> view(feature, state, claims(state)).enabled())
+                .orElse(false);
+    }
+    public synchronized boolean featureEnabled(String id, String requestDomain) {
+        if (requestDomain == null || requestDomain.isBlank()) return featureEnabled(id);
+        var state = store.load();
+        var claims = claims(state);
+        return catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
+                .map(feature -> view(feature, state, claims).enabled() && domainAllowed(claims, requestDomain))
+                .orElse(false);
     }
     public synchronized void requireFeature(String id, String requestDomain) {
         var state = store.load();

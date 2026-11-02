@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.delta.admin.controller.AdminReviewController;
+import com.delta.admin.controller.PlayerDirectoryLayoutController;
 import com.delta.admin.controller.PlayerReviewController;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;
@@ -11,6 +12,7 @@ import com.delta.common.security.filter.JwtAuthenticationFilter;
 import com.delta.common.security.handler.AccessDeniedHandlerImpl;
 import com.delta.common.security.handler.AuthenticationEntryPointImpl;
 import com.delta.common.security.service.TokenService;
+import com.delta.common.security.service.StaffPermissions;
 import com.delta.order.controller.ReviewController;
 import com.delta.order.entity.Order;
 import com.delta.order.service.OrderService;
@@ -32,6 +34,7 @@ import com.delta.pay.service.PaymentService;
 import com.delta.pay.service.TransactionService;
 import com.delta.user.service.UserService;
 import com.delta.system.service.SysConfigService;
+import com.delta.admin.platform.PlatformService;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +70,7 @@ class PlayerDirectoryIntegrationTest {
     @EnableAutoConfiguration(excludeName={"com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure"})
     @MapperScan({"com.delta.player.mapper","com.delta.order.mapper","com.delta.common.mapper"})
     @Import({AdminPlayerController.class,AdminPlayerLevelController.class,PlayerController.class,PublicPlayerChatController.class,FileController.class,PlayerLevelService.class,PlayerDirectoryService.class,PublicPlayerController.class,PlayerReviewController.class,AdminReviewController.class,ReviewController.class,
+            PlayerDirectoryLayoutController.class,
             SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,
             GlobalExceptionHandler.class,PlayerServiceImpl.class,ReviewServiceImpl.class})
     static class Config {
@@ -87,6 +91,8 @@ class PlayerDirectoryIntegrationTest {
     @MockBean TransactionService transactions;
     @MockBean UserService users;
     @MockBean SysConfigService configs;
+    @MockBean PlatformService platform;
+    @MockBean(name = "staffPermissions") StaffPermissions permissions;
     @MockBean com.delta.player.service.PlayerGovernanceService governance;
     @MockBean com.delta.system.service.FeatureAuditService featureAudit;
 
@@ -103,6 +109,21 @@ class PlayerDirectoryIntegrationTest {
                 .andExpect(jsonPath("$.data.phone").doesNotExist()).andExpect(jsonPath("$.data.realName").doesNotExist())
                 .andExpect(jsonPath("$.data.openid").doesNotExist()).andExpect(jsonPath("$.data.balance").doesNotExist());
         mvc.perform(get("/app/players/2")).andExpect(jsonPath("$.code").value(404));
+    }
+    @Test void licensedLayoutSelectionFallsBackToGridWhenFeatureIsDisabled() throws Exception {
+        jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group) VALUES(?,?,?,?,?)",
+                "player.directory.layout", "打手列表布局", "list", "text", "打手与审核");
+        when(platform.featureEnabled("player_directory_layouts", "localhost")).thenReturn(false, true);
+        when(permissions.allowed("system.manage")).thenReturn(true);
+        mvc.perform(get("/app/players/layout")).andExpect(jsonPath("$.data.layout").value("grid"))
+                .andExpect(jsonPath("$.data.licensed").value(false));
+        mvc.perform(get("/app/players/layout")).andExpect(jsonPath("$.data.layout").value("list"))
+                .andExpect(jsonPath("$.data.licensed").value(true));
+        mvc.perform(put("/admin/player-layout").with(role("ADMIN", 1)).contentType("application/json")
+                .content("{\"layout\":\"compact\"}")).andExpect(jsonPath("$.data.layout").value("compact"));
+        mvc.perform(get("/app/players/layout")).andExpect(jsonPath("$.data.layout").value("compact"));
+        mvc.perform(put("/admin/player-layout").with(role("ADMIN", 1)).contentType("application/json")
+                .content("{\"layout\":\"unknown\"}")).andExpect(jsonPath("$.code").value(400));
     }
 
     @Test

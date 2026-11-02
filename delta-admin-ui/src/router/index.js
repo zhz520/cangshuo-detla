@@ -272,6 +272,7 @@ const routes = [
         meta: { title: '轮播图管理', roles: ['admin'] }
       },
       {path:'reward-grab',name:'RewardGrabSettings',component:()=>import('@/views/system/RewardGrabSettings.vue'),meta:{title:'打赏与抢单设置',roles:['admin']}},
+      {path:'player-layout',name:'PlayerLayoutSettings',component:()=>import('@/views/system/PlayerLayoutSettings.vue'),meta:{title:'打手列表布局',roles:['admin'],permission:'system.manage',feature:'player_directory_layouts'}},
       {
         path: 'config',
         name: 'SysConfig',

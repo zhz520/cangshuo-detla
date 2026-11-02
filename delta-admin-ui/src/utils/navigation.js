@@ -18,7 +18,7 @@ const sections = [
     { id: 'finance', title: '结算与统计', icon: 'DataAnalysis', paths: ['/statistics/income-daily', '/settlements', '/withdraw', '/rewards', '/platform/income-analysis', '/system/recharge-packages'] }
   ] },
   { id: 'settings', title: '平台设置', items: [
-    { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/reward-grab'] },
+    { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/reward-grab', '/system/player-layout'] },
     { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/operation-log'] }
   ] },
   { id: 'updates', title: '功能更新', items: [

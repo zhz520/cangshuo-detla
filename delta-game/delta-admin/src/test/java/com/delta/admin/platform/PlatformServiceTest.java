@@ -54,6 +54,9 @@ class PlatformServiceTest {
         assertThat(email.entryPath()).isEqualTo("/system/email-notifications"); assertThat(email.enabled()).isFalse(); assertThat(email.termDays()).isEqualTo(365);
         var identity=platform.features().stream().filter(feature->feature.id().equals("identity_verification")).findFirst().orElseThrow();
         assertThat(identity.paid()).isTrue(); assertThat(identity.priceCents()).isEqualTo(2000); assertThat(identity.enabled()).isFalse();
+        var layouts=platform.features().stream().filter(feature->feature.id().equals("player_directory_layouts")).findFirst().orElseThrow();
+        assertThat(layouts.paid()).isTrue(); assertThat(layouts.priceCents()).isEqualTo(500);
+        assertThat(layouts.minVersion()).isEqualTo("1.5.0"); assertThat(layouts.entryPath()).isEqualTo("/system/player-layout");
         assertThatThrownBy(() -> platform.setEnabled("advanced_income_reports", true)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> platform.setEnabled("official_wechat_notifications", true)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> platform.requireFeature("advanced_income_reports")).isInstanceOf(BusinessException.class);

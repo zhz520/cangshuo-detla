@@ -1,6 +1,7 @@
 const dedicatedConfigKeys = new Set([
   'wallet.recharge.packages',
   'features.reward_grab',
+  'player.directory.layout',
   'player.deposit_required'
 ])
 

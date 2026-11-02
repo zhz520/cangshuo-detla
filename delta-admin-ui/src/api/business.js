@@ -218,6 +218,9 @@ export const playerLevelList = () => request({url:'/admin/player-level/list',met
 export const playerLevelCreate = data => request({url:'/admin/player-level',method:'post',data})
 export const playerLevelUpdate = (id,data) => request({url:`/admin/player-level/${id}`,method:'put',data})
 export const playerLevelDelete = id => request({url:`/admin/player-level/${id}`,method:'delete'})
+
+export const getPlayerLayoutSettings = () => request({url:'/admin/player-layout',method:'get'})
+export const savePlayerLayoutSettings = layout => request({url:'/admin/player-layout',method:'put',data:{layout}})
 export function uploadProfileAudio(file){const data=new FormData();data.append('file',file);return request({url:'/common/file/profile-audio',method:'post',data,headers:{'Content-Type':'multipart/form-data'}})}
 export function uploadFile(file) {
   const formData = new FormData()

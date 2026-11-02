@@ -37,4 +37,4 @@ INSERT INTO `order`(id,order_no,user_id,player_id,product_id,product_name,status
 INSERT INTO review(id,order_id,user_id,player_id,product_id,rating,content,deleted)
  VALUES(9,99,7,1,11,4,'服务认真',0),(10,98,7,1,11,1,'旧评价',1);
 
-CREATE TABLE IF NOT EXISTS sys_config(id BIGINT AUTO_INCREMENT PRIMARY KEY,config_key VARCHAR(128),config_value VARCHAR(512));
+CREATE TABLE IF NOT EXISTS sys_config(id BIGINT AUTO_INCREMENT PRIMARY KEY,config_key VARCHAR(128) UNIQUE,config_name VARCHAR(128),config_value TEXT,value_type VARCHAR(32),config_group VARCHAR(64),remark VARCHAR(255),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);

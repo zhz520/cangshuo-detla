@@ -159,6 +159,14 @@ class RewardGrabIntegrationTest {
         mvc.perform(post("/order/101/reward").with(role("USER",7)).contentType("application/json").content(body("normal","10"))).andExpect(jsonPath("$.code").value(409));
         mvc.perform(post("/order/100/reward").with(role("USER",7)).contentType("application/json").content(body("different","10"))).andExpect(jsonPath("$.code").value(409));
     }
+    @Test void enabledRewardIsDiscoverableFromCustomerOrderAndPlayerPages() throws Exception {
+        mvc.perform(get("/user/rewards/eligible-orders").param("playerId", "1").with(role("USER", 7)))
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data[0].id").value(100))
+                .andExpect(jsonPath("$.data[0].productName").value("体验单"));
+        mvc.perform(get("/order/100/reward").with(role("USER", 7)))
+                .andExpect(jsonPath("$.data.eligible").value(true)).andExpect(jsonPath("$.data.minAmount").value(1))
+                .andExpect(jsonPath("$.data.maxAmount").value(200)).andExpect(jsonPath("$.data.balance").value(100));
+    }
     @Test void invalidOwnersRolesAmountsAndUnfinishedOrdersNeverMoveMoney() throws Exception {
         mvc.perform(post("/order/100/reward").contentType("application/json").content(body("a","10"))).andExpect(jsonPath("$.code").value(401));
         mvc.perform(post("/order/100/reward").with(role("PLAYER",1)).contentType("application/json").content(body("a","10"))).andExpect(jsonPath("$.code").value(403));

@@ -7,6 +7,7 @@ export const createPlayerChat = (id) => post(`/app/players/${id}/chat`, {}, { ro
 export const getHomepageRevisions=()=>get('/player/homepage/revisions',{}, {role:'player'})
 export const updatePlayerHomepage = (data) => put('/player/homepage', data, { role: 'player' })
 export const getPublicPlayers = (params) => get('/app/players', params, { auth: false, loading: false })
+export const getPublicPlayerLayout = () => get('/app/players/layout', {}, { auth: false, loading: false })
 export const getPublicPlayer = (id) => get(`/app/players/${id}`, {}, { auth: false, loading: false })
 export const getPublicPlayerReviews = (id, params) => get(`/app/players/${id}/reviews`, params, { auth: false, loading: false })
 export const getPlayerReviewableOrders = (id) => get(`/app/players/${id}/reviewable-orders`, {}, { role: 'user', loading: false })

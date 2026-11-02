@@ -18,8 +18,11 @@
           <text>{{ selectedName }}</text>
           <text>{{ total }} 位打手</text>
         </view>
-        <view class="player-grid">
+        <view v-if="layout==='grid'" class="player-grid">
           <PlayerShowcaseCard v-for="player in players" :key="player.id" :player="player" />
+        </view>
+        <view v-if="layout!=='grid'" class="player-list" :class="{ compact: layout==='compact' }">
+          <PlayerListCard v-for="player in players" :key="player.id" :player="player" :compact="layout==='compact'" />
         </view>
         <EmptyState v-if="!loading && !loadError && !players.length" text="暂无符合条件的打手" />
         <view v-if="loading" class="hint">加载中...</view>
@@ -36,8 +39,9 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import PlayerShowcaseCard from '@/components/PlayerShowcaseCard.vue'
+import PlayerListCard from '@/components/PlayerListCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { getPlayerCategories, getPublicPlayers } from '@/api/player'
+import { getPlayerCategories, getPublicPlayerLayout, getPublicPlayers } from '@/api/player'
 
 const levels = ref([])
 const players = ref([])
@@ -47,6 +51,7 @@ const loading = ref(false)
 const loadError = ref(false)
 const finished = ref(false)
 const total = ref(0)
+const layout = ref('grid')
 let generation = 0
 let pageNum = 1
 
@@ -57,7 +62,11 @@ const selectedName = computed(() => {
 
 onShow(async () => {
   try {
-    levels.value = (await getPlayerCategories()).data || []
+    const [levelResult, layoutResult] = await Promise.allSettled([getPlayerCategories(), getPublicPlayerLayout()])
+    if (levelResult.status === 'fulfilled') levels.value = levelResult.value.data || []
+    if (layoutResult.status === 'fulfilled' && ['grid', 'list', 'compact'].includes(layoutResult.value.data?.layout)) {
+      layout.value = layoutResult.value.data.layout
+    }
     if (selectedLevel.value !== null && !levels.value.some(level => level.id === selectedLevel.value)) {
       selectedLevel.value = null
     }
@@ -116,6 +125,7 @@ function loadMore() {
 .level-item{display:block;flex-shrink:0;white-space:nowrap;padding:14rpx 24rpx;font-size:25rpx;color:#73777e;border-radius:999rpx;&.active{background:#17191c;color:#fff;font-weight:600}}
 .directory-scroll{flex:1;height:0;padding:0 24rpx;box-sizing:border-box}
 .player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16rpx}
+.player-list{display:grid;gap:16rpx}.player-list.compact{gap:10rpx}
 .hint{display:block;text-align:center;padding:40rpx 0;color:#969aa1;font-size:24rpx}
 .result-heading{display:flex;justify-content:space-between;padding:28rpx 0;font-size:28rpx;font-weight:700;text:last-child{font-size:24rpx;color:#858992;font-weight:400}}
 .bottom-space{height:calc(140rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)))}
