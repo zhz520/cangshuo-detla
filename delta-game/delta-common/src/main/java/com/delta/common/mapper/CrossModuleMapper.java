@@ -145,6 +145,9 @@ public interface CrossModuleMapper {
     @Select("SELECT p.id FROM player p INNER JOIN user u ON u.openid = p.openid WHERE u.id = #{userId} LIMIT 1")
     Long selectPlayerIdByUserId(@Param("userId") Long userId);
 
+    @Select("SELECT u.id FROM `user` u JOIN player p ON p.openid=u.openid AND p.deleted=0 WHERE p.id=#{playerId} AND u.deleted=0 LIMIT 1")
+    Long selectUserIdByPlayerId(@Param("playerId") Long playerId);
+
     @Update("UPDATE player SET is_online = 1, last_online_at = NOW() WHERE id = #{playerId}")
     int setPlayerOnline(@Param("playerId") Long playerId);
 

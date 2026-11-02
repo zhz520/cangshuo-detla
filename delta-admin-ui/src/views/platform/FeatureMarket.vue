@@ -50,6 +50,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useResponsive } from '@/utils/responsive'
 import { getPlatformOverview, getPlatformFeatures, importPlatformLicense, setPlatformFeatureEnabled } from '@/api/platform'
+import {loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 
 const { isCompact } = useResponsive()
 const overview = ref(null), features = ref([]), loading = ref(false), error = ref(''), changing = ref('')
@@ -66,7 +67,7 @@ async function load() {
 }
 async function toggle(feature, enabled) {
   changing.value = feature.id
-  try { const response = await setPlatformFeatureEnabled(feature.id, enabled); features.value = response.data; ElMessage.success(enabled ? '功能已启用' : '功能已关闭') }
+  try { const response = await setPlatformFeatureEnabled(feature.id, enabled); features.value = response.data; await loadPlatformFeatureVisibility(true); ElMessage.success(enabled ? '功能已启用' : '功能已关闭') }
   catch { /* Request interceptor displays the server error. */ }
   finally { changing.value = '' }
 }

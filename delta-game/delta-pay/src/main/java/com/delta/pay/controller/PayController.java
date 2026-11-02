@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.pay.config.WxPayConfiguration;
 import com.delta.pay.entity.Payment;
 import com.delta.pay.entity.Transaction;
@@ -50,6 +51,7 @@ public class PayController {
     private final OrderService orderService;
     private final WxPayConfiguration wxPayConfiguration;
     private final UserService userService;
+    private final CrossModuleMapper crossModuleMapper;
 
     @Value("${wx.pay.key-store-path:/www/data/private/wxpay}")
     private String uploadPath;
@@ -238,7 +240,9 @@ public class PayController {
             return R.fail("微信支付未启用，暂无法支付押金");
         }
 
-        Long userId = SecurityUtils.getUserId();
+        Long actorId = SecurityUtils.getUserId();
+        Long userId = "PLAYER".equals(SecurityUtils.getUserType()) ? crossModuleMapper.selectUserIdByPlayerId(actorId) : actorId;
+        if(userId==null) return R.fail("未找到押金所属用户");
         Payment payment = paymentService.createPlayerDepositPayment(userId);
         User user = userService.getById(userId);
         if (user == null || user.getOpenid() == null) {

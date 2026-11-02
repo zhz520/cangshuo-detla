@@ -32,7 +32,7 @@
       </view>
       <!-- 菜单 -->
       <view class="menu-list">
-        <view class="menu-item" @click="go('/pages/wechat/binding?role=player')"><text>公众号消息通知</text><text>›</text></view>
+        <view v-if="officialWechat.isEnabled('player')" class="menu-item" @click="go('/pages/wechat/binding?role=player')"><text>公众号消息通知</text><text>›</text></view>
       <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" /><text>提现记录</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现账户</text><text class="arrow">></text></view>
@@ -76,10 +76,12 @@ import { useAppStore } from '@/store/app'
 import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
 import { getPlayerHome, getMyWork, toggleOnlineStatus } from '@/api/player'
+import { useOfficialWechatStore } from '@/store/official-wechat'
 
 const playerStore = usePlayerStore()
 const appStore = useAppStore()
 const remindStore = useRemindStore()
+const officialWechat = useOfficialWechatStore()
 const homeData = ref({})
 const recentOrders = ref([])
 
@@ -87,6 +89,7 @@ const isOnline = computed(() => playerStore.playerInfo?.isOnline === 1)
 
 onShow(async () => {
   try { uni.hideHomeButton() } catch (_) {}
+  officialWechat.load('player')
   playerStore.fetchProfile()
   remindStore.fetchPlayerRemind()
   try { const res = await getPlayerHome(); homeData.value = res.data || {} } catch (e) {}

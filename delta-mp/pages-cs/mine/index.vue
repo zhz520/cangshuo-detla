@@ -13,7 +13,7 @@
 
       <!-- 订单服务 -->
       <view class="menu-list">
-        <view class="menu-item" @click="go('/pages/wechat/binding?role=cs')"><text>公众号消息通知</text><text>›</text></view>
+        <view v-if="officialWechat.isEnabled('cs')" class="menu-item" @click="go('/pages/wechat/binding?role=cs')"><text>公众号消息通知</text><text>›</text></view>
       <view class="menu-item" @click="go('/pages-cs/order/list')">
           <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
           <text>订单管理</text><text class="arrow">></text>
@@ -64,12 +64,14 @@ import { useAppStore } from '@/store/app'
 import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
 import { getCsInfo, removeCsToken } from '@/utils/auth'
+import { useOfficialWechatStore } from '@/store/official-wechat'
 
 const appStore = useAppStore()
 const remindStore = useRemindStore()
+const officialWechat = useOfficialWechatStore()
 const csInfo = computed(() => getCsInfo() || {})
 
-onShow(() => { remindStore.fetchCsRemind() })
+onShow(() => { remindStore.fetchCsRemind();officialWechat.load('cs') })
 
 function go(url) { uni.navigateTo({ url }) }
 function goProfileEdit() { uni.navigateTo({ url: '/pages-cs/profile/edit' }) }

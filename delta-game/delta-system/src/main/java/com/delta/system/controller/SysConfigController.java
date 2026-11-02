@@ -83,6 +83,8 @@ public class SysConfigController {
         }
         // 打手押金开关
         map.put("player_deposit_required", sysConfigService.getConfigValue("player.deposit_required", "true"));
+        map.put("player_deposit_mode", sysConfigService.getConfigValue("player.deposit_mode",
+                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE"));
         // 打手押金金额（元）
         map.put("player_deposit_amount", sysConfigService.getConfigValue("player.deposit_amount", "100"));
         // 微信支付总开关（支付模块运行时动态读取）
@@ -118,6 +120,9 @@ public class SysConfigController {
                 "开启后浏览器刷新会展示已发布的首页公告，切换页面不会重复弹出；关闭后仅在新版本公告首次出现时提醒");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
         ensureConfig("sms.aliyun.template_code.verification","短信验证码模板 Code","","text","短信配置","已审核模板，使用code作为验证码参数名");
+        ensureConfig("player.deposit_mode", "打手押金政策",
+                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE",
+                "text", "打手配置", "REQUIRED：入驻必须缴纳；NONE：全部不收；BEFORE_WITHDRAW：入驻免交，提现前按等级补交");
         ensureConfig("player.deposit_amount", "打手入驻押金金额", "100", "number", "打手配置",
                 "开启打手押金时的应支付金额，单位：元");
         ensureConfig("wallet.recharge.packages", "余额充值套餐",
@@ -237,6 +242,9 @@ public class SysConfigController {
             } catch(Exception e) {
                 throw new com.delta.common.exception.BusinessException(400,"企业微信客服链接须为有效的 HTTPS 地址");
             }
+        }
+        if("player.deposit_mode".equals(key)) {
+            if(!java.util.Set.of("REQUIRED","NONE","BEFORE_WITHDRAW").contains(value)) throw new com.delta.common.exception.BusinessException(400,"打手押金政策不正确");
         }
         if(java.util.Set.of("withdraw.min_amount","player.deposit_amount","sms.aliyun.player_fee").contains(key)) {
             try{var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.stripTrailingZeros().scale()>2 || n.compareTo(new java.math.BigDecimal("1000000"))>0)throw new IllegalArgumentException();}

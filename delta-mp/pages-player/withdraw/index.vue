@@ -4,6 +4,10 @@
       <text class="label">可提现金额（元）</text>
       <text class="amount">¥{{ balance }}</text>
     </view>
+    <view v-if="depositStatus?.needsPayment" class="deposit-card">
+      <view><text class="deposit-title">提现前需补交押金</text><text class="deposit-tip">当前等级应缴 ¥{{ Number(depositStatus.requiredAmount||0).toFixed(2) }}，已缴 ¥{{ Number(depositStatus.paidAmount||0).toFixed(2) }}，还需补交 ¥{{ Number(depositStatus.outstandingAmount||0).toFixed(2) }}</text></view>
+      <button class="deposit-button" :disabled="payingDeposit" @click="payDeposit">{{ payingDeposit ? '支付中…' : '补交押金' }}</button>
+    </view>
     <!-- 提现金额 -->
     <view class="form-card">
       <view class="form-item">
@@ -45,18 +49,35 @@
 import { ref, reactive } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
-import { applyWithdraw, getAccountList, getEarningsSummary } from '@/api/player'
+import { applyWithdraw, getAccountList, getEarningsSummary, getWithdrawDepositStatus } from '@/api/player'
+import { createPlayerDeposit } from '@/api/pay'
 
 const balance = ref('0.00')
 const form = reactive({ amount: '', accountId: '', remark: '' })
 const accounts = ref([])
 const selectedAccount = ref(null)
 const showAccountPicker = ref(false)
+const depositStatus = ref(null),payingDeposit=ref(false)
 
 onShow(async () => {
   try { const res = await getEarningsSummary(); balance.value = Number(res.data?.balance || 0).toFixed(2) } catch (e) {}
   try { const res = await getAccountList(); accounts.value = res.data || [] } catch (e) {}
+  try { depositStatus.value = (await getWithdrawDepositStatus()).data } catch (e) {}
 })
+async function payDeposit(){
+  if(payingDeposit.value)return
+  payingDeposit.value=true
+  try{
+    const res=await createPlayerDeposit({role:'player'})
+    const {paymentNo,timeStamp,nonceStr,package:pkg,signType,paySign}=res.data
+    await new Promise((resolve,reject)=>uni.requestPayment({provider:'wxpay',timeStamp,nonceStr,package:pkg,signType:signType||'RSA',paySign,success:resolve,fail:reject}))
+    uni.showToast({title:'支付已提交，正在确认',icon:'none'})
+    await new Promise(resolve=>setTimeout(resolve,2000))
+    depositStatus.value=(await getWithdrawDepositStatus()).data
+  }catch(e){
+    if(!e?.errMsg?.includes('cancel'))uni.showToast({title:e?.msg||'补交押金失败',icon:'none'})
+  }finally{payingDeposit.value=false}
+}
 
 function accountDisplay(a) { return `${a.type === 'ALIPAY' ? '支付宝' : a.type === 'WECHAT' ? '微信' : a.type === 'BANK' ? '银行卡' : a.type} ${(a.accountNo || '').replace(/(.{3}).*(.{4})/, '$1****$2')}` }
 function selectAccount(a) { selectedAccount.value = a; form.accountId = a.id; showAccountPicker.value = false }
@@ -78,6 +99,7 @@ function goAccounts() { uni.navigateTo({ url: '/pages-player/account/list' }) }
 .balance-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .label { font-size: 26rpx; opacity: 0.85; display: block; } .amount { font-size: 56rpx; font-weight: bold; display: block; margin-top: 12rpx; }
 }
+.deposit-card{margin:24rpx;padding:24rpx;border:1rpx solid #ead8bd;border-radius:12rpx;background:#fff8ed;display:flex;flex-direction:column;gap:20rpx}.deposit-title{display:block;font-size:28rpx;font-weight:700;color:#17191c}.deposit-tip{display:block;margin-top:8rpx;color:#73777e;font-size:24rpx;line-height:1.7}.deposit-button{align-self:flex-start;margin:0;padding:14rpx 28rpx;border-radius:999rpx;background:#17191c;color:#fff;font-size:26rpx}
 .form-card { margin: 24rpx; background: #f4f5f6; border-radius: 12rpx; padding: 0 24rpx; }
 .form-item { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f4f5f6;
   .item-label { font-size: 28rpx; color: #17191c; width: 160rpx; } .input { flex: 1; font-size: 28rpx; }

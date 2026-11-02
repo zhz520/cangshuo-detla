@@ -10,6 +10,10 @@ public interface PaymentService extends IService<Payment> {
     Payment createRechargePayment(String packageId, Long userId);
     /** 创建打手入驻押金支付（金额来自 sys_config: player.deposit_amount），返回Payment含paymentNo */
     Payment createPlayerDepositPayment(Long userId);
+    /** 当前用户按押金策略和打手等级应缴纳的总押金。 */
+    java.math.BigDecimal playerDepositRequiredAmount(Long userId);
+    /** 已支付成功的打手押金合计。 */
+    java.math.BigDecimal playerDepositPaidAmount(Long userId);
     /** 校验打手押金支付是否有效（已支付、金额匹配当前配置、归属当前用户） */
     boolean verifyPlayerDepositPayment(String paymentNo, Long userId);
     void handleWxPayV3Notify(String jsonData, String serial, String nonce, String timestamp, String signature);

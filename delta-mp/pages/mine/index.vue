@@ -57,7 +57,7 @@
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
         <view class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
-        <view class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
+        <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages/agreement/user')">
           <image class="menu-icon" src="/static/icons/暂无权限.svg" mode="aspectFit" />
           <text>用户协议</text><text class="arrow">></text>
@@ -86,16 +86,19 @@ import { getUserToken, setPlayerToken } from '@/utils/auth'
 import { switchToPlayerToken } from '@/api/auth'
 import { getPlayerApplicationStatus } from '@/api/player'
 import { openCustomerService } from '@/utils/customer-service'
+import { useOfficialWechatStore } from '@/store/official-wechat'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import TechSupportFooter from '@/components/TechSupportFooter.vue'
 const userStore = useUserStore()
 const appStore = useAppStore()
 const chatStore = useChatStore()
+const officialWechat = useOfficialWechatStore()
 const longPressCount = ref(0)
 const systemUnread = computed(() => chatStore.messageUnreadCount)
 
 // 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
+  officialWechat.load('user')
   const savedToken = getUserToken()
   if (savedToken && !userStore.token) {
     userStore.token = savedToken

@@ -106,7 +106,9 @@ public class PlayerController {
         player.setLevel(null); // Platform levels can only be assigned by an administrator.
         if (player.getIntroduction() != null && player.getIntroduction().length() > 1000) return R.fail("个人简介不能超过1000字");
         Long userId = SecurityUtils.getUserId();
-        boolean depositRequired = "true".equals(sysConfigService.getConfigValue("player.deposit_required", "true"));
+        String depositMode = sysConfigService.getConfigValue("player.deposit_mode",
+                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required", "true")) ? "REQUIRED" : "NONE");
+        boolean depositRequired = "REQUIRED".equalsIgnoreCase(depositMode);
         String depositPaymentNo = player.getDepositPaymentNo();
         if (depositRequired) {
             if (depositPaymentNo == null || depositPaymentNo.isBlank()) {
@@ -115,6 +117,8 @@ public class PlayerController {
             if (!paymentService.verifyPlayerDepositPayment(depositPaymentNo, userId)) {
                 return R.fail("押金支付无效或未到账，请完成支付后再提交");
             }
+        } else {
+            depositPaymentNo = null;
         }
         User applicant=userService.getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>().eq(User::getId,userId).last("FOR UPDATE"));
         if(applicant==null) return R.fail(404,"用户不存在");

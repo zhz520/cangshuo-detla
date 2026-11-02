@@ -23,7 +23,8 @@ public class AdminPlayerLevelController {
     public record LevelRequest(@NotBlank @Size(max=30) String name,
             @NotNull @Min(0) @Max(99999) Integer sortOrder, @NotNull @Min(0) @Max(1) Integer status,
             @Min(0) @Max(1) Integer grabCaptchaRequired,
-            @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=2) java.math.BigDecimal priceIncreaseRate) {}
+            @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=2) java.math.BigDecimal priceIncreaseRate,
+            @DecimalMin("0") @DecimalMax("1000000") @Digits(integer=7,fraction=2) java.math.BigDecimal withdrawDepositAmount) {}
     @GetMapping("/list")
     public R<List<PlayerLevel>> list() { return R.ok(levels.ordered(false)); }
     @PostMapping
@@ -44,6 +45,8 @@ public class AdminPlayerLevelController {
         PlayerLevel before=id==null?null:levels.getById(id);
         level.setPriceIncreaseRate(body.priceIncreaseRate()!=null?body.priceIncreaseRate():
                 before==null?java.math.BigDecimal.ZERO:before.getPriceIncreaseRate());
+        level.setWithdrawDepositAmount(body.withdrawDepositAmount()!=null?body.withdrawDepositAmount():
+                before==null?java.math.BigDecimal.ZERO:before.getWithdrawDepositAmount());
         levels.saveOrUpdate(level);featureAudit.record("修改打手等级验证规则",level.getId().longValue(),before,level);return R.ok(level);
     }
     @DeleteMapping("/{id}")

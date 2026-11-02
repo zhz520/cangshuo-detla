@@ -61,6 +61,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {can} from '@/utils/staff-permissions'
 import {buildNavigation} from '@/utils/navigation'
+import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAllowed} from '@/utils/platform-feature-visibility'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
@@ -95,7 +96,10 @@ const logoInitial = computed(() => {
 const activeMenu = computed(() => route.meta.activeMenu || route.path)
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
 
-const menuGroups = computed(() => buildNavigation(router.options.routes, role.value, can))
+const menuGroups = computed(() => {
+  void enabledPlatformFeatures.value
+  return buildNavigation(router.options.routes, role.value, can, platformFeatureAllowed)
+})
 
 const profileDialogVisible = ref(false)
 
@@ -119,6 +123,7 @@ function goChat() {
 }
 
 onMounted(() => {
+  loadPlatformFeatureVisibility()
   chatStore.start()
 })
 onUnmounted(() => {

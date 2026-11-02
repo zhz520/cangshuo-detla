@@ -37,7 +37,7 @@ CREATE TABLE `player_level` (id int NOT NULL AUTO_INCREMENT,
   deleted tinyint NOT NULL DEFAULT 0,
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id) ,grab_captcha_required INT DEFAULT 1,price_increase_rate DECIMAL(5,2) DEFAULT 0);
+  PRIMARY KEY (id) ,grab_captcha_required INT DEFAULT 1,price_increase_rate DECIMAL(5,2) DEFAULT 0,withdraw_deposit_amount DECIMAL(10,2) DEFAULT 0);
 CREATE TABLE `user` (`id` bigint NOT NULL AUTO_INCREMENT,
   `openid` varchar(64) NOT NULL,
   `nickname` varchar(64) NOT NULL DEFAULT '微信用户',

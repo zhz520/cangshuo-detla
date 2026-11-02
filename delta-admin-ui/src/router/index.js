@@ -243,7 +243,7 @@ const routes = [
     redirect: '/system/admin',
     meta: { title: '系统管理', icon: 'Setting', roles: ['admin'] },
     children: [
-      {path:'wechat-notices',component:()=>import('@/views/system/WechatNotices.vue'),meta:{title:'公众号通知记录',roles:['admin'],permission:'system.manage'}},
+      {path:'wechat-notices',component:()=>import('@/views/system/WechatNotices.vue'),meta:{title:'公众号通知记录',roles:['admin'],permission:'system.manage',feature:'official_wechat_notifications'}},
       {path:'roles',component:()=>import('@/views/system/StaffRoles.vue'),meta:{title:'角色与权限',roles:['admin'],permission:'system.manage'}},
       {
         path: 'admin',
@@ -319,6 +319,7 @@ router.beforeEach(async (to, from, next) => {
       try{await loadStaffPermissions()}catch(error){if(error.code===401){removeToken();next('/login');return}if(to.path!=='/403'){next('/403');return}}
       const permission=to.meta.permission||permissionFor(to.path)
       if(permission&&!can(permission)){next('/403');return}
+      if(to.meta.feature){const {loadPlatformFeatureVisibility,platformFeatureAllowed}=await import('@/utils/platform-feature-visibility');await loadPlatformFeatureVisibility();if(!platformFeatureAllowed(to.meta.feature)){next('/403');return}}
       const roles = to.meta.roles
       if (roles && !roles.includes(user?.role)) {
         next('/403')

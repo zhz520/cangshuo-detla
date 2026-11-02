@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS player_level;
 DROP TABLE IF EXISTS product;
 DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `order`;
-CREATE TABLE player_level(id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30),sort_order INT DEFAULT 0,status INT DEFAULT 1,grab_captcha_required INT DEFAULT 1,price_increase_rate DECIMAL(5,2) DEFAULT 0,deleted INT DEFAULT 0,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE player_level(id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30),sort_order INT DEFAULT 0,status INT DEFAULT 1,grab_captcha_required INT DEFAULT 1,price_increase_rate DECIMAL(5,2) DEFAULT 0,withdraw_deposit_amount DECIMAL(10,2) DEFAULT 0,deleted INT DEFAULT 0,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO player_level(id,name,sort_order,status) VALUES(1,'高级打手',20,1),(2,'金牌打手',10,1),(3,'停用分类',30,0);
 CREATE TABLE player (
  id BIGINT PRIMARY KEY, openid VARCHAR(64), nickname VARCHAR(64), avatar VARCHAR(512),

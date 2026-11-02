@@ -11,6 +11,7 @@ export const useSiteStore = defineStore('site', () => {
   const playerCommissionRate = ref(0)
   /** 打手入驻押金开关 */
   const depositRequired = ref(true)
+  const depositMode = ref('REQUIRED')
   /** 后台微信支付总开关 */
   const wxPayEnabled = ref(false)
   /** 公告是否在浏览器刷新后再次展示 */
@@ -40,6 +41,9 @@ export const useSiteStore = defineStore('site', () => {
         }
         if (data.player_deposit_required !== undefined) {
           depositRequired.value = data.player_deposit_required === 'true'
+        }
+        if (data.player_deposit_mode !== undefined) {
+          depositMode.value = ['REQUIRED','NONE','BEFORE_WITHDRAW'].includes(data.player_deposit_mode) ? data.player_deposit_mode : 'REQUIRED'
         }
         if (data.wx_pay_enabled !== undefined) {
           wxPayEnabled.value = data.wx_pay_enabled === 'true'
@@ -76,5 +80,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

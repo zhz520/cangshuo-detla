@@ -13,7 +13,7 @@ export const createRechargePayment = (packageId) => post(`/pay/recharge/wx/${pac
 export const createH5RechargePayment = (packageId) => post(`/pay/recharge/h5/${packageId}`)
 
 /** 打手入驻押金支付(100元)，返回paymentNo及wx.requestPayment参数 */
-export const createPlayerDeposit = () => post('/pay/player-deposit')
+export const createPlayerDeposit = (options = {}) => post('/pay/player-deposit', {}, options)
 
 /** 余额支付 */
 export const balancePay = (orderId) => post(`/pay/balance/${orderId}`)

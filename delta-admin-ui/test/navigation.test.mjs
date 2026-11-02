@@ -31,3 +31,9 @@ test('a limited administrator cannot see finance, chat or configuration entries 
     screen('/platform/income-analysis','收益对比分析'),screen('/chat/record','聊天记录'),screen('/system/config','系统配置')]
   assert.deepEqual(paths(buildNavigation(routes,'admin',permission=>permission==='order.read')),['/order/list'])
 })
+
+test('paid feature routes are hidden until the platform reports them enabled',()=>{
+  const routes=[screen('/dashboard','仪表盘'),screen('/system/wechat-notices','公众号通知记录',['admin'],{permission:'system.manage',feature:'official_wechat_notifications'})]
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>false)),['/dashboard'])
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/system/wechat-notices'])
+})

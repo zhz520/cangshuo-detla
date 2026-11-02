@@ -23,6 +23,11 @@
             <el-option label="系统内置客服" value="internal" />
             <el-option label="第三方企业微信链接" value="external" />
           </el-select>
+          <el-select v-else-if="item.configKey === 'player.deposit_mode'" v-model="item.configValue" style="width:280px">
+            <el-option label="必须交押金（原配置）" value="REQUIRED" />
+            <el-option label="全部不需要押金" value="NONE" />
+            <el-option label="入驻免押金，提现前补交" value="BEFORE_WITHDRAW" />
+          </el-select>
           <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" :type="isSecretKey(item.configKey)?'password':'text'" :show-password="isSecretKey(item.configKey)" autocomplete="new-password" />
           <el-input-number v-else-if="item.valueType === 'number'" v-model.number="item.configValue" :controls="false" style="width:200px" />
           <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />
@@ -40,11 +45,12 @@ import { ref, computed, onMounted } from 'vue'
 import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '@/api/system'
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
+import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 const loading = ref(false), submitting = ref(false)
 function isSecretKey(key){return ['wx.pay.api-v3-key','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
-const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab'].includes(c.configKey)))
+const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab','player.deposit_required'].includes(c.configKey) && (c.configGroup !== '公众号通知' || enabledPlatformFeatures.value?.has('official_wechat_notifications'))))
 const groupNames = computed(() => {
   const groups = [...new Set(visibleConfigList.value.map(c => c.configGroup || '默认'))]
   return groups.length ? groups : ['默认']
@@ -79,7 +85,7 @@ async function handleCertificateUpload(item, options) {
     options.onError?.(e)
   }
 }
-onMounted(fetchData)
+onMounted(()=>{loadPlatformFeatureVisibility();fetchData()})
 </script>
 <style scoped>
 .card-header { display: flex; justify-content: space-between; align-items: center; }

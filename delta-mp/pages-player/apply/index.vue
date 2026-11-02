@@ -9,9 +9,11 @@
     <view class="form-item"><text class="label">擅长服务</text><input v-model="form.serviceTypes" placeholder="如：三角洲行动，无畏契约" /></view>
     <view class="form-item"><text class="label">技能标签</text><input v-model="form.skillTags" placeholder="如：突击位，信息位" /></view>
     <view class="form-item"><text class="label">证明截图</text><ImageUploader v-model="proofImages" :max="4" /></view>
-    <view v-if="siteStore.depositRequired" class="deposit-tip">申请成为打手需缴纳押金</view>
+    <view v-if="siteStore.depositMode === 'REQUIRED'" class="deposit-tip">申请成为打手需缴纳押金</view>
+    <view v-else-if="siteStore.depositMode === 'BEFORE_WITHDRAW'" class="deposit-tip">入驻无需缴纳押金；后续提现前按平台等级要求补交押金。</view>
+    <view v-else class="deposit-tip">当前平台不收取打手押金。</view>
     <view class="deposit-tip" @click="agreed=!agreed">{{agreed?'☑':'☐'}} 我已阅读并同意 <text @click.stop="goAgreement('user')">《用户协议》</text>及<text @click.stop="goAgreement('privacy')">《隐私政策》</text>。实名及手机号仅客服、管理员可见。</view>
-    <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositRequired ? '支付押金并提交' : '提交申请') }}</view>
+    <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositMode === 'REQUIRED' ? '支付押金并提交' : '提交申请') }}</view>
   </view>
 </template>
 <script setup>
@@ -23,7 +25,7 @@ import {getUserProfile} from '@/api/user'
 const agreed=ref(false),avatarImages=ref([]),inviteName=ref('')
 let invitationToken='',deviceId=clientStorage.get('enrollment_device')
 if(!deviceId){deviceId='device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);clientStorage.set('enrollment_device',deviceId)}
-onLoad(async options=>{try{const {data}=await getUserProfile();form.phone=data.phone||''}catch(_){};invitationToken=options.invite||clientStorage.get('enrollment_invite')||'';if(invitationToken){clientStorage.set('enrollment_invite',invitationToken);try{const {data}=await get('/player/invitations/'+encodeURIComponent(invitationToken),{},{auth:false});inviteName.value=data.name}catch(_){uni.showToast({title:'邀请链接已失效',icon:'none'})}}})
+onLoad(async options=>{await siteStore.fetchSiteConfig();try{const {data}=await getUserProfile();form.phone=data.phone||''}catch(_){};invitationToken=options.invite||clientStorage.get('enrollment_invite')||'';if(invitationToken){clientStorage.set('enrollment_invite',invitationToken);try{const {data}=await get('/player/invitations/'+encodeURIComponent(invitationToken),{},{auth:false});inviteName.value=data.name}catch(_){uni.showToast({title:'邀请链接已失效',icon:'none'})}}})
 import ImageUploader from '@/components/ImageUploader.vue'
 import { applyPlayer } from '@/api/player'
 import { createPlayerDeposit } from '@/api/pay'
@@ -40,7 +42,7 @@ async function submit() {
   if (submitting.value) return
   submitting.value = true
   try {
-    if (siteStore.depositRequired) {
+    if (siteStore.depositMode === 'REQUIRED') {
       // 需要押金：先支付再提交
       await submitWithDeposit()
     } else {

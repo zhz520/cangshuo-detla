@@ -30,12 +30,13 @@ function join(parent, path) {
   return (path.startsWith('/') ? path : `${parent}/${path}`).replace(/\/+/g, '/').replace(/\/$/, '') || '/'
 }
 
-export function visibleNavigationRoutes(routes, role, allowed) {
+export function visibleNavigationRoutes(routes, role, allowed, featureAllowed = () => true) {
   const leaves = new Map()
   function visit(route, parent = '', parents = []) {
     const path = join(parent, route.path), lineage = [...parents, route]
     if (route.children?.length) return route.children.forEach(child => visit(child, path, lineage))
     if (!route.meta?.title || lineage.some(node => node.meta?.hidden || node.meta?.roles && !node.meta.roles.includes(role))) return
+    if (lineage.some(node => node.meta?.feature && !featureAllowed(node.meta.feature))) return
     const permission = route.meta.permission || permissionFor(path)
     if (permission && !allowed(permission)) return
     leaves.set(path, { path, title: route.meta.title, icon: route.meta.icon || parents[parents.length - 1]?.meta?.icon || 'Menu' })
@@ -44,8 +45,8 @@ export function visibleNavigationRoutes(routes, role, allowed) {
   return leaves
 }
 
-export function buildNavigation(routes, role, allowed) {
-  const available = visibleNavigationRoutes(routes, role, allowed), used = new Set()
+export function buildNavigation(routes, role, allowed, featureAllowed = () => true) {
+  const available = visibleNavigationRoutes(routes, role, allowed, featureAllowed), used = new Set()
   function take(path) {
     const entry = available.get(path)
     if (!entry || used.has(path)) return null

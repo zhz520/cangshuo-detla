@@ -94,34 +94,47 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Transactional(rollbackFor = Exception.class)
     public Payment createPlayerDepositPayment(Long userId) {
         lockUser(userId);
-        BigDecimal amount = getPlayerDepositAmount();
-        com.delta.common.utils.Money.positive(amount);
-        Payment existing = getOne(new LambdaQueryWrapper<Payment>()
-                .eq(Payment::getUserId, userId)
-                .eq(Payment::getBizType, "PLAYER_DEPOSIT")
-                .eq(Payment::getStatus, "PAID")
-                .last("LIMIT 1"));
-        if (existing != null) {
-            throw new BusinessException("您已支付过押金，无需重复支付");
-        }
+        BigDecimal amount = playerDepositRequiredAmount(userId);
+        if(amount.signum()<=0) throw new BusinessException("当前无需缴纳打手押金");
+        BigDecimal paid=playerDepositPaidAmount(userId);
+        if (paid.compareTo(amount)>=0) throw new BusinessException("您已足额缴纳押金，无需重复支付");
+        BigDecimal payable=amount.subtract(paid);
         Payment paying = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getUserId, userId)
                 .eq(Payment::getBizType, "PLAYER_DEPOSIT")
                 .eq(Payment::getStatus, "PAYING")
+                .eq(Payment::getAmount, payable)
                 .last("LIMIT 1"));
-        if (paying != null && amount.compareTo(paying.getAmount()) == 0) {
-            return paying;
-        }
+        if (paying != null) return paying;
         Payment payment = new Payment();
         payment.setPaymentNo(IdGenerator.nextPaymentNo());
         payment.setOrderId(null);
         payment.setUserId(userId);
         payment.setBizType("PLAYER_DEPOSIT");
-        payment.setAmount(amount);
+        payment.setAmount(payable);
         payment.setPayMethod("WECHAT");
         payment.setStatus("PAYING");
         save(payment);
         return payment;
+    }
+
+    @Override
+    public BigDecimal playerDepositRequiredAmount(Long userId) {
+        String mode=sysConfigService.getConfigValue("player.deposit_mode",
+                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE").trim().toUpperCase();
+        if("NONE".equals(mode))return BigDecimal.ZERO;
+        if("REQUIRED".equals(mode))return getPlayerDepositAmount();
+        if("BEFORE_WITHDRAW".equals(mode)) {
+            var rows=jdbc.queryForList("SELECT COALESCE(l.withdraw_deposit_amount,0) AS amount FROM `user` u JOIN player p ON p.openid=u.openid AND p.deleted=0 LEFT JOIN player_level l ON l.id=p.level AND l.deleted=0 WHERE u.id=? AND u.deleted=0 LIMIT 1",userId);
+            return rows.isEmpty()?BigDecimal.ZERO:new BigDecimal(String.valueOf(rows.get(0).get("amount")));
+        }
+        return getPlayerDepositAmount();
+    }
+
+    @Override
+    public BigDecimal playerDepositPaidAmount(Long userId) {
+        BigDecimal value=jdbc.queryForObject("SELECT COALESCE(SUM(amount),0) FROM payment WHERE user_id=? AND biz_type='PLAYER_DEPOSIT' AND status='PAID'",BigDecimal.class,userId);
+        return value==null?BigDecimal.ZERO:value;
     }
 
     @Override
@@ -161,7 +174,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Override
     public boolean verifyPlayerDepositPayment(String paymentNo, Long userId) {
         if (paymentNo == null || paymentNo.isBlank()) return false;
-        BigDecimal expectedAmount = getPlayerDepositAmount();
+        BigDecimal expectedAmount = playerDepositRequiredAmount(userId);
         Payment payment = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getPaymentNo, paymentNo));
         if (payment == null) return false;
