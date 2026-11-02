@@ -36,12 +36,13 @@ public class PlatformRemote {
             try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
             catch(Exception ignored) {}
         }
-        var result=json.createObjectNode();result.put("currentVersion",effectiveVersion());result.put("backendVersion",platform.overview().version());result.put("connected",cached!=null);
+        String currentVersion=effectiveVersion();
+        var result=json.createObjectNode();result.put("currentVersion",currentVersion);result.put("backendVersion",platform.overview().version());result.put("connected",cached!=null);
         result.set("componentVersions",componentVersions());
         var installed=json.createArrayNode();
         try(var files=Files.list(path("installed-plans"))) {for(var file:files.limit(500).toList())if(Files.isRegularFile(file)&&Files.size(file)<500000)for(var item:json.readTree(Files.readString(file)).path("items"))installed.add(item.path("key").asText());}catch(Exception ignored){}
         result.set("installedItems",installed);
-        if(cached!=null) { result.set("updates",cached.path("updates"));result.set("project",project());result.set("lastSync",cached.path("receivedAt")); }
+        if(cached!=null) { result.set("updates",currentUpdates(cached.path("updates"),currentVersion));result.set("project",project());result.set("lastSync",cached.path("receivedAt")); }
         try {var file=path("update-result.json");if(Files.exists(file)&&Files.size(file)<65536)result.set("job",json.readTree(Files.readString(file)));} catch(Exception ignored){}
         result.put("installerAvailable",Files.exists(path("installer-ready")));
         return result;
@@ -89,6 +90,14 @@ public class PlatformRemote {
             }
         }catch(Exception ignored) {}
         return latest;
+    }
+    JsonNode currentUpdates(JsonNode cached,String currentVersion) {
+        if(!cached.isObject())return json.createObjectNode();
+        var updates=((com.fasterxml.jackson.databind.node.ObjectNode)cached).deepCopy();
+        var applicable=json.createArrayNode();
+        for(var release:cached.path("releases"))if(release.path("version").asText().matches("\\d+\\.\\d+\\.\\d+")&&compare(release.path("version").asText(),currentVersion)>0)applicable.add(release);
+        updates.put("currentVersion",currentVersion);updates.set("releases",applicable);updates.put("updateAvailable",!applicable.isEmpty());
+        return updates;
     }
     private static int compare(String left,String right){String[] a=left.split("\\."),b=right.split("\\.");try{for(int i=0;i<3;i++){int value=Integer.compare(Integer.parseInt(a[i]),Integer.parseInt(b[i]));if(value!=0)return value;}}catch(Exception ignored){}return 0;}
     public synchronized JsonNode project() {

@@ -1,6 +1,7 @@
 package com.delta.admin.platform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
@@ -20,5 +21,15 @@ class PlatformRemoteTest {
 
     @Test void noSuccessfulPlanHasNoReleaseMarker() {
         assertThat(PlatformRemote.latestInstalledRelease(directory, json)).isNull();
+    }
+
+    @Test void cachedUpdateCatalogIsFilteredAgainstTheCurrentVersion() {
+        var properties=new PlatformProperties();properties.setCustomerId("742");properties.setStatePath(directory.resolve("state.json").toString());properties.setPublicKeyPath(directory.resolve("public.pem").toString());
+        var remote=new PlatformRemote(properties,null,json,java.time.Clock.systemUTC());
+        ObjectNode cached=json.createObjectNode();cached.put("currentVersion","1.3.4");cached.put("latestVersion","1.3.5");cached.put("updateAvailable",true);cached.set("releases",json.createArrayNode().add(json.createObjectNode().put("version","1.3.5")));
+        var current=remote.currentUpdates(cached,"1.3.5");
+        assertThat(current.path("currentVersion").asText()).isEqualTo("1.3.5");assertThat(current.path("updateAvailable").asBoolean()).isFalse();assertThat(current.path("releases")).isEmpty();
+        var pending=remote.currentUpdates(cached,"1.3.4");
+        assertThat(pending.path("updateAvailable").asBoolean()).isTrue();assertThat(pending.path("releases")).hasSize(1);
     }
 }

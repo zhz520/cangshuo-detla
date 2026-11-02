@@ -1,5 +1,16 @@
 export const updateItemKey = (release, item) => `${release.version}:${item.id}`
 
+export function compareReleaseVersions(left, right) {
+  const parse = value => String(value || '').split('.').map(part => Number.parseInt(part, 10))
+  const a = parse(left), b = parse(right)
+  if (a.length !== 3 || b.length !== 3 || [...a, ...b].some(value => !Number.isSafeInteger(value))) return 0
+  for (let index = 0; index < 3; index++) if (a[index] !== b[index]) return Math.sign(a[index] - b[index])
+  return 0
+}
+
+export const applicableUpdateReleases = (releases = [], currentVersion = '') =>
+  releases.filter(release => compareReleaseVersions(release.version, currentVersion) > 0)
+
 export function publicReleaseNotesUrl(value) {
   try {
     const url = new URL(String(value || ''))
