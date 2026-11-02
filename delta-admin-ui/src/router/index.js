@@ -59,13 +59,13 @@ const routes = [
         path: 'create',
         name: 'ProductCreate',
         component: () => import('@/views/product/ProductForm.vue'),
-        meta: { title: '新增商品', roles: ['admin'], hidden: true }
+        meta: { title: '新增商品', roles: ['admin'], hidden: true, activeMenu: '/product/list' }
       },
       {
         path: 'edit/:id',
         name: 'ProductEdit',
         component: () => import('@/views/product/ProductForm.vue'),
-        meta: { title: '编辑商品', roles: ['admin'], hidden: true }
+        meta: { title: '编辑商品', roles: ['admin'], hidden: true, activeMenu: '/product/list' }
       }
     ]
   },
@@ -221,7 +221,7 @@ const routes = [
         path: 'record/:id',
         name: 'ChatRecordDetail',
         component: () => import('@/views/chat/ChatRecordDetail.vue'),
-        meta: { title: '聊天记录详情', roles: ['admin', 'cs'], hidden: true }
+        meta: { title: '聊天记录详情', roles: ['admin', 'cs'], hidden: true, activeMenu: '/chat/record' }
       }
     ]
   },

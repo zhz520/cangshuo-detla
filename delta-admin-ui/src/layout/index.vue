@@ -1,11 +1,11 @@
 <template>
   <el-container class="layout-container">
     <el-aside v-if="!isCompact" :width="isCollapse ? '64px' : '220px'" class="layout-aside">
-      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :routes="menuRoutes" :title="siteStore.adminTitle" :initial="logoInitial" />
+      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :title="siteStore.adminTitle" :initial="logoInitial" />
     </el-aside>
 
     <el-drawer v-model="navigationOpen" direction="ltr" size="300px" :with-header="false" title="主导航" append-to-body class="mobile-navigation">
-      <SidebarNavigation :active="activeMenu" :routes="menuRoutes" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
+      <SidebarNavigation :active="activeMenu" :groups="menuGroups" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
         <template #action><button class="navigation-close" type="button" aria-label="关闭导航" @click="navigationOpen = false"><el-icon><Close /></el-icon></button></template>
       </SidebarNavigation>
     </el-drawer>
@@ -59,7 +59,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import {can,permissionFor} from '@/utils/staff-permissions'
+import {can} from '@/utils/staff-permissions'
+import {buildNavigation} from '@/utils/navigation'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
@@ -91,18 +92,10 @@ const logoInitial = computed(() => {
   return title.trim().slice(0, 1)
 })
 
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => route.meta.activeMenu || route.path)
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
 
-// 根据角色过滤路由，生成菜单
-const menuRoutes = computed(() => {
-  return router.options.routes.filter((r) => {
-    if (!r.children) return false
-    if (r.path === '/login' || r.path === '/403' || r.path.includes(':pathMatch')) return false
-    const roles = r.meta?.roles || r.children?.[0]?.meta?.roles
-    const permission=r.meta?.permission||r.children?.[0]?.meta?.permission||permissionFor(r.path);return (!roles||roles.includes(role.value))&&(!permission||can(permission))
-  })
-})
+const menuGroups = computed(() => buildNavigation(router.options.routes, role.value, can))
 
 const profileDialogVisible = ref(false)
 

@@ -48,7 +48,9 @@ jobs:
         run: npm ci
       - name: Build admin
         working-directory: delta-admin-ui
-        run: npm run build
+        run: |
+          npm test
+          npm run build
       - name: Install H5 dependencies
         working-directory: delta-mp
         run: npm ci
