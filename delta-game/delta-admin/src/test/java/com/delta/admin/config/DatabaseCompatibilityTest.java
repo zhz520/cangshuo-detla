@@ -1,0 +1,40 @@
+package com.delta.admin.config;
+
+import org.h2.jdbcx.JdbcDataSource;
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class DatabaseCompatibilityTest {
+    @Test
+    void addsMissingPlayerLevelDepositColumnIdempotently() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:compatibility;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE player_level(id INT PRIMARY KEY)");
+
+        DatabaseCompatibility compatibility = new DatabaseCompatibility(jdbc);
+        compatibility.ensure();
+        compatibility.ensure();
+
+        Integer columns = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='PLAYER_LEVEL' AND column_name='WITHDRAW_DEPOSIT_AMOUNT'",
+                Integer.class);
+        assertThat(columns).isEqualTo(1);
+    }
+
+    @Test
+    void leavesExistingSchemaUntouched() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:compatibility_existing;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE player_level(id INT PRIMARY KEY, withdraw_deposit_amount DECIMAL(10,2) NOT NULL DEFAULT 25)");
+        jdbc.update("INSERT INTO player_level(id) VALUES(1)");
+
+        new DatabaseCompatibility(jdbc).ensure();
+
+        assertThat(jdbc.queryForObject("SELECT withdraw_deposit_amount FROM player_level WHERE id=1", java.math.BigDecimal.class))
+                .isEqualByComparingTo("25");
+    }
+}
