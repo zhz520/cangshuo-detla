@@ -19,7 +19,7 @@ const sections = [
   ] },
   { id: 'settings', title: '平台设置', items: [
     { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/reward-grab'] },
-    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/operation-log'] }
+    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/operation-log'] }
   ] },
   { id: 'updates', title: '功能更新', items: [
     { id: 'updates', title: '功能与更新', icon: 'Box', paths: ['/platform/features', '/platform/updates'] }

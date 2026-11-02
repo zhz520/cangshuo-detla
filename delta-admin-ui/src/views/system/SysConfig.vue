@@ -51,10 +51,10 @@ import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 const loading = ref(false), submitting = ref(false)
-function isSecretKey(key){return ['wx.pay.api-v3-key','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token'].includes(key)}
+function isSecretKey(key){return ['wx.pay.api-v3-key','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
-const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab','player.deposit_required'].includes(c.configKey) && (c.configGroup !== '公众号通知' || enabledPlatformFeatures.value?.has('official_wechat_notifications'))))
+const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab','player.deposit_required'].includes(c.configKey) && !c.configKey.startsWith('email.notifications.') && (c.configGroup !== '公众号通知' || enabledPlatformFeatures.value?.has('official_wechat_notifications'))))
 const groupNames = computed(() => {
   const groups = [...new Set(visibleConfigList.value.map(c => c.configGroup || '默认'))]
   return groups.length ? groups : ['默认']

@@ -43,6 +43,9 @@ class PlatformServiceTest {
         assertThat(platform.features().get(0).enabled()).isTrue(); assertThat(report().enabled()).isFalse();
         var official=platform.features().stream().filter(feature->feature.id().equals("official_wechat_notifications")).findFirst().orElseThrow();
         assertThat(official.paid()).isTrue(); assertThat(official.enabled()).isFalse(); assertThat(platform.featureEnabled("official_wechat_notifications")).isFalse();
+        var email=platform.features().stream().filter(feature->feature.id().equals("email_notifications")).findFirst().orElseThrow();
+        assertThat(email.paid()).isTrue(); assertThat(email.priceCents()).isEqualTo(5000); assertThat(email.minVersion()).isEqualTo("1.4.2");
+        assertThat(email.entryPath()).isEqualTo("/system/email-notifications"); assertThat(email.enabled()).isFalse();
         var identity=platform.features().stream().filter(feature->feature.id().equals("identity_verification")).findFirst().orElseThrow();
         assertThat(identity.paid()).isTrue(); assertThat(identity.priceCents()).isEqualTo(2000); assertThat(identity.enabled()).isFalse();
         assertThatThrownBy(() -> platform.setEnabled("advanced_income_reports", true)).isInstanceOf(BusinessException.class);
@@ -54,6 +57,14 @@ class PlatformServiceTest {
         assertThat(platform.featureEnabled("official_wechat_notifications")).isFalse();
         platform.setEnabled("official_wechat_notifications",true);
         assertThat(platform.featureEnabled("official_wechat_notifications")).isTrue();
+    }
+    @Test void emailNotificationFeatureRequiresItsOwnPaidEntitlement() throws Exception {
+        platform.importLicense(signed("742",platform.overview().instanceId(),now,now,now.plusSeconds(3600),List.of("email_notifications")));
+        var email=platform.features().stream().filter(feature->feature.id().equals("email_notifications")).findFirst().orElseThrow();
+        assertThat(email.entitled()).isTrue(); assertThat(email.enabled()).isFalse();
+        platform.setEnabled("email_notifications",true);
+        platform.requireFeature("email_notifications");
+        assertThat(platform.featureEnabled("email_notifications")).isTrue();
     }
     @Test void signedGrantMustBeEnabledAndSurvivesRestartAndCanBeDisabled() throws Exception {
         String instance = platform.overview().instanceId(); platform.importLicense(grant());

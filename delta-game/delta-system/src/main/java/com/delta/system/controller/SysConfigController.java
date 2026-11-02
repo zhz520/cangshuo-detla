@@ -99,6 +99,16 @@ public class SysConfigController {
     }
 
     private void ensureBuiltinConfigs() {
+        ensureConfig("email.notifications.enabled","启用邮件通知","false","boolean","邮件通知","邮件通知总开关，仅由邮件通知专用页面维护");
+        ensureConfig("email.notifications.host","SMTP 服务器","","text","邮件通知","客户自有 SMTP 服务器地址");
+        ensureConfig("email.notifications.port","SMTP 端口","465","number","邮件通知","通常 TLS 使用 465，STARTTLS 使用 587");
+        ensureConfig("email.notifications.security","SMTP 加密方式","TLS","text","邮件通知","TLS 或 STARTTLS");
+        ensureConfig("email.notifications.username","SMTP 邮箱账号","","text","邮件通知","用于 SMTP 身份认证的邮箱账号");
+        ensureConfig("email.notifications.password","SMTP 密码","","text","邮件通知","保存后不回显，仅使用邮件通知专用接口维护");
+        ensureConfig("email.notifications.from_address","发件邮箱","","text","邮件通知","运营通知的 From 地址");
+        ensureConfig("email.notifications.sender_name","发件人名称","运营通知","text","邮件通知","收件人看到的发件人名称");
+        ensureConfig("email.notifications.recipients","运营收件邮箱","[]","json","邮件通知","最多 20 个邮箱，自动去重");
+        ensureConfig("email.notifications.events","邮件通知事件","[]","json","邮件通知","只排队已勾选的事件，由专用页面维护");
         ensureConfig("settlement.cs_rate","客服提成占俱乐部抽成比例","0","text","结算配置","0至1，按下单时快照计算；如0.2表示俱乐部抽成的20%计入客服提成台账");
         ensureConfig("player.invite_required","仅允许邀请入驻","false","boolean","入驻配置","开启后入驻必须使用有效邀请链接");
         ensureConfig("risk.freeze_threshold","违规冻结阈值","3","text","内容风控","系统拦截或人工明确标记的违规累计达到此次数后冻结接单");
@@ -198,11 +208,12 @@ public class SysConfigController {
         }
     }
 
-    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret").contains(key==null?"":key);}
+    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
     private void updateValue(SysConfig submitted) {
         SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
         if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
         String key=old.getConfigKey(),value=submitted.getConfigValue();
+        if(key!=null && key.startsWith("email.notifications.")) throw new com.delta.common.exception.BusinessException(409,"邮件通知配置请使用专用设置页面保存");
         if(com.delta.system.service.RewardGrabRulesService.KEY.equals(key)) return; // Edited through validated dedicated settings only.
         if(value==null || secret(key) && "********".equals(value)) return;
         if(value.length()>10000) throw new com.delta.common.exception.BusinessException(400,"配置内容过长");

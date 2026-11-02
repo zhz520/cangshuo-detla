@@ -1291,6 +1291,25 @@ UNLOCK TABLES;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+
+CREATE TABLE IF NOT EXISTS `email_notice_queue` (
+  `id` varchar(36) NOT NULL,
+  `event_type` varchar(64) NOT NULL,
+  `event_hash` char(64) NOT NULL,
+  `recipient` varchar(254) NOT NULL,
+  `subject` varchar(255) NOT NULL,
+  `plain_body` text NOT NULL,
+  `html_body` text NOT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'PENDING',
+  `attempts` int NOT NULL DEFAULT '0',
+  `last_error` varchar(100) DEFAULT NULL,
+  `next_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_email_notice_event_recipient` (`event_hash`,`recipient`),
+  KEY `idx_email_notice_delivery` (`status`,`next_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

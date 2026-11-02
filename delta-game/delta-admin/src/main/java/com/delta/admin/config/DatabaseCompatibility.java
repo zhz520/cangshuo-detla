@@ -82,6 +82,15 @@ public class DatabaseCompatibility {
                     "reviewed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
                     "UNIQUE KEY uk_identity_document(id_number_hash))");
+            ensureTable("email_notice_queue", "CREATE TABLE IF NOT EXISTS email_notice_queue (" +
+                    "id VARCHAR(36) PRIMARY KEY, event_type VARCHAR(64) NOT NULL, event_hash CHAR(64) NOT NULL, " +
+                    "recipient VARCHAR(254) NOT NULL, subject VARCHAR(255) NOT NULL, plain_body TEXT NOT NULL, " +
+                    "html_body TEXT NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'PENDING', " +
+                    "attempts INT NOT NULL DEFAULT 0, last_error VARCHAR(100), " +
+                    "next_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, sent_at TIMESTAMP NULL, " +
+                    "CONSTRAINT uk_email_notice_event_recipient UNIQUE(event_hash, recipient), " +
+                    "INDEX idx_email_notice_delivery(status,next_at))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }

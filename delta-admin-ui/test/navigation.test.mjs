@@ -33,9 +33,9 @@ test('a limited administrator cannot see finance, chat or configuration entries 
 })
 
 test('paid feature routes are hidden until the platform reports them enabled',()=>{
-  const routes=[screen('/dashboard','仪表盘'),screen('/system/wechat-notices','公众号通知记录',['admin'],{permission:'system.manage',feature:'official_wechat_notifications'}),screen('/user/identity-review','实名认证审核',['admin'],{permission:'user.manage',feature:'identity_verification'})]
+  const routes=[screen('/dashboard','仪表盘'),screen('/system/wechat-notices','公众号通知记录',['admin'],{permission:'system.manage',feature:'official_wechat_notifications'}),screen('/system/email-notifications','邮件通知',['admin'],{permission:'system.manage',feature:'email_notifications'}),screen('/user/identity-review','实名认证审核',['admin'],{permission:'user.manage',feature:'identity_verification'})]
   assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>false)),['/dashboard'])
-  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/user/identity-review','/system/wechat-notices'])
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/user/identity-review','/system/wechat-notices','/system/email-notifications'])
 })
 
 test('paid reports and platform configuration respect both staff grants and feature authorization', () => {
