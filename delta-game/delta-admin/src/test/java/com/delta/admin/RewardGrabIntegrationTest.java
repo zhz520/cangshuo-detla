@@ -244,6 +244,16 @@ class RewardGrabIntegrationTest {
         Reward reward=rewards.pay(100L,7L,new BigDecimal("10"),"reward-fee-test","");assertThat(reward.getIncome()).isEqualByComparingTo("9");
         assertThat(number("SELECT COUNT(*) FROM operation_log WHERE module='reward-grab'")).isEqualTo(1);
     }
+    @Test void savingSettingsCreatesMissingConfigRowAutomatically() {
+        jdbc.update("DELETE FROM sys_config WHERE config_key='features.reward_grab'");
+        var defaults=RewardGrabRulesService.defaults();
+        var updated=new RewardGrabRulesService.Rules(true,defaults.minAmount(),defaults.maxAmount(),defaults.validDays(),
+                defaults.userDailyLimit(),defaults.playerDailyLimit(),defaults.pairDailyLimit(),new BigDecimal("2"),
+                defaults.captchaSeconds(),defaults.captchaAttempts(),defaults.captchaRefreshSeconds());
+        settings.save(updated);
+        assertThat(number("SELECT COUNT(*) FROM sys_config WHERE config_key='features.reward_grab'")).isEqualTo(1);
+        assertThat(settings.get().feePercent()).isEqualByComparingTo("2");
+    }
     @Test void playerDetailsHideCredentialsBeforeAcceptAndRejectOtherPlayersOrders() throws Exception {
         jdbc.update("UPDATE `order` SET game_account='SECRET_ACCOUNT',contact='SECRET_CONTACT',extra_fields='SECRET_FIELDS' WHERE id=200");
         mvc.perform(get("/player/work/200").with(role("PLAYER",1))).andExpect(jsonPath("$.code").value(200))

@@ -93,9 +93,29 @@ public class DatabaseCompatibility {
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, sent_at TIMESTAMP NULL, " +
                     "CONSTRAINT uk_email_notice_event_recipient UNIQUE(event_hash, recipient), " +
                     "INDEX idx_email_notice_delivery(status,next_at))");
+            ensureTable("player_reward", "CREATE TABLE IF NOT EXISTS player_reward (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, reward_no VARCHAR(40) NOT NULL, " +
+                    "request_id VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, " +
+                    "user_id BIGINT NOT NULL, player_id BIGINT NOT NULL, order_id BIGINT NOT NULL, " +
+                    "order_no VARCHAR(64) NOT NULL, amount DECIMAL(12,2) NOT NULL, fee DECIMAL(12,2) NOT NULL, " +
+                    "income DECIMAL(12,2) NOT NULL, fee_percent DECIMAL(5,2) NOT NULL, " +
+                    "user_balance_before DECIMAL(12,2) NOT NULL, user_balance_after DECIMAL(12,2) NOT NULL, " +
+                    "player_balance_before DECIMAL(12,2) NOT NULL, player_balance_after DECIMAL(12,2) NOT NULL, " +
+                    "reversal_user_balance_before DECIMAL(12,2), reversal_user_balance_after DECIMAL(12,2), " +
+                    "reversal_player_balance_before DECIMAL(12,2), reversal_player_balance_after DECIMAL(12,2), " +
+                    "payment_method VARCHAR(16) NOT NULL DEFAULT 'BALANCE', remark VARCHAR(200), " +
+                    "status VARCHAR(24) NOT NULL, pending_recovery DECIMAL(12,2) NOT NULL DEFAULT 0, " +
+                    "reversal_reason VARCHAR(200), reversal_admin_id BIGINT, reversed_at TIMESTAMP NULL, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_reward_no(reward_no), UNIQUE KEY uk_order_reward(order_id), " +
+                    "UNIQUE KEY uk_user_reward_request(user_id,request_id), " +
+                    "KEY idx_reward_user_date(user_id,created_at), KEY idx_reward_player_date(player_id,created_at), " +
+                    "KEY idx_reward_status(status))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
+            ensureRewardGrabConfig();
         } catch (SQLException error) {
             throw new IllegalStateException("数据库结构兼容检查失败", error);
         }
@@ -113,6 +133,25 @@ public class DatabaseCompatibility {
             if (actualTable == null || hasColumn(connection, actualTable, column)) return;
             jdbc.execute(ddl);
         }
+    }
+
+    private void ensureRewardGrabConfig() throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            if (findTable(connection, "sys_config") == null) return;
+        }
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM sys_config WHERE config_key='features.reward_grab'", Integer.class);
+        if (count != null && count > 0) return;
+        jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) " +
+                        "VALUES(?,?,?,?,?,?)",
+                "features.reward_grab",
+                "打赏与抢单验证规则",
+                "{\"rewardEnabled\":false,\"minAmount\":1,\"maxAmount\":200,\"validDays\":30," +
+                        "\"userDailyLimit\":10,\"playerDailyLimit\":5,\"pairDailyLimit\":5,\"feePercent\":0," +
+                        "\"captchaSeconds\":120,\"captchaAttempts\":5,\"captchaRefreshSeconds\":10}",
+                "json",
+                "reward-grab",
+                "在打赏与抢单设置页面修改");
     }
 
     private String findTable(Connection connection, String expected) throws SQLException {

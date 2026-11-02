@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +41,18 @@ public class RewardGrabRulesService {
     public void save(Rules rules) {
         if(rules.minAmount().compareTo(rules.maxAmount())>0) throw new BusinessException(400,"最低金额不能高于最高金额");
         SysConfig row=configs.getOne(new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey,KEY));
-        if(row==null) throw new BusinessException(503,"请先执行打赏与抢单验证数据库升级");
+        if(row==null) {
+            row=new SysConfig();
+            row.setConfigKey(KEY);
+            row.setConfigName("打赏与抢单验证规则");
+            row.setValueType("json");
+            row.setConfigGroup("reward-grab");
+            row.setRemark("在打赏与抢单设置页面修改");
+            row.setCreatedAt(LocalDateTime.now());
+            row.setUpdatedAt(row.getCreatedAt());
+        }
         row.setConfigValue(JSON.toJSONString(rules));
-        configs.updateById(row);
+        if(row.getId()==null) configs.save(row);
+        else configs.updateById(row);
     }
 }
