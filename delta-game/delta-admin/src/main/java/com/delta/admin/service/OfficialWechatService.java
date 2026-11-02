@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.*;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.security.service.StaffPermissions;
+import com.delta.admin.platform.PlatformService;
 import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,13 +24,16 @@ public class OfficialWechatService {
  private final JdbcTemplate jdbc;
  private final SysConfigService configs;
  private final StaffPermissions permissions;
+ private final PlatformService platform;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
  private volatile String accessToken="";private volatile long tokenUntil=0;
+ private static final String FEATURE_ID="official_wechat_notifications";
  private static final Set<String> EVENTS=Set.of("ORDER_PAID","ORDER_ACCEPTED","ORDER_ASSIGNED","ORDER_COMPLETED","MATERIAL_REVIEWED","WITHDRAW_COMPLETED","WITHDRAW_REJECTED","PLAYER_FROZEN");
  @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
  @Transactional(propagation=Propagation.REQUIRES_NEW)
  public void event(BusinessEvent event){
+  if(!platform.featureEnabled(FEATURE_ID))return;
   if(!EVENTS.contains(event.getEventType()))return;
   if(event.getUserId()!=null)queue(event.getEventType(),event.getUserType(),event.getUserId(),event.getOrderId(),event.getMessage());
   if("ORDER_PAID".equals(event.getEventType()))for(var staff:jdbc.queryForList("SELECT a.id,a.role FROM admin a LEFT JOIN staff_shift s ON s.admin_id=a.id WHERE a.status=1 AND a.deleted=0 AND (UPPER(a.role) IN ('ADMIN','BOTH') OR s.online=1)")){
@@ -40,6 +44,7 @@ public class OfficialWechatService {
  private void queue(String event,String type,Long user,Long order,String message){jdbc.update("INSERT INTO wechat_notice_queue(id,event_type,user_type,user_id,order_id,message,status) VALUES (?,?,?,?,?,?,'PENDING')",UUID.randomUUID().toString(),event,type,user,order,Objects.toString(message,"").substring(0,Math.min(1000,Objects.toString(message,"").length())));}
  @Scheduled(fixedDelay=15000,initialDelay=30000)
  public synchronized void deliver(){
+  if(!platform.featureEnabled(FEATURE_ID))return;
   if(!"true".equals(configs.getConfigValue("wechat.official.enabled","false")))return;
   jdbc.update("UPDATE wechat_notice_queue SET status='EXPIRED' WHERE status IN ('PENDING','RETRY') AND created_at<?",LocalDateTime.now().minusDays(1));
   jdbc.update("UPDATE wechat_notice_queue SET status='RETRY'  WHERE status='SENDING' AND next_at<CURRENT_TIMESTAMP");
@@ -68,8 +73,9 @@ public class OfficialWechatService {
   String value=result.getString("access_token");if(value==null||value.isBlank())throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");
   accessToken=value;tokenUntil=System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L;return value;
  }
- public Map<String,Object> binding(String type,Long id){return Map.of("enabled","true".equals(configs.getConfigValue("wechat.official.enabled","false")),"bound",jdbc.queryForObject("SELECT COUNT(*) FROM wechat_official_binding WHERE user_type=? AND user_id=?",Long.class,type,id)>0);}
+ public Map<String,Object> binding(String type,Long id){boolean licensed=platform.featureEnabled(FEATURE_ID);return Map.of("enabled",licensed&&"true".equals(configs.getConfigValue("wechat.official.enabled","false")),"licensed",licensed,"bound",jdbc.queryForObject("SELECT COUNT(*) FROM wechat_official_binding WHERE user_type=? AND user_id=?",Long.class,type,id)>0);}
  public String startBinding(String type,Long id){
+  platform.requireFeature(FEATURE_ID);
   if(!"true".equals(configs.getConfigValue("wechat.official.enabled","false")))throw new BusinessException(503,"公众号通知尚未启用");
   String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue("wechat.official.redirect_url","");URI uri;
   try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,"请先配置公众号授权回调页面的HTTPS地址");}
@@ -79,6 +85,7 @@ public class OfficialWechatService {
  }
  @Transactional(rollbackFor=Exception.class)
  public void finishBinding(String type,Long id,String code,String state)throws Exception{
+  platform.requireFeature(FEATURE_ID);
   if(state==null||!state.matches("[a-f0-9]{32}")||code==null||code.length()>256)throw new BusinessException(400,"绑定凭据无效");
   String value=redis.opsForValue().getAndDelete("wechat:binding:"+state);if(value==null)throw new BusinessException(400,"绑定凭据已过期，请重新操作");
   JSONObject claim=JSON.parseObject(value);if(!type.equals(claim.getString("type"))||id.longValue()!=claim.getLongValue("id"))throw new BusinessException(403,"绑定身份不匹配");

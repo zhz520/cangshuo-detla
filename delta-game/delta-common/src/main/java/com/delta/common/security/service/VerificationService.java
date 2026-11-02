@@ -94,6 +94,10 @@ public class VerificationService {
         limits.check("otp-global",1000,86400);
         String id=UUID.randomUUID().toString(),code=String.format(Locale.ROOT,"%06d",RANDOM.nextInt(1000000));
         String redisKey="otp:"+purpose+":"+id;
+        String activeKey="otp-active:"+purpose+":"+phone;
+        String previous=redis.opsForValue().getAndSet(activeKey,id);
+        if(previous!=null&&previous.matches("[a-f0-9-]{36}"))redis.delete("otp:"+purpose+":"+previous);
+        redis.expire(activeKey,Duration.ofMinutes(5));
         redis.opsForValue().set(redisKey,digest(purpose,subject,phone,code),Duration.ofMinutes(5));
         try {sms.sendTemplate("dysmsapi.aliyuncs.com",access,key,sign,template,phone,Map.of("code",code));}
         catch(RuntimeException e){redis.delete(redisKey);throw new BusinessException(503,"验证码发送失败，请稍后重试");}
@@ -105,6 +109,8 @@ public class VerificationService {
         if(code==null || !code.matches("[0-9]{6}")) throw new BusinessException(400,"验证码错误或已过期");
         limits.check("otp-verify:"+purpose+":"+phone,20,600);
         consume("otp:"+purpose+":"+safeId(id),digest(purpose,subject,phone,code));
+        String activeKey="otp-active:"+purpose+":"+phone;
+        if(id.equals(redis.opsForValue().get(activeKey)))redis.delete(activeKey);
     }
     public void verifyLoginCaptcha(String id,String code,String ip) {
         limits.check("password-captcha:"+ip,60,600);

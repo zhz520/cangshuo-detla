@@ -19,6 +19,10 @@
               </el-upload>
             </template>
           </el-input>
+          <el-select v-else-if="item.configKey === 'customer_service.mode'" v-model="item.configValue" style="width:240px">
+            <el-option label="系统内置客服" value="internal" />
+            <el-option label="第三方企业微信链接" value="external" />
+          </el-select>
           <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" :type="isSecretKey(item.configKey)?'password':'text'" :show-password="isSecretKey(item.configKey)" autocomplete="new-password" />
           <el-input-number v-else-if="item.valueType === 'number'" v-model.number="item.configValue" :controls="false" style="width:200px" />
           <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />

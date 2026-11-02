@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
+  "version": "1.3.5",
   "channel": "stable",
   "schemaVersion": 1,
   "features": [
@@ -30,6 +30,22 @@
         "等长周期对比",
         "客单价与变化率",
         "每日汇总 CSV 导出"
+      ]
+    },
+    {
+      "id": "official_wechat_notifications",
+      "name": "公众号模板通知",
+      "description": "绑定公众号后发送新订单、接单、订单完成、素材审核和提现审核模板消息。",
+      "paid": true,
+      "minVersion": "1.3.5",
+      "dependencies": [
+        "core_platform"
+      ],
+      "entryPath": "/system/wechat-notices",
+      "capabilities": [
+        "公众号账号绑定与解绑",
+        "五类业务模板通知",
+        "发送失败自动重试与人工重试"
       ]
     }
   ],

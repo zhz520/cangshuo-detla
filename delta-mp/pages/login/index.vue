@@ -113,7 +113,10 @@ async function sendCode() {
     smsRequestId.value=data.requestId;codeCountdown.value=data.retryAfter||60
     clearInterval(countdownTimer);countdownTimer=setInterval(()=>{if(--codeCountdown.value<=0)clearInterval(countdownTimer)},1000)
     uni.showToast({title:'验证码已发送',icon:'none'})
-  } catch (_) {} finally {sendingCode.value=false;loadCaptcha()}
+  } catch (_) {
+    // A failed send consumes the entered challenge; only refresh it on failure.
+    await loadCaptcha()
+  } finally {sendingCode.value=false}
 }
 async function submitReset(){
   if(loggingIn.value)return

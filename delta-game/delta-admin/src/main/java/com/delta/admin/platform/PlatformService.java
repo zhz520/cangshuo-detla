@@ -122,6 +122,11 @@ public class PlatformService {
     public synchronized void requireFeature(String id) {
         requireFeature(id, null);
     }
+    public synchronized boolean featureEnabled(String id) {
+        var state = store.load();
+        return catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
+                .map(feature -> view(feature, state, claims(state)).enabled()).orElse(false);
+    }
     public synchronized void requireFeature(String id, String requestDomain) {
         var state = store.load();
         var feature = catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()

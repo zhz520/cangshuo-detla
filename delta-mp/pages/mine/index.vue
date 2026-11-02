@@ -85,7 +85,7 @@ import { useAppStore } from '@/store/app'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
 import { switchToPlayerToken } from '@/api/auth'
 import { getPlayerApplicationStatus } from '@/api/player'
-import { createCsSession } from '@/api/chat'
+import { openCustomerService } from '@/utils/customer-service'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import TechSupportFooter from '@/components/TechSupportFooter.vue'
 const userStore = useUserStore()
@@ -148,11 +148,8 @@ async function goPlayer() {
   }
 }
 async function goCustomerService() {
-  if (!userStore.checkLogin()) return
   try {
-    const res = await createCsSession()
-    const session = res.data
-    uni.navigateTo({ url: '/pages/chat/room?sessionId=' + session.id + '&name=' + encodeURIComponent('在线客服') })
+    await openCustomerService()
   } catch (e) {
     uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
   }

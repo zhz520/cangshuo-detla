@@ -73,10 +73,7 @@ import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import PriceText from '@/components/PriceText.vue'
 import { productDescriptionHtml } from '@/utils/product-content'
 import { getProductRichDetail, getProductDetail } from '@/api/product'
-import { createCsSession, sendChatMessage } from '@/api/chat'
-import { useUserStore } from '@/store/user'
-
-const userStore = useUserStore()
+import { openCustomerService } from '@/utils/customer-service'
 const designatedPlayerId=ref('')
 const product = ref(null)
 const swiperIdx = ref(0)
@@ -151,15 +148,8 @@ onLoad(async (opts) => {
 })
 
 async function goChat() {
-  if (!userStore.checkLogin()) return
   try {
-    const res = await createCsSession()
-    const session = res.data
-    // 自动发送当前商品卡片给客服
-    const p = product.value
-    const content = JSON.stringify({ id: p.id, name: p.name, price: p.price, coverImage: p.coverImage || p.image })
-    await sendChatMessage({ sessionId: session.id, type: 'PRODUCT', content })
-    uni.navigateTo({ url: '/pages/chat/room?sessionId=' + session.id + '&name=' + encodeURIComponent('在线客服') })
+    await openCustomerService(product.value)
   } catch (e) {
     uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
   }

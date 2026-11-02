@@ -145,7 +145,7 @@ import { getRecommendProducts, getRecommendCategories } from '@/api/product'
 import { getActiveBanners } from '@/api/banner'
 import { getActiveNotices } from '@/api/notice'
 import { getCategoryTree } from '@/api/category'
-import { createCsSession } from '@/api/chat'
+import { openCustomerService } from '@/utils/customer-service'
 import { getRemind } from '@/api/message'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
@@ -326,11 +326,8 @@ function closeNoticePopup() {
 }
 
 async function goCustomerService() {
-  if (!userStore.checkLogin()) return
   try {
-    const res = await createCsSession()
-    const session = res.data
-    uni.navigateTo({ url: '/pages/chat/room?sessionId=' + session.id + '&name=' + encodeURIComponent('在线客服') })
+    await openCustomerService()
   } catch (e) {
     uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
   }

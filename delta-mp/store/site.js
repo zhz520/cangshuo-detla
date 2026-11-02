@@ -17,6 +17,8 @@ export const useSiteStore = defineStore('site', () => {
   const noticePopupEveryVisit = ref(false)
   const techSupportText = ref('KK云网络提供技术支持')
   const techSupportUrl = ref('')
+  const customerServiceMode = ref('internal')
+  const customerServiceUrl = ref('')
   let pendingConfigRequest = null
   let noticePopupShownThisSession = false
 
@@ -51,6 +53,12 @@ export const useSiteStore = defineStore('site', () => {
         if (data.tech_support_url !== undefined) {
           techSupportUrl.value = String(data.tech_support_url || '').trim()
         }
+        if (data.customer_service_mode !== undefined) {
+          customerServiceMode.value = data.customer_service_mode === 'external' ? 'external' : 'internal'
+        }
+        if (data.customer_service_external_url !== undefined) {
+          customerServiceUrl.value = String(data.customer_service_external_url || '').trim()
+        }
       } catch (e) {
         console.warn('[SiteStore] fetch site config failed', e)
       } finally {
@@ -68,5 +76,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

@@ -1,4 +1,4 @@
-<template><view class="binding-page"><text class="title">公众号消息通知</text><text class="tip">绑定微信后，可接收订单、素材审核、提现审核等服务通知。需关注平台已配置的公众号，并具备对应模板消息权限。</text><text>{{status.enabled?(status.bound?'已绑定':'尚未绑定'):'平台尚未启用公众号通知'}}</text><button v-if="status.enabled&&!status.bound" :disabled="busy" @click="start">在微信内绑定</button><button v-if="status.bound" :disabled="busy" @click="remove">解除绑定</button><text v-if="message" class="tip">{{message}}</text></view></template>
+<template><view class="binding-page"><text class="title">公众号消息通知</text><text class="tip">绑定微信后，可接收订单、素材审核、提现审核等服务通知。需关注平台已配置的公众号，并具备对应模板消息权限。</text><text>{{status.enabled?(status.bound?'已绑定':'尚未绑定'):status.licensed===false?'公众号通知功能尚未开通，请联系平台购买':'公众号通知已授权，等待管理员在系统配置中启用'}}</text><button v-if="status.enabled&&!status.bound" :disabled="busy" @click="start">在微信内绑定</button><button v-if="status.bound" :disabled="busy" @click="remove">解除绑定</button><text v-if="message" class="tip">{{message}}</text></view></template>
 <script setup>
 import {reactive,ref} from 'vue'
 import {onLoad} from '@dcloudio/uni-app'

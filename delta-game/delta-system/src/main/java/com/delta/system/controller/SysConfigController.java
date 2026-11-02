@@ -90,6 +90,8 @@ public class SysConfigController {
         map.put("notice_popup_every_visit", sysConfigService.getConfigValue("notice.popup_every_visit", "true"));
         map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
+        map.put("customer_service_mode", sysConfigService.getConfigValue("customer_service.mode", "internal"));
+        map.put("customer_service_external_url", sysConfigService.getConfigValue("customer_service.external_url", ""));
         return R.ok(map);
     }
 
@@ -108,6 +110,10 @@ public class SysConfigController {
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
         ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
                 "可填写 http:// 或 https:// 开头的链接；留空时底部文字不可点击");
+        ensureConfig("customer_service.mode", "客服接入方式", "internal", "text", "客服配置",
+                "internal：使用系统内置客服；external：跳转第三方企业微信客服链接");
+        ensureConfig("customer_service.external_url", "第三方企业微信客服链接", "", "text", "客服配置",
+                "选择 external 时填写企业微信客服的 HTTPS 链接；未填写时仍使用内置客服");
         ensureConfig("notice.popup_every_visit", "首页公告每次刷新都弹窗", "true", "boolean", "公告配置",
                 "开启后浏览器刷新会展示已发布的首页公告，切换页面不会重复弹出；关闭后仅在新版本公告首次出现时提醒");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
@@ -218,6 +224,18 @@ public class SysConfigController {
                 } catch(Exception e) {
                     throw new com.delta.common.exception.BusinessException(400,"技术支持链接须为有效的 http 或 https 地址");
                 }
+            }
+        }
+        if("customer_service.mode".equals(key)) {
+            if(!java.util.Set.of("internal","external").contains(value)) throw new com.delta.common.exception.BusinessException(400,"客服接入方式不正确");
+        }
+        if("customer_service.external_url".equals(key) && !value.isBlank()) {
+            try {
+                java.net.URI uri = java.net.URI.create(value);
+                if(!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null || uri.getFragment()!=null)
+                    throw new IllegalArgumentException();
+            } catch(Exception e) {
+                throw new com.delta.common.exception.BusinessException(400,"企业微信客服链接须为有效的 HTTPS 地址");
             }
         }
         if(java.util.Set.of("withdraw.min_amount","player.deposit_amount","sms.aliyun.player_fee").contains(key)) {
