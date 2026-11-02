@@ -46,6 +46,7 @@
 <EmptyState v-if="accounts.length===0" text="暂无账户，请先添加" image="/pages-player/static/icons/暂无地址.svg" button-text="添加账户" @action="goAccounts" />
       </view>
     </view>
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="押金支付二维码" />
   </view>
 </template>
 <script setup>
@@ -57,6 +58,7 @@ import { applyWithdraw, getAccountList, getEarningsSummary, getWithdrawDepositSt
 import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 import { useSiteStore } from '@/store/site'
+import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 
 const balance = ref('0.00')
 const form = reactive({ amount: '', accountId: '', remark: '' })
@@ -65,6 +67,7 @@ const selectedAccount = ref(null)
 const showAccountPicker = ref(false)
 const depositStatus = ref(null),payingDeposit=ref(false)
 const loading = ref(false), ready = ref(false), loadError = ref(''), submitting = ref(false)
+const qrVisible = ref(false), paymentQrUrl = ref('')
 const siteStore = useSiteStore()
 
 onShow(load)
@@ -95,6 +98,13 @@ async function payDeposit(){
     }) : null
     if (!channel) throw new Error('未启用可用的微信支付方式')
     if (showWechatPaymentEnvironmentPrompt(channel)) return
+    if (channel === 'OFFICIAL_QR') {
+      const result = await createOfficialPlayerDeposit({ scene: 'WITHDRAW', role: 'player' })
+      if (!result.data?.authorizeUrl) throw new Error('未获取到微信支付地址')
+      paymentQrUrl.value = result.data.authorizeUrl
+      qrVisible.value = true
+      return
+    }
     if (channel === 'OFFICIAL') {
       const result = await createOfficialPlayerDeposit({ scene: 'WITHDRAW', role: 'player' })
       if (!result.data?.authorizeUrl) throw new Error('未获取到微信支付授权地址')

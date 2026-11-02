@@ -47,15 +47,16 @@ export function resolveWechatPayChannel({ miniapp, web, inWechat, mobile, miniap
     if (officialEnabled) return 'OFFICIAL'
     return h5Enabled ? 'OPEN_IN_BROWSER' : null
   }
+  if (officialEnabled) return 'OFFICIAL_QR'
   if (mobile && h5Enabled) return 'H5'
-  return officialEnabled ? 'OPEN_IN_WECHAT' : null
+  return h5Enabled ? 'OPEN_IN_MOBILE_BROWSER' : null
 }
 
 export function showWechatPaymentEnvironmentPrompt(channel) {
-  const content = channel === 'OPEN_IN_WECHAT'
-    ? '当前浏览器无法直接完成微信支付，请复制本页链接并在微信客户端中打开后重试。'
-    : channel === 'OPEN_IN_BROWSER'
+  const content = channel === 'OPEN_IN_BROWSER'
       ? '微信内暂不能使用当前支付方式，请复制本页链接并在手机浏览器中打开后重试。'
+      : channel === 'OPEN_IN_MOBILE_BROWSER'
+        ? '当前浏览器无法直接完成微信支付，请复制本页链接并在手机浏览器中打开后重试。'
       : ''
   if (!content) return false
   uni.showModal({ title: '微信支付', content, showCancel: false, confirmText: '知道了' })

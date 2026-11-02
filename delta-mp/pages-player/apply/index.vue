@@ -15,6 +15,7 @@
     <view class="deposit-tip" @click="agreed=!agreed">{{agreed?'☑':'☐'}} 我已阅读并同意 <text @click.stop="goAgreement('user')">《用户协议》</text>及<text @click.stop="goAgreement('privacy')">《隐私政策》</text>。实名及手机号仅客服、管理员可见。</view>
     <view v-if="pendingDepositNo" class="deposit-tip">已返回支付页面，请确认资料后提交申请。到账状态以平台核验为准。<text @click="reopenPayment">重新打开支付</text></view>
     <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositMode === 'REQUIRED' ? (pendingDepositNo ? '确认押金到账并提交' : '支付押金并提交') : '提交申请') }}</view>
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="押金支付二维码" />
   </view>
 </template>
 <script setup>
@@ -53,8 +54,11 @@ import { applyPlayer } from '@/api/player'
 import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
 import { useSiteStore } from '@/store/site'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
+import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 const siteStore = useSiteStore()
 const pendingDepositNo = ref('')
+const qrVisible = ref(false)
+const paymentQrUrl = ref('')
 const draftKey = 'cangshuo-enrollment-deposit-draft'
 const form = reactive({ nickname:'', realName: '', phone: '', gameLevel: '', serviceTypes: '', skillTags: '' })
 const proofImages = ref([])
@@ -94,6 +98,14 @@ async function submitWithDeposit() {
     }) : null
     if (!channel) throw new Error('未启用可用的微信支付方式')
     if (showWechatPaymentEnvironmentPrompt(channel)) return
+    if (channel === 'OFFICIAL_QR') {
+      const response = await createOfficialPlayerDeposit({ scene: 'APPLY' })
+      if (!response.data?.authorizeUrl || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')
+      pendingDepositNo.value = response.data.paymentNo
+      paymentQrUrl.value = response.data.authorizeUrl
+      qrVisible.value = true
+      return
+    }
     if (channel === 'OFFICIAL') {
       const response = await createOfficialPlayerDeposit({ scene: 'APPLY' })
       if (!response.data?.authorizeUrl || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')

@@ -37,7 +37,7 @@ public class UserPlayerController {
                                                     @RequestParam(value = "keyword", required = false) String keyword) {
         LambdaQueryWrapper<Player> w = directory.visibleQuery()
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword))
-                .orderByDesc(Player::getAvgRating);
+                .orderByDesc(Player::getIsOnline).orderByDesc(Player::getAvgRating);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
         // 使用公开字段白名单，避免将打手身份和财务资料返回给下单用户。
         java.util.List<Map<String,Object>> records=page.getRecords().stream().map(p -> {

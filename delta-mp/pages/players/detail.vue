@@ -4,7 +4,7 @@
       <view v-if="loading" class="hint">加载中...</view>
       <view v-else-if="!player" class="hint" @click="loadPlayer">{{ errorMessage || '打手暂未开放展示' }}，点击重试</view>
       <template v-else>
-        <view class="cover"><AppImage :width="160" :src="player.coverImage || player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/><view class="cover-shade"/><text class="cover-label">{{ player.levelName || `Lv.${player.level||1}` }} · 打手主页</text></view>
+        <view class="cover"><AppImage :width="1080" eager :src="player.coverImage || player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/><view class="cover-shade"/><text class="cover-label">{{ player.levelName || `Lv.${player.level||1}` }} · 打手主页</text></view>
         <view class="profile-card">
           <view class="profile-row"><view class="profile-info"><text class="name">{{ player.nickname || '打手' }}</text><view class="badges"><text class="level">{{ player.levelName || `Lv.${player.level||1}` }}</text><text class="online" :class="{available:player.isOnline===1}">● {{ player.isOnline===1?'在线接单':'暂时离线' }}</text></view></view><AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/></view>
           <view class="voice-wrap"><VoicePlayer :src="player.voiceUrl" :duration="player.voiceDuration || 0"/><text v-if="!player.voiceUrl" class="muted">TA还没有留下语音</text></view>

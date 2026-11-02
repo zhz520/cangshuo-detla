@@ -216,9 +216,10 @@ class PlayerDirectoryIntegrationTest {
         mvc.perform(post("/app/players/1/chat").with(role("CS",7))).andExpect(jsonPath("$.code").value(403));
     }
 
-    @Test void offDutyPlayerIsHiddenFromDirectoryButHistoricalProfileRemainsReadable()throws Exception{
+    @Test void offDutyPlayerRemainsVisibleWithOfflineState()throws Exception{
         jdbc.update("UPDATE player SET is_online=0 WHERE id=1");
-        mvc.perform(get("/app/players").param("level","2")).andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/app/players").param("level","2")).andExpect(jsonPath("$.data.records[0].id").value(1))
+                .andExpect(jsonPath("$.data.records[0].isOnline").value(0));
         mvc.perform(get("/app/players/1")).andExpect(jsonPath("$.data.canOrder").value(false));
     }
     @Test void audioUploadChecksRoleFormatAndSize() throws Exception {

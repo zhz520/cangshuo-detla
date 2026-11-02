@@ -18,6 +18,7 @@
       <text class="selected-info" v-if="selected">实付 ¥{{ money(selected.amount) }}，到账 ¥{{ money(Number(selected.amount) + Number(selected.bonus)) }}</text>
       <view class="pay-button" :class="{ disabled: !selected || paying }" @click="pay">{{ paying ? '支付中...' : payButtonText }}</view>
     </view>
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="充值支付二维码" />
   </view>
 </template>
 
@@ -28,11 +29,14 @@ import { getRechargePackages, getSiteConfig } from '@/api/config'
 import { createH5RechargePayment, createOfficialRechargePayment, createRechargePayment } from '@/api/pay'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 import EmptyState from '@/components/EmptyState.vue'
+import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 
 const packages = ref([])
 const selected = ref(null)
 const loading = ref(false)
 const paying = ref(false)
+const qrVisible = ref(false)
+const paymentQrUrl = ref('')
 const payButtonText = '微信支付充值'
 function money(value) { return Number(value || 0).toFixed(2) }
 
@@ -57,6 +61,13 @@ async function pay() {
     }) : null
     if (!channel) return uni.showToast({ title: '未启用可用的微信支付方式', icon: 'none' })
     if (showWechatPaymentEnvironmentPrompt(channel)) return
+    if (channel === 'OFFICIAL_QR') {
+      const res = await createOfficialRechargePayment(selected.value.id)
+      if (!res.data?.authorizeUrl) throw new Error('未获取到微信支付地址')
+      paymentQrUrl.value = res.data.authorizeUrl
+      qrVisible.value = true
+      return
+    }
     if (channel === 'OFFICIAL') {
       const res = await createOfficialRechargePayment(selected.value.id)
       if (!res.data?.authorizeUrl) throw new Error('未获取到微信支付授权地址')

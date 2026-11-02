@@ -16,7 +16,7 @@ public class PlayerDirectoryService {
     private final CrossModuleMapper crossModuleMapper;
 
     public LambdaQueryWrapper<Player> visibleQuery() {
-        return new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE").eq(Player::getIsOnline,1)
+        return new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE")
                 .inSql(Player::getLevel,"SELECT id FROM player_level WHERE status=1 AND deleted=0");
     }
     public Player requireVisible(Long id) {

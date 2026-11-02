@@ -22,6 +22,7 @@
       </view>
     </view>
     <view class="btn-pay" :class="{ disabled: expired }" @click="handlePay">确认支付</view>
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="订单支付二维码" />
   </view>
 </template>
 <script setup>
@@ -34,10 +35,13 @@ import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
+import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 
 const orderId = ref(0)
 const amount = ref(0)
 const canUseWechatPay = ref(false)
+const qrVisible = ref(false)
+const paymentQrUrl = ref('')
 const payType = ref('BALANCE')
 const walletBalance = ref('0.00')
 const countdown = ref(0)
@@ -156,6 +160,13 @@ async function handlePay() {
         officialEnabled: site.wx_pay_official_enabled === 'true'
       })
       if (showWechatPaymentEnvironmentPrompt(channel)) return
+      if (channel === 'OFFICIAL_QR') {
+        const res = await createOfficialPayment(orderId.value)
+        if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
+        paymentQrUrl.value = res.data.authorizeUrl
+        qrVisible.value = true
+        return
+      }
       if (channel === 'OFFICIAL') {
         const res = await createOfficialPayment(orderId.value)
         if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到微信支付授权地址', icon: 'none' })
