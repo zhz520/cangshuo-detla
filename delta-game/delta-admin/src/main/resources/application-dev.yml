@@ -41,6 +41,10 @@ mybatis-plus:
 aes:
   key: ${AES_KEY:change_me_16byte}
 
+identity:
+  hash-pepper: ${IDENTITY_HASH_PEPPER:dev-only-identity-hash-pepper-change-before-production}
+  encryption-key: ${IDENTITY_ENCRYPTION_KEY:dev-only-identity-encryption-key-change-before-production}
+
 # JWT
 jwt:
   secret: ${JWT_SECRET:change_me_jwt_secret_at_least_256_bits}

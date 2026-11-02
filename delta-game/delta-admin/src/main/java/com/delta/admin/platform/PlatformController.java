@@ -26,8 +26,11 @@ public class PlatformController {
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
     @GetMapping("/features")
     public R<List<PlatformService.FeatureView>> features() {
+        return R.ok(withCommercialMetadata(platform.features()));
+    }
+    private List<PlatformService.FeatureView> withCommercialMetadata(List<PlatformService.FeatureView> source) {
         var commercial = remote.commercialModules();
-        return R.ok(platform.features().stream().map(feature -> {
+        return source.stream().map(feature -> {
             var module = commercial.get(feature.id());
             if (module == null) return feature;
             Integer price = module.path("priceCents").isNumber() ? module.path("priceCents").asInt() : feature.priceCents();
@@ -35,7 +38,7 @@ public class PlatformController {
             return new PlatformService.FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(),
                     price, minimum, feature.dependencies(), feature.entryPath(), feature.capabilities(), feature.status(),
                     feature.entitled(), feature.enabled(), feature.reason(), feature.expiresAt());
-        }).toList());
+        }).toList();
     }
     @GetMapping("/updates") public R<PlatformService.UpdateInfo> updates() { return R.ok(platform.updates()); }
     @PutMapping("/updates/selection")
@@ -56,7 +59,7 @@ public class PlatformController {
     @PutMapping("/features/{id}/enabled")
     @OpLog(module="platform", operation="调整扩展功能启用状态")
     public R<List<PlatformService.FeatureView>> enabled(@PathVariable String id, @Valid @RequestBody EnableRequest body) {
-        return R.ok(platform.setEnabled(id, body.enabled()));
+        return R.ok(withCommercialMetadata(platform.setEnabled(id, body.enabled())));
     }
     @GetMapping("/reports/income")
     public R<IncomeAnalysisService.Comparison> income(

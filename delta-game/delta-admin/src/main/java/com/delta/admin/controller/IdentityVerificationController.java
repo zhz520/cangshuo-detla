@@ -25,10 +25,12 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -40,6 +42,7 @@ public class IdentityVerificationController {
     private static final String FEATURE = "identity_verification";
     private static final String PRIVACY_VERSION = "2026-11-02";
     private static final Set<String> STATUSES = Set.of("NOT_SUBMITTED", "DRAFT", "PENDING", "APPROVED", "REJECTED");
+    private static final Semaphore IMAGE_DECODE_SLOTS = new Semaphore(2, true);
     private static final int[] ID_WEIGHTS = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
     private static final char[] ID_CHECK_CODES = {'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'};
 
@@ -47,9 +50,9 @@ public class IdentityVerificationController {
     private final PlatformService platform;
     private final com.delta.common.security.service.RateLimitService limits;
 
-    @Value("${identity.hash-pepper:${jwt.secret:change_me_jwt_secret_at_least_256_bits}}")
+    @Value("${identity.hash-pepper}")
     private String hashPepper;
-    @Value("${identity.encryption-key:${jwt.secret:change_me_jwt_secret_at_least_256_bits}}")
+    @Value("${identity.encryption-key}")
     private String encryptionKey;
 
     public record StatusView(boolean available, String reason, String status, String realName,
@@ -169,7 +172,7 @@ public class IdentityVerificationController {
 
     private FeatureAccess access(HttpServletRequest request) {
         try {
-            platform.requireFeature(FEATURE, requestDomain(request));
+            verifyRequest(request);
             return new FeatureAccess(true, "");
         } catch (BusinessException error) {
             return new FeatureAccess(false, error.getMessage());
@@ -177,11 +180,21 @@ public class IdentityVerificationController {
     }
 
     private void requireAccess(HttpServletRequest request) {
-        platform.requireFeature(FEATURE, requestDomain(request));
+        verifyRequest(request);
     }
 
-    private String requestDomain(HttpServletRequest request) {
-        return request.getServerName();
+    private void verifyRequest(HttpServletRequest request) {
+        platform.requireFeature(FEATURE, request.getServerName());
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.isBlank()) return;
+        try {
+            var uri = URI.create(origin);
+            if (!Set.of("http", "https").contains(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null)
+                throw new IllegalArgumentException();
+            platform.requireFeature(FEATURE, uri.getHost());
+        } catch (IllegalArgumentException error) {
+            throw new BusinessException(403, "请求来源未获得实名认证模块授权");
+        }
     }
 
     private StatusView emptyStatus(String reason) {
@@ -192,30 +205,35 @@ public class IdentityVerificationController {
     private EncodedImage encode(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) throw new BusinessException(400, "请选择证件照片");
         if (file.getSize() > 8L * 1024 * 1024) throw new BusinessException(400, "证件照片不能超过8MB");
-        BufferedImage source;
-        try (var input = ImageIO.createImageInputStream(file.getInputStream())) {
-            if (input == null) throw new BusinessException(400, "无法识别证件照片");
-            var readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) throw new BusinessException(400, "无法识别证件照片");
-            var reader = readers.next();
-            try {
-                reader.setInput(input, true, true);
-                String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                if (!Set.of("jpeg", "jpg", "png").contains(format)) throw new BusinessException(400, "证件照片仅支持JPG或PNG");
-                int width = reader.getWidth(0), height = reader.getHeight(0);
-                if (width < 160 || height < 100) throw new BusinessException(400, "证件照片尺寸过小");
-                if (width > 6000 || height > 6000 || (long) width * height > 24_000_000L) throw new BusinessException(400, "证件照片分辨率过大");
-                source = reader.read(0);
-            } finally { reader.dispose(); }
-        }
-        if (source == null) throw new BusinessException(400, "无法识别证件照片");
-        BufferedImage image = ImageEncoding.resize(source, 1600, 1600);
-        try (var output = new ByteArrayOutputStream()) {
-            BufferedImage rgb = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
-            var graphics = rgb.createGraphics();
-            try { graphics.drawImage(image, 0, 0, null); } finally { graphics.dispose(); }
-            if (!ImageIO.write(rgb, "jpg", output)) throw new BusinessException(400, "证件照片处理失败");
-            return new EncodedImage(encrypt(output.toByteArray()), "image/jpeg");
+        if (!IMAGE_DECODE_SLOTS.tryAcquire()) throw new BusinessException(429, "证件照片正在处理中，请稍后重试");
+        try {
+            BufferedImage source;
+            try (var input = ImageIO.createImageInputStream(file.getInputStream())) {
+                if (input == null) throw new BusinessException(400, "无法识别证件照片");
+                var readers = ImageIO.getImageReaders(input);
+                if (!readers.hasNext()) throw new BusinessException(400, "无法识别证件照片");
+                var reader = readers.next();
+                try {
+                    reader.setInput(input, true, true);
+                    String format = reader.getFormatName().toLowerCase(Locale.ROOT);
+                    if (!Set.of("jpeg", "jpg", "png").contains(format)) throw new BusinessException(400, "证件照片仅支持JPG或PNG");
+                    int width = reader.getWidth(0), height = reader.getHeight(0);
+                    if (width < 160 || height < 100) throw new BusinessException(400, "证件照片尺寸过小");
+                    if (width > 4000 || height > 4000 || (long) width * height > 10_000_000L) throw new BusinessException(400, "证件照片分辨率过大");
+                    source = reader.read(0);
+                } finally { reader.dispose(); }
+            }
+            if (source == null) throw new BusinessException(400, "无法识别证件照片");
+            BufferedImage image = ImageEncoding.resize(source, 1600, 1600);
+            try (var output = new ByteArrayOutputStream()) {
+                BufferedImage rgb = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+                var graphics = rgb.createGraphics();
+                try { graphics.drawImage(image, 0, 0, null); } finally { graphics.dispose(); }
+                if (!ImageIO.write(rgb, "jpg", output)) throw new BusinessException(400, "证件照片处理失败");
+                return new EncodedImage(encrypt(output.toByteArray()), "image/jpeg");
+            }
+        } finally {
+            IMAGE_DECODE_SLOTS.release();
         }
     }
 
