@@ -61,7 +61,7 @@ const identityText = computed(() => overview.value ? `客户编号：${overview.
 function formatTime(value) { return new Date(value).toLocaleString('zh-CN', { hour12: false }) }
 async function load() {
   loading.value = true; error.value = ''
-  try { const [info, modules] = await Promise.all([getPlatformOverview(), getPlatformFeatures()]); overview.value = info.data; features.value = modules.data }
+  try { const [info, modules] = await Promise.all([getPlatformOverview(), getPlatformFeatures({ silent: true })]); overview.value = info.data; features.value = modules.data }
   catch { error.value = '功能与授权信息加载失败，请刷新重试。'; overview.value = null; features.value = [] }
   finally { loading.value = false }
 }

@@ -80,8 +80,8 @@ export function csPlayerUpdateNickname(id, nickname) {
 }
 
 // ==================== 订单管理 ====================
-export function adminOrderList(params) {
-  return request({ url: '/admin/order/list', method: 'get', params })
+export function adminOrderList(params, config = {}) {
+  return request({ ...config, url: '/admin/order/list', method: 'get', params })
 }
 export function adminOrderDetail(id) {
   return request({ url: `/admin/order/${id}`, method: 'get' })
@@ -104,8 +104,8 @@ export function csOrderRefund(orderId) {
 export function csOrderConfirm(orderId) {
   return request({ url: `/cs/order/${orderId}/confirm`, method: 'post' })
 }
-export function csOrderList(params) {
-  return request({ url: '/cs/order/list', method: 'get', params })
+export function csOrderList(params, config = {}) {
+  return request({ ...config, url: '/cs/order/list', method: 'get', params })
 }
 
 // ==================== 投诉管理 ====================

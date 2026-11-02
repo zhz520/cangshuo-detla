@@ -6,16 +6,16 @@
       :page-sizes="[10, 20, 50, 100]"
       :total="total"
       :pager-count="isNarrow ? 5 : 7"
-      layout="total, sizes, prev, pager, next, jumper"
+      :layout="isNarrow ? 'total, prev, pager, next, sizes' : 'total, sizes, prev, pager, next, jumper'"
       background
-      @size-change="handleChange"
+      @size-change="handleSizeChange"
       @current-change="handleChange"
     />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 
 const { isNarrow } = useResponsive()
@@ -36,8 +36,15 @@ const pageSize = computed({
   set: (val) => emit('update:limit', val)
 })
 
+let scheduled = false
+function handleSizeChange() {
+  emit('update:page', 1)
+  handleChange()
+}
 function handleChange() {
-  emit('pagination')
+  if (scheduled) return
+  scheduled = true
+  nextTick(() => { scheduled = false; emit('pagination') })
 }
 </script>
 

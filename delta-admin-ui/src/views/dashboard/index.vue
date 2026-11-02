@@ -1,8 +1,12 @@
 <template>
-  <div class="dashboard" v-loading="loading">
+  <div class="dashboard" :aria-busy="loading || userLoading || playerLoading">
+    <div class="dashboard-heading">
+      <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
+      <el-button :loading="loading" @click="fetchDashboard">刷新概览</el-button>
+    </div>
+    <LoadFeedback :loading="loading" :error="dashboardError" label="概览" @retry="fetchDashboard" />
     <!-- ==================== 管理员仪表盘 ==================== -->
     <template v-if="isAdmin">
-      <h2 class="dashboard-title">管理员仪表盘</h2>
 
       <!-- 今日核心数据 -->
       <div class="section-label">今日数据</div>
@@ -173,10 +177,11 @@
       </el-row>
 
       <!-- 用户统计 + 打手统计 -->
-      <el-row :gutter="16" style="margin-top: 16px">
+      <el-row v-if="statisticsAllowed" :gutter="16" style="margin-top: 16px">
         <el-col :span="12">
-          <el-card shadow="hover" v-loading="userLoading">
+          <el-card shadow="hover" :aria-busy="userLoading">
             <template #header><span>用户统计</span></template>
+            <LoadFeedback :loading="userLoading" :error="userError" label="用户统计" @retry="loadUserStats" />
             <div class="stat-extra" v-if="paidUserRate != null">付费用户占比：<strong>{{ paidUserRate.toFixed(1) }}%</strong></div>
             <el-table :data="newUserTrend" stripe size="small" max-height="300">
               <el-table-column prop="dt" label="日期" width="120" />
@@ -192,8 +197,9 @@
           </el-card>
         </el-col>
         <el-col :span="12">
-          <el-card shadow="hover" v-loading="playerLoading">
+          <el-card shadow="hover" :aria-busy="playerLoading">
             <template #header><span>打手统计</span></template>
+            <LoadFeedback :loading="playerLoading" :error="playerError" label="打手统计" @retry="loadPlayerStats" />
             <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
               <el-descriptions-item label="总打手数">{{ playerStats.totalPlayers ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="活跃打手">{{ playerStats.activePlayers ?? '-' }}</el-descriptions-item>
@@ -220,7 +226,6 @@
 
     <!-- ==================== 客服工作台 ==================== -->
     <template v-else>
-      <h2 class="dashboard-title">客服工作台</h2>
 
       <!-- 待办事项 -->
       <div class="section-label">待办事项</div>
@@ -359,8 +364,11 @@
 
 <script setup>
 import { useResponsive } from '@/utils/responsive'
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useLoadTask } from '@/composables/useLoadTask'
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useUserStore } from '@/stores/user'
+import { can } from '@/utils/staff-permissions'
 import { getAdminDashboard, getCsDashboard, getStatisticsUser, getStatisticsPlayer } from '@/api/dashboard'
 import {
   List, Money, User, Avatar, Warning, Wallet, Clock, Loading,
@@ -371,17 +379,19 @@ const { isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.role === 'admin')
-const loading = ref(false)
-const stats = ref({})
+const statisticsAllowed = computed(() => isAdmin.value && can('finance.read'))
+const { data: stats, loading, error: dashboardError, run: fetchDashboard } = useLoadTask(async () => {
+  const fn = isAdmin.value ? getAdminDashboard : getCsDashboard
+  return (await fn({ silent: true })).data || {}
+}, {})
 
 // 用户统计 & 打手统计（admin 独有）
-const userLoading = ref(false)
-const newUserTrend = ref([])
-const paidUserRate = ref(null)
+const { data: userStats, loading: userLoading, error: userError, run: loadUserStats } = useLoadTask(async () => (await getStatisticsUser({ silent: true })).data || {}, {})
+const newUserTrend = computed(() => userStats.value.newUserTrend || [])
+const paidUserRate = computed(() => userStats.value.paidUserRate ?? null)
 const maxUserCnt = computed(() => Math.max(...newUserTrend.value.map(r => r.cnt), 1))
 
-const playerLoading = ref(false)
-const playerStats = ref({})
+const { data: playerStats, loading: playerLoading, error: playerError, run: loadPlayerStats } = useLoadTask(async () => (await getStatisticsPlayer({ silent: true })).data || {}, {})
 
 // 订单状态映射
 const statusLabelMap = {
@@ -415,7 +425,7 @@ function statusPercent(count) {
 
 // 格式化金额
 function formatAmount(val) {
-  if (val == null || val === '-') return '0.00'
+  if (val == null || val === '-') return '—'
   return Number(val).toFixed(2)
 }
 
@@ -433,37 +443,9 @@ function diffClass(cur, prev) {
   return ''
 }
 
-async function fetchDashboard() {
-  loading.value = true
-  try {
-    const res = isAdmin.value ? await getAdminDashboard() : await getCsDashboard()
-    stats.value = res.data || {}
-  } catch (e) {
-    // request interceptor handles errors
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadUserStats() {
-  userLoading.value = true
-  try {
-    const res = await getStatisticsUser()
-    const d = res.data || {}
-    newUserTrend.value = d.newUserTrend || []
-    paidUserRate.value = d.paidUserRate ?? null
-  } finally { userLoading.value = false }
-}
-
-async function loadPlayerStats() {
-  playerLoading.value = true
-  try { const res = await getStatisticsPlayer(); playerStats.value = res.data || {} }
-  finally { playerLoading.value = false }
-}
-
 onMounted(() => {
   fetchDashboard()
-  if (isAdmin.value) {
+  if (statisticsAllowed.value) {
     loadUserStats()
     loadPlayerStats()
   }
@@ -474,6 +456,8 @@ onMounted(() => {
 .dashboard {
   min-height: 100%;
 }
+.dashboard-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.dashboard-heading .dashboard-title { margin-bottom: 0; }
 .dashboard-title {
   position: relative;
   margin: 0 0 18px;

@@ -1,21 +1,8 @@
 <template>
   <view class="player-home tab-page">
     <scroll-view scroll-y class="player-home-scroll tab-page-scroll" :show-scrollbar="false">
-      <view class="stat-cards">
-        <view class="card"><text class="num">{{ homeData.todayCompleted || 0 }}</text><text class="label">今日订单</text></view>
-        <view class="card"><text class="num">￥{{ homeData.todayIncome || '0.00' }}</text><text class="label">今日收入</text></view>
-        <view class="card"><text class="num">￥{{ homeData.wallet?.totalIncome || '0.00' }}</text><text class="label">累计收入</text></view>
-      </view>
-      <view class="quick-actions">
-        <view class="action" @click="go('/pages-player/hall/index')">
-          <image class="action-icon" src="/pages-player/static/icons/店铺.svg" mode="aspectFit" />
-          <text>接单大厅</text>
-          <view v-if="homeData.pendingCount" class="pending-badge">{{ homeData.pendingCount }}</view>
-        </view>
-        <view class="action" @click="go('/pages-player/order/list')"><image class="action-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的订单</text></view>
-        <view class="action" @click="go('/pages-player/earnings/index')"><image class="action-icon" src="/static/icons/钞票.svg" mode="aspectFit" /><text>我的收益</text></view>
-        <view class="action" @click="go('/pages-player/withdraw/index')"><image class="action-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现</text></view>
-      </view>
+      <PageState :loading="loading && !loaded" :error="error" @retry="load" />
+      <PlayerOverview v-if="loaded" :data="homeData" :profile="playerStore.playerInfo" @navigate="go" />
       <!-- 待处理订单预览 -->
       <view class="section" v-if="recentOrders.length">
         <view class="section-header">
@@ -35,22 +22,30 @@ import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import OrderCard from '@/components/OrderCard.vue'
 import { getPlayerHome, getMyWork } from '@/api/player'
+import PlayerOverview from '@/components/PlayerOverview.vue'
+import PageState from '@/components/PageState.vue'
+import { usePlayerStore } from '@/store/player'
 
 const homeData = ref({})
 const recentOrders = ref([])
 
-onShow(async () => {
-  try { const res = await getPlayerHome(); homeData.value = res.data || {} } catch (e) {}
-  try {
-    const res = await getMyWork({ pageNum: 1, pageSize: 3, status: 'ASSIGNED' })
-    recentOrders.value = res.data?.records || []
-  } catch (e) {}
-})
+const playerStore = usePlayerStore()
+const loading = ref(false), loaded = ref(false), error = ref('')
+onShow(load)
+async function load() {
+  if (loading.value) return
+  loading.value = true; error.value = ''
+  const [home, work] = await Promise.allSettled([getPlayerHome({ loading: false }), getMyWork({ pageNum: 1, pageSize: 3, status: 'ASSIGNED' }), playerStore.fetchProfile()])
+  if (home.status === 'fulfilled') { homeData.value = home.value.data || {}; loaded.value = true }
+  else error.value = '工作台数据暂未获取，请稍后重试。'
+  if (work.status === 'fulfilled') recentOrders.value = work.value.data?.records || []
+  loading.value = false
+}
 
-function go(url) { uni.navigateTo({ url }) }
+function go(url) { if (['/pages-player/hall/index', '/pages-player/order/list'].includes(url)) uni.redirectTo({ url }); else uni.navigateTo({ url }) }
 </script>
 <style lang="scss" scoped>
-.player-home { background: #ffffff; position: relative; }
+.player-home { background: #f5f6f8; position: relative; }
 .stat-cards { display: flex; gap: 20rpx; padding: 24rpx;
   .card { flex: 1; background: rgba(0,0,0,0.04); padding: 24rpx; border-radius: 12rpx; text-align: center;
     .num { font-size: 36rpx; font-weight: bold; color: #17191c; display: block; }

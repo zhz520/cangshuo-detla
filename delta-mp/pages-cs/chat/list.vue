@@ -15,7 +15,7 @@
           </view>
         </view>
       </view>
-      <EmptyState v-if="sessions.length === 0" text="暂无会话" image="/static/icons/暂无消息对话.svg" />
+      <PageState :loading="loading && !sessions.length" :error="error" :empty="!loading && !error && !sessions.length" empty-text="暂无会话" @retry="fetchList" />
       <view class="tab-page-bottom-spacer" />
     </scroll-view>
     <CustomTabBar :current="3" />
@@ -26,7 +26,7 @@ import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
-import EmptyState from '@/components/EmptyState.vue'
+import PageState from '@/components/PageState.vue'
 import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
 import { getCsChatSessions } from '@/pages-cs/api/cs'
@@ -36,15 +36,22 @@ const remindStore = useRemindStore()
 import { formatRelativeTime } from '@/utils/format'
 
 const sessions = ref([])
+const loading = ref(false), error = ref('')
 
 onShow(async () => {
   chatStore.fetchMessageUnreadCount()
   remindStore.fetchCsRemind()
+  await fetchList()
+})
+async function fetchList() {
+  if (loading.value) return
+  loading.value = true; error.value = ''
   try {
     const res = await getCsChatSessions({ pageNum: 1, pageSize: 100 })
     sessions.value = res.data?.records || res.data || []
-  } catch (e) { sessions.value = [] }
-})
+  } catch (e) { error.value = '会话加载失败，请重新加载。' }
+  finally { loading.value = false }
+}
 
 function firstChar(str) { const s = (str && String(str).trim()) || ''; return s.length ? s[0] : '?' }
 function goRoom(s) {

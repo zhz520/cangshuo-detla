@@ -1,5 +1,7 @@
 <template>
   <view class="withdraw-page">
+    <PageState :loading="loading && !ready" :error="loadError" @retry="load" />
+    <template v-if="ready">
     <view class="balance-card">
       <text class="label">可提现金额（元）</text>
       <text class="amount">¥{{ balance }}</text>
@@ -27,8 +29,9 @@
       </view>
     </view>
     <view class="btn-area">
-      <view class="submit-btn" @click="doSubmit">确认提现</view>
+      <button class="submit-btn" role="button" :disabled="submitting || loading || depositStatus?.needsPayment" @click="doSubmit">{{ submitting ? '提交中…' : depositStatus?.needsPayment ? '请先补交押金' : '确认提现' }}</button>
     </view>
+    </template>
     <view class="links">
       <text class="link" @click="goList">提现记录</text>
       <text class="link" @click="goAccounts">管理账户</text>
@@ -49,8 +52,10 @@
 import { ref, reactive } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
+import PageState from '@/components/PageState.vue'
 import { applyWithdraw, getAccountList, getEarningsSummary, getWithdrawDepositStatus } from '@/api/player'
-import { createPlayerDeposit } from '@/api/pay'
+import { createPlayerDeposit, createH5PlayerDeposit } from '@/api/pay'
+import { isH5, canStartH5WechatPayment } from '@/utils/platform'
 
 const balance = ref('0.00')
 const form = reactive({ amount: '', accountId: '', remark: '' })
@@ -58,16 +63,38 @@ const accounts = ref([])
 const selectedAccount = ref(null)
 const showAccountPicker = ref(false)
 const depositStatus = ref(null),payingDeposit=ref(false)
+const loading = ref(false), ready = ref(false), loadError = ref(''), submitting = ref(false)
 
-onShow(async () => {
-  try { const res = await getEarningsSummary(); balance.value = Number(res.data?.balance || 0).toFixed(2) } catch (e) {}
-  try { const res = await getAccountList(); accounts.value = res.data || [] } catch (e) {}
-  try { depositStatus.value = (await getWithdrawDepositStatus()).data } catch (e) {}
-})
+onShow(load)
+async function load() {
+  if (loading.value) return
+  loading.value = true; loadError.value = ''
+  try {
+    const [summary, accountResult, deposit] = await Promise.all([getEarningsSummary({ loading: false }), getAccountList({ loading: false }), getWithdrawDepositStatus()])
+    balance.value = Number(summary.data?.balance || 0).toFixed(2)
+    accounts.value = accountResult.data || []
+    depositStatus.value = deposit.data
+    // An account deleted in the account manager must not remain selectable here.
+    const selected = accounts.value.find(a => a.id === form.accountId)
+    selectedAccount.value = selected || null; form.accountId = selected?.id || ''
+    ready.value = true
+  } catch (_) { loadError.value = '提现信息未获取完整，请重新加载后操作。'; ready.value = false }
+  finally { loading.value = false }
+}
 async function payDeposit(){
   if(payingDeposit.value)return
+  if(isH5() && !canStartH5WechatPayment())return
   payingDeposit.value=true
   try{
+    if(isH5()) {
+      const result = await createH5PlayerDeposit({role:'player'})
+      if (!result.data?.h5Url) throw new Error('未获取到支付地址')
+      // #ifdef H5
+      const returnUrl = window.location.origin + window.location.pathname + '#/pages-player/withdraw/index'
+      window.location.assign(result.data.h5Url + '&redirect_url=' + encodeURIComponent(returnUrl))
+      // #endif
+      return
+    }
     const res=await createPlayerDeposit({role:'player'})
     const {paymentNo,timeStamp,nonceStr,package:pkg,signType,paySign}=res.data
     await new Promise((resolve,reject)=>uni.requestPayment({provider:'wxpay',timeStamp,nonceStr,package:pkg,signType:signType||'RSA',paySign,success:resolve,fail:reject}))
@@ -75,21 +102,24 @@ async function payDeposit(){
     await new Promise(resolve=>setTimeout(resolve,2000))
     depositStatus.value=(await getWithdrawDepositStatus()).data
   }catch(e){
-    if(!e?.errMsg?.includes('cancel'))uni.showToast({title:e?.msg||'补交押金失败',icon:'none'})
+    if(!e?.errMsg?.includes('cancel'))uni.showToast({title:e?.msg||e?.message||'补交押金失败',icon:'none'})
   }finally{payingDeposit.value=false}
 }
 
-function accountDisplay(a) { return `${a.type === 'ALIPAY' ? '支付宝' : a.type === 'WECHAT' ? '微信' : a.type === 'BANK' ? '银行卡' : a.type} ${(a.accountNo || '').replace(/(.{3}).*(.{4})/, '$1****$2')}` }
+function accountDisplay(a) { return `${a.type === 'ALIPAY' ? '支付宝' : a.type === 'WECHAT' ? '微信' : a.type === 'BANK' ? '银行卡' : a.type} ${(a.accountNo || a.account || '').replace(/(.{3}).*(.{4})/, '$1****$2')}` }
 function selectAccount(a) { selectedAccount.value = a; form.accountId = a.id; showAccountPicker.value = false }
 async function doSubmit() {
-  if (!form.amount || Number(form.amount) <= 0) return uni.showToast({ title: '请输入金额', icon: 'none' })
+  if (submitting.value || loading.value || !ready.value) return
+  if (depositStatus.value?.needsPayment) return uni.showToast({ title: '请先补交押金', icon: 'none' })
+  if (!/^\d+(\.\d{1,2})?$/.test(String(form.amount)) || !Number.isFinite(Number(form.amount)) || Number(form.amount) <= 0) return uni.showToast({ title: '请输入正确金额，最多两位小数', icon: 'none' })
   if (Number(form.amount) > Number(balance.value)) return uni.showToast({ title: '超过可提现金额', icon: 'none' })
   if (!form.accountId) return uni.showToast({ title: '请选择提现账户', icon: 'none' })
+  submitting.value = true
   try {
     await applyWithdraw({ amount: Number(form.amount), accountId: form.accountId, remark: form.remark })
     uni.showToast({ title: '提现申请已提交' })
-    setTimeout(() => uni.navigateTo({ url: '/pages-player/withdraw/list' }), 1500)
-  } catch (e) {}
+    uni.redirectTo({ url: '/pages-player/withdraw/list' })
+  } catch (e) { submitting.value = false }
 }
 function goList() { uni.navigateTo({ url: '/pages-player/withdraw/list' }) }
 function goAccounts() { uni.navigateTo({ url: '/pages-player/account/list' }) }

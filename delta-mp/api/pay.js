@@ -14,6 +14,7 @@ export const createH5RechargePayment = (packageId) => post(`/pay/recharge/h5/${p
 
 /** 打手入驻押金支付(100元)，返回paymentNo及wx.requestPayment参数 */
 export const createPlayerDeposit = (options = {}) => post('/pay/player-deposit', {}, options)
+export const createH5PlayerDeposit = (options = {}) => post('/pay/player-deposit/h5', {}, options)
 
 /** 余额支付 */
 export const balancePay = (orderId) => post(`/pay/balance/${orderId}`)

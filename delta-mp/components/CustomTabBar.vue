@@ -38,6 +38,8 @@ const chatStore = useChatStore()
 const remindStore = useRemindStore()
 const siteStore = useSiteStore()
 const safeBottom = ref(0)
+let navigating = false
+let navigationTimer
 
 const baseTabs = computed(() => ROLE_TABS[appStore.role] || ROLE_TABS.user)
 const currentTabs = computed(() => {
@@ -93,6 +95,7 @@ onHide(() => {
 })
 
 onUnmounted(() => {
+  clearTimeout(navigationTimer)
   unlockH5PageScroll()
 })
 
@@ -119,7 +122,9 @@ const TAB_BAR_PAGES = [
 ]
 
 function switchTab(tab, index) {
-  if (currentIndex.value === index) return
+  if (currentIndex.value === index || navigating) return
+  navigating = true
+  navigationTimer = setTimeout(() => { navigating = false }, 450)
   if (TAB_BAR_PAGES.includes(tab.pagePath)) {
     uni.switchTab({ url: tab.pagePath })
   } else {

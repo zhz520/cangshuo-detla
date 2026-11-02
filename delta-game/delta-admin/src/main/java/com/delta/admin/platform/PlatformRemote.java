@@ -108,7 +108,23 @@ public class PlatformRemote {
         if(!cached.isObject())return json.createObjectNode();
         var updates=((com.fasterxml.jackson.databind.node.ObjectNode)cached).deepCopy();
         var applicable=json.createArrayNode();
-        for(var release:cached.path("releases"))if(release.path("version").asText().matches("\\d+\\.\\d+\\.\\d+")&&compare(release.path("version").asText(),currentVersion)>0)applicable.add(release);
+        JsonNode versions;
+        try { versions=componentVersions(); }
+        catch(Exception ignored) { versions=json.createObjectNode(); }
+        for(var release:cached.path("releases")) {
+            String version=release.path("version").asText();
+            boolean valid=version.matches("\\d+\\.\\d+\\.\\d+");
+            if(!valid)continue;
+            boolean pending=false;
+            for(var item:release.path("items")) {
+                String component=item.path("component").asText();
+                String installed=versions.path(component).asText();
+                if(component.matches("backend|admin|h5")&&compare(version,installed.matches("\\d+\\.\\d+\\.[0-9]+")?installed:currentVersion)>0){pending=true;break;}
+            }
+            // Older catalogs without component items still use the overall marker.
+            if(!release.path("items").isArray()||release.path("items").isEmpty())pending=compare(version,currentVersion)>0;
+            if(pending)applicable.add(release);
+        }
         updates.put("currentVersion",currentVersion);updates.set("releases",applicable);updates.put("updateAvailable",!applicable.isEmpty());
         return updates;
     }

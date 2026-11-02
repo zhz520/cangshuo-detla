@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import { Avatar, Box, ChatDotRound, DataAnalysis, Goods, List, Lock, Menu, Odometer, Picture, Search, Setting, User } from '@element-plus/icons-vue'
 import router from './router'
 import App from './App.vue'
 import './style.css'
@@ -15,8 +15,8 @@ if (import.meta.hot) import.meta.hot.dispose(stopViewport)
 
 const app = createApp(App)
 
-// 注册所有 Element Plus 图标
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+// Only string-based navigation/input icons need global registration.
+for (const [key, component] of Object.entries({ Avatar, Box, ChatDotRound, DataAnalysis, Goods, List, Lock, Menu, Odometer, Picture, Search, Setting, User })) {
   app.component(key, component)
 }
 

@@ -1,63 +1,47 @@
 <template>
   <view class="player-mine tab-page">
     <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
-      <!-- 用户信息 -->
-      <view class="user-header">
-        <AppImage :width="160" class="avatar" :src="playerStore.playerInfo?.avatar||'/static/images/default-avatar.png'" mode="aspectFill" />
-        <text class="name">{{playerStore.playerInfo?.nickname||'接单员'}}</text>
-      </view>
+      <PageState :loading="loading && !loaded" :error="loadError" @retry="loadDashboard" />
+      <template v-if="loaded">
+      <PlayerOverview :profile="playerStore.playerInfo" :data="homeData" @navigate="go" />
       <!-- 在线状态 -->
       <view class="online-bar">
         <text class="online-label">接单状态</text>
         <view class="online-right">
-          <text :class="['online-status-text', isOnline ? 'on' : 'off']">{{ isOnline ? '在线接单中' : '已离线' }}</text>
-          <switch :checked="isOnline" color="#22c55e" @change="onToggleOnline" />
+          <text :class="['online-status-text', isOnline ? 'on' : 'off']">{{ toggling ? '正在切换…' : isOnline ? '在线接单中' : '休息中' }}</text>
+          <switch :checked="isOnline" :disabled="toggling" color="#347a5b" @change="onToggleOnline" />
         </view>
-      </view>
-      <!-- 统计卡片 -->
-      <view class="stat-cards">
-        <view class="card"><text class="num">{{ homeData.todayCompleted || 0 }}</text><text class="label">今日订单</text></view>
-        <view class="card"><text class="num">￥{{ homeData.todayIncome || '0.00' }}</text><text class="label">今日收入</text></view>
-        <view class="card"><text class="num">￥{{ homeData.wallet?.totalIncome || '0.00' }}</text><text class="label">累计收入</text></view>
-      </view>
-      <!-- 快捷入口 -->
-      <view class="quick-actions">
-        <view class="action" @click="go('/pages-player/hall/index')">
-          <image class="action-icon" src="/pages-player/static/icons/店铺.svg" mode="aspectFit" />
-          <text>接单大厅</text>
-        </view>
-        <view class="action" @click="go('/pages-player/order/list')"><image class="action-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的订单</text></view>
-        <view class="action" @click="go('/pages-player/earnings/index')"><image class="action-icon" src="/static/icons/钞票.svg" mode="aspectFit" /><text>我的收益</text></view>
-        <view class="action" @click="go('/pages-player/withdraw/index')"><image class="action-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现</text></view>
       </view>
       <!-- 菜单 -->
+      <text class="group-heading">工作与管理</text>
       <view class="menu-list">
-        <view v-if="officialWechat.isEnabled('player')" class="menu-item" @click="go('/pages/wechat/binding?role=player')"><text>公众号消息通知</text><text>›</text></view>
-      <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">></text></view>
-        <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" /><text>提现记录</text><text class="arrow">></text></view>
-        <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现账户</text><text class="arrow">></text></view>
+        <view v-if="officialWechat.isEnabled('player')" class="menu-item" @click="go('/pages/wechat/binding?role=player')"><image class="menu-icon" src="/static/icons/短信.svg" mode="aspectFit" /><text>公众号消息通知</text><text class="arrow">›</text></view>
+      <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">›</text></view>
+        <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" /><text>提现记录</text><text class="arrow">›</text></view>
+        <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现账户</text><text class="arrow">›</text></view>
         <view class="menu-item" @click="go('/pages-player/invite/list')">
           <image class="menu-icon" src="/pages-player/static/icons/分享.svg" mode="aspectFit" />
           <text>邀请列表</text>
           <view v-if="remindStore.inviteCount > 0" class="badge">{{ remindStore.inviteCount > 99 ? '99+' : remindStore.inviteCount }}</view>
-          <text class="arrow">></text>
+          <text class="arrow">›</text>
         </view>
         <view class="menu-item" @click="go('/pages/message/index')">
           <image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit" />
           <text>系统通知</text>
           <view v-if="remindStore.systemUnread > 0" class="badge">{{ remindStore.systemUnread > 99 ? '99+' : remindStore.systemUnread }}</view>
-          <text class="arrow">></text>
+          <text class="arrow">›</text>
         </view>
       </view>
       <!-- 待处理订单预览 -->
       <view class="section" v-if="recentOrders.length">
         <view class="section-header">
           <text class="section-title">待处理订单</text>
-          <text class="more" @click="go('/pages-player/order/list')">查看全部 ></text>
+          <text class="more" @click="go('/pages-player/order/list')">查看全部 ›</text>
         </view>
         <OrderCard v-for="o in recentOrders" :key="o.id" :order="o" detail-path="/pages-player/order/detail" />
       </view>
       <view class="switch-btn" @click="backToUser">返回用户端</view>
+      </template>
       <TechSupportFooter />
       <view class="tab-page-bottom-spacer" />
     </scroll-view>
@@ -65,7 +49,8 @@
   </view>
 </template>
 <script setup>
-import AppImage from '@/components/AppImage.vue'
+import PlayerOverview from '@/components/PlayerOverview.vue'
+import PageState from '@/components/PageState.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -84,55 +69,68 @@ const remindStore = useRemindStore()
 const officialWechat = useOfficialWechatStore()
 const homeData = ref({})
 const recentOrders = ref([])
+const loading = ref(false), loaded = ref(false), loadError = ref(''), toggling = ref(false)
 
 const isOnline = computed(() => playerStore.playerInfo?.isOnline === 1)
 
-onShow(async () => {
+onShow(() => {
   try { uni.hideHomeButton() } catch (_) {}
   officialWechat.load('player')
-  playerStore.fetchProfile()
   remindStore.fetchPlayerRemind()
-  try { const res = await getPlayerHome(); homeData.value = res.data || {} } catch (e) {}
-  try {
-    const res = await getMyWork({ pageNum: 1, pageSize: 3, status: 'ASSIGNED' })
-    recentOrders.value = res.data?.records || []
-  } catch (e) {}
+  loadDashboard()
 })
+async function loadDashboard() {
+  if (loading.value) return
+  loading.value = true; loadError.value = ''
+  const [home, work] = await Promise.allSettled([
+    getPlayerHome({ loading: false }),
+    getMyWork({ pageNum: 1, pageSize: 3, status: 'ASSIGNED' }, { loading: false }),
+    playerStore.fetchProfile({ loading: false })
+  ])
+  if (home.status === 'fulfilled') { homeData.value = home.value.data || {}; loaded.value = true }
+  else loadError.value = '工作台数据暂未获取，请检查网络后重试。'
+  if (work.status === 'fulfilled') recentOrders.value = work.value.data?.records || []
+  loading.value = false
+}
 
 async function onToggleOnline(e) {
   const newVal = e.detail.value
+  if (toggling.value) return
+  toggling.value = true
   try {
     await toggleOnlineStatus(newVal)
-    playerStore.fetchProfile()
+    if (playerStore.playerInfo) playerStore.playerInfo.isOnline = newVal ? 1 : 0
     uni.showToast({ title: newVal ? '已上线' : '已下线', icon: 'none' })
   } catch (err) {
-    uni.showToast({ title: '操作失败', icon: 'none' })
-    playerStore.fetchProfile()
-  }
+    await playerStore.fetchProfile({ loading: false, force: true })
+  } finally { toggling.value = false }
 }
 
-function go(url) { uni.navigateTo({ url }) }
+function go(url) {
+  if (['/pages-player/hall/index', '/pages-player/order/list'].includes(url)) uni.redirectTo({ url })
+  else uni.navigateTo({ url })
+}
 function backToUser() {
   useChatStore().disconnect()
   appStore.switchToUser()
 }
 </script>
 <style lang="scss" scoped>
-.player-mine { background: #ffffff; position: relative; }
-.online-bar { display:flex; align-items:center; justify-content:space-between; padding:24rpx 32rpx; margin:0 24rpx; background:#f7f8f9; border-radius:12rpx; .online-label { font-size:28rpx; color:#41464e; font-weight:500; } .online-right { display:flex; align-items:center; gap:16rpx; } .online-status-text { font-size:26rpx; &.on { color:#347a5b; } &.off { color:#73777e; } } }
-.user-header { display:flex; align-items:center; padding:48rpx 32rpx; background: #f4f5f6; .avatar { width:100rpx; height:100rpx; border-radius:50%; margin-right:24rpx; } .name { font-size:32rpx; font-weight:bold; } }
-.stat-cards { display:flex; gap:20rpx; padding:24rpx;
-  .card { flex:1; background: #f4f5f6; padding:24rpx; border-radius:12rpx; text-align:center;
-    .num { font-size:36rpx; font-weight:bold; color: #17191c; display:block; }
-    .label { font-size:24rpx; color: #73777e; margin-top:8rpx; display:block; }
-  }
-}
-.quick-actions { display:grid; grid-template-columns:repeat(4, 1fr); gap:20rpx; padding:0 24rpx;
-  .action { background: #f4f5f6; padding:24rpx 0; text-align:center; border-radius:12rpx; font-size:24rpx; color: #17191c; display:flex; flex-direction:column; align-items:center; gap:8rpx; .action-icon { width:48rpx; height:48rpx; } }
-}
-.menu-list { margin-top:20rpx; background: #f4f5f6; }
-.menu-item { display:flex; align-items:center; padding:32rpx 24rpx; border-bottom:1rpx solid #f4f5f6; font-size:28rpx; .menu-icon { width:40rpx; height:40rpx; margin-right:16rpx; flex-shrink:0; } text:not(.arrow) { flex:1; } .badge { min-width:32rpx; height:32rpx; line-height:32rpx; padding:0 8rpx; font-size:20rpx; color:#fff; background:#d44955; border-radius:32rpx; text-align:center; margin-right:8rpx; flex-shrink:0; } .arrow { color: #b9bdc4; flex-shrink:0; margin-left:auto; } }
-.section { padding:24rpx; }
-.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16rpx; .section-title { font-size:28rpx; font-weight:bold; } .more { font-size:24rpx; color: #73777e; } }
-.switch-btn { margin:40rpx 24rpx; height:88rpx; line-height:88rpx; text-align:center; background: #f4f5f6; color: #17191c; font-size:30rpx; border-radius:12rpx; border:1rpx solid rgba(23, 25, 28, 0.5); }
+.player-mine { background: #f5f6f8; position: relative; }
+.online-bar { display:flex; align-items:center; justify-content:space-between; padding:22rpx 26rpx; margin:24rpx 28rpx 0; background:#fff; border:1rpx solid #edf0f3; border-radius:24rpx; }
+.online-label { font-size:27rpx; color:#343a43; font-weight:600; }
+.online-right { display:flex; align-items:center; gap:12rpx; }
+.online-status-text { font-size:24rpx; color:#73777e; } .online-status-text.on { color:#347a5b; }
+.group-heading { display:block; margin:34rpx 34rpx 16rpx; color:#73777e; font-size:23rpx; letter-spacing:2rpx; }
+.menu-list { margin:0 28rpx; background:#fff; border:1rpx solid #edf0f3; border-radius:24rpx; overflow:hidden; }
+.menu-item { display:flex; align-items:center; padding:28rpx 26rpx; border-bottom:1rpx solid #f1f3f5; font-size:27rpx; gap:18rpx; }
+.menu-item:last-child { border-bottom:0; }
+.menu-icon { width:38rpx; height:38rpx; flex-shrink:0; }
+.menu-item text:not(.arrow) { flex:1; }
+.arrow { color:#b1b8c3; margin-left:auto; }
+.badge { min-width:32rpx; height:32rpx; line-height:32rpx; padding:0 8rpx; font-size:20rpx; color:#fff; background:#d44955; border-radius:32rpx; text-align:center; }
+.section { padding:28rpx; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18rpx; }
+.section-title { font-size:29rpx; font-weight:600; } .more { font-size:24rpx; color:#73777e; }
+.switch-btn { margin:28rpx; padding:24rpx; text-align:center; background:#fff; color:#525a66; font-size:27rpx; border-radius:24rpx; border:1rpx solid #e4e8ed; }
 </style>

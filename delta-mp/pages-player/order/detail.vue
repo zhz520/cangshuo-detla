@@ -1,6 +1,9 @@
 <template>
-  <view class="detail" v-if="order">
-    <GrabAcceptDialog ref="grabDialog" @accepted="loadDetail" />
+  <view class="detail">
+    <PageState v-if="!order" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无订单信息" @retry="loadDetail" />
+    <template v-if="order">
+    <PageState v-if="error" :error="error" @retry="loadDetail" />
+    <GrabAcceptDialog ref="grabDialog" @accepted="refreshAfterAccept" />
     <!-- 状态栏 -->
     <view class="status-bar">
       <view class="status-left"><StatusTag :status="order.status" /></view>
@@ -51,8 +54,9 @@
       </view>
     </view>
     <!-- 进度历史 -->
-    <view class="card" v-if="progressList.length">
+    <view class="card" v-if="progressList.length || progressLoading || progressError">
       <view class="card-header"><view class="title-bar" /><text class="card-title">进度历史</text></view>
+      <PageState :loading="progressLoading && !progressList.length" :error="progressError" @retry="loadProgress" />
       <view v-for="(p, idx) in progressList" :key="idx" class="progress-item">
         <text class="p-content">{{ p.content }}</text>
         <text class="p-time">{{ p.createdAt }}</text>
@@ -62,13 +66,14 @@
       </view>
     </view>
     <!-- 操作按钮 -->
-    <view class="actions">
+    <PageState v-if="actionError" :error="actionError" @retry="retryAction" />
+    <view class="actions" :class="{ 'actions-disabled': actionDisabled }" :aria-busy="!!actionBusy">
       <view v-if="['PAID','ASSIGNED'].includes(order.status)" class="btn" @click="doAccept">接单</view>
       <view v-if="order.status==='ASSIGNED'" class="btn-warn" @click="doReject">拒绝</view>
       <view v-if="['ACCEPTED','WAITING_TEAMMATE'].includes(order.status)" class="btn" @click="doStart">开始服务</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="goProgress">提交进度</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn btn-success" @click="doComplete">完成服务</view>
-      <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="showReplaceModal=true">换人</view>
+      <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="openReplaceModal">换人</view>
       <view v-if="['IN_PROGRESS'].includes(order.status) && order.playerId" class="btn" @click="goInvite">邀请队友</view>
       <view v-if="['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status)" class="btn-ghost" @click="goChat">聊天</view>
     </view>
@@ -79,20 +84,21 @@
         <text class="modal-sub">系统会自动新增一条名为“结束服务”的进度，必须上传图片后才能完成。</text>
         <view class="complete-block">
           <text class="complete-label">结束服务图片</text>
-          <ImageUploader v-model="endServiceImages" :max="6" />
+          <view :class="{ 'actions-disabled': !!actionBusy }"><ImageUploader v-model="endServiceImages" :max="6" /></view>
         </view>
+        <PageState v-if="actionError" :error="actionError" @retry="retryAction" />
         <view class="modal-actions">
           <view class="modal-cancel" @click="closeCompleteModal">取消</view>
-          <view class="btn btn-success complete-submit" @click="submitComplete">确认完成</view>
+          <view class="btn btn-success complete-submit" :class="{ 'actions-disabled': !!actionBusy }" @click="submitComplete">{{ actionBusy === 'complete' ? '提交中...' : '确认完成' }}</view>
         </view>
       </view>
     </view>
     <!-- 换人弹窗 -->
-    <view v-if="showReplaceModal" class="modal-mask" @click="showReplaceModal=false">
+    <view v-if="showReplaceModal" class="modal-mask" @click="closeReplaceModal">
       <view class="modal-box" @click.stop>
         <text class="modal-title">换人</text>
         <text class="modal-sub">选择换人方式</text>
-        <view class="replace-options">
+        <view class="replace-options" :class="{ 'actions-disabled': !!actionBusy }">
           <view v-if="hasTeammate" class="replace-opt" @click="doReplace('all')">
             <text class="opt-label">两个都换</text>
             <text class="opt-desc">主接单员和队友都退出，订单回到接单大厅</text>
@@ -106,11 +112,13 @@
             <text class="opt-desc">踢掉队友，可重新选择分成方式邀请新队友</text>
           </view>
         </view>
+        <PageState v-if="actionError" :error="actionError" @retry="retryAction" />
         <view class="modal-actions">
-          <view class="modal-cancel" @click="showReplaceModal=false">取消</view>
+          <view class="modal-cancel" @click="closeReplaceModal">取消</view>
         </view>
       </view>
     </view>
+    </template>
   </view>
 </template>
 <script setup>
@@ -118,17 +126,29 @@ import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import GrabAcceptDialog from '@/components/GrabAcceptDialog.vue'
 const grabDialog=ref(null)
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'
 import PriceText from '@/components/PriceText.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
-import { acceptOrder, startOrder, completeOrder, getPlayerOrderProgress, rejectAssign, replaceSelf, replaceAll, replaceTeammate } from '@/api/player'
+import PageState from '@/components/PageState.vue'
+import { startOrder, completeOrder, getPlayerOrderProgress, rejectAssign, replaceSelf, replaceAll, replaceTeammate } from '@/api/player'
 import { getPlayerOrderDetail as getOrderDetail } from '@/api/player'
 import { requestPlayerSubscribe } from '@/utils/subscribe'
 
 const order = ref(null)
 const orderId = ref(0)
 const progressList = ref([])
+const loading = ref(true)
+const error = ref('')
+const progressLoading = ref(false)
+const progressError = ref('')
+const actionBusy = ref('')
+const actionError = ref('')
+const leaving = ref(false)
+const actionDisabled = computed(() => loading.value || !!error.value || !!actionBusy.value || leaving.value)
+let disposed = false, detailVersion = 0, progressVersion = 0
+let detailTask = null, lastDetailTask = null, progressTask = null, lastProgressTask = null
+let failedAction = null, backTimer = null
 const parsedExtra = computed(() => {
   const o = order.value
   if (!o) return []
@@ -157,10 +177,19 @@ const hasTeammate = computed(() => {
 const teammateStatusText = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废', REPLACED: '已更换' }
 const teammateStatusColor = { INVITED: '#e6a23c', ACCEPTED: '#07c160', REJECTED: '#ee0a24', CANCELLED: '#999', REPLACED: '#909399' }
 
-onLoad((opts) => { orderId.value = opts.id })
+onLoad((opts) => { orderId.value = opts?.id || 0 })
 onShow(() => {
   unlockH5TabbarPageScroll()
   loadDetail()
+})
+onHide(() => {
+  detailVersion++; progressVersion++
+  detailTask = null; progressTask = null
+  loading.value = false; progressLoading.value = false
+})
+onUnload(() => {
+  disposed = true; detailVersion++; progressVersion++
+  clearTimeout(backTimer)
 })
 
 function unlockH5TabbarPageScroll() {
@@ -185,46 +214,127 @@ function incomeAmount(o) {
   return n * (1 - commissionRateForOrder(o))
 }
 
-async function loadDetail() {
-  const res = await getOrderDetail(orderId.value)
-  order.value = res.data
-  try {
-    const pRes = await getPlayerOrderProgress(orderId.value)
-    progressList.value = pRes.data || []
-  } catch (e) { progressList.value = [] }
+function messageFor(err, fallback) { return String(err?.msg || err?.data?.msg || err?.message || fallback) }
+function loadDetail({ force = false } = {}) {
+  if (disposed) return Promise.resolve(false)
+  if (detailTask && !force) return detailTask
+  const previous = lastDetailTask, run = ++detailVersion, id = orderId.value
+  const current = () => !disposed && run === detailVersion
+  loading.value = true; error.value = ''
+  const task = Promise.resolve().then(async () => {
+    try {
+      if (previous) await previous
+      if (!current()) return false
+      if (!id) throw new Error('缺少订单信息，请返回列表重试')
+      const res = await getOrderDetail(id)
+      if (!current()) return false
+      if (!res.data || typeof res.data !== 'object') throw new Error('订单不存在或已不可查看')
+      order.value = res.data
+      await loadProgress({ force })
+      return true
+    } catch (err) {
+      if (current()) error.value = messageFor(err, '订单加载失败，请重试')
+      return false
+    } finally {
+      if (current()) { loading.value = false; detailTask = null }
+    }
+  })
+  detailTask = lastDetailTask = task
+  return task
 }
-async function doAccept() {
-  await requestPlayerSubscribe()  // 接单前请求订阅
-  grabDialog.value?.open(orderId.value)
+function loadProgress({ force = false } = {}) {
+  if (disposed) return Promise.resolve(false)
+  if (progressTask && !force) return progressTask
+  const previous = lastProgressTask, run = ++progressVersion, id = orderId.value
+  const current = () => !disposed && run === progressVersion
+  progressLoading.value = true; progressError.value = ''
+  const task = Promise.resolve().then(async () => {
+    try {
+      if (previous) await previous
+      if (!current()) return false
+      const res = await getPlayerOrderProgress(id)
+      if (!current()) return false
+      if (!Array.isArray(res.data)) throw new Error('进度数据异常，请重试')
+      progressList.value = res.data
+      return true
+    } catch (err) {
+      if (current()) progressError.value = messageFor(err, '进度加载失败，请重试')
+      return false
+    } finally {
+      if (current()) { progressLoading.value = false; progressTask = null }
+    }
+  })
+  progressTask = lastProgressTask = task
+  return task
 }
-async function doReject() {
-  uni.showModal({ title: '提示', content: '确定拒绝该指派？', success: async (r) => {
-    if (r.confirm) { await rejectAssign(orderId.value); uni.showToast({ title: '已拒绝' }); uni.navigateBack() }
-  }})
+function refreshAfterAccept() { return loadDetail({ force: true }) }
+
+async function runAction(name, action, retry) {
+  if (disposed || actionDisabled.value) return false
+  actionBusy.value = name; actionError.value = ''; failedAction = null
+  try { await action(); return !disposed }
+  catch (err) {
+    if (!disposed) { actionError.value = messageFor(err, '操作失败，请重试'); failedAction = retry }
+    return false
+  } finally { if (!disposed) actionBusy.value = '' }
 }
-async function doStart() { await startOrder(orderId.value); uni.showToast({ title: '已开始' }); loadDetail() }
-function doComplete() { showCompleteModal.value = true }
+function retryAction() { return failedAction?.() }
+function confirmAction(options) {
+  return new Promise(resolve => uni.showModal({ ...options, success: result => resolve(!!result.confirm), fail: () => resolve(false) }))
+}
+function leaveWithToast(title, delay = 0) {
+  if (disposed) return
+  leaving.value = true
+  uni.showToast({ title })
+  if (delay) backTimer = setTimeout(() => { if (!disposed) uni.navigateBack() }, delay)
+  else uni.navigateBack()
+}
+function doAccept() {
+  return runAction('accept', async () => {
+    await requestPlayerSubscribe()
+    if (!disposed) await grabDialog.value?.open(orderId.value)
+  }, doAccept)
+}
+function doReject() {
+  return runAction('reject', async () => {
+    if (!await confirmAction({ title: '提示', content: '确定拒绝该指派？' }) || disposed) return
+    await rejectAssign(orderId.value)
+    leaveWithToast('已拒绝')
+  }, doReject)
+}
+function doStart() {
+  return runAction('start', async () => {
+    await startOrder(orderId.value)
+    if (disposed) return
+    uni.showToast({ title: '已开始' })
+    await loadDetail({ force: true })
+  }, doStart)
+}
+function doComplete() { if (!actionDisabled.value) { actionError.value = ''; showCompleteModal.value = true } }
 function closeCompleteModal() {
+  if (actionBusy.value) return
   showCompleteModal.value = false
   endServiceImages.value = []
 }
-async function submitComplete() {
+function submitComplete() {
+  if (disposed || actionDisabled.value) return Promise.resolve(false)
   if (!endServiceImages.value.length) {
     return uni.showToast({ title: '请至少上传一张结束服务图片', icon: 'none' })
   }
-  try {
+  const images = endServiceImages.value.join(',')
+  return runAction('complete', async () => {
     await requestPlayerSubscribe()
-    await completeOrder(orderId.value, { images: endServiceImages.value.join(',') })
+    if (disposed) return
+    await completeOrder(orderId.value, { images })
+    if (disposed) return
     uni.showToast({ title: '已完成' })
-    closeCompleteModal()
-    loadDetail()
-  } catch (e) {
-    uni.showToast({ title: e?.data?.msg || '完成失败', icon: 'none' })
-  }
+    showCompleteModal.value = false; endServiceImages.value = []
+    await loadDetail({ force: true })
+  }, submitComplete)
 }
-function goProgress() { uni.navigateTo({ url: '/pages-player/order/progress?orderId=' + orderId.value }) }
-function goChat() { uni.navigateTo({ url: '/pages-player/chat/room?orderId=' + orderId.value }) }
-function goInvite() { uni.navigateTo({ url: '/pages-player/invite/teammate?orderId=' + orderId.value }) }
+function goProgress() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/order/progress?orderId=' + orderId.value }) }
+function goChat() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/chat/room?orderId=' + orderId.value }) }
+function goInvite() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/invite/teammate?orderId=' + orderId.value }) }
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 function copyText(text, title) {
   if (!text) {
@@ -241,34 +351,27 @@ function copyOrderNo() {
 function copyDetailItem(item) {
   copyText(String(item?.value ?? ''), `${item?.key || '内容'}已复制`)
 }
-async function doReplace(type) {
+function openReplaceModal() { if (!actionDisabled.value) { actionError.value = ''; showReplaceModal.value = true } }
+function closeReplaceModal() { if (!actionBusy.value) showReplaceModal.value = false }
+function doReplace(type) {
   const msgs = {
     all: '确定两个都换？主接单员和队友都将退出，订单回到接单大厅。',
     self: '确定换自己？你将退出该订单且不参与分成，订单回到接单大厅。',
     teammate: '确定换队友？队友将被移除且不参与分成，你可以重新邀请新队友。'
   }
-  uni.showModal({
-    title: '确认换人',
-    content: msgs[type],
-    success: async (r) => {
-      if (!r.confirm) return
-      try {
-        if (type === 'all') await replaceAll(orderId.value)
-        else if (type === 'self') await replaceSelf(orderId.value)
-        else await replaceTeammate(orderId.value)
-        showReplaceModal.value = false
-        if (type === 'teammate') {
-          uni.showToast({ title: '队友已移除' })
-          loadDetail()
-        } else {
-          uni.showToast({ title: '已退出订单' })
-          setTimeout(() => uni.navigateBack(), 1500)
-        }
-      } catch (e) {
-        uni.showToast({ title: e?.msg || '操作失败', icon: 'none' })
-      }
-    }
-  })
+  if (!msgs[type]) return Promise.resolve(false)
+  return runAction('replace', async () => {
+    if (!await confirmAction({ title: '确认换人', content: msgs[type] }) || disposed) return
+    if (type === 'all') await replaceAll(orderId.value)
+    else if (type === 'self') await replaceSelf(orderId.value)
+    else await replaceTeammate(orderId.value)
+    if (disposed) return
+    showReplaceModal.value = false
+    if (type === 'teammate') {
+      uni.showToast({ title: '队友已移除' })
+      await loadDetail({ force: true })
+    } else leaveWithToast('已退出订单', 1500)
+  }, () => doReplace(type))
 }
 </script>
 <style lang="scss" scoped>
@@ -350,4 +453,5 @@ async function doReplace(type) {
 .modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
 .modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #b9bdc4; border-radius: 999rpx; font-size: 28rpx; color: #666b73; }
 .complete-submit { flex: 1; text-align: center; }
+.actions-disabled { opacity: .6; pointer-events: none; }
 </style>

@@ -285,23 +285,30 @@ public class PlayerOrderController {
     @Transactional(rollbackFor = Exception.class)
     public R<Void> acceptInvite(@PathVariable Long orderId) {
         Long playerId = SecurityUtils.getUserId();
+        Order order = orderService.getById(orderId);
+        if (order == null || !java.util.Set.of("ACCEPTED", "WAITING_TEAMMATE", "IN_PROGRESS").contains(order.getStatus())) {
+            throw new BusinessException(409, "当前订单状态不允许接受队友邀请");
+        }
         OrderPlayer op = orderPlayerService.getOne(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getPlayerId, playerId)
-                .eq(OrderPlayer::getStatus, "INVITED"));
+                .eq(OrderPlayer::getRole, "TEAMMATE")
+                .eq(OrderPlayer::getStatus, "INVITED").last("FOR UPDATE"));
         if (op == null) return R.fail("未找到邀请记录");
         if (op.getInviteDeadline() != null && op.getInviteDeadline().isBefore(LocalDateTime.now())) {
             return R.fail("邀请已过期");
+        }
+        if (crossModuleMapper.lockActivePlayer(playerId) == null) {
+            throw new BusinessException(403, "打手未上班、未通过审核或账号已冻结，无法接单");
+        }
+        int max = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
+        if (crossModuleMapper.countActivePlayerOrders(playerId) >= max) {
+            throw new BusinessException(400, "您当前进行中的订单已达上限(" + max + "单)");
         }
         op.setStatus("ACCEPTED");
         op.setAcceptedAt(LocalDateTime.now());
         orderPlayerService.updateById(op);
 
-        // 检查是否已凑齐人数
-        Order order = orderService.getById(orderId);
-        long acceptedCount = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getStatus, "ACCEPTED"));
         // 记录进度
         addProgress(orderId, "TEAMMATE_ACCEPTED", "PLAYER", playerId, "队友接受邀请");
 

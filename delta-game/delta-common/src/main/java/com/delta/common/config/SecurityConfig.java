@@ -66,7 +66,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/player/apply").hasRole("USER")
                 .requestMatchers(HttpMethod.GET,"/player/invitations/*").permitAll()
                 .requestMatchers("/player/**").hasRole("PLAYER")
-                .requestMatchers("/pay/player-deposit").hasAnyRole("USER","PLAYER")
+                .requestMatchers("/pay/player-deposit", "/pay/player-deposit/h5").hasAnyRole("USER","PLAYER")
                 .requestMatchers("/user/**", "/order/**", "/pay/recharge/**", "/pay/balance/**", "/pay/h5/**", "/pay/wx/**", "/pay/player-deposit").hasRole("USER")
                 .requestMatchers("/product/**", "/app/product/**").hasRole("ADMIN")
                 // 聊天记录: 管理员和客服均可查看

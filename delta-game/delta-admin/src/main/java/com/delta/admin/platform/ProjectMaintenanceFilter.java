@@ -26,8 +26,7 @@ public class ProjectMaintenanceFilter extends OncePerRequestFilter {
             response.setStatus(503);response.setCharacterEncoding("UTF-8");response.setContentType("application/json");response.setHeader("Retry-After","3600");
             json.writeValue(response.getWriter(),Map.of("code",503,"msg","项目维护期已到期，业务暂时停止，请联系管理员续期","maintenance",true));return;
         }
-        String forwarded=request.getHeader("X-Forwarded-Host"),domain=forwarded==null?request.getServerName():forwarded.split(",",2)[0].trim();
-        if(!recovery&&!remote.domainAllowed(domain)) {
+        if(!recovery&&!remote.domainAllowed(request.getServerName())) {
             response.setStatus(403);response.setCharacterEncoding("UTF-8");response.setContentType("application/json");
             json.writeValue(response.getWriter(),Map.of("code",403,"msg","当前访问域名未授权，请使用项目登记的域名"));return;
         }

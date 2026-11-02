@@ -3,14 +3,15 @@
     <el-card>
       <template #header><span>订单管理</span></template>
       <el-form :inline="true" :model="query" class="search-form">
-        <el-form-item><el-input v-model="query.orderNo" placeholder="订单号" clearable @keyup.enter="fetchData" /></el-form-item>
+        <el-form-item><el-input v-model="query.orderNo" placeholder="订单号" aria-label="订单号" clearable @keyup.enter="searchOrders" /></el-form-item>
         <el-form-item>
           <el-select v-model="query.status" placeholder="订单状态" clearable>
             <el-option v-for="(v, k) in orderStatusMap" :key="k" :label="v" :value="k" />
           </el-select>
         </el-form-item>
-        <el-form-item><el-button type="primary" @click="fetchData">查询</el-button><el-button @click="query.orderNo='';query.status='';fetchData()">重置</el-button></el-form-item>
+        <el-form-item><el-button type="primary" :loading="loading" @click="searchOrders">查询</el-button><el-button @click="query.orderNo='';query.status='';searchOrders()">重置</el-button></el-form-item>
       </el-form>
+      <LoadFeedback :error="loadError" label="订单" @retry="fetchData" />
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="orderNo" label="订单号" width="180" />
@@ -114,7 +115,9 @@
 <script setup>
 import {can} from '@/utils/staff-permissions'
 import { useResponsive } from '@/utils/responsive'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useLoadTask } from '@/composables/useLoadTask'
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -145,16 +148,15 @@ function parsedExtraFields(order) {
     return Object.entries(obj).map(([key, value]) => ({ key, value }))
   } catch { return [] }
 }
-const loading = ref(false), list = ref([]), total = ref(0)
 const query = reactive({ pageNum: 1, pageSize: 10, orderNo: '', status: '' })
-async function fetchData() {
-  loading.value = true
-  try {
-    const fn = isAdmin ? adminOrderList : csOrderList
-    const res = await fn(query)
-    list.value = res.data.records; total.value = Number(res.data.total)
-  } finally { loading.value = false }
-}
+const { data: result, loading, error: loadError, run: loadOrders } = useLoadTask(async params => {
+  const fn = isAdmin ? adminOrderList : csOrderList
+  return (await fn(params, { silent: true })).data || {}
+}, {})
+const list = computed(() => result.value.records || [])
+const total = computed(() => Number(result.value.total || 0))
+function fetchData() { return loadOrders({ ...query }) }
+function searchOrders() { query.pageNum = 1; return fetchData() }
 // 详情
 const detailVisible = ref(false), detail = ref(null), detailLoading = ref(false), progressList = ref([])
 const confirmLoading = ref(false)

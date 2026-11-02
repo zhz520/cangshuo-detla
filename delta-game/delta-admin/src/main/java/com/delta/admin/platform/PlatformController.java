@@ -66,8 +66,6 @@ public class PlatformController {
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate endDate,
             HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-Host");
-        String domain = forwarded != null && !forwarded.isBlank() ? forwarded.split(",", 2)[0].trim() : request.getServerName();
-        return R.ok(analysis.compare(startDate, endDate, domain));
+        return R.ok(analysis.compare(startDate, endDate, request.getServerName()));
     }
 }

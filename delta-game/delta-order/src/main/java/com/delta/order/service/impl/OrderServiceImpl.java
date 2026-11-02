@@ -205,15 +205,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (reassign && previousPlayerId != null && previousPlayerId.equals(playerId)) {
             throw new BusinessException("订单已指派给该打手，无需重复指派");
         }
-        // 校验目标打手状态为ACTIVE
-        String playerStatus = crossModuleMapper.selectPlayerStatus(playerId);
-        if (!"ACTIVE".equals(playerStatus)) {
+        // 与自主接单共用打手行锁，确保下班操作和并发指派不会绕过接单限制。
+        if (crossModuleMapper.lockActivePlayer(playerId) == null) {
             throw new BusinessException("目标打手状态不可用，无法指派");
         }
         requirePlayerLevel(order,playerId);
         // 校验打手当前活跃订单数是否已达上限
-        int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "1"));
-        int activeOrders = crossModuleMapper.selectPlayerActiveOrders(playerId);
+        int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
+        int activeOrders = crossModuleMapper.countActivePlayerOrders(playerId);
         if (activeOrders >= maxConcurrent) {
             throw new BusinessException("该打手当前已有" + activeOrders + "个进行中订单，已达最大接单数" + maxConcurrent + "，无法指派");
         }

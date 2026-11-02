@@ -50,8 +50,17 @@ public class PlayerHomeController {
         // 2. 今日统计（今日完成单数 & 今日收入）
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+        List<Long> teammateOrderIds = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                        .eq(OrderPlayer::getPlayerId, playerId)
+                        .eq(OrderPlayer::getRole, "TEAMMATE")
+                        .eq(OrderPlayer::getStatus, "ACCEPTED")
+                        .select(OrderPlayer::getOrderId))
+                .stream().map(OrderPlayer::getOrderId).toList();
         long todayCompleted = orderService.count(new LambdaQueryWrapper<Order>()
-                .eq(Order::getPlayerId, playerId)
+                .and(w -> {
+                    w.eq(Order::getPlayerId, playerId);
+                    if (!teammateOrderIds.isEmpty()) w.or().in(Order::getId, teammateOrderIds);
+                })
                 .in(Order::getStatus, "CONFIRMED", "REVIEWED")
                 .between(Order::getCompleteTime, todayStart, todayEnd));
         result.put("todayCompleted", todayCompleted);
@@ -97,9 +106,17 @@ public class PlayerHomeController {
         // 4. 可接单预览（PAID状态且未指定打手，取前5）
         List<Order> availableOrders = orderService.list(new LambdaQueryWrapper<Order>()
                 .eq(Order::getStatus, "PAID")
+                .isNull(Order::getPlayerId)
                 .isNull(Order::getDesignatedPlayerId)
                 .orderByDesc(Order::getCreatedAt)
                 .last("LIMIT 5"));
+        availableOrders.forEach(order -> {
+            order.setGameAccount(null);
+            order.setContact(null);
+            order.setRemark(null);
+            order.setExtraFields(null);
+            order.setUserId(null);
+        });
         result.put("availableOrders", availableOrders);
 
         return R.ok(result);

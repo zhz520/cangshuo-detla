@@ -48,7 +48,7 @@ onMounted(() => {
 onBeforeUnmount(() => observer?.disconnect())
 </script>
 <style scoped>
-.app-image { background-color: #f0f1f3; }
+.app-image { background-color: #f0f1f3; transition: opacity 160ms ease; }
 .image-loading { background-color: #f0f1f3; }
 .image-failed { background-color: #f0f1f3; }
 </style>

@@ -1,5 +1,8 @@
 <template>
   <view class="earnings-page">
+    <PageState :loading="loading && !summary" :error="error" @retry="load" />
+    <view v-if="loading && summary" class="refresh-tip">正在更新收益…</view>
+    <template v-if="summary">
     <!-- 收益概览 -->
     <view class="summary-card">
       <text class="card-label">累计收益（元）</text>
@@ -33,6 +36,7 @@
         <text class="stat-label">完成率</text>
       </view>
     </view>
+    </template>
     <!-- 操作入口 -->
     <view class="action-list">
       <view class="action-row" @click="goDetail">
@@ -46,20 +50,43 @@
 </template>
 <script setup>
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onUnload } from '@dcloudio/uni-app'
 import { getEarningsSummary } from '@/api/player'
+import PageState from '@/components/PageState.vue'
 
-const summary = ref({})
+const summary = ref(null)
+const loading = ref(true)
+const error = ref('')
+let active, version = 0, disposed = false
 
-onShow(async () => {
-  try { const res = await getEarningsSummary(); summary.value = res.data || {} } catch (e) {}
-})
+onShow(() => load())
+onUnload(() => { disposed = true; version++ })
+function load() {
+  if (disposed) return Promise.resolve()
+  if (active) return active
+  const current = ++version
+  loading.value = true
+  error.value = ''
+  active = (async () => {
+    try {
+      const { data } = await getEarningsSummary({ loading: false, silent: true })
+      if (!data || typeof data !== 'object' || Array.isArray(data) || data.totalIncome == null) throw new Error('收益数据异常，请重试')
+      if (!disposed && current === version) summary.value = data
+    } catch (e) {
+      if (!disposed && current === version) error.value = e?.msg || e?.message || '收益加载失败，请重试'
+    } finally {
+      if (!disposed && current === version) { loading.value = false; active = null }
+    }
+  })()
+  return active
+}
 
 function goDetail() { uni.navigateTo({ url: '/pages-player/earnings/detail' }) }
 function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) }
 </script>
 <style lang="scss" scoped>
-.earnings-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
+.earnings-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); padding: 1rpx 0 calc(32rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; }
+.refresh-tip { color: #73777e; font-size: 24rpx; text-align: center; padding: 16rpx; }
 .reward-total { display:block;font-size:24rpx;opacity:.85;margin:-12rpx 0 28rpx; }
 .summary-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .card-label { font-size: 26rpx; opacity: 0.85; display: block; }
@@ -69,11 +96,11 @@ function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) 
   .divider { width: 1rpx; height: 48rpx; background: rgba(255,255,255,0.3); }
 }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20rpx; padding: 0 24rpx 24rpx;
-  .stat-item { background: #f4f5f6; padding: 24rpx; border-radius: 12rpx; text-align: center;
+  .stat-item { background: #fff; border: 1rpx solid #edf0f2; padding: 24rpx; border-radius: 20rpx; text-align: center;
     .stat-num { font-size: 32rpx; font-weight: bold; color: #17191c; display: block; }
     .stat-label { font-size: 24rpx; color: #73777e; display: block; margin-top: 8rpx; }
   }
 }
-.action-list { margin: 0 24rpx; background: #f4f5f6; border-radius: 12rpx; overflow: hidden; }
+.action-list { margin: 0 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; overflow: hidden; }
 .action-row { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f4f5f6; font-size: 28rpx; .arrow { color: #b9bdc4; } }
 </style>

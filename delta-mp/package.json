@@ -1,9 +1,10 @@
 {
   "name": "delta-mp",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "三角洲游戏服务平台小程序",
   "main": "main.js",
   "scripts": {
+    "test": "node --test test/*.test.mjs",
     "dev:h5": "set UNI_INPUT_DIR=%cd%&& uni -p h5",
     "build:h5": "set UNI_INPUT_DIR=%cd%&& uni build -p h5",
     "dev:mp-weixin": "set UNI_INPUT_DIR=%cd%&& uni -p mp-weixin",

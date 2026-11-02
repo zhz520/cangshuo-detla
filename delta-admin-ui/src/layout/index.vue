@@ -25,7 +25,7 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <button class="chat-notify" type="button" @click="goChat" title="客服消息" :aria-label="`客服消息，${chatStore.globalUnread || 0}条未读`">
+          <button v-if="can('chat.manage')" class="chat-notify" type="button" @click="goChat" title="客服消息" :aria-label="`客服消息，${chatStore.globalUnread || 0}条未读`">
             <el-icon :size="20"><ChatDotRound /></el-icon>
             <span v-if="chatStore.globalUnread > 0" class="notify-badge">{{ chatStore.globalUnread > 99 ? '99+' : chatStore.globalUnread }}</span>
           </button>
@@ -47,8 +47,14 @@
         </div>
       </el-header>
 
-      <el-main class="layout-main">
-        <router-view />
+      <el-main ref="main" class="layout-main" tabindex="-1" :aria-busy="Boolean(loadingFeedback.destination) || loadingFeedback.requests > 0" aria-label="页面内容">
+        <LoadFeedback :error="platformFeatureError" label="功能菜单" @retry="loadPlatformFeatureVisibility(true)" />
+        <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
+        <router-view v-slot="{ Component, route: pageRoute }">
+          <transition name="page-fade" mode="out-in">
+            <component :is="Component" :key="`${pageRoute.path}:${pageVersion}`" />
+          </transition>
+        </router-view>
       </el-main>
     </el-container>
 
@@ -58,10 +64,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, onErrorCaptured } from 'vue'
 import {can} from '@/utils/staff-permissions'
 import {buildNavigation} from '@/utils/navigation'
-import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAllowed} from '@/utils/platform-feature-visibility'
+import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAllowed,platformFeatureError} from '@/utils/platform-feature-visibility'
+import { loadingFeedback } from '@/utils/loading-feedback'
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
@@ -78,6 +86,10 @@ const chatStore = useChatStore()
 const siteStore = useSiteStore()
 
 const isCollapse = ref(false)
+const main = ref(null)
+const pageVersion = ref(0)
+function reloadPage() { loadingFeedback.readError = null; pageVersion.value++ }
+onErrorCaptured(error => { if (error?.requestHandled) return false })
 const navigationOpen = ref(false)
 const { isCompact } = useResponsive()
 function toggleNavigation() {
@@ -85,6 +97,11 @@ function toggleNavigation() {
   else isCollapse.value = !isCollapse.value
 }
 watch(() => route.fullPath, () => { navigationOpen.value = false })
+watch(() => route.path, async () => {
+  await nextTick()
+  const element = main.value?.$el
+  if (element) { element.scrollTop = 0; element.scrollLeft = 0; element.focus({ preventScroll: true }) }
+})
 watch(isCompact, compact => { if (!compact) navigationOpen.value = false })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
@@ -123,8 +140,8 @@ function goChat() {
 }
 
 onMounted(() => {
-  loadPlatformFeatureVisibility()
-  chatStore.start()
+  if (role.value === 'admin' && ['system.manage', 'user.manage', 'finance.read'].some(can)) loadPlatformFeatureVisibility()
+  if (can('chat.manage')) chatStore.start()
 })
 onUnmounted(() => {
   chatStore.stop()

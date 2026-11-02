@@ -37,3 +37,12 @@ test('paid feature routes are hidden until the platform reports them enabled',()
   assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>false)),['/dashboard'])
   assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/user/identity-review','/system/wechat-notices'])
 })
+
+test('paid reports and platform configuration respect both staff grants and feature authorization', () => {
+  const routes = [screen('/platform/features', '功能商城', ['admin']), screen('/platform/updates', '系统更新', ['admin']),
+    screen('/platform/income-analysis', '收益对比分析', ['admin'], { permission: 'finance.read', feature: 'advanced_income_reports' })]
+  assert.deepEqual(paths(buildNavigation(routes, 'admin', () => false, () => true)), [])
+  assert.deepEqual(paths(buildNavigation(routes, 'admin', code => code === 'finance.read', () => false)), [])
+  assert.deepEqual(paths(buildNavigation(routes, 'admin', code => code === 'finance.read', () => true)), ['/platform/income-analysis'])
+  assert.deepEqual(paths(buildNavigation(routes, 'cs', () => true, () => true)), [])
+})

@@ -181,8 +181,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         if (!"PLAYER_DEPOSIT".equals(payment.getBizType())) return false;
         if (!"PAID".equals(payment.getStatus())) return false;
         if (!userId.equals(payment.getUserId())) return false;
-        if (payment.getAmount().compareTo(expectedAmount) != 0) return false;
-        return true;
+        // Deposit creation charges only the outstanding amount, so a top-up receipt
+        // need not equal the entire current requirement.
+        return playerDepositPaidAmount(userId).compareTo(expectedAmount) >= 0;
     }
 
     @Override

@@ -11,8 +11,8 @@
           <StarRating :model-value="r.rating" readonly />
         </view>
         <text class="content">{{ r.content }}</text>
-        <view v-if="r.images" class="images">
-          <AppImage v-for="(img, i) in r.images.split(',')" :key="i" :src="img" mode="aspectFill" class="img" @click="previewImg(r.images.split(','), i)" />
+        <view v-if="r.imageUrls.length" class="images">
+          <AppImage v-for="(img, i) in r.imageUrls" :key="i" :src="img" mode="aspectFill" class="img" @click="previewImg(r.imageUrls, i)" />
         </view>
         <view class="order-info">
           <text class="order-label">订单：{{ r.orderNo || r.orderId }}</text>
@@ -24,46 +24,56 @@
           <text class="reply-content">{{ r.reply }}</text>
         </view>
       </view>
-      <view v-if="loading" class="loading-tip">加载中...</view>
-<EmptyState v-if="!loading && reviews.length === 0" text="暂无评价" image="/static/icons/暂无纪录.svg" />
+      <PageState :loading="loading && !reviews.length" :error="error" :empty="!reviews.length" empty-text="暂无评价" @retry="retry" />
+      <view v-if="reviews.length && loading" class="loading-tip">正在加载…</view>
+      <view v-else-if="reviews.length && finished && !error" class="loading-tip">已显示全部评价</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
 import AppImage from '@/components/AppImage.vue'
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import EmptyState from '@/components/EmptyState.vue'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import PageState from '@/components/PageState.vue'
 import StarRating from '@/components/StarRating.vue'
-import { getMyReviews } from '@/api/review'
+import { getReviewsByPlayer } from '@/api/review'
+import { getPlayerProfile } from '@/api/player'
+import { usePagedList } from '@/composables/usePagedList'
 
-const reviews = ref([])
-const pageNum = ref(1)
-const loading = ref(false)
-const finished = ref(false)
-
-onLoad(() => { loadData() })
-
-async function loadData() {
-  loading.value = true
-  const res = await getMyReviews({ pageNum: pageNum.value, pageSize: 20 })
-  const list = res.data?.records || []
-  if (list.length < 20) finished.value = true
-  reviews.value = pageNum.value === 1 ? list : [...reviews.value, ...list]
-  loading.value = false
+let playerId
+const { items: reviews, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
+  pageSize: 20,
+  async fetchPage({ pageNum, pageSize, isCurrent }) {
+    if (playerId == null) {
+      const profile = await getPlayerProfile({ loading: false, silent: true })
+      if (!isCurrent()) return { records: [] }
+      if (profile.data?.id == null) throw new Error('接单员资料异常，请重试')
+      playerId = profile.data.id
+    }
+    const { data } = await getReviewsByPlayer(playerId, { pageNum, pageSize }, { role: 'player', loading: false, silent: true })
+    if (!Array.isArray(data?.records)) throw new Error('评价数据异常，请重试')
+    return { ...data, records: data.records.map(row => ({ ...row, imageUrls: imageUrls(row.images) })) }
+  }
+})
+onShow(() => refresh())
+onHide(cancel)
+onUnload(dispose)
+function imageUrls(value) {
+  if (Array.isArray(value)) return value.filter(url => typeof url === 'string' && url.trim())
+  if (typeof value !== 'string' || !value.trim()) return []
+  try { const parsed = JSON.parse(value); if (Array.isArray(parsed)) return imageUrls(parsed) } catch (_) {}
+  return value.split(',').map(url => url.trim()).filter(Boolean)
 }
-function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
-function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
+function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: imgs[idx] }) }
 </script>
 <style lang="scss" scoped>
-.review-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.list { height: var(--app-page-height, 100vh); padding: 20rpx 24rpx; }
-.review-card { background: #f4f5f6; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx;
+.review-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
+.list { height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 20rpx 24rpx calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
+.review-card { background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
   .avatar { width: 64rpx; height: 64rpx; border-radius: 50%; }
   .user-info { flex: 1; .name { font-size: 26rpx; font-weight: bold; display: block; } .time { font-size: 22rpx; color: #73777e; display: block; } }
   .content { font-size: 28rpx; color: #17191c; line-height: 1.6; display: block; margin-bottom: 12rpx; }
-  .images { display: flex; gap: 12rpx; margin-bottom: 12rpx; .img { width: 160rpx; height: 160rpx; border-radius: 8rpx; } }
+  .images { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 12rpx; .img { width: 160rpx; height: 160rpx; border-radius: 8rpx; } }
   .order-info { font-size: 22rpx; color: #73777e; padding: 12rpx 0; border-top: 1rpx solid #f4f5f6; .order-label { margin-right: 16rpx; } }
   .reply-box { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; margin-top: 12rpx;
     .reply-label { font-size: 24rpx; color: #17191c; } .reply-content { font-size: 24rpx; color: #666b73; }

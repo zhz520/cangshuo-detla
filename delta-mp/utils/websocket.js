@@ -8,12 +8,8 @@
  *   - 发送消息前检查 state，CONNECTING 时自动排队
  */
 
-const configuredWs = import.meta.env.VITE_WS_BASE_URL
-const WS_BASE_URL = configuredWs && !configuredWs.includes('your-domain.example')
-  ? configuredWs
-  : (typeof window !== 'undefined' && window.location
-    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`
-    : 'ws://localhost:8080/ws/chat')
+import { resolveWebSocketUrl } from './connection-url'
+const WS_BASE_URL = resolveWebSocketUrl({ configured: import.meta.env.VITE_WS_BASE_URL, runtime: globalThis.__CANGSHUO_INSTANCE__?.wsBaseUrl, location: typeof window !== 'undefined' ? window.location : null })
 const HEARTBEAT_INTERVAL = 30000
 const MAX_RECONNECT = 5
 
@@ -21,6 +17,7 @@ const MAX_RECONNECT = 5
 let state = 'DISCONNECTED'
 let socketTask = null
 let heartbeatTimer = null
+let authTimer = null
 let reconnectCount = 0
 let reconnectTimer = null
 let currentToken = null
@@ -42,7 +39,7 @@ export function connectWebSocket(token, options = {}) {
     }
     // token 或 chatRole 变了，需要先关再连
     _pendingConnect = { token, chatRole }
-    closeWebSocket()
+    closeWebSocket(true)
     return
   }
 
@@ -58,7 +55,9 @@ export function connectWebSocket(token, options = {}) {
   _doConnect()
 }
 
-export function closeWebSocket() {
+export function closeWebSocket(preservePending = false) {
+  if (!preservePending) _pendingConnect = null
+  clearTimeout(authTimer)
   reconnectCount = MAX_RECONNECT
   _clearReconnectTimer()
   _stopHeartbeat()
@@ -102,17 +101,23 @@ function _doConnect() {
   const url = WS_BASE_URL
 
   console.log('[WS] connecting')
-  socketTask = uni.connectSocket({ url, success() {} })
+  const task = uni.connectSocket({ url, success() {} })
+  socketTask = task
+  clearTimeout(authTimer)
+  authTimer = setTimeout(() => { if (socketTask === task && state === 'CONNECTING') task.close() }, 12000)
 
   socketTask.onOpen(() => {
-    socketTask.send({ data: JSON.stringify({ type: 'auth', token: currentToken, chatRole: currentChatRole }) })
+    if (socketTask !== task || state !== 'CONNECTING') return
+    task.send({ data: JSON.stringify({ type: 'auth', token: currentToken, chatRole: currentChatRole }) })
   })
 
   socketTask.onMessage((res) => {
+    if (socketTask !== task || state === 'CLOSING') return
     try {
       const data = JSON.parse(res.data)
       if (data.type === 'auth') {
         if (data.success) {
+          clearTimeout(authTimer)
           console.log('[WS] authenticated')
           state = 'CONNECTED'
           reconnectCount = 0
@@ -129,10 +134,13 @@ function _doConnect() {
   })
 
   socketTask.onError((err) => {
+    if (socketTask !== task) return
     console.error('[WS] error:', err)
   })
 
   socketTask.onClose(() => {
+    if (socketTask !== task) return
+    clearTimeout(authTimer)
     console.log('[WS] closed')
     const wasIntentional = state === 'CLOSING'
     _stopHeartbeat()

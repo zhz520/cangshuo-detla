@@ -1,15 +1,32 @@
 export const updateItemKey = (release, item) => `${release.version}:${item.id}`
 
 export function compareReleaseVersions(left, right) {
-  const parse = value => String(value || '').split('.').map(part => Number.parseInt(part, 10))
+  if (![left, right].every(validReleaseVersion)) return 0
+  const parse = value => String(value).split('.').map(Number)
   const a = parse(left), b = parse(right)
   if (a.length !== 3 || b.length !== 3 || [...a, ...b].some(value => !Number.isSafeInteger(value))) return 0
   for (let index = 0; index < 3; index++) if (a[index] !== b[index]) return Math.sign(a[index] - b[index])
   return 0
 }
 
-export const applicableUpdateReleases = (releases = [], currentVersion = '') =>
-  releases.filter(release => compareReleaseVersions(release.version, currentVersion) > 0)
+const validReleaseVersion = value => /^\d+\.\d+\.\d+$/.test(String(value || ''))
+
+export function isUpdateItemInstalled(release, item, componentVersions = {}, installedKeys = []) {
+  const version = componentVersions?.[item.component]
+  // Actual deployed component versions take precedence over historical plans,
+  // which can still contain an item after a rollback or a partial installation.
+  if (validReleaseVersion(version) && validReleaseVersion(release.version)) return compareReleaseVersions(version, release.version) >= 0
+  return installedKeys.includes(updateItemKey(release, item))
+}
+
+export function applicableUpdateReleases(releases = [], currentVersion = '', componentVersions = {}, installedKeys = []) {
+  return (releases || []).filter(release => {
+    if (!validReleaseVersion(release.version)) return false
+    if (!release.items?.length) return compareReleaseVersions(release.version, currentVersion) > 0
+    return release.items.some(item => !isUpdateItemInstalled(release, item, componentVersions, installedKeys)
+      && compareReleaseVersions(release.version, componentVersions?.[item.component] || currentVersion) > 0)
+  })
+}
 
 export function publicReleaseNotesUrl(value) {
   try {
@@ -31,7 +48,9 @@ export function toggleUpdateSelection(releases = [], current = [], release, item
   const selected = new Set(current)
   const key = updateItemKey(release, item)
   const includeDependencies = targetRelease => targetItem => {
-    selected.add(updateItemKey(targetRelease, targetItem))
+    const targetKey = updateItemKey(targetRelease, targetItem)
+    if (selected.has(targetKey)) return
+    selected.add(targetKey)
     for (const dependencyId of targetItem.requires || []) {
       const dependency = (targetRelease.items || []).find(candidate => candidate.id === dependencyId)
       if (dependency) includeDependencies(targetRelease)(dependency)

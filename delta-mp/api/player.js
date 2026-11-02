@@ -20,12 +20,12 @@ export const getPlayerApplicationStatus = () => get('/player/apply/status', {}, 
 export const applyPlayer = (data) => post('/player/apply', data, { role: 'user' })
 
 // ========== 接单员首页 ==========
-export const getPlayerHome = () => get('/player/home', {}, { role: 'player' })
+export const getPlayerHome = (options = {}) => get('/player/home', {}, { role: 'player', ...options })
 /** 提醒红点：被邀请数、系统通知未读、消息未读 */
 export const getPlayerRemind = (opts = {}) => get('/player/remind', {}, { role: 'player', ...opts })
 
 // ========== 接单员订单 ==========
-export const getOrderHall = (params) => get('/player/order/hall', params, { role: 'player' })
+export const getOrderHall = (params) => get('/player/order/hall', params, { role: 'player', loading: false })
 export const getPlayerOrderDetail = id => get(`/player/work/${id}`, {}, {role:'player'})
 export const acceptOrder = (id, data = {}) => post(`/player/order/${id}/accept`, data, { role: 'player' })
 export const getAcceptChallenge = (id, deviceId) => get(`/player/order/${id}/accept-challenge`, {deviceId}, {role:'player',loading:false})
@@ -42,24 +42,24 @@ export const getInviteList = (params) => get('/player/order/invite-list', params
 export const getAvailableTeammates = (params) => get('/player/order/teammate/available', params, { role: 'player' })
 
 // ========== 接单员工作 ==========
-export const getMyWork = (params) => get('/player/work/my', params, { role: 'player' })
+export const getMyWork = (params, options = {}) => get('/player/work/my', params, { role: 'player', loading: false, ...options })
 export const getAvailableWork = (params) => get('/player/work/available', params, { role: 'player' })
 export const startWork = (orderId) => post(`/player/work/${orderId}/start`, {}, { role: 'player' })
 export const submitWorkProgress = (orderId, data) => post(`/player/order/${orderId}/progress`, data, { role: 'player' })
 export const completeWork = (orderId, data = {}) => post(`/player/work/${orderId}/complete`, data, { role: 'player' })
 
 // ========== 收益 ==========
-export const getEarningsSummary = () => get('/player/earnings/summary', {}, { role: 'player' })
-export const getEarningsDetail = (params) => get('/player/earnings/detail', params, { role: 'player' })
+export const getEarningsSummary = (options = {}) => get('/player/earnings/summary', {}, { role: 'player', ...options })
+export const getEarningsDetail = (params) => get('/player/earnings/detail', params, { role: 'player', loading: false })
 
 // ========== 提现 ==========
 export const applyWithdraw = (data) => post('/player/withdraw', data, { role: 'player' })
 export const getWithdrawDepositStatus = () => get('/player/withdraw/deposit-status', {}, { role: 'player', loading: false })
-export const getWithdrawList = (params) => get('/player/withdraw', params, { role: 'player' })
-export const getWithdrawDetail = (id) => get(`/player/withdraw/${id}`, {}, { role: 'player' })
+export const getWithdrawList = (params) => get('/player/withdraw', params, { role: 'player', loading: false })
+export const getWithdrawDetail = (id) => get(`/player/withdraw/${id}`, {}, { role: 'player', loading: false })
 
 // ========== 提现账户 ==========
-export const getAccountList = () => get('/player/account', {}, { role: 'player' })
+export const getAccountList = (options = {}) => get('/player/account', {}, { role: 'player', ...options })
 export const addAccount = (data) => post('/player/account', data, { role: 'player' })
 export const updateAccount = (data) => put('/player/account', data, { role: 'player' })
 export const deleteAccount = (id) => del(`/player/account/${id}`, {}, { role: 'player' })

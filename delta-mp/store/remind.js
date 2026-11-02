@@ -19,7 +19,7 @@ export const useRemindStore = defineStore('remind', () => {
   async function fetchCsRemind(options = {}) {
     const notifyIncrease = options.notifyIncrease === true
     try {
-      const res = await getCsRemind({ loading: false })
+      const res = await getCsRemind({ loading: false, silent: true })
       const d = res.data || {}
       const nextRelayUnread = d.relayUnread ?? 0
       if (notifyIncrease && lastRelayUnread !== null && nextRelayUnread > lastRelayUnread) {
@@ -33,25 +33,19 @@ export const useRemindStore = defineStore('remind', () => {
       systemUnread.value = d.systemUnread ?? 0
       lastRelayUnread = nextRelayUnread
     } catch (_) {
-    complaintUnread.value = 0
-      relayUnread.value = 0
-      replaceUnread.value = 0
-      messageUnread.value = 0
-      systemUnread.value = 0
+      // Retain the last known badges during a transient network failure.
     }
   }
 
   async function fetchPlayerRemind() {
     try {
-      const res = await getPlayerRemind({ loading: false })
+      const res = await getPlayerRemind({ loading: false, silent: true })
       const d = res.data || {}
       inviteCount.value = d.inviteCount ?? 0
       systemUnread.value = d.systemUnread ?? 0
       messageUnread.value = d.messageUnread ?? 0
     } catch (_) {
-      inviteCount.value = 0
-      systemUnread.value = 0
-      messageUnread.value = 0
+      // Retain the last known badges during a transient network failure.
     }
   }
 

@@ -1,6 +1,6 @@
 <script setup>
 import { clientStorage } from '@/utils/client-storage'
-import { onLaunch, onShow } from '@dcloudio/uni-app'
+import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 import { useAppStore } from '@/store/app'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
@@ -68,15 +68,19 @@ onShow(() => {
   if (shouldConnectChat()) {
     if (!chatStore.connected) chatStore.connect()
     chatStore.fetchMessageUnreadCount()
+    chatStore.resumePolling()
   }
   syncRemindPolling()
 })
+
+onHide(() => { useRemindStore().stopPolling(); useChatStore().pausePolling() })
 </script>
 
 <style lang="scss">
 @import '@/uni.scss';
 @import '@/styles/monochrome.scss';
 @import '@/styles/responsive.scss';
+@import '@/styles/experience.scss';
 
 page, view, text, image, scroll-view, textarea, input { box-sizing: border-box; }
 

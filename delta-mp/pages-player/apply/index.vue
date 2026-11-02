@@ -13,7 +13,8 @@
     <view v-else-if="siteStore.depositMode === 'BEFORE_WITHDRAW'" class="deposit-tip">入驻无需缴纳押金；后续提现前按平台等级要求补交押金。</view>
     <view v-else class="deposit-tip">当前平台不收取打手押金。</view>
     <view class="deposit-tip" @click="agreed=!agreed">{{agreed?'☑':'☐'}} 我已阅读并同意 <text @click.stop="goAgreement('user')">《用户协议》</text>及<text @click.stop="goAgreement('privacy')">《隐私政策》</text>。实名及手机号仅客服、管理员可见。</view>
-    <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositMode === 'REQUIRED' ? '支付押金并提交' : '提交申请') }}</view>
+    <view v-if="pendingDepositNo" class="deposit-tip">已返回支付页面，请确认资料后提交申请。到账状态以平台核验为准。<text @click="reopenPayment">重新打开支付</text></view>
+    <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositMode === 'REQUIRED' ? (pendingDepositNo ? '确认押金到账并提交' : '支付押金并提交') : '提交申请') }}</view>
   </view>
 </template>
 <script setup>
@@ -25,14 +26,36 @@ import {getUserProfile} from '@/api/user'
 const agreed=ref(false),avatarImages=ref([]),inviteName=ref('')
 let invitationToken='',deviceId=clientStorage.get('enrollment_device')
 if(!deviceId){deviceId='device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);clientStorage.set('enrollment_device',deviceId)}
-onLoad(async options=>{await siteStore.fetchSiteConfig();try{const {data}=await getUserProfile();form.phone=data.phone||''}catch(_){};invitationToken=options.invite||clientStorage.get('enrollment_invite')||'';if(invitationToken){clientStorage.set('enrollment_invite',invitationToken);try{const {data}=await get('/player/invitations/'+encodeURIComponent(invitationToken),{},{auth:false});inviteName.value=data.name}catch(_){uni.showToast({title:'邀请链接已失效',icon:'none'})}}})
+onLoad(async options => {
+  await siteStore.fetchSiteConfig()
+  try { const {data} = await getUserProfile(); form.phone = data.phone || '' } catch (_) {}
+  invitationToken = options.invite || clientStorage.get('enrollment_invite') || ''
+  if (invitationToken) {
+    clientStorage.set('enrollment_invite', invitationToken)
+    try { const {data} = await get('/player/invitations/' + encodeURIComponent(invitationToken), {}, {auth:false}); inviteName.value = data.name }
+    catch (_) { uni.showToast({title:'邀请链接已失效',icon:'none'}) }
+  }
+  // #ifdef H5
+  if (options.depositReturn === '1') {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null')
+      if (draft && draft.phone === form.phone && Date.now() - draft.savedAt < 3600000) {
+        Object.assign(form, draft.form); avatarImages.value = draft.avatarImages || []; proofImages.value = draft.proofImages || []
+        agreed.value = draft.agreed === true; pendingDepositNo.value = draft.paymentNo || ''
+      } else sessionStorage.removeItem(draftKey)
+    } catch (_) {}
+  }
+  // #endif
+})
+
 import ImageUploader from '@/components/ImageUploader.vue'
 import { applyPlayer } from '@/api/player'
-import { createPlayerDeposit } from '@/api/pay'
+import { createPlayerDeposit, createH5PlayerDeposit } from '@/api/pay'
 import { useSiteStore } from '@/store/site'
-import { isMpWeixin } from '@/utils/platform'
+import { isMpWeixin, isH5, canStartH5WechatPayment } from '@/utils/platform'
 const siteStore = useSiteStore()
-const canUseWechatPay = isMpWeixin()
+const pendingDepositNo = ref('')
+const draftKey = 'cangshuo-enrollment-deposit-draft'
 const form = reactive({ nickname:'', realName: '', phone: '', gameLevel: '', serviceTypes: '', skillTags: '' })
 const proofImages = ref([])
 const submitting = ref(false)
@@ -55,33 +78,34 @@ async function submit() {
       setTimeout(() => uni.navigateBack(), 1500)
     }
   } catch (e) {
-    if (e && e.errMsg && !e.errMsg.includes('cancel')) {
-      uni.showToast({ title: e.msg || '操作失败', icon: 'none' })
-    }
+    if (!e?.errMsg?.includes('cancel')) uni.showToast({ title: e?.msg || e?.message || '操作失败', icon: 'none' })
   } finally {
     submitting.value = false
   }
 }
 
 async function submitWithDeposit() {
-  if (!canUseWechatPay) {
-    uni.showToast({ title: 'H5暂未接入押金在线支付', icon: 'none' })
-    throw new Error('H5 payment is not supported')
+  let paymentNo = pendingDepositNo.value
+  if (!paymentNo) {
+    if (isH5()) {
+      if (!canStartH5WechatPayment()) return
+      const response = await createH5PlayerDeposit()
+      if (!response.data?.h5Url || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')
+      // Only this tab retains the draft for one hour; it is removed on successful submission.
+      // #ifdef H5
+      sessionStorage.setItem(draftKey, JSON.stringify({phone:form.phone,form:{...form},avatarImages:avatarImages.value,proofImages:proofImages.value,agreed:agreed.value,paymentNo:response.data.paymentNo,savedAt:Date.now()}))
+      const returnUrl = window.location.origin + window.location.pathname + '#/pages-player/apply/index?depositReturn=1'
+      window.location.assign(response.data.h5Url + '&redirect_url=' + encodeURIComponent(returnUrl))
+      // #endif
+      return
+    }
+    if (!isMpWeixin()) throw new Error('当前环境不支持微信支付')
+    const res = await createPlayerDeposit()
+    const { timeStamp, nonceStr, package: pkg, signType, paySign } = res.data
+    paymentNo = res.data.paymentNo
+    await new Promise((resolve,reject) => uni.requestPayment({provider:'wxpay',timeStamp,nonceStr,package:pkg,signType:signType||'RSA',paySign,success:resolve,fail:reject}))
+    pendingDepositNo.value = paymentNo
   }
-  const res = await createPlayerDeposit()
-  const { paymentNo, timeStamp, nonceStr, package: pkg, signType, paySign } = res.data
-  await new Promise((resolve, reject) => {
-    uni.requestPayment({
-      provider: 'wxpay',
-      timeStamp,
-      nonceStr,
-      package: pkg,
-      signType: signType || 'RSA',
-      paySign,
-      success: () => resolve(),
-      fail: (e) => reject(e)
-    })
-  })
   const doApply = () => applyPlayer({
     ...form,avatar:avatarImages.value[0],privacyAccepted:agreed.value,invitationToken,deviceId,
     proofImages: proofImages.value.join(','),
@@ -98,9 +122,14 @@ async function submitWithDeposit() {
       throw e
     }
   }
+  // #ifdef H5
+  sessionStorage.removeItem(draftKey)
+  // #endif
+  pendingDepositNo.value = ''
   uni.showToast({ title: '已提交，等待审核' })
   setTimeout(() => uni.navigateBack(), 1500)
 }
+async function reopenPayment() { if (submitting.value) return; pendingDepositNo.value = ''; submitting.value = true; try { await submitWithDeposit() } catch (e) { uni.showToast({title:e?.msg||e?.message||'操作失败',icon:'none'}) } finally { submitting.value = false } }
 </script>
 <style lang="scss" scoped>
 .apply-page { padding:24rpx; background: #ffffff; min-height: var(--app-page-height, 100vh); }

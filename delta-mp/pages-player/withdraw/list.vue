@@ -7,49 +7,46 @@
           <StatusTag :status="item.status" :text-map="WITHDRAW_STATUS_TEXT" :color-map="WITHDRAW_STATUS_COLOR" />
         </view>
         <view class="info-row">
-          <text class="account">{{ item.accountType === 'ALIPAY' ? '支付宝' : item.accountType === 'WECHAT' ? '微信' : '银行卡' }} {{ item.accountNo || '' }}</text>
+          <text class="account">{{ accountTypeText(item.accountTypeSnapshot || item.accountType) }} {{ item.accountNoSnapshot || item.accountNo || '账号未记录' }}</text>
           <text class="time">{{ item.createdAt }}</text>
         </view>
       </view>
-      <view v-if="loading" class="loading-tip">加载中...</view>
-<EmptyState v-if="!loading && records.length === 0" text="暂无提现记录" image="/static/icons/暂无纪录.svg" />
+      <PageState :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无提现记录" @retry="retry" />
+      <view v-if="records.length && loading" class="loading-tip">正在加载…</view>
+      <view v-else-if="records.length && finished && !error" class="loading-tip">已显示全部提现记录</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import EmptyState from '@/components/EmptyState.vue'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import PageState from '@/components/PageState.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { getWithdrawList } from '@/api/player'
+import { usePagedList } from '@/composables/usePagedList'
 
 const WITHDRAW_STATUS_TEXT = { PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', COMPLETED: '已到账', CANCELLED: '已取消' }
-const WITHDRAW_STATUS_COLOR = { PENDING: '#ff9900', APPROVED: '#ff4544', REJECTED: '#ee0a24', COMPLETED: '#07c160', CANCELLED: 'rgba(0,0,0,0.3)' }
-const records = ref([])
-const pageNum = ref(1)
-const loading = ref(false)
-const finished = ref(false)
-
-onLoad(() => { loadData() })
-
-async function loadData() {
-  loading.value = true
-  const res = await getWithdrawList({ pageNum: pageNum.value, pageSize: 20 })
-  const list = res.data?.records || []
-  if (list.length < 20) finished.value = true
-  records.value = pageNum.value === 1 ? list : [...records.value, ...list]
-  loading.value = false
-}
-function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
-function goDetail(id) { uni.navigateTo({ url: '/pages-player/withdraw/detail?id=' + id }) }
+const WITHDRAW_STATUS_COLOR = { PENDING: '#996b30', APPROVED: '#347a5b', REJECTED: '#b84b55', COMPLETED: '#347a5b', CANCELLED: '#73777e' }
+const { items: records, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
+  pageSize: 20,
+  async fetchPage({ pageNum, pageSize }) {
+    const { data } = await getWithdrawList({ pageNum, pageSize }, { loading: false, silent: true })
+    if (!Array.isArray(data?.records)) throw new Error('提现记录数据异常，请重试')
+    return data
+  }
+})
+onShow(() => refresh())
+onHide(cancel)
+onUnload(dispose)
+function accountTypeText(type) { return { ALIPAY: '支付宝', WECHAT: '微信', BANK: '银行卡' }[type] || '收款账户' }
+function goDetail(id) { if (id != null) uni.navigateTo({ url: '/pages-player/withdraw/detail?id=' + encodeURIComponent(id) }) }
 </script>
 <style lang="scss" scoped>
-.list-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.list { height: var(--app-page-height, 100vh); }
-.record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: rgba(0,0,0,0.04); border-radius: 12rpx;
+.list-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
+.list { height: var(--app-page-height, 100vh); box-sizing: border-box; padding-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom)); }
+.record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx;
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
   .amount { font-size: 34rpx; font-weight: bold; color: rgba(0,0,0,0.85); }
-  .info-row { display: flex; justify-content: space-between; .account { font-size: 24rpx; color: rgba(0,0,0,0.55); } .time { font-size: 22rpx; color: rgba(0,0,0,0.3); } }
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; .account { font-size: 24rpx; color: #666b73; word-break: break-all; } .time { font-size: 22rpx; color: #73777e; } }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
 </style>

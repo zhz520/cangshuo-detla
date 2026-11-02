@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted, getCurrentInstance } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
 
 /**
  * 金沙粒子背景 - Canvas 2D 实现
@@ -11,11 +12,12 @@ export function useGoldDust(canvasId = 'goldDust') {
   let cvs = null
   let ctx = null
   let raf = null
-  let running = true
+  let running = false
+  let pageVisible = true, destroyed = false, initTimer, reduced = false, media
   let W = 375
   let H = 700
 
-  const COUNT = 120
+  const COUNT = 24
   const dots = []
 
   function rand(a, b) { return Math.random() * (b - a) + a }
@@ -93,35 +95,50 @@ export function useGoldDust(canvasId = 'goldDust') {
   }
 
   function scheduleNext() {
-    if (!running) return
-    if (cvs && cvs.requestAnimationFrame) {
-      raf = cvs.requestAnimationFrame(draw)
-    } else {
-      raf = setTimeout(draw, 16)
-    }
+    if (!running || reduced) return
+    raf = setTimeout(draw, 34)
   }
+
+  function start() {
+    if (running || !ctx || !pageVisible || destroyed) return
+    // #ifdef H5
+    if (document.hidden) return
+    // #endif
+    running = true
+    draw()
+  }
+  function visibilityChanged() { if (typeof document !== 'undefined' && document.hidden) stop(); else start() }
+  function motionChanged() { reduced = !!media?.matches; stop(); start() }
+  onShow(() => { pageVisible = true; start() })
+  onHide(() => { pageVisible = false; stop() })
 
   function stop() {
     running = false
     if (raf == null) return
-    if (cvs && cvs.cancelAnimationFrame) cvs.cancelAnimationFrame(raf)
-    else clearTimeout(raf)
+    clearTimeout(raf)
     raf = null
   }
 
   onMounted(() => {
+    // #ifdef H5
+    media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    reduced = !!media?.matches
+    media?.addEventListener?.('change', motionChanged)
+    document.addEventListener('visibilitychange', visibilityChanged)
+    // #endif
     const sys = uni.getSystemInfoSync()
     W = sys.windowWidth || 375
     H = sys.windowHeight || 700
-    const dpr = sys.pixelRatio || 2
+    const dpr = Math.min(sys.pixelRatio || 1, 1.5)
 
-    setTimeout(() => {
+    initTimer = setTimeout(() => {
+      if (destroyed) return
       uni.createSelectorQuery()
         .in(instance.proxy)
         .select('#' + canvasId)
         .fields({ node: true, size: true })
         .exec((res) => {
-          if (!res || !res[0] || !res[0].node) return
+          if (destroyed || !res || !res[0] || !res[0].node) return
           cvs = res[0].node
           ctx = cvs.getContext('2d')
           cvs.width = W * dpr
@@ -134,10 +151,16 @@ export function useGoldDust(canvasId = 'goldDust') {
             dots.push(d)
           }
 
-          draw()
+          start()
         })
     }, 300)
   })
 
-  onUnmounted(() => { stop() })
+  onUnmounted(() => {
+    destroyed = true; clearTimeout(initTimer); stop()
+    // #ifdef H5
+    document.removeEventListener('visibilitychange', visibilityChanged)
+    media?.removeEventListener?.('change', motionChanged)
+    // #endif
+  })
 }

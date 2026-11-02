@@ -216,4 +216,6 @@ html { -webkit-text-size-adjust: 100%; }
 /* Avoid iOS auto-zoom when focusing a small input, including embedded Safari. */
 @media (max-width: 1024px) and (pointer: coarse) {
   .el-input__inner, .el-textarea__inner, .el-select__input, .el-range-input, [contenteditable='true'] { font-size: 16px !important; }
+  .el-button:not(.is-link), .el-input__wrapper, .el-select__wrapper { min-height: 44px; }
+  .el-pagination button, .el-pagination .el-pager li { min-width: 36px; min-height: 36px; }
 }

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
+import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
 
 const Layout = () => import('@/layout/index.vue')
 
@@ -239,7 +240,7 @@ const routes = [
     children: [
       { path: 'features', name: 'FeatureMarket', component: () => import('@/views/platform/FeatureMarket.vue'), meta: { title: '功能商城', roles: ['admin'] } },
       { path: 'updates', name: 'SystemUpdates', component: () => import('@/views/platform/SystemUpdates.vue'), meta: { title: '系统更新', roles: ['admin'] } },
-      { path: 'income-analysis', name: 'IncomeAnalysis', component: () => import('@/views/platform/IncomeAnalysis.vue'), meta: { title: '收益对比分析', roles: ['admin'] } }
+      { path: 'income-analysis', name: 'IncomeAnalysis', component: () => import('@/views/platform/IncomeAnalysis.vue'), meta: { title: '收益对比分析', roles: ['admin'], permission: 'finance.read', feature: 'advanced_income_reports' } }
     ]
   },
   // 系统管理 (仅 admin)
@@ -314,7 +315,7 @@ const router = createRouter({
 // 路由守卫
 const whiteList = ['/login']
 router.beforeEach(async (to, from, next) => {
-  document.title = `${to.meta.title || ''} - 护航管理后台`
+  beginNavigation(to)
   const token = getToken()
 
   if (token) {
@@ -322,10 +323,19 @@ router.beforeEach(async (to, from, next) => {
       next('/')
     } else {
       const user = getUserInfo()
-      try{await loadStaffPermissions()}catch(error){if(error.code===401){removeToken();next('/login');return}if(to.path!=='/403'){next('/403');return}}
+      try { await loadStaffPermissions() } catch (error) {
+        if (error.code === 401) { removeToken(); next('/login'); return }
+        throw error
+      }
       const permission=to.meta.permission||permissionFor(to.path)
       if(permission&&!can(permission)){next('/403');return}
-      if(to.meta.feature){const {loadPlatformFeatureVisibility,platformFeatureAllowed}=await import('@/utils/platform-feature-visibility');await loadPlatformFeatureVisibility();if(!platformFeatureAllowed(to.meta.feature)){next('/403');return}}
+      if (to.matched.some(record => record.meta.roles && !record.meta.roles.includes(user?.role))) { next('/403'); return }
+      if (to.meta.feature) {
+        const { loadPlatformFeatureVisibility, platformFeatureAllowed, platformFeatureError } = await import('@/utils/platform-feature-visibility')
+        await loadPlatformFeatureVisibility()
+        if (platformFeatureError.value) throw new Error(platformFeatureError.value)
+        if (!platformFeatureAllowed(to.meta.feature)) { next('/403'); return }
+      }
       const roles = to.meta.roles
       if (roles && !roles.includes(user?.role)) {
         next('/403')
@@ -337,9 +347,12 @@ router.beforeEach(async (to, from, next) => {
     if (whiteList.includes(to.path)) {
       next()
     } else {
-      next(`/login?redirect=${to.path}`)
+      next({ path: '/login', query: { redirect: to.fullPath } })
     }
   }
 })
+
+router.afterEach(to => finishNavigation(to))
+router.onError(failNavigation)
 
 export default router

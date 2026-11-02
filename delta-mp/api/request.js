@@ -4,30 +4,14 @@ import { clientStorage } from '@/utils/client-storage'
  * 自动注入token、统一错误处理、loading管理
  */
 import { getTokenByRole } from '@/utils/auth'
+import { createLoadingController } from '@/utils/loading'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
-let loadingCount = 0
 let _handlingUnauthorized = false  // 防止多个401同时触发重复弹出跳转
-
-function showLoading() {
-  if (loadingCount === 0) {
-    uni.showLoading({ title: '加载中...', mask: true })
-  }
-  loadingCount++
-}
-
-function hideLoading() {
-  loadingCount--
-  if (loadingCount <= 0) {
-    loadingCount = 0
-    try {
-      uni.hideLoading()
-    } catch (e) {
-      // 真机下若 toast 已被系统关闭（如弹出订阅窗时），hideLoading 会报错，忽略即可
-    }
-  }
-}
+const pendingReads = new Map()
+let readGeneration = 0
+const loaders = createLoadingController({ show: options => uni.showLoading(options), hide: () => { try { uni.hideLoading() } catch (_) {} } })
 
 /**
  * 获取当前角色（从Storage读取，避免循环依赖store）
@@ -47,6 +31,17 @@ function getCurrentRole() {
  * @param {string} options.role - 指定角色获取token，默认当前角色
  */
 export function request(options) {
+  const role = options.role || getCurrentRole()
+  // Only coalesce simultaneous reads, never cache responses or combine writes.
+  if ((options.method || 'GET') !== 'GET') { readGeneration++; return performRequest(options) }
+  const key = JSON.stringify([readGeneration, options.url, options.data || {}, role, options.auth === false ? '' : getTokenByRole(role), options.header || {}, options.loading !== false])
+  if (pendingReads.has(key)) return pendingReads.get(key)
+  const task = performRequest(options).finally(() => { if (pendingReads.get(key) === task) pendingReads.delete(key) })
+  pendingReads.set(key, task)
+  return task
+}
+
+function performRequest(options) {
   const {
     url,
     method = 'GET',
@@ -54,26 +49,21 @@ export function request(options) {
     loading = true,
     auth = true,
     role,
-    header = {}
+    header = {},
+    timeout = 20000,
+    silent = false
   } = options
 
   return new Promise((resolve, reject) => {
-    let loadingHandled = false
-    const finishLoading = () => {
-      if (loading && !loadingHandled) {
-        loadingHandled = true
-        hideLoading()
-      }
-    }
-
-    if (loading) showLoading()
+    const finishLoading = loading ? loaders.begin(method !== 'GET') : () => {}
 
     // 注入token
     const currentRole = role || getCurrentRole()
+    const requestToken = auth ? getTokenByRole(currentRole) : ''
+    const requestHeader = { ...header }
     if (auth) {
-      const token = getTokenByRole(currentRole)
-      if (token) {
-        header['Authorization'] = `Bearer ${token}`
+      if (requestToken) {
+        requestHeader['Authorization'] = `Bearer ${requestToken}`
       }
     }
 
@@ -88,17 +78,18 @@ export function request(options) {
       if (qs) finalUrl += (url.includes('?') ? '&' : '?') + qs
       bodyData = {}
     }
-    console.log(`[REQ] >>> ${method} ${finalUrl}`)
+    if (import.meta.env.DEV) console.log(`[REQ] >>> ${method} ${url}`)
     uni.request({
       url: finalUrl,
       method,
+      timeout,
       data: bodyData,
       header: {
         'Content-Type': 'application/json',
-        ...header
+        ...requestHeader
       },
       success(res) {
-        console.log(`[REQ] <<< ${method} ${url} ${Date.now() - _startTime}ms`)
+        if (import.meta.env.DEV) console.log(`[REQ] <<< ${method} ${url} ${Date.now() - _startTime}ms`)
         const { statusCode, data: resData } = res
 
         if (statusCode === 503 && resData?.maintenance) {
@@ -110,32 +101,32 @@ export function request(options) {
         }
         if (statusCode === 200) {
           // 业务层code判断
-          if (resData.code === 0 || resData.code === 200) {
+          if (resData?.code === 0 || resData?.code === 200) {
             resolve(resData)
-          } else if (resData.code === 401) {
+          } else if (resData?.code === 401) {
             // token失效
             finishLoading()
-            handleUnauthorized(currentRole)
+            handleUnauthorized(currentRole, requestToken)
             reject(resData)
           } else {
             // 业务错误
             finishLoading()
-            uni.showToast({ title: resData.msg || '请求失败', icon: 'none' })
+            if (!silent) uni.showToast({ title: resData?.msg || '请求失败', icon: 'none' })
             reject(resData)
           }
         } else if (statusCode === 401) {
           finishLoading()
-          handleUnauthorized(currentRole)
+          handleUnauthorized(currentRole, requestToken)
           reject(resData)
         } else {
           finishLoading()
-          uni.showToast({ title: `网络错误(${statusCode})`, icon: 'none' })
+          if (!silent) uni.showToast({ title: statusCode >= 500 ? '服务暂时不可用，请稍后重试' : `网络错误(${statusCode})`, icon: 'none' })
           reject(resData)
         }
       },
       fail(err) {
         finishLoading()
-        uni.showToast({ title: '网络连接失败', icon: 'none' })
+        if (!silent) uni.showToast({ title: err?.errMsg?.includes('timeout') ? '请求超时，请重试' : '网络连接失败', icon: 'none' })
         reject(err)
       },
       complete() {
@@ -148,7 +139,10 @@ export function request(options) {
 /**
  * 处理未授权
  */
-function handleUnauthorized(role) {
+function handleUnauthorized(role, expectedToken) {
+  if (expectedToken !== undefined && expectedToken !== getTokenByRole(role)) return
+  // A late response from another role must not interrupt the active session.
+  if (role !== getCurrentRole()) return
   // 防止多个并发401请求重复触发弹出和跳转
   if (_handlingUnauthorized) return
   _handlingUnauthorized = true
@@ -192,20 +186,22 @@ export function uploadFile(filePath, endpoint = '/common/file/upload', options =
       filePath,
       name: 'file',
       header,
+      timeout: 60000,
       success(res) {
         if (res.statusCode === 200) {
-          const data = JSON.parse(res.data)
+          let data
+          try { data = JSON.parse(res.data) } catch (_) { reject(new Error('上传响应异常，请重试')); return }
           if (data.code === 0 || data.code === 200) {
             resolve(data.data) // 返回文件URL
           } else if (data.code === 401) {
-            handleUnauthorized(role)
+            handleUnauthorized(role, token)
             reject(data)
           } else {
             uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
             reject(data)
           }
         } else if (res.statusCode === 401) {
-          handleUnauthorized(role)
+          handleUnauthorized(role, token)
           reject(res)
         } else {
           reject(res)

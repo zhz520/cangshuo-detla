@@ -25,7 +25,8 @@
 </template>
 <script setup>
 import { onMounted, ref } from 'vue'
-import { getPlatformFeatures, getIncomeComparison } from '@/api/platform'
+import { getIncomeComparison } from '@/api/platform'
+import { platformFeatureAllowed } from '@/utils/platform-feature-visibility'
 const loading = ref(false), checked = ref(false), enabled = ref(false), error = ref(''), report = ref(null)
 function formatDate(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` }
 const end = new Date(), start = new Date(); start.setDate(end.getDate() - 29)
@@ -33,7 +34,7 @@ const range = ref([formatDate(start), formatDate(end)])
 const metrics = [{key:'orderCount', name:'已结算订单数'}, {key:'orderAmount', name:'已结算订单金额'}, {key:'playerIncome', name:'打手收入'}, {key:'commissionIncome', name:'平台抽成'}, {key:'averageOrderAmount', name:'平均订单金额'}]
 function metricValue(metric, value) { return metric.key === 'orderCount' ? String(value ?? 0) : `¥${Number(value ?? 0).toFixed(2)}` }
 async function loadReport() {
-  if (!range.value?.[0] || !range.value?.[1]) return
+  if (!enabled.value || !range.value?.[0] || !range.value?.[1]) return
   loading.value = true; error.value = ''; report.value = null
   try { report.value = (await getIncomeComparison({startDate:range.value[0], endDate:range.value[1]})).data }
   catch { error.value = '报表加载失败，请检查日期范围和模块授权后重试。' }
@@ -49,7 +50,7 @@ function exportCsv() {
 }
 onMounted(async () => {
   loading.value = true
-  try { enabled.value = (await getPlatformFeatures()).data.some(feature => feature.id === 'advanced_income_reports' && feature.enabled); checked.value = true; if (enabled.value) await loadReport() }
+  try { enabled.value = platformFeatureAllowed('advanced_income_reports'); checked.value = true; if (enabled.value) await loadReport() }
   catch { error.value = '无法确认模块授权，请刷新后重试。' }
   finally { loading.value = false }
 })

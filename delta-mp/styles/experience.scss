@@ -1,0 +1,25 @@
+/* Shared interaction rhythm. Only opacity/transform animate; content never waits for animation. */
+page { --ui-radius: 24rpx; --ui-duration: 160ms; }
+button, .menu-item, .action, .action-row, .tabbar-item, .filter-item, .tab, .btn-accept, .switch-btn, .submit-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background-color var(--ui-duration, 160ms) ease, opacity var(--ui-duration, 160ms) ease, transform var(--ui-duration, 160ms) ease;
+}
+button:active:not([disabled]), .menu-item:active, .action:active, .action-row:active, .tabbar-item:active, .btn-accept:active { opacity: .72; }
+.tabbar-item { min-height: 88rpx; }
+.tabbar-item.active .tabbar-icon { transform: translateY(-2rpx); }
+.tabbar-icon { transition: transform var(--ui-duration, 160ms) ease; }
+.num, .amount, .total-amount, .stat-num { font-variant-numeric: tabular-nums; }
+.menu-item, .form-item, .action-row { min-height: 100rpx; }
+.loading-tip { color: #73777e; font-size: 25rpx; text-align: center; padding: 28rpx; line-height: 1.6; }
+.hall-page, .player-order-list, .player-home, .player-mine, .earnings-page, .withdraw-page { background: #f5f6f8; }
+.hall-page .order-card-wrap { background: #fff; border-color: #e8eaee; border-radius: 24rpx; box-shadow: 0 6rpx 22rpx rgba(23,25,28,.025); }
+.hall-page .accept-bar { background: #fafbfc; }
+/* #ifdef H5 */
+uni-page-body > view { animation: page-reveal 180ms ease-out; }
+@keyframes page-reveal { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+uni-page-body input, uni-page-body textarea { caret-color: #17191c; }
+/* #endif */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

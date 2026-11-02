@@ -26,7 +26,7 @@ export const useChatStore = defineStore('chat', () => {
     }
     try {
       const type = role === 'cs' ? 'CS' : role === 'player' ? 'PLAYER' : 'USER'
-      const res = await getUnreadCount(type, { loading: false })
+      const res = await getUnreadCount(type, { loading: false, silent: true })
       const newCount = res.data ?? 0
       if (lastSystemUnread !== null && newCount > lastSystemUnread) {
         playMessageNotification()
@@ -85,6 +85,7 @@ export const useChatStore = defineStore('chat', () => {
 
       onWsClose(() => {
         connected.value = false
+        stopPoll()
       })
     }
 
@@ -99,6 +100,16 @@ export const useChatStore = defineStore('chat', () => {
     closeWebSocket()
     connected.value = false
     _callbacksBound = false
+    unreadCount.value = 0
+    messageUnreadCount.value = 0
+    lastSystemUnread = null
+    currentSessionId.value = null
+    newMessage.value = null
+  }
+
+  function pausePolling() { stopPoll() }
+  function resumePolling() {
+    if (connected.value && !systemUnreadPollTimer) systemUnreadPollTimer = setInterval(fetchMessageUnreadCount, 25000)
   }
 
   function setCurrentSession(sessionId) {
@@ -136,6 +147,8 @@ export const useChatStore = defineStore('chat', () => {
     disconnect,
     setCurrentSession,
     clearCurrentSession,
-    resetUnread
+    resetUnread,
+    pausePolling,
+    resumePolling
   }
 })

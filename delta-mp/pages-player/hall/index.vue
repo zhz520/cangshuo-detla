@@ -5,7 +5,8 @@
       <view class="filter-item" :class="{active: !categoryId}" @click="filterCategory('')">全部</view>
       <view v-for="c in categories" :key="c.id" class="filter-item" :class="{active: categoryId===c.id}" @click="filterCategory(c.id)">{{ c.name }}</view>
     </scroll-view>
-    <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
+    <scroll-view :key="categoryId" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
+      <PageState v-if="!orders.length" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无可接订单" @retry="retry" />
       <view v-for="o in orders" :key="o.id" class="order-card-wrap">
         <OrderCard :order="o" detail-path="/pages-player/order/detail" embed />
         <view class="accept-bar">
@@ -16,35 +17,64 @@
           <view class="btn-accept" @click.stop="doAccept(o.id)">立即接单</view>
         </view>
       </view>
-      <view v-if="loading" class="loading-tip">加载中...</view>
-<EmptyState v-if="!loading && orders.length===0" text="暂无可接订单" image="/static/icons/暂无项目.svg" />
+      <template v-if="orders.length">
+        <PageState v-if="error" :error="error" @retry="retry" />
+        <view v-else-if="loading" class="loading-tip">加载中...</view>
+        <view v-else-if="finished" class="loading-tip">已全部加载</view>
+        <view v-else class="loading-tip" @click="loadMore">加载更多</view>
+      </template>
     </scroll-view>
-<GrabAcceptDialog ref="grabDialog" @accepted="refresh" />
+<GrabAcceptDialog ref="grabDialog" @accepted="refreshAfterAccept" />
 <CustomTabBar :current="0" />
   </view>
 </template>
 <script setup>
 import { ref } from 'vue'
-import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import OrderCard from '@/components/OrderCard.vue'
-import EmptyState from '@/components/EmptyState.vue'
+import PageState from '@/components/PageState.vue'
+import { usePagedList } from '@/composables/usePagedList'
 import { getOrderHall } from '@/api/player'
 import GrabAcceptDialog from '@/components/GrabAcceptDialog.vue'
 const grabDialog=ref(null)
 import { getAllCategories } from '@/api/category'
 import { useRemindStore } from '@/store/remind'
 
-const orders = ref([])
 const remindStore = useRemindStore()
 /** 仅主分类，用于顶部 tab 展示 */
 const categories = ref([])
 /** 全量分类（含子分类），用于计算主分类下的子分类 id 列表 */
 const allCategories = ref([])
-const categoryId = ref('')
-const pageNum = ref(1)
-const loading = ref(false)
-const finished = ref(false)
+let categoriesLoaded = false
+let categoryRequest = null
+let disposed = false
+const {
+  query: categoryId, items: orders, loading, error, finished,
+  refresh, loadMore, retry, setQuery: filterCategory, cancel, dispose
+} = usePagedList({
+  async fetchPage({ pageNum, pageSize, query, isCurrent }) {
+    await loadCategories()
+    if (!isCurrent()) return
+    const params = { pageNum, pageSize }
+    if (query) params.categoryIds = getCategoryIdsUnderMain(query).join(',')
+    const res = await getOrderHall(params)
+    return res.data
+  }
+})
+
+function loadCategories() {
+  if (categoriesLoaded) return Promise.resolve()
+  if (categoryRequest) return categoryRequest
+  categoryRequest = getAllCategories({ loading: false }).then(res => {
+    if (disposed) return
+    const all = res.data || []
+    allCategories.value = all
+    categories.value = all.filter(c => !c.parentId || c.parentId === 0 || c.parentId === '')
+    categoriesLoaded = true
+  }).finally(() => { categoryRequest = null })
+  return categoryRequest
+}
 
 /** 获取某主分类及其所有子分类的 id 列表（含多级） */
 function getCategoryIdsUnderMain(mainId) {
@@ -60,24 +90,21 @@ function getCategoryIdsUnderMain(mainId) {
   return ids
 }
 
-onShow(async () => {
+onShow(() => {
   try { uni.hideHomeButton() } catch (_) {}
   remindStore.fetchPlayerRemind()
-  if (!allCategories.value.length) {
-    try {
-      const res = await getAllCategories()
-      const all = res.data || []
-      allCategories.value = all
-      categories.value = all.filter(c => !c.parentId || c.parentId === 0 || c.parentId === '')
-    } catch (e) {}
-  }
   refresh()
 })
 
+onHide(cancel)
+onUnload(() => { disposed = true; dispose() })
+
 onPullDownRefresh(async () => {
-  await refresh()
-  uni.stopPullDownRefresh()
+  try { await refresh() } finally { uni.stopPullDownRefresh() }
 })
+
+// Acceptance changes availability even if an earlier refresh is still in flight.
+function refreshAfterAccept() { return refresh({ force: true }) }
 
 /** 订单抽佣比例（0~1），仅用订单字段，无则按 0 */
 function commissionRateForOrder(order) {
@@ -93,22 +120,6 @@ function incomeAmount(order) {
   const n = Number(order?.amount) || 0
   return n * (1 - commissionRateForOrder(order))
 }
-function filterCategory(id) { categoryId.value = id; refresh() }
-async function refresh() { pageNum.value = 1; orders.value = []; finished.value = false; await loadData() }
-async function loadData() {
-  loading.value = true
-  const params = { pageNum: pageNum.value, pageSize: 10 }
-  if (categoryId.value) {
-    const ids = getCategoryIdsUnderMain(categoryId.value)
-    params.categoryIds = ids.join(',')
-  }
-  const res = await getOrderHall(params)
-  const list = res.data?.records || []
-  if (list.length < 10) finished.value = true
-  orders.value = pageNum.value === 1 ? list : [...orders.value, ...list]
-  loading.value = false
-}
-function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 function doAccept(id) { grabDialog.value?.open(id) }
 </script>
 <style lang="scss" scoped>

@@ -16,7 +16,7 @@
           </view>
         </view>
       </view>
-      <EmptyState v-if="sessions.length===0" text="暂无会话" image="/static/icons/暂无消息对话.svg" />
+      <PageState :loading="loading && !sessions.length" :error="error" :empty="!loading && !error && !sessions.length" empty-text="暂无会话" @retry="fetchList" />
     </scroll-view>
     <CustomTabBar :current="3" />
   </view>
@@ -24,8 +24,8 @@
 <script setup>
 import AppImage from '@/components/AppImage.vue'
 import { ref, watch } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import EmptyState from '@/components/EmptyState.vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
+import PageState from '@/components/PageState.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import { getSessionList } from '@/api/chat'
 import { getRemind } from '@/api/message'
@@ -35,19 +35,24 @@ import { useGoldDust } from '@/composables/useGoldDust'
 useGoldDust()
 const chatStore = useChatStore()
 const sessions = ref([])
+const loading = ref(false), error = ref('')
+let visible = true
+onHide(() => { visible = false })
 
 const USER_CHAT_OPTS = { chatRole: 'USER' }
 
 async function fetchList() {
+  if (loading.value || !visible) return
+  loading.value = true; error.value = ''
   try {
     const res = await getSessionList({ ...USER_CHAT_OPTS, loading: false })
     sessions.value = res.data || []
-  } catch (e) {
-    sessions.value = []
-  }
+  } catch (e) { error.value = '会话加载失败，请重新加载。' }
+  finally { loading.value = false }
 }
 
 onShow(async () => {
+  visible = true
   chatStore.connect(USER_CHAT_OPTS)
   try {
     const res = await getRemind({ loading: false })

@@ -1,18 +1,18 @@
 <template>
   <div class="login-container">
-    <canvas ref="canvasRef" class="particle-canvas" />
+    <canvas ref="canvasRef" class="particle-canvas" aria-hidden="true" />
     <div class="login-box">
       <h2 class="login-title">{{ siteStore.siteName }}</h2>
       <p class="login-subtitle">管理员与客服统一登录</p>
-      <el-form ref="formRef" :model="form" :rules="rules" size="large">
+      <el-form ref="formRef" :model="form" :rules="rules" size="large" @submit.prevent="handleLogin">
         <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" />
+          <el-input v-model="form.username" placeholder="用户名" aria-label="用户名" autocomplete="username" prefix-icon="User" />
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
+          <el-input v-model="form.password" type="password" placeholder="密码" aria-label="密码" autocomplete="current-password" prefix-icon="Lock" show-password />
         </el-form-item>
         <el-form-item>
-          <el-button class="login-btn" :loading="loading" @click="handleLogin">登 录</el-button>
+          <el-button class="login-btn" native-type="submit" :loading="loading">登 录</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -41,14 +41,14 @@ const rules = {
 
 async function handleLogin() {
   if (loading.value) return
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
   loading.value = true
   try {
+    const valid = await formRef.value.validate().catch(() => false)
+    if (!valid) return
     await userStore.login(form)
     ElMessage.success('登录成功')
-    const redirect = route.query.redirect || '/'
-    router.push(redirect)
+    const redirect = route.query.redirect
+    await router.push(typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch (e) {
     // error handled by request interceptor
   } finally {
@@ -59,7 +59,7 @@ async function handleLogin() {
 /* ---- 金色粒子动画 ---- */
 const canvasRef = ref(null)
 let animId = 0
-let resizeCanvas
+let stopParticles = () => {}
 class Particle {
   constructor(w, h) { this.reset(w, h, true) }
   reset(w, h, init = false) {
@@ -87,21 +87,48 @@ class Particle {
 onMounted(() => {
   const canvas = canvasRef.value; if (!canvas) return
   const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
   let w, h, particles = []
-  resizeCanvas = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight }
-  resizeCanvas(); window.addEventListener('resize', resizeCanvas)
-  for (let i = 0; i < 120; i++) particles.push(new Particle(w, h))
-  function loop() {
+  let lastFrame = 0
+  function draw(advance = false) {
     ctx.clearRect(0, 0, w, h)
     for (const p of particles) {
-      p.update(); p.draw(ctx)
+      if (advance) p.update()
+      p.draw(ctx)
       if (p.life <= 0) p.reset(w, h)
     }
+  }
+  const resizeCanvas = () => {
+    w = canvas.width = canvas.clientWidth
+    h = canvas.height = canvas.clientHeight
+    particles = Array.from({ length: Math.min(100, Math.max(18, Math.round(w * h / 18000))) }, () => new Particle(w, h))
+    draw()
+  }
+  function loop(time) {
+    if (time - lastFrame >= 1000 / 30) { draw(true); lastFrame = time }
     animId = requestAnimationFrame(loop)
   }
-  loop()
+  function updatePlayback() {
+    cancelAnimationFrame(animId)
+    animId = 0
+    if (!motion.matches && !document.hidden) { lastFrame = 0; animId = requestAnimationFrame(loop) }
+  }
+  resizeCanvas()
+  window.addEventListener('resize', resizeCanvas, { passive: true })
+  document.addEventListener('visibilitychange', updatePlayback)
+  if (motion.addEventListener) motion.addEventListener('change', updatePlayback)
+  else motion.addListener(updatePlayback)
+  updatePlayback()
+  stopParticles = () => {
+    cancelAnimationFrame(animId)
+    window.removeEventListener('resize', resizeCanvas)
+    document.removeEventListener('visibilitychange', updatePlayback)
+    if (motion.removeEventListener) motion.removeEventListener('change', updatePlayback)
+    else motion.removeListener(updatePlayback)
+  }
 })
-onUnmounted(() => { cancelAnimationFrame(animId); window.removeEventListener('resize', resizeCanvas) })
+onUnmounted(() => stopParticles())
 </script>
 
 <style lang="scss" scoped>

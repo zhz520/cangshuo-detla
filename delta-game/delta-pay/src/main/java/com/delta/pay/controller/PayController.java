@@ -270,6 +270,46 @@ public class PayController {
         }
     }
 
+    /** 浏览器押金支付复用押金支付单、服务端金额计算及微信验签回调。 */
+    @PostMapping("/player-deposit/h5")
+    public R<Map<String, String>> playerDepositH5(HttpServletRequest httpRequest) {
+        WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
+        if (!wxPayConfiguration.isEnabled() || clients == null) {
+            return R.fail("微信支付未启用，暂无法支付押金");
+        }
+        Long actorId = SecurityUtils.getUserId();
+        Long userId = "PLAYER".equals(SecurityUtils.getUserType())
+                ? crossModuleMapper.selectUserIdByPlayerId(actorId) : actorId;
+        if (userId == null) return R.fail("未找到押金所属用户");
+        Payment payment = paymentService.createPlayerDepositPayment(userId);
+        try {
+            com.wechat.pay.java.service.payments.h5.model.PrepayRequest request =
+                    new com.wechat.pay.java.service.payments.h5.model.PrepayRequest();
+            request.setAppid(clients.getConfig().appId());
+            request.setMchid(clients.getConfig().mchId());
+            request.setDescription("打手押金");
+            request.setOutTradeNo(payment.getPaymentNo());
+            request.setNotifyUrl(clients.getConfig().notifyUrl());
+            com.wechat.pay.java.service.payments.h5.model.Amount amount =
+                    new com.wechat.pay.java.service.payments.h5.model.Amount();
+            amount.setTotal(com.delta.common.utils.Money.cents(payment.getAmount()));
+            amount.setCurrency("CNY");
+            request.setAmount(amount);
+            SceneInfo scene = new SceneInfo();
+            scene.setPayerClientIp(getClientIp(httpRequest));
+            H5Info info = new H5Info();
+            info.setType(clients.getConfig().h5Type());
+            info.setAppName(clients.getConfig().h5AppName());
+            scene.setH5Info(info);
+            request.setSceneInfo(scene);
+            PrepayResponse response = clients.getH5Service().prepay(request);
+            return R.ok(Map.of("h5Url", response.getH5Url(), "paymentNo", payment.getPaymentNo()));
+        } catch (Exception e) {
+            log.error("打手押金 H5 下单失败, userId={}", userId, e);
+            return R.fail("发起押金 H5 支付失败，请稍后重试");
+        }
+    }
+
     @PostMapping("/wx/notify")
     public org.springframework.http.ResponseEntity<Map<String, String>> wxNotify(HttpServletRequest httpRequest, @RequestBody String jsonData) {
         Map<String, String> response = new HashMap<>();
@@ -307,6 +347,7 @@ public class PayController {
         Long userId = SecurityUtils.getUserId();
         return R.ok(transactionService.page(new Page<>(query.getPageNum(), query.getPageSize()),
                 new LambdaQueryWrapper<Transaction>().eq(Transaction::getUserId, userId)
+                        .eq(Transaction::getUserType, SecurityUtils.getUserType())
                         .orderByDesc(Transaction::getCreatedAt)));
     }
 
