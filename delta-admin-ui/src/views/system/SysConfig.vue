@@ -52,18 +52,20 @@ import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
+import {editableSystemConfigs,isSystemConfigVisible} from '@/utils/system-config'
 const loading = ref(false), submitting = ref(false)
 function isSecretKey(key){return ['wx.pay.api-v3-key','wx.pay.official-appsecret','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
-const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab','player.deposit_required'].includes(c.configKey) && !c.configKey.startsWith('email.notifications.') && (c.configGroup !== '公众号通知' || enabledPlatformFeatures.value?.has('official_wechat_notifications'))))
+const visibleConfigList = computed(() => configList.value.filter(c => isSystemConfigVisible(c, enabledPlatformFeatures.value)))
+const editableConfigList = computed(() => editableSystemConfigs(configList.value, enabledPlatformFeatures.value))
 const groupNames = computed(() => {
   const groups = [...new Set(visibleConfigList.value.map(c => c.configGroup || '默认'))]
   return groups.length ? groups : ['默认']
 })
 const filteredList = computed(() => {
   // 只显示有 configName 的配置项
-  const named = visibleConfigList.value.filter(c => c.configName)
+  const named = editableConfigList.value
   if (groupNames.value.length <= 1) return named
   const g = activeGroup.value || groupNames.value[0]
   return named.filter(c => (c.configGroup || '默认') === g)
@@ -78,7 +80,7 @@ async function fetchData() {
 }
 async function handleSave() {
   submitting.value = true
-  try { await batchUpdateSysConfig(configList.value); ElMessage.success('保存成功') } finally { submitting.value = false }
+  try { await batchUpdateSysConfig(editableConfigList.value); ElMessage.success('保存成功') } finally { submitting.value = false }
 }
 async function handleCertificateUpload(item, options) {
   try {
