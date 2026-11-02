@@ -42,7 +42,7 @@ class ProjectMaintenanceTest {
     @Test void suspensionBlocksBusinessButPreservesRenewalLoginAndPaymentCallbacks()throws Exception {
         credential("STOP_ALL",platform.overview().instanceId());var filter=new ProjectMaintenanceFilter(remote(now.plusSeconds(60)),json);
         var request=new MockHttpServletRequest("POST","/order");request.setServletPath("/order");var response=new MockHttpServletResponse();var chain=new MockFilterChain();filter.doFilter(request,response,chain);assertThat(response.getStatus()).isEqualTo(503);assertThat(response.getContentAsString()).contains("maintenance");assertThat(chain.getRequest()).isNull();
-        for(String path:List.of("/admin/platform/updates/check","/user/auth/login","/pay/wx/notify","/system/maintenance/status")){
+        for(String path:List.of("/admin/platform/updates/check","/user/auth/login","/user/auth/h5-login","/user/auth/reset-password","/cs/auth/login","/cs/permissions","/user/privacy/requests","/admin/privacy/requests","/pay/wx/notify","/system/maintenance/status")){
             request=new MockHttpServletRequest("POST",path);request.setServletPath(path);response=new MockHttpServletResponse();chain=new MockFilterChain();filter.doFilter(request,response,chain);assertThat(chain.getRequest()).isNotNull();
         }
     }

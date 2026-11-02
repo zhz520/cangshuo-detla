@@ -45,6 +45,7 @@
               <el-button link type="success" @click="handleApprove(row.id)">通过</el-button>
               <el-button link type="danger" @click="openRejectDialog(row.id)">驳回</el-button>
             </template>
+            <el-button v-if="row.isOnline===1" link @click="setOffline(row)">下班</el-button>
             <el-button v-if="row.status === 'ACTIVE'" link type="warning" @click="openFreezeDialog(row)">冻结</el-button>
             <el-popconfirm v-if="row.status === 'FROZEN'" title="确认解冻？" @confirm="handleUnfreeze(row.id)">
               <template #reference><el-button link type="success">解冻</el-button></template>
@@ -206,6 +207,7 @@
   </div>
 </template>
 <script setup>
+import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import { ref, reactive, onMounted } from 'vue'
@@ -223,6 +225,7 @@ const isAdmin = userStore.role === 'admin'
 const levelOptions=ref([]),mediaBusy=ref(false)
 function levelLabel(id){return levelOptions.value.find(l=>l.id===id)?.name || `Lv.${id||1}`}
 onMounted(async()=>{if(isAdmin)levelOptions.value=(await playerLevelList()).data||[]})
+async function setOffline(row){await ElMessageBox.confirm('确认让该打手下班？需要打手本人操作才能重新上班。','打手下班');await request.put('/cs/player/'+row.id+'/online-status',{online:false});await fetchData()}
 const loading = ref(false), list = ref([]), total = ref(0)
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '' })
 const statusMap = { PENDING: '待审核', ACTIVE: '正常', REJECTED: '已驳回', FROZEN: '已冻结' }

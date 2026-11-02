@@ -12,6 +12,8 @@
     "initialRenderingCache": "static"
   },
   "pages": [
+    {"path":"pages/mine/privacy-center","style":{"navigationBarTitleText":"隐私与账号"}},
+    {"path":"pages/wechat/binding","style":{"navigationBarTitleText":"公众号通知"}},
     {
       "path": "pages/index/index",
       "style": { "navigationBarTitleText": "首页", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }

@@ -1,9 +1,11 @@
 import { get, post } from './request'
 export const getLoginCaptcha = () => get('/user/auth/captcha', {}, { auth: false, loading: false })
+export const sendResetCode=data=>post('/user/auth/reset-code',data,{auth:false})
+export const resetPassword=data=>post('/user/auth/reset-password',data,{auth:false})
 export const sendLoginCode = (data) => post('/user/auth/sms-code', data, { auth: false })
 
 /** 用户微信登录 */
-export const userLogin = (code, phoneCode) => post('/user/auth/login', { code, phoneCode }, { auth: false })
+export const userLogin = (code, phoneCode) => post('/user/auth/login', { code, phoneCode, privacyAccepted:true }, { auth: false })
 
 /** H5 手机号验证码登录 */
 export const h5Login = (data) => post('/user/auth/h5-login', data, { auth: false })

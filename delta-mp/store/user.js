@@ -33,7 +33,7 @@ export const useUserStore = defineStore('user', () => {
   /** H5 手机号验证码登录 */
   async function loginByPhone(phone, code, requestId) {
     try {
-      const { data } = await h5Login({ phone, code, requestId })
+      const { data } = await h5Login({ phone, code, requestId, privacyAccepted:true })
       if(data.passwordSetupRequired) {token.value='';userInfo.value=null;removeUserToken();removePlayerToken();useChatStore().disconnect();return { success:false, passwordSetupRequired:true, data }}
       applyLoginResult(data)
       return { success: true, code: 200, data }

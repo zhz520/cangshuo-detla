@@ -35,6 +35,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements OrderService {
     private final OrderProgressService orderProgressService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final OrderPlayerService orderPlayerService;
     private final ProductService productService;
     private final ChatSessionService chatSessionService;
@@ -124,6 +125,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         save(order);
+        BigDecimal csRate=new BigDecimal(sysConfigService.getConfigValue("settlement.cs_rate","0"));
+        if(csRate.signum()<0||csRate.compareTo(BigDecimal.ONE)>0)throw new BusinessException("客服提成比例无效");
+        jdbc.update("INSERT INTO order_finance_snapshot(order_id,cs_rate) VALUES (?,?)",order.getId(),csRate);
         addProgress(order.getId(), null, OrderStatusEnum.PENDING_PAYMENT.name(), "USER", userId, "创建订单");
 
         // 写入Redis超时key，到期自动取消订单
@@ -216,6 +220,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setPlayerId(playerId);
         order.setAssignTime(LocalDateTime.now());
         String normalizedOperatorType = normalizeAssignOperatorType(operatorType);
+        if(operatorId!=null&&java.util.Set.of("ADMIN","CS").contains(normalizedOperatorType))jdbc.update("UPDATE order_finance_snapshot SET cs_id=COALESCE(cs_id,?) WHERE order_id=?",operatorId,orderId);
         String progressContent = buildAssignProgressContent(normalizedOperatorType, reassign);
         if (reassign) {
             order.setUpdatedAt(LocalDateTime.now());

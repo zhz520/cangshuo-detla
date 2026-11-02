@@ -26,6 +26,7 @@
 </template>
 
 <script setup>
+import {can,permissionFor} from '@/utils/staff-permissions'
 defineProps({
   collapsed: Boolean,
   active: String,
@@ -35,7 +36,7 @@ defineProps({
 })
 defineEmits(['select'])
 function resolvePath(parent, child) { return child ? (parent + '/' + child).replace(/\/+/g, '/') : parent }
-function visibleChildren(children) { return (children || []).filter(child => !child.meta?.hidden) }
+function visibleChildren(children) { return (children || []).filter(child => !child.meta?.hidden&&(!child.meta?.permission||can(child.meta.permission))) }
 </script>
 
 <style lang="scss" scoped>

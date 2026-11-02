@@ -56,12 +56,13 @@
     <view class="actions">
       <view v-if="order.status==='PAID'||order.status==='PENDING'" class="btn" @click="goAssign">指派接单员</view>
       <view v-if="order.status==='COMPLETED'" class="btn" @click="doConfirm">结单</view>
-      <view v-if="['ASSIGNED','IN_PROGRESS'].includes(order.status)" class="btn-warn" @click="doRefund">退款</view>
+      <view v-if="canRefund && ['ASSIGNED','IN_PROGRESS'].includes(order.status)" class="btn-warn" @click="doRefund">退款</view>
       <view class="btn-ghost" @click="goChat">联系用户</view>
     </view>
   </view>
 </template>
 <script setup>
+import {get} from '@/api/request'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
@@ -76,6 +77,8 @@ const statusLabelMap = {
 }
 function statusLabel(s) { return statusLabelMap[s] || s }
 
+const canRefund=ref(false)
+onShow(async()=>{try{const {data}=await get('/cs/permissions',{}, {role:'cs'});canRefund.value=data.includes('order.refund')}catch(_){canRefund.value=false}})
 const order = ref(null)
 const progressList = ref([])
 const orderId = ref('')

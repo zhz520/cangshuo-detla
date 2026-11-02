@@ -8,7 +8,9 @@ public class PlayerProfileVO {
     private Long id;
     private String nickname;
     private String avatar;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using=com.delta.common.security.utils.PrivateNameSerializer.class)
     private String realName;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using=com.delta.common.security.utils.MaskedPhoneSerializer.class)
     private String phone;
     private String status;
     private String gameLevel;

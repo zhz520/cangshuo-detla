@@ -59,6 +59,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import {can,permissionFor} from '@/utils/staff-permissions'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
@@ -99,7 +100,7 @@ const menuRoutes = computed(() => {
     if (!r.children) return false
     if (r.path === '/login' || r.path === '/403' || r.path.includes(':pathMatch')) return false
     const roles = r.meta?.roles || r.children?.[0]?.meta?.roles
-    return !roles || roles.includes(role.value)
+    const permission=r.meta?.permission||r.children?.[0]?.meta?.permission||permissionFor(r.path);return (!roles||roles.includes(role.value))&&(!permission||can(permission))
   })
 })
 

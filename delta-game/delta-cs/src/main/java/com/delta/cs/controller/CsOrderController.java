@@ -83,6 +83,8 @@ public class CsOrderController {
         return R.ok();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@staffPermissions.allowed('order.refund')")
+    @com.delta.common.annotation.OpLog(module="order",operation="按角色权限执行订单退款")
     @PostMapping("/{id}/refund")
     public R<Void> refund(@PathVariable Long id) {
         orderService.csCancelOrder(id, SecurityUtils.getUserId());

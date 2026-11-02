@@ -1,4 +1,5 @@
 /.local-deploy/
+**/__pycache__/
 /.local/
 **/.env.local
 **/*.license.json

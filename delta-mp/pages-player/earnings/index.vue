@@ -4,6 +4,7 @@
     <view class="summary-card">
       <text class="card-label">累计收益（元）</text>
       <text class="total-amount">¥{{ summary.totalIncome || '0.00' }}</text>
+      <text v-if="Number(summary.pendingRefundRecovery)>0" class="reward-total">退款待追回 ¥{{Number(summary.pendingRefundRecovery).toFixed(2)}}，后续订单收益优先抵扣</text>
       <text class="reward-total">其中打赏收入 ¥{{ Number(summary.rewardIncome || 0).toFixed(2) }}</text>
       <view class="row">
         <view class="col"><text class="num">¥{{ summary.monthIncome || '0.00' }}</text><text class="desc">本月收益</text></view>

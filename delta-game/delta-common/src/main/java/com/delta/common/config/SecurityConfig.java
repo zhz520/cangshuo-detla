@@ -43,7 +43,7 @@ public class SecurityConfig {
                                      .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET,"/user/auth/captcha").permitAll()
-                .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/player/auth/login", "/player/auth/register", "/cs/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/user/auth/reset-code", "/user/auth/reset-password", "/player/auth/login", "/player/auth/register", "/cs/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
                 .requestMatchers("/ws/**").permitAll()
@@ -59,17 +59,19 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/system/maintenance/status", "/system/banner/active", "/system/notice/active", "/system/content/key/**", "/system/config/site", "/system/recharge-packages").permitAll()
                 .requestMatchers("/doc.html", "/webjars/**", "/v3/api-docs/**", "/swagger-resources/**").hasRole("ADMIN")
                 // 下单选打手：普通用户、打手、客服、管理员均可访问（复用客服指派打手接口）
-                .requestMatchers("/cs/player/assign-list").hasAnyRole("ADMIN", "CS", "USER")
+                .requestMatchers("/cs/player/assign-list").hasAnyRole("ADMIN", "CS")
                 // 聊天：普通用户、打手、客服、管理员均可访问
                 .requestMatchers("/common/chat/**").hasAnyRole("ADMIN", "CS", "USER", "PLAYER")
                 .requestMatchers(HttpMethod.GET, "/player/apply/status").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/player/apply").hasRole("USER")
+                .requestMatchers(HttpMethod.GET,"/player/invitations/*").permitAll()
                 .requestMatchers("/player/**").hasRole("PLAYER")
                 .requestMatchers("/user/**", "/order/**", "/pay/recharge/**", "/pay/balance/**", "/pay/h5/**", "/pay/wx/**", "/pay/player-deposit").hasRole("USER")
                 .requestMatchers("/product/**", "/app/product/**").hasRole("ADMIN")
                 // 聊天记录: 管理员和客服均可查看
                 .requestMatchers("/admin/chat/**").hasAnyRole("ADMIN", "CS")
                 // 角色权限控制: /admin/** 和 /system/** 仅管理员可访问
+                .requestMatchers(HttpMethod.POST,"/admin/order/*/refund").hasAnyRole("ADMIN","CS")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // 快捷回复: 管理员和客服均可访问
                 .requestMatchers("/system/quick-reply/**").hasAnyRole("ADMIN", "CS")

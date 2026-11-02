@@ -30,6 +30,8 @@ import java.util.List;
 public class SettlementEventListener {
 
     private final OrderService orderService;
+    private final com.delta.admin.service.SettlementRecoveryService recovery;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final OrderPlayerService orderPlayerService;
     private final PlayerWalletService playerWalletService;
     private final TransactionService transactionService;
@@ -65,6 +67,12 @@ public class SettlementEventListener {
         if(commissionRate.signum()<0 || commissionRate.compareTo(BigDecimal.ONE)>0) throw new com.delta.common.exception.BusinessException("抽佣比例无效");
         BigDecimal commission = orderAmount.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal playerTotalIncome = orderAmount.subtract(commission);
+        var snapshot=jdbc.queryForList("SELECT cs_rate,cs_id FROM order_finance_snapshot WHERE order_id=?",orderId);
+        Long csId=snapshot.isEmpty()||snapshot.get(0).get("cs_id")==null?null:((Number)snapshot.get(0).get("cs_id")).longValue();
+        BigDecimal csRate=snapshot.isEmpty()?BigDecimal.ZERO:(BigDecimal)snapshot.get(0).get("cs_rate");
+        BigDecimal csIncome=csId==null?BigDecimal.ZERO:commission.multiply(csRate).setScale(2,RoundingMode.HALF_UP);
+        if(csIncome.signum()<0||csIncome.compareTo(commission)>0)throw new com.delta.common.exception.BusinessException("客服提成超出俱乐部抽成");
+        jdbc.update("INSERT INTO order_settlement_ledger(order_id,amount,club_amount,player_amount,cs_amount,cs_id) VALUES (?,?,?,?,?,?)",orderId,orderAmount,commission.subtract(csIncome),playerTotalIncome,csIncome,csId);
 
         Long primaryPlayerId = order.getPlayerId();
 
@@ -74,6 +82,9 @@ public class SettlementEventListener {
                 .eq(OrderPlayer::getRole, "TEAMMATE")
                 .eq(OrderPlayer::getStatus, "ACCEPTED"));
 
+        // Lock all participant wallets in ascending ID order to avoid cross-order lock inversion.
+        var participantIds=new java.util.TreeSet<Long>();participantIds.add(primaryPlayerId);teammates.forEach(p->participantIds.add(p.getPlayerId()));
+        for(Long participant:participantIds){if(playerWalletService.getByPlayerId(participant)==null){playerWalletService.initWallet(participant);playerWalletService.getByPlayerId(participant);}}
         BigDecimal primaryIncome = playerTotalIncome; // 默认全归主打手
         BigDecimal totalTeammates=teammates.stream().map(tm -> calcTeammateIncome(playerTotalIncome,tm,teammates.size())).reduce(BigDecimal.ZERO,BigDecimal::add);
         if(totalTeammates.signum()<0 || totalTeammates.compareTo(playerTotalIncome)>0) throw new com.delta.common.exception.BusinessException("队友分成总额超过可结算收益");
@@ -158,5 +169,6 @@ public class SettlementEventListener {
         playerWalletService.updateById(wallet);
         transactionService.record("INCOME", "PLAYER", playerId,
                 income, balanceBefore, balanceAfter, orderId, null, null, remark);
+        recovery.recover(playerId,income);
     }
 }

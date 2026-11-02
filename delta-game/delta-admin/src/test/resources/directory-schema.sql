@@ -14,7 +14,7 @@ CREATE TABLE player (
  service_types VARCHAR(500), avg_rating DECIMAL(3,2) DEFAULT 0, order_count INT DEFAULT 0,
  complete_rate DECIMAL(5,2) DEFAULT 100, status VARCHAR(20), reject_reason VARCHAR(255),
  deposit_payment_no VARCHAR(64), frozen_until TIMESTAMP, last_online_at TIMESTAMP,
- is_online INT DEFAULT 0, deleted INT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ is_online INT DEFAULT 1, deleted INT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE review (

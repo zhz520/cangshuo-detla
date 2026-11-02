@@ -30,6 +30,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlayerController {
     private final PlayerService playerService;
+    private final com.delta.player.service.PlayerGovernanceService governance;
     private final PlayerLevelService levelService;
     private final PlayerWalletService playerWalletService;
     private final UserService userService;
@@ -74,13 +75,13 @@ public class PlayerController {
         if (player.getIntroduction() != null && player.getIntroduction().length() > 1000) return R.fail("个人简介不能超过1000字");
         Player update = new Player();
         update.setId(SecurityUtils.getUserId());
-        update.setAvatar(player.getAvatar());
-        update.setRealName(player.getRealName());
+        // Public avatar changes go through the reviewed homepage endpoint.
+        // Real identity is maintained by staff and privacy requests, not the public editor.
         update.setSkillTags(player.getSkillTags());
         update.setGameLevel(player.getGameLevel());
         if (player.getProofImages() != null) update.setProofImages(ImageListUtils.normalize(player.getProofImages()));
         update.setServiceTypes(player.getServiceTypes());
-        update.setIntroduction(player.getIntroduction());
+        // Public introduction changes go through the reviewed homepage endpoint.
         playerService.updateById(update);
         return R.ok();
     }
@@ -90,13 +91,15 @@ public class PlayerController {
     public R<Void> updateHomepage(@Valid @RequestBody PlayerHomepageRequest body) {
         Long id=SecurityUtils.getUserId();
         if(playerService.getById(id)==null) return R.fail(404,"打手不存在");
-        Player update=new Player();update.setId(id);body.applyTo(update);
-        playerService.updateById(update);return R.ok();
+        governance.submit(id,body);return R.ok();
     }
 
     @PostMapping("/apply")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> apply(@RequestBody Player player) {
         Player supplied=player;player=new Player();
+        if(!Boolean.TRUE.equals(supplied.getPrivacyAccepted()))return R.fail(400,"请同意用户协议和隐私政策");
+        if(supplied.getNickname()==null||supplied.getNickname().isBlank()||supplied.getNickname().length()>32||supplied.getRealName()==null||supplied.getRealName().isBlank()||supplied.getRealName().length()>50||supplied.getAvatar()==null||!supplied.getAvatar().matches("(?:/file/|https://).{1,500}"))return R.fail(400,"请上传头像并填写接单名和真实姓名");
         player.setNickname(supplied.getNickname());player.setAvatar(supplied.getAvatar());player.setRealName(supplied.getRealName());
         player.setSkillTags(supplied.getSkillTags());player.setGameLevel(supplied.getGameLevel());player.setIntroduction(supplied.getIntroduction());
         player.setProofImages(supplied.getProofImages());player.setServiceTypes(supplied.getServiceTypes());player.setDepositPaymentNo(supplied.getDepositPaymentNo());
@@ -113,8 +116,9 @@ public class PlayerController {
                 return R.fail("押金支付无效或未到账，请完成支付后再提交");
             }
         }
-        User applicant=userService.getById(userId);
+        User applicant=userService.getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>().eq(User::getId,userId).last("FOR UPDATE"));
         if(applicant==null) return R.fail(404,"用户不存在");
+        if(applicant.getPhone()==null||!applicant.getPhone().matches("1[0-9]{10}"))return R.fail(400,"请先验证并绑定手机号");
         Player existing = playerService.getByOpenid(applicant.getOpenid());
         if(existing!=null && !"REJECTED".equals(existing.getStatus())) return R.fail(409,"已有入驻记录，请查看当前状态");
         player.setPhone(applicant.getPhone());
@@ -134,6 +138,7 @@ public class PlayerController {
             player.setCompleteRate(BigDecimal.ZERO);
             player.setDepositPaymentNo(depositPaymentNo);
             playerService.save(player);
+            playerWalletService.initWallet(player.getId());
         } else {
             // 已有记录，更新资料重新提交
             player.setId(existing.getId());
@@ -143,6 +148,7 @@ public class PlayerController {
             player.setDepositPaymentNo(depositPaymentNo);
             playerService.updateById(player);
         }
+        governance.enroll(userId,player.getId(),supplied.getInvitationToken(),supplied.getDeviceId(),Boolean.TRUE.equals(supplied.getPrivacyAccepted()));
         return R.ok();
     }
 
@@ -162,9 +168,13 @@ public class PlayerController {
         return R.ok(result);
     }
 
+    @com.delta.common.annotation.OpLog(module="shift",operation="打手自主上下班")
     @PostMapping("/online-status")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> toggleOnlineStatus(@RequestParam("online") Boolean online) {
         Long playerId = SecurityUtils.getUserId();
+        var current=playerService.getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Player>().eq(Player::getId,playerId).last("FOR UPDATE"));
+        if(current==null||!"ACTIVE".equals(current.getStatus()))return R.fail(403,"账号未通过审核或已冻结");
         Player p = new Player();
         p.setId(playerId);
         p.setIsOnline(Boolean.TRUE.equals(online) ? 1 : 0);

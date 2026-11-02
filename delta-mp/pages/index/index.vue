@@ -10,9 +10,9 @@
       <view class="search-bar-placeholder" />
 
       <!-- 轮播图 -->
-      <swiper class="banner" :autoplay="true" :interval="4000" circular indicator-dots>
+      <swiper class="banner" :style="{height: bannerHeight + 'rpx'}" @change="onBannerChange" :autoplay="true" :interval="4000" circular indicator-dots>
         <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
-          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFit" class="banner-img" />
+          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFit" class="banner-img" @load="onBannerLoad(item.id,$event)" />
         </swiper-item>
       </swiper>
 
@@ -163,6 +163,10 @@ onShareTimeline(() => ({
   title: siteStore.siteName + ' - ' + siteStore.subtitle
 }))
 const banners = ref([])
+const bannerHeight=ref(395),bannerIndex=ref(0),bannerRatios={}
+function resizeBanner(){const ratio=bannerRatios[banners.value[bannerIndex.value]?.id];bannerHeight.value=ratio?Math.max(160,Math.min(950,702/ratio)):395}
+function onBannerLoad(id,event){const d=event.detail||{};if(d.width>0&&d.height>0){bannerRatios[id]=d.width/d.height;resizeBanner()}}
+function onBannerChange(event){bannerIndex.value=event.detail.current;resizeBanner()}
 const categories = ref([])
 const notices = ref([])
 const recommendProducts = ref([])

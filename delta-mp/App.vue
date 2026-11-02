@@ -35,6 +35,11 @@ function syncRemindPolling() {
 onLaunch(() => {
   // #ifdef H5
   installViewportAdapter()
+  const oauth=new URLSearchParams(window.location.search)
+  if(oauth.has('code')&&oauth.has('state')){
+    const code=oauth.get('code'),state=oauth.get('state');window.history.replaceState(null,'',window.location.pathname+window.location.hash)
+    setTimeout(()=>uni.navigateTo({url:'/pages/wechat/binding?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state)}),500)
+  }
   // #endif
   const appStore = useAppStore()
   const userStore = useUserStore()

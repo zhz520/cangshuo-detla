@@ -36,13 +36,16 @@ public class OpLogAspect {
     @AfterReturning(pointcut = "@annotation(opLog)", returning = "result")
     public void afterReturning(JoinPoint joinPoint, OpLog opLog, Object result) {
         try {
-            recordLog(joinPoint, opLog);
+            int code=result instanceof com.delta.common.domain.R<?> r?r.getCode():200;
+            recordLog(joinPoint, opLog,code==200||code==0?"成功":"未成功（"+code+"）");
         } catch (Exception e) {
             log.warn("记录操作日志失败: {}", e.getMessage());
         }
     }
 
-    private void recordLog(JoinPoint joinPoint, OpLog opLog) {
+    @AfterThrowing(pointcut="@annotation(opLog)",throwing="error")
+    public void afterThrowing(JoinPoint point,OpLog opLog,Throwable error){try{recordLog(point,opLog,"未成功（"+error.getClass().getSimpleName()+"）");}catch(Exception ignored){}}
+    private void recordLog(JoinPoint joinPoint, OpLog opLog,String outcome) {
         OperationLog record = new OperationLog();
         record.setModule(opLog.module());
         record.setOperation(opLog.operation());
@@ -54,7 +57,7 @@ public class OpLogAspect {
             String userType = SecurityUtils.getUserType();
             record.setOperatorId(userId);
             record.setOperatorType(userType);
-            String nickname = crossModuleMapper.selectAdminNickname(userId);
+            String nickname = java.util.Set.of("ADMIN","CS").contains(userType)?crossModuleMapper.selectAdminNickname(userId):null;
             record.setOperatorName(nickname != null ? nickname : "ID:" + userId);
         } catch (Exception e) {
             record.setOperatorType("UNKNOWN");
@@ -65,6 +68,7 @@ public class OpLogAspect {
 
         // 详情
         record.setDetail(opLog.operation());
+        if("order".equals(opLog.module())&&record.getTargetId()!=null&&opLog.operation().contains("退款"))record.setDetail(opLog.operation()+"，订单ID="+record.getTargetId());
 
         // 请求IP
         try {
@@ -85,6 +89,7 @@ public class OpLogAspect {
             }
         } catch (Exception ignored) {}
 
+        record.setDetail(record.getDetail()+"；结果："+outcome);
         operationLogService.save(record);
     }
 

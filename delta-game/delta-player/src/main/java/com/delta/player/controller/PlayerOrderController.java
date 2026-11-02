@@ -369,13 +369,13 @@ public class PlayerOrderController {
 
         // 查询ACTIVE打手，排除自己和已邀请的，支持搜索
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
-                .eq(Player::getStatus, "ACTIVE")
+                .eq(Player::getStatus, "ACTIVE").eq(Player::getIsOnline,1)
                 .ne(Player::getId, playerId);
         if (!invitedPlayerIds.isEmpty()) {
             w.notIn(Player::getId, invitedPlayerIds);
         }
         if (keyword != null && !keyword.isEmpty()) {
-            w.and(qw -> qw.like(Player::getNickname, keyword).or().like(Player::getPhone, keyword));
+            w.and(qw -> qw.like(Player::getNickname, keyword));
         }
         w.orderByDesc(Player::getAvgRating);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
@@ -386,6 +386,7 @@ public class PlayerOrderController {
         }
         int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
         java.util.Map<String, Object> result = new java.util.HashMap<>();
+        for(Player p:page.getRecords()){p.setOpenid(null);p.setRealName(null);p.setPhone(null);p.setProofImages(null);p.setDepositPaymentNo(null);p.setBalance(null);}
         result.put("players", page);
         result.put("maxConcurrent", maxConcurrent);
         return R.ok(result);

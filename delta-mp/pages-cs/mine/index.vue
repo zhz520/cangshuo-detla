@@ -13,7 +13,8 @@
 
       <!-- 订单服务 -->
       <view class="menu-list">
-        <view class="menu-item" @click="go('/pages-cs/order/list')">
+        <view class="menu-item" @click="go('/pages/wechat/binding?role=cs')"><text>公众号消息通知</text><text>›</text></view>
+      <view class="menu-item" @click="go('/pages-cs/order/list')">
           <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
           <text>订单管理</text><text class="arrow">></text>
         </view>

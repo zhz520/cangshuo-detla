@@ -1,17 +1,29 @@
 <template>
   <view class="apply-page">
+    <view v-if="inviteName" class="deposit-tip">邀请：{{inviteName}}</view>
+    <view class="form-item"><text class="label">头像 *</text><ImageUploader v-model="avatarImages" :max="1"/></view>
+    <view class="form-item"><text class="label">接单名 *</text><input v-model="form.nickname" maxlength="32" placeholder="对外展示的接单名"/></view>
     <view class="form-item"><text class="label">真实姓名</text><input v-model="form.realName" placeholder="请输入" /></view>
-    <view class="form-item"><text class="label">联系电话</text><input v-model="form.phone" type="number" placeholder="请输入" /></view>
-    <view class="form-item"><text class="label">复燃电竞ID</text><input v-model="form.gameLevel" placeholder="如：复燃电竞xxx" /></view>
+    <view class="form-item"><text class="label">联系电话</text><input v-model="form.phone" disabled placeholder="登录后自动使用已验证的手机号" /></view>
+    <view class="form-item"><text class="label">游戏ID</text><input v-model="form.gameLevel" placeholder="请输入游戏ID或段位" /></view>
     <view class="form-item"><text class="label">擅长服务</text><input v-model="form.serviceTypes" placeholder="如：三角洲行动，无畏契约" /></view>
     <view class="form-item"><text class="label">技能标签</text><input v-model="form.skillTags" placeholder="如：突击位，信息位" /></view>
     <view class="form-item"><text class="label">证明截图</text><ImageUploader v-model="proofImages" :max="4" /></view>
     <view v-if="siteStore.depositRequired" class="deposit-tip">申请成为打手需缴纳押金</view>
+    <view class="deposit-tip" @click="agreed=!agreed">{{agreed?'☑':'☐'}} 我已阅读并同意 <text @click.stop="goAgreement('user')">《用户协议》</text>及<text @click.stop="goAgreement('privacy')">《隐私政策》</text>。实名及手机号仅客服、管理员可见。</view>
     <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositRequired ? '支付押金并提交' : '提交申请') }}</view>
   </view>
 </template>
 <script setup>
 import { reactive, ref } from 'vue'
+import {onLoad} from '@dcloudio/uni-app'
+import {clientStorage} from '@/utils/client-storage'
+import {get} from '@/api/request'
+import {getUserProfile} from '@/api/user'
+const agreed=ref(false),avatarImages=ref([]),inviteName=ref('')
+let invitationToken='',deviceId=clientStorage.get('enrollment_device')
+if(!deviceId){deviceId='device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);clientStorage.set('enrollment_device',deviceId)}
+onLoad(async options=>{try{const {data}=await getUserProfile();form.phone=data.phone||''}catch(_){};invitationToken=options.invite||clientStorage.get('enrollment_invite')||'';if(invitationToken){clientStorage.set('enrollment_invite',invitationToken);try{const {data}=await get('/player/invitations/'+encodeURIComponent(invitationToken),{},{auth:false});inviteName.value=data.name}catch(_){uni.showToast({title:'邀请链接已失效',icon:'none'})}}})
 import ImageUploader from '@/components/ImageUploader.vue'
 import { applyPlayer } from '@/api/player'
 import { createPlayerDeposit } from '@/api/pay'
@@ -19,11 +31,12 @@ import { useSiteStore } from '@/store/site'
 import { isMpWeixin } from '@/utils/platform'
 const siteStore = useSiteStore()
 const canUseWechatPay = isMpWeixin()
-const form = reactive({ realName: '', phone: '', gameLevel: '', serviceTypes: '', skillTags: '' })
+const form = reactive({ nickname:'', realName: '', phone: '', gameLevel: '', serviceTypes: '', skillTags: '' })
 const proofImages = ref([])
 const submitting = ref(false)
+function goAgreement(kind){uni.navigateTo({url:'/pages/agreement/'+kind})}
 async function submit() {
-  if (!form.realName || !form.phone) return uni.showToast({ title: '请填写完整', icon: 'none' })
+  if (!agreed.value || !avatarImages.value.length || !form.nickname.trim() || !form.realName || !form.phone) return uni.showToast({ title: '请填写完整', icon: 'none' })
   if (submitting.value) return
   submitting.value = true
   try {
@@ -33,7 +46,7 @@ async function submit() {
     } else {
       // 无需押金：直接提交
       await applyPlayer({
-        ...form,
+        ...form,avatar:avatarImages.value[0],privacyAccepted:agreed.value,invitationToken,deviceId,
         proofImages: proofImages.value.join(',')
       })
       uni.showToast({ title: '已提交，等待审核' })
@@ -68,7 +81,7 @@ async function submitWithDeposit() {
     })
   })
   const doApply = () => applyPlayer({
-    ...form,
+    ...form,avatar:avatarImages.value[0],privacyAccepted:agreed.value,invitationToken,deviceId,
     proofImages: proofImages.value.join(','),
     depositPaymentNo: paymentNo
   })

@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class WxLoginRequest {
     private String code;
+    private Boolean privacyAccepted;
     /** 微信获取手机号的code */
     private String phoneCode;
 }

@@ -43,6 +43,17 @@ public class UserAuthController {
         return R.ok(verification.send(body.get("phone"),"LOGIN","LOGIN",body.get("captchaId"),body.get("captchaCode"),request.getRemoteAddr()));
     }
 
+    @PostMapping("/reset-code")
+    public R<java.util.Map<String,Object>> resetCode(@RequestBody java.util.Map<String,String> body,jakarta.servlet.http.HttpServletRequest request) {
+        return R.ok(verification.send(body.get("phone"),"RESET","RESET",body.get("captchaId"),body.get("captchaCode"),request.getRemoteAddr()));
+    }
+    @PostMapping("/reset-password")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
+    public R<Void> resetPassword(@jakarta.validation.Valid @RequestBody com.delta.user.dto.PasswordResetRequest body) {
+        verification.verify(body.phone(),"RESET","RESET",body.requestId(),body.code());
+        passwords.reset(body.phone(),body.password(),body.confirmation());
+        return R.ok();
+    }
     @PostMapping("/login")
     public R<LoginResponse> wxLogin(@RequestBody WxLoginRequest request) {
         if(request.getCode()==null || request.getCode().isBlank() || request.getCode().length()>256) return R.fail(400,"登录凭据无效");
@@ -55,6 +66,7 @@ public class UserAuthController {
             String openid = session.getOpenid();
             User user = userService.getByOpenid(openid);
             if (user == null) {
+                if(!Boolean.TRUE.equals(request.getPrivacyAccepted()))return R.fail(400,"首次注册请阅读并同意用户协议与隐私政策");
                 if (request.getPhoneCode() == null || request.getPhoneCode().isEmpty()) {
                     return R.fail(1006, "首次登录请先授权手机号");
                 }
@@ -104,6 +116,7 @@ public class UserAuthController {
             return R.fail("请输入正确的手机号");
         }
         verification.verify(phone,"LOGIN","LOGIN",request.getRequestId(),code);
+        if(userService.getByPhone(phone)==null&&!Boolean.TRUE.equals(request.getPrivacyAccepted()))return R.fail(400,"首次注册请阅读并同意用户协议与隐私政策");
         User user = userService.loginOrRegisterByPhone(phone);
         if (!Integer.valueOf(1).equals(user.getStatus())) return R.fail(403,"账号暂不可用");
         if(!user.isPasswordSet()) {

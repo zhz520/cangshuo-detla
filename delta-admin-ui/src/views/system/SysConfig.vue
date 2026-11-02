@@ -19,10 +19,10 @@
               </el-upload>
             </template>
           </el-input>
-          <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" />
+          <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" :type="isSecretKey(item.configKey)?'password':'text'" :show-password="isSecretKey(item.configKey)" autocomplete="new-password" />
           <el-input-number v-else-if="item.valueType === 'number'" v-model.number="item.configValue" :controls="false" style="width:200px" />
           <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />
-          <el-input v-else-if="item.valueType === 'textarea'" v-model="item.configValue" type="textarea" :rows="3" />
+          <el-input v-else-if="item.valueType === 'textarea' || item.valueType === 'json'" v-model="item.configValue" type="textarea" :rows="item.valueType==='json'?6:3" />
           <ImageUpload v-else-if="item.valueType === 'image'" v-model="item.configValue" />
           <div class="config-desc" v-if="item.remark">{{ item.remark }}</div>
         </el-form-item>
@@ -37,6 +37,7 @@ import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 const loading = ref(false), submitting = ref(false)
+function isSecretKey(key){return ['wx.pay.api-v3-key','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
 const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab'].includes(c.configKey)))

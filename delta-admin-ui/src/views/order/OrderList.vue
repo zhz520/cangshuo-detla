@@ -30,7 +30,7 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button v-if="canAssign(row)" link type="warning" @click="openAssignDialog(row)">{{ row.status === 'ASSIGNED' ? '重新指派' : '指派' }}</el-button>
-            <el-button v-if="['ASSIGNED','IN_PROGRESS'].includes(row.status)" link type="danger" @click="handleRefund(row)">退款</el-button>
+            <el-button v-if="can('order.refund') && ['ASSIGNED','IN_PROGRESS'].includes(row.status)" link type="danger" @click="handleRefund(row)">退款</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -112,6 +112,7 @@
   </div>
 </template>
 <script setup>
+import {can} from '@/utils/staff-permissions'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'

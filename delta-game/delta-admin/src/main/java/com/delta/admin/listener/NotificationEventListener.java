@@ -39,14 +39,14 @@ public class NotificationEventListener {
             "ORDER_CANCELLED", "ORDER_REFUNDED",
             "TEAMMATE_INVITED", "ORDER_COMPLETED",
             "INCOME_SETTLED", "COMPLAINT_RESOLVED",
-            "WITHDRAW_COMPLETED", "WITHDRAW_REJECTED"
+            "WITHDRAW_COMPLETED", "WITHDRAW_REJECTED", "MATERIAL_REVIEWED"
     );
 
     /**
      * 监听通用业务事件
      */
     @Async
-    @EventListener
+    @org.springframework.transaction.event.TransactionalEventListener(phase=org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
     public void onBusinessEvent(BusinessEvent event) {
         try {
             systemNotificationService.send(event.getUserType(), event.getUserId(),
@@ -72,7 +72,7 @@ public class NotificationEventListener {
      * 用户点击确认或系统自动确认时触发
      */
     @Async
-    @EventListener
+    @org.springframework.transaction.event.TransactionalEventListener(phase=org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
     public void onOrderConfirmed(OrderConfirmedEvent event) {
         try {
             Order order = orderService.getById(event.getOrderId());
@@ -202,6 +202,10 @@ public class NotificationEventListener {
                                 wxTemplate.getIncome(), data,
                                 "pages-player/earnings/index");
                     }
+                }
+                case "MATERIAL_REVIEWED" -> {
+                    Map<String,String> data=new LinkedHashMap<>();data.put("thing1","主页资料审核结果");data.put("thing2",truncate(event.getMessage(),20));
+                    wxSubscribeMessageService.sendAsync(userType,userId,wxTemplate.getIncome(),data,"pages-player/profile/introduction");
                 }
                 case "WITHDRAW_COMPLETED", "WITHDRAW_REJECTED" -> {
                     if ("PLAYER".equals(userType)) {

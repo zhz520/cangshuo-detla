@@ -16,7 +16,9 @@ public class Player extends BaseEntity {
     private String openid;
     private String nickname;
     private String avatar;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using=com.delta.common.security.utils.PrivateNameSerializer.class)
     private String realName;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using=com.delta.common.security.utils.MaskedPhoneSerializer.class)
     private String phone;
     private String skillTags;
     private String gameLevel;
@@ -46,6 +48,9 @@ public class Player extends BaseEntity {
     @TableLogic
     private Integer deleted;
 
+    @TableField(exist = false) private String invitationToken;
+    @TableField(exist = false) private String deviceId;
+    @TableField(exist = false) private Boolean privacyAccepted;
     /** 余额（非DB字段） */
     @TableField(exist = false)
     private BigDecimal balance;

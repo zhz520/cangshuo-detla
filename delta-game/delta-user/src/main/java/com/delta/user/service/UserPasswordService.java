@@ -45,6 +45,16 @@ public class UserPasswordService {
         if(!users.updateById(update)) throw new IllegalStateException("密码设置失败");
         user.setPassword(update.getPassword());user.setAuthVersion(update.getAuthVersion());return user;
     }
+    @Transactional(rollbackFor=Exception.class)
+    public void reset(String phone,String password,String confirmation) {
+        PasswordPolicy.validateUser(password);
+        if(!password.equals(confirmation))throw new BusinessException(400,"两次输入的密码不一致");
+        User user=users.getOne(new LambdaQueryWrapper<User>().eq(User::getPhone,phone).last("FOR UPDATE"));
+        if(user==null||!Integer.valueOf(1).equals(user.getStatus()))throw new BusinessException(400,"账号暂不可重置，请联系平台客服");
+        User update=new User();update.setId(user.getId());update.setPassword(encoder.encode(password));
+        update.setAuthVersion((user.getAuthVersion()==null?0:user.getAuthVersion())+1);
+        if(!users.updateById(update))throw new IllegalStateException("密码重置失败");
+    }
     private String key(String ticket) {
         try{return "auth:password-setup:"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(ticket.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));}
         catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}

@@ -30,6 +30,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlayerEarningsController {
     private final TransactionService transactionService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final PlayerWalletService playerWalletService;
     private final OrderService orderService;
 
@@ -44,6 +45,7 @@ public class PlayerEarningsController {
         data.put("balance", wallet != null ? wallet.getBalance() : BigDecimal.ZERO);
         data.put("frozenAmount", wallet != null ? wallet.getFrozenAmount() : BigDecimal.ZERO);
         data.put("totalIncome", wallet != null ? wallet.getTotalIncome() : BigDecimal.ZERO);
+        data.put("pendingRefundRecovery",jdbc.queryForObject("SELECT COALESCE(SUM(remaining),0) FROM player_refund_recovery WHERE player_id=?",BigDecimal.class,playerId));
         BigDecimal rewardIncome = transactionService.getObj(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Transaction>()
                 .select("COALESCE(SUM(amount),0)").eq("user_type","PLAYER").eq("user_id",playerId)
                 .in("type","REWARD_INCOME","REWARD_REVERSAL"),value->new BigDecimal(value.toString()));

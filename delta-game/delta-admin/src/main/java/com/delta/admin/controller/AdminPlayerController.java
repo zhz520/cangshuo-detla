@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class AdminPlayerController {
     private final PlayerService playerService;
+    private final com.delta.player.service.PlayerGovernanceService governance;
     private final PlayerLevelService levelService;
     private final PlayerWalletService playerWalletService;
     private final OrderService orderService;
@@ -83,6 +84,7 @@ public class AdminPlayerController {
     @OpLog(module = "player", operation = "审核通过")
     @PutMapping("/{id}/approve")
     public R<Void> approve(@PathVariable Long id) {
+        governance.checkApplication(id);
         Player p = new Player();
         p.setId(id);
         p.setStatus("ACTIVE");
@@ -111,6 +113,7 @@ public class AdminPlayerController {
         Player p = new Player();
         p.setId(id);
         p.setStatus("FROZEN");
+        p.setIsOnline(0);
         p.setFrozenUntil(body.getFrozenUntil());
         playerService.updateById(p);
         eventPublisher.publishEvent(new BusinessEvent(this, "PLAYER_FROZEN",
@@ -124,7 +127,8 @@ public class AdminPlayerController {
         Player p = new Player();
         p.setId(id);
         p.setStatus("ACTIVE");
-        p.setFrozenUntil(null);
+        p.setIsOnline(0);
+        playerService.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Player>().eq(Player::getId,id).set(Player::getFrozenUntil,null));
         playerService.updateById(p);
         eventPublisher.publishEvent(new BusinessEvent(this, "PLAYER_UNFROZEN",
                 "PLAYER", id, null, "您的账号已解冻"));
@@ -134,6 +138,8 @@ public class AdminPlayerController {
     @OpLog(module = "player", operation = "更新打手状态")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
+        if(!java.util.Set.of("ACTIVE","PENDING","REJECTED","FROZEN").contains(status))return R.fail(400,"打手状态无效");
+        if("ACTIVE".equals(status)){var current=playerService.getById(id);if(current!=null&&"PENDING".equals(current.getStatus()))governance.checkApplication(id);}
         Player p = new Player();
         p.setId(id);
         p.setStatus(status);

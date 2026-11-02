@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken, getUserInfo } from '@/utils/auth'
+import { getToken, getUserInfo, removeToken } from '@/utils/auth'
+import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 
 const Layout = () => import('@/layout/index.vue')
 
@@ -119,6 +120,11 @@ const routes = [
   },
   {path:'/player-level',component:Layout,children:[{path:'',name:'PlayerLevels',component:()=>import('@/views/player/PlayerLevels.vue'),meta:{title:'打手等级分类',icon:'Medal',roles:['admin']}}]},
   {path:'/rewards',component:Layout,children:[{path:'',name:'RewardList',component:()=>import('@/views/player/RewardList.vue'),meta:{title:'打赏记录',icon:'Wallet',roles:['admin']}}]},
+  {path:'/invitations',component:Layout,children:[{path:'',component:()=>import('@/views/player/Governance.vue'),meta:{title:'入驻邀请',icon:'Link',roles:['admin','cs'],governance:'invitations',permission:'player.manage'}}]},
+  {path:'/material-review',component:Layout,children:[{path:'',component:()=>import('@/views/player/Governance.vue'),meta:{title:'主页素材审核',icon:'Picture',roles:['admin','cs'],governance:'revisions',permission:'media.review'}}]},
+  {path:'/staff-shifts',component:Layout,children:[{path:'',component:()=>import('@/views/player/Governance.vue'),meta:{title:'上下班管理',icon:'Clock',roles:['admin','cs'],governance:'shifts'}}]},
+  {path:'/privacy-requests',component:Layout,children:[{path:'',component:()=>import('@/views/player/Governance.vue'),meta:{title:'隐私与注销申请',icon:'Lock',roles:['admin'],governance:'privacy',permission:'user.manage'}}]},
+  {path:'/settlements',component:Layout,children:[{path:'',component:()=>import('@/views/statistics/SettlementLedger.vue'),meta:{title:'自动分账台账',icon:'Tickets',roles:['admin'],permission:'finance.read'}}]},
   // 数据统计（仅管理员）
   {
     path: '/statistics',
@@ -237,6 +243,8 @@ const routes = [
     redirect: '/system/admin',
     meta: { title: '系统管理', icon: 'Setting', roles: ['admin'] },
     children: [
+      {path:'wechat-notices',component:()=>import('@/views/system/WechatNotices.vue'),meta:{title:'公众号通知记录',roles:['admin'],permission:'system.manage'}},
+      {path:'roles',component:()=>import('@/views/system/StaffRoles.vue'),meta:{title:'角色与权限',roles:['admin'],permission:'system.manage'}},
       {
         path: 'admin',
         name: 'AdminManage',
@@ -299,7 +307,7 @@ const router = createRouter({
 
 // 路由守卫
 const whiteList = ['/login']
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   document.title = `${to.meta.title || ''} - 护航管理后台`
   const token = getToken()
 
@@ -308,6 +316,9 @@ router.beforeEach((to, from, next) => {
       next('/')
     } else {
       const user = getUserInfo()
+      try{await loadStaffPermissions()}catch(error){if(error.code===401){removeToken();next('/login');return}if(to.path!=='/403'){next('/403');return}}
+      const permission=to.meta.permission||permissionFor(to.path)
+      if(permission&&!can(permission)){next('/403');return}
       const roles = to.meta.roles
       if (roles && !roles.includes(user?.role)) {
         next('/403')

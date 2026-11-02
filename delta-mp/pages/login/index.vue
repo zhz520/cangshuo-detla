@@ -20,6 +20,14 @@
       <view class="login-btn account-btn" @click="submitPasswordSetup">{{ loggingIn?'设置中...':'设置密码并登录' }}</view>
       <view class="setup-back" @click="restartPhoneLogin">重新验证手机号</view>
     </view>
+    <view v-else-if="resetting" class="login-area">
+      <text class="setup-title">重置登录密码</text><text class="setup-hint">使用绑定手机号验证。重置后原有登录会话将失效。</text>
+      <input v-model="phone" type="number" maxlength="11" class="input" placeholder="绑定手机号"/>
+      <view class="verification-row"><input v-model="captchaCode" class="input" maxlength="6" placeholder="图形验证码"/><AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha"/></view>
+      <view class="verification-row"><input v-model="verifyCode" class="input" type="number" maxlength="6" placeholder="短信验证码"/><button :disabled="sendingCode||codeCountdown>0" class="send-code" @click="sendCode">{{codeCountdown?codeCountdown+'秒后重试':'获取验证码'}}</button></view>
+      <input v-model="newPassword" class="input" :password="true" maxlength="32" placeholder="新密码：8～32位，包含字母和数字"/><input v-model="confirmPassword" class="input" :password="true" maxlength="32" placeholder="再次输入新密码"/>
+      <view class="login-btn account-btn" @click="submitReset">{{loggingIn?'重置中…':'确认重置'}}</view><view class="setup-back" @click="resetting=false">返回登录</view>
+    </view>
     <view v-else class="login-area">
       <!-- 快速登录 -->
       <template v-if="loginMode === 'wechat'">
@@ -49,7 +57,7 @@
         <input v-model="userPassword" :password="true" maxlength="72" placeholder="请输入登录密码" class="input" />
         <view class="verification-row"><input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" /><AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha" /></view>
         <view class="login-btn account-btn" @click="handleUserPasswordLogin">{{ loggingIn?'登录中...':'登录' }}</view>
-        <view class="setup-hint">忘记密码可使用手机验证码登录，或联系客服重置。</view>
+        <view class="setup-back" @click="resetting=true;newPassword='';confirmPassword='';verifyCode='';smsRequestId='';loadCaptcha()">忘记密码？验证手机号重置</view>
       </template>
       <view class="agreement">
         <view class="agree-row">
@@ -74,7 +82,7 @@ import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
 import { useChatStore } from '@/store/chat'
-import { getLoginCaptcha, sendLoginCode } from '@/api/auth'
+import { getLoginCaptcha, sendLoginCode, sendResetCode, resetPassword } from '@/api/auth'
 import { isMpWeixin } from '@/utils/platform'
 
 const userStore = useUserStore()
@@ -83,6 +91,7 @@ const appStore = useAppStore()
 const siteStore = useSiteStore()
 
 const loginMode = ref('wechat')
+const resetting=ref(false)
 const phone = ref('')
 const setupToken=ref(''),newPassword=ref(''),confirmPassword=ref(''),userPassword=ref(''),loggingIn=ref(false)
 const verifyCode = ref('')
@@ -90,7 +99,7 @@ const captchaCode=ref(''),captchaId=ref(''),captchaImage=ref(''),smsRequestId=re
 const sendingCode=ref(false),codeCountdown=ref(0)
 let countdownTimer
 async function loadCaptcha() {
-  if (isMpWeixin()) return
+  // Password recovery also uses the captcha in WeChat.
   try {const {data}=await getLoginCaptcha();captchaId.value=data.captchaId;captchaImage.value=data.image;captchaCode.value=''} catch (_) {}
 }
 async function sendCode() {
@@ -98,11 +107,16 @@ async function sendCode() {
   if(!/^1\d{10}$/.test(phone.value) || !captchaCode.value) return uni.showToast({title:'请填写手机号和图形验证码',icon:'none'})
   sendingCode.value=true
   try {
-    const {data}=await sendLoginCode({phone:phone.value,captchaId:captchaId.value,captchaCode:captchaCode.value})
+    const {data}=await (resetting.value?sendResetCode:sendLoginCode)({phone:phone.value,captchaId:captchaId.value,captchaCode:captchaCode.value})
     smsRequestId.value=data.requestId;codeCountdown.value=data.retryAfter||60
     clearInterval(countdownTimer);countdownTimer=setInterval(()=>{if(--codeCountdown.value<=0)clearInterval(countdownTimer)},1000)
     uni.showToast({title:'验证码已发送',icon:'none'})
   } catch (_) {} finally {sendingCode.value=false;loadCaptcha()}
+}
+async function submitReset(){
+  if(loggingIn.value)return
+  if(!smsRequestId.value||!verifyCode.value||newPassword.value!==confirmPassword.value)return uni.showToast({title:'请填写验证码并确认两次密码一致',icon:'none'})
+  loggingIn.value=true;try{await resetPassword({phone:phone.value,code:verifyCode.value,requestId:smsRequestId.value,password:newPassword.value,confirmation:confirmPassword.value});userStore.logout();resetting.value=false;loginMode.value='password';userPassword.value='';newPassword.value='';confirmPassword.value='';smsRequestId.value='';uni.showToast({title:'密码已重置，请重新登录',icon:'none'});loadCaptcha()}catch(_){}finally{loggingIn.value=false}
 }
 onMounted(loadCaptcha)
 onUnmounted(()=>clearInterval(countdownTimer))

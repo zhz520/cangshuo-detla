@@ -25,6 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CsPlayerController {
     private final PlayerService playerService;
+    private final com.delta.player.service.PlayerGovernanceService governance;
     private final PlayerWalletService playerWalletService;
     private final CrossModuleMapper crossModuleMapper;
     private final TransactionService transactionService;
@@ -80,6 +81,13 @@ public class CsPlayerController {
         return R.ok(p);
     }
 
+    @OpLog(module="shift",operation="客服操作打手下班")
+    @PutMapping("/{id}/online-status")
+    public R<Void> offline(@PathVariable Long id,@RequestBody Map<String,Boolean> body) {
+        if(!Boolean.FALSE.equals(body.get("online")))return R.fail(403,"客服只能操作打手下班，不能操作上班");
+        Player player=playerService.getById(id);if(player==null)return R.fail(404,"打手不存在");
+        Player update=new Player();update.setId(id);update.setIsOnline(0);playerService.updateById(update);return R.ok();
+    }
     @GetMapping("/{id}/transactions")
     public R<Page<Transaction>> transactions(@PathVariable Long id, PageQuery query) {
         LambdaQueryWrapper<Transaction> w = new LambdaQueryWrapper<Transaction>()
@@ -94,6 +102,9 @@ public class CsPlayerController {
     public R<Void> audit(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String status = body.getOrDefault("status", "");
         String rejectReason = body.getOrDefault("rejectReason", "");
+        if(!java.util.Set.of("ACTIVE","REJECTED").contains(status))return R.fail(400,"审核状态无效");
+        var existing=playerService.getById(id);if(existing==null||!"PENDING".equals(existing.getStatus()))return R.fail(409,"入驻申请不存在或已审核");
+        if("ACTIVE".equals(status))governance.checkApplication(id);
         Player p = new Player();
         p.setId(id);
         p.setStatus(status);
@@ -108,6 +119,8 @@ public class CsPlayerController {
         Player p = new Player();
         p.setId(id);
         p.setStatus("FROZEN");
+        p.setIsOnline(0);
+        playerService.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Player>().eq(Player::getId,id).set(Player::getFrozenUntil,null));
         // 支持冻结时长（小时），0 或不传表示永久冻结
         if (body != null && body.get("hours") != null) {
             int hours = Integer.parseInt(body.get("hours").toString());

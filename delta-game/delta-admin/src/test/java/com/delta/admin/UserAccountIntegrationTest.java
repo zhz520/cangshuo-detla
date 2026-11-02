@@ -86,7 +86,7 @@ class UserAccountIntegrationTest {
     private RequestPostProcessor role(String type,long id){return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId",id,"userType",type),null,List.of(new SimpleGrantedAuthority("ROLE_"+type))));}
     private Map<?,?> data(MvcResult result)throws Exception{return (Map<?,?>)json.readValue(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8),Map.class).get("data");}
     private String setupTicket(String phone)throws Exception{
-        var result=mvc.perform(post("/user/auth/h5-login").contentType("application/json").content(json.writeValueAsString(Map.of("phone",phone,"code","123456","requestId","verified-by-test"))))
+        var result=mvc.perform(post("/user/auth/h5-login").contentType("application/json").content(json.writeValueAsString(Map.of("phone",phone,"code","123456","requestId","verified-by-test","privacyAccepted",true))))
                 .andExpect(jsonPath("$.data.passwordSetupRequired").value(true)).andExpect(jsonPath("$.data.token").isEmpty()).andReturn();
         return (String)data(result).get("setupToken");
     }
@@ -135,17 +135,17 @@ class UserAccountIntegrationTest {
         mvc.perform(post("/user/auth/password-login").contentType("application/json").content(loginBody("13900000007",PASSWORD))).andExpect(jsonPath("$.data.token").isNotEmpty());
         mvc.perform(post("/user/auth/password-login").contentType("application/json").content(loginBody("13900000007","wrong-password"))).andExpect(jsonPath("$.code").value(400));
         mvc.perform(post("/user/auth/password-login").contentType("application/json").content(loginBody("13900000999",PASSWORD))).andExpect(jsonPath("$.code").value(400));
-        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\"}"))
+        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
                 .andExpect(jsonPath("$.data.passwordSetupRequired").value(false)).andExpect(jsonPath("$.data.token").isNotEmpty());
         doThrow(new BusinessException(400,"验证码错误")).when(verification).verifyLoginCaptcha(any(),any(),any());
         mvc.perform(post("/user/auth/password-login").contentType("application/json").content(loginBody("13900000007",PASSWORD))).andExpect(jsonPath("$.code").value(400));
     }
     @Test void bannedOrDeletedUsersCannotRegainAccessBySmsRegistration()throws Exception{
         jdbc.update("UPDATE `user` SET status=0 WHERE id=7");
-        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\"}"))
+        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
                 .andExpect(jsonPath("$.code").value(403));
         jdbc.update("UPDATE `user` SET deleted=1 WHERE id=7");
-        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\"}"))
+        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
                 .andExpect(jsonPath("$.code").value(403));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone='13900000007'",Integer.class)).isEqualTo(1);
     }
@@ -192,4 +192,20 @@ class UserAccountIntegrationTest {
         mvc.perform(delete("/admin/user/7").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(409));
         assertThat(jdbc.queryForObject("SELECT deleted FROM `user` WHERE id=7",Integer.class)).isZero();
     }
+    @Test void resettingPasswordRequiresResetOtpAndRevokesAllExistingSessions()throws Exception{
+        String old=tokens.createToken(7L,"USER");assertThat(tokens.authenticate(old)).isNotNull();
+        String body=json.writeValueAsString(Map.of("phone","13900000007","requestId","reset-request","code","123456","password",PASSWORD,"confirmation",PASSWORD));
+        mvc.perform(post("/user/auth/reset-password").contentType("application/json").content(body)).andExpect(jsonPath("$.code").value(200));
+        org.mockito.Mockito.verify(verification).verify("13900000007","RESET","RESET","reset-request","123456");
+        assertThat(tokens.authenticate(old)).isNull();
+        assertThat(encoder.matches(PASSWORD,jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class))).isTrue();
+    }
+    @Test void resetOtpFailureCannotModifyPasswordOrOtherUsers()throws Exception{
+        org.mockito.Mockito.doThrow(new com.delta.common.exception.BusinessException(400,"验证码错误或已过期")).when(verification).verify("13900000007","RESET","RESET","bad","000000");
+        String body=json.writeValueAsString(Map.of("phone","13900000007","requestId","bad","code","000000","password",PASSWORD,"confirmation",PASSWORD));
+        mvc.perform(post("/user/auth/reset-password").contentType("application/json").content(body)).andExpect(jsonPath("$.code").value(400));
+        assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class)).isNull();
+        assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=8",String.class)).isNull();
+    }
+
 }

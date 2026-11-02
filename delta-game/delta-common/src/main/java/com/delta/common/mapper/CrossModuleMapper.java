@@ -25,7 +25,7 @@ public interface CrossModuleMapper {
     @Select("SELECT level FROM player WHERE id=#{id} AND deleted=0")
     Integer selectPlayerLevel(@Param("id") Long id);
 
-    @Select("SELECT id FROM player WHERE id=#{id} AND status='ACTIVE' AND deleted=0 FOR UPDATE")
+    @Select("SELECT id FROM player WHERE id=#{id} AND status='ACTIVE' AND deleted=0 AND is_online=1 FOR UPDATE")
     Long lockActivePlayer(@Param("id") Long id);
 
     @Select("SELECT COALESCE(NULLIF(p.grab_captcha_override,-1),l.grab_captcha_required,1) FROM player p LEFT JOIN player_level l ON l.id=p.level AND l.deleted=0 WHERE p.id=#{id} AND p.deleted=0")

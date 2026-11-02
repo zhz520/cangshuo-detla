@@ -80,7 +80,7 @@ public class VerificationService {
 
     public Map<String,Object> send(String phone,String purpose,String subject,String captchaId,String captchaCode,String ip) {
         requirePhone(phone);
-        if(!Set.of("LOGIN","BIND_OLD","BIND_NEW").contains(purpose)) throw new BusinessException(400,"验证码用途无效");
+        if(!Set.of("LOGIN","RESET","BIND_OLD","BIND_NEW").contains(purpose)) throw new BusinessException(400,"验证码用途无效");
         if(!"true".equalsIgnoreCase(configs.selectConfigValue("sms.aliyun.enabled"))
                 || !"true".equalsIgnoreCase(configs.selectConfigValue("sms.aliyun.otp_enabled")))
             throw new BusinessException(503,"短信登录暂未开放，请联系平台客服");

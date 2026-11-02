@@ -78,33 +78,6 @@ public class PlayerAuthController {
      */
     @PostMapping("/register")
     public R<Void> register(@RequestBody com.delta.player.dto.PlayerLoginRequest request) {
-        WxMaService wxMaService = wxMaServiceProvider.getIfAvailable();
-        if (wxMaService == null) {
-            return R.fail("微信小程序登录未启用");
-        }
-        try {
-            WxMaJscode2SessionResult session = wxMaService.getUserService().getSessionInfo(request.getCode());
-            String openid = session.getOpenid();
-            Player existing = playerService.getByOpenid(openid);
-            if (existing != null) {
-                return R.fail("已存在申请记录，当前状态：" + existing.getStatus());
-            }
-            Player player = new Player();
-            player.setOpenid(openid);
-            player.setNickname("");
-            player.setAvatar("");
-            player.setStatus("PENDING");
-            // 若该 openid 已存在用户且用户上传过头像，则打手使用用户头像
-            String userAvatar = crossModuleMapper.selectUserAvatarByOpenid(openid);
-            if (userAvatar != null && !userAvatar.isEmpty()) {
-                player.setAvatar(userAvatar);
-            }
-            playerService.save(player);
-            playerWalletService.initWallet(player.getId());
-            return R.ok();
-        } catch (Exception e) {
-            log.error("打手入驻申请失败", e);
-            return R.fail("申请失败，请重试");
-        }
+        return R.fail(400,"请先登录用户端，再通过入驻申请页面提交完整资料并同意隐私协议");
     }
 }

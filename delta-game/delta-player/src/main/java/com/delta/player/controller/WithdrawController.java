@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class WithdrawController {
     private final WithdrawService withdrawService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final PlayerService playerService;
     private final PlayerWalletService playerWalletService;
     private final TransactionService transactionService;
@@ -61,6 +62,7 @@ public class WithdrawController {
     @Transactional(rollbackFor = Exception.class)
     public R<Void> apply(@RequestBody WithdrawRequest req) {
         Long playerId = SecurityUtils.getUserId();
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM player_refund_recovery WHERE player_id=? AND remaining>0",Long.class,playerId)>0)throw new BusinessException(409,"存在退款待追回款，请先核对结算台账");
         com.delta.common.utils.Money.positive(req.getAmount());
         if(playerWalletService.getByPlayerId(playerId)==null) throw new BusinessException("钱包不存在");
 

@@ -40,6 +40,7 @@ public class CsComplaintController {
     private final OrderService orderService;
     private final OrderProgressService orderProgressService;
     private final PaymentService paymentService;
+    private final com.delta.common.security.service.StaffPermissions staffPermissions;
     private final PlayerService playerService;
     private final PlayerWalletService playerWalletService;
     private final TransactionService transactionService;
@@ -155,6 +156,7 @@ public class CsComplaintController {
         if (c == null) return R.fail("投诉不存在");
         if(!java.util.Set.of("PENDING","PROCESSING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
         if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
+        if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()))staffPermissions.require("order.refund");
         Long operatorId = SecurityUtils.getUserId();
 
         c.setResult(complaint.getResult());
@@ -178,7 +180,7 @@ public class CsComplaintController {
                 Payment payment = findPaidPayment(c.getOrderId());
                 if (payment != null) {
                     paymentService.refund(payment.getId(), order.getAmount(), "仲裁全额退款: " + complaint.getResultReason());
-                    refundPlayerIncomeIfSettled(order, order.getAmount());
+                    // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
                 }
                 notifyBoth(order, c, "投诉已处理，全额退款中", "订单仲裁结果：全额退款");
             }
@@ -187,7 +189,7 @@ public class CsComplaintController {
                 Payment payment = findPaidPayment(c.getOrderId());
                 if (payment != null && complaint.getRefundAmount() != null) {
                     paymentService.refund(payment.getId(), complaint.getRefundAmount(), "仲裁部分退款: " + complaint.getResultReason());
-                    refundPlayerIncomeIfSettled(order, complaint.getRefundAmount());
+                    // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
                 }
                 notifyBoth(order, c, "投诉已处理，部分退款 " + complaint.getRefundAmount() + " 元",
                         "订单仲裁结果：部分退款 " + complaint.getRefundAmount() + " 元");
@@ -271,40 +273,4 @@ public class CsComplaintController {
         }
     }
 
-    /**
-     * 如果订单已经结算给打手，则在退款时从打手钱包中扣回对应收益
-     */
-    private void refundPlayerIncomeIfSettled(Order order, java.math.BigDecimal refundAmount) {
-        if (refundAmount == null || refundAmount.compareTo(java.math.BigDecimal.ZERO) <= 0) return;
-        if (order == null) return;
-        // 未结算，不需要从打手端扣款
-        if (order.getSettled() == null || order.getSettled() != 1) {
-            return;
-        }
-        if (order.getPlayerId() == null) return;
-
-        PlayerWallet wallet = playerWalletService.getByPlayerId(order.getPlayerId());
-        if (wallet == null) {
-            log.warn("退款扣款失败: 打手钱包不存在, playerId={}, orderId={}", order.getPlayerId(), order.getId());
-            return;
-        }
-        java.math.BigDecimal balanceBefore = wallet.getBalance();
-        if (balanceBefore == null) balanceBefore = java.math.BigDecimal.ZERO;
-        // 为避免余额为负，扣款额不超过当前余额
-        java.math.BigDecimal deduction = refundAmount.min(balanceBefore);
-        if (deduction.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            return;
-        }
-        java.math.BigDecimal balanceAfter = balanceBefore.subtract(deduction);
-        wallet.setBalance(balanceAfter);
-        playerWalletService.updateById(wallet);
-
-        // 记录一条打手端退款扣款流水
-        transactionService.record("REFUND", "PLAYER", order.getPlayerId(),
-                deduction.negate(), // 扣款记为负数
-                balanceBefore, balanceAfter,
-                order.getId(), null, null,
-                "投诉仲裁退款扣除收益，订单金额退款：" + refundAmount);
-        log.info("投诉仲裁退款，已从打手{}钱包扣除{}，orderId={}", order.getPlayerId(), deduction, order.getId());
-    }
 }

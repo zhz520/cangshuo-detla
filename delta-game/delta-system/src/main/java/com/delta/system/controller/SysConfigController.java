@@ -94,6 +94,16 @@ public class SysConfigController {
     }
 
     private void ensureBuiltinConfigs() {
+        ensureConfig("settlement.cs_rate","客服提成占俱乐部抽成比例","0","text","结算配置","0至1，按下单时快照计算；如0.2表示俱乐部抽成的20%计入客服提成台账");
+        ensureConfig("player.invite_required","仅允许邀请入驻","false","boolean","入驻配置","开启后入驻必须使用有效邀请链接");
+        ensureConfig("risk.freeze_threshold","违规冻结阈值","3","text","内容风控","系统拦截或人工明确标记的违规累计达到此次数后冻结接单");
+        ensureConfig("risk.media.endpoint","图片语音系统检测接口","","text","内容风控","HTTPS检测网关，执行图片OCR与语音转写风控，返回verdict: SAFE或BLOCK；未配置时资料保留待检测");
+        ensureConfig("risk.media.token","检测接口令牌","","text","内容风控","仅发送到已配置的HTTPS检测接口，保存后不回显");
+        ensureConfig("wechat.official.enabled","启用公众号模板通知","false","boolean","公众号通知","公众号模板消息与原小程序订阅通知相互独立");
+        ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
+        ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
+        ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写客户H5的HTTPS首页地址，不含#、查询参数；在微信后台配置网页授权域名");
+        for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields，字段值可选message/status/time/orderNo/amount；字段名需与微信模板一致");
         ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
         ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
@@ -173,7 +183,7 @@ public class SysConfigController {
         }
     }
 
-    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret").contains(key==null?"":key);}
+    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret").contains(key==null?"":key);}
     private void updateValue(SysConfig submitted) {
         SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
         if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
@@ -184,10 +194,16 @@ public class SysConfigController {
         if("sms.aliyun.endpoint".equals(key) && !"dysmsapi.aliyuncs.com".equals(value)) throw new com.delta.common.exception.BusinessException(400,"短信服务地址无效");
         if("wx.pay.api-v3-key".equals(key) && !value.isEmpty() && value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length!=32)
             throw new com.delta.common.exception.BusinessException(400,"微信API v3密钥须为32字节");
-        if("settlement.commission_rate".equals(key)) {
+        if(java.util.Set.of("settlement.commission_rate","settlement.cs_rate").contains(key)) {
             try {var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.compareTo(java.math.BigDecimal.ONE)>0) throw new IllegalArgumentException();}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"抽佣比例须在0至1之间");}
         }
+        if(key.startsWith("wechat.official.template.")){
+            try{var obj=com.alibaba.fastjson2.JSON.parseObject(value);if(obj==null)throw new IllegalArgumentException();if(!obj.isEmpty()){if(obj.getString("templateId")==null||obj.getString("templateId").isBlank())throw new IllegalArgumentException();var fields=obj.getJSONObject("fields");if(fields==null||fields.isEmpty()||fields.size()>20)throw new IllegalArgumentException();for(String field:fields.keySet())if(!field.matches("[A-Za-z_]+[0-9]*")||!java.util.Set.of("message","status","time","orderNo","amount").contains(fields.getString(field)))throw new IllegalArgumentException();}}
+            catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"模板映射须包含templateId和有效fields字段映射");}
+        }
+        if(java.util.Set.of("risk.media.endpoint","wechat.official.redirect_url").contains(key)&&!value.isBlank())try{var uri=java.net.URI.create(value);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"请填写有效HTTPS地址");}
+        if("risk.freeze_threshold".equals(key))try{int n=Integer.parseInt(value);if(n<1||n>100)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"违规阈值须为1至100之间整数");}
         if("site.tech_support_text".equals(key)) {
             value = value.trim();
             if(value.isEmpty() || value.length()>80) throw new com.delta.common.exception.BusinessException(400,"技术支持文字须为1至80个字符");

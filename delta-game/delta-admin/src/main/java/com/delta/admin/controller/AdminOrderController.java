@@ -74,6 +74,7 @@ public class AdminOrderController {
     }
 
     @OpLog(module = "order", operation = "客服退款")
+    @org.springframework.security.access.prepost.PreAuthorize("@staffPermissions.allowed('order.refund')")
     @PostMapping("/{id}/refund")
     public R<Void> refund(@PathVariable Long id) {
         orderService.csCancelOrder(id, SecurityUtils.getUserId());

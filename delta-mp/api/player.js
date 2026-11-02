@@ -4,6 +4,7 @@ import { get, post, put, del } from './request'
 export const getPublicPlayerLevels = () => get('/app/players/levels', {}, { auth: false, loading: false })
 export const getPlayerCategories = () => get('/app/players/categories', {}, { auth: false, loading: false })
 export const createPlayerChat = (id) => post(`/app/players/${id}/chat`, {}, { role: 'user' })
+export const getHomepageRevisions=()=>get('/player/homepage/revisions',{}, {role:'player'})
 export const updatePlayerHomepage = (data) => put('/player/homepage', data, { role: 'player' })
 export const getPublicPlayers = (params) => get('/app/players', params, { auth: false, loading: false })
 export const getPublicPlayer = (id) => get(`/app/players/${id}`, {}, { auth: false, loading: false })

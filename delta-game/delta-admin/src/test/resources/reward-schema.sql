@@ -198,3 +198,10 @@ INSERT INTO `order`(id,order_no,user_id,product_id,product_name,amount,status,pl
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group) VALUES
  ('order.max_active_per_player','接单上限','5','number','order'),
  ('features.reward_grab','规则','{"rewardEnabled":true,"minAmount":1,"maxAmount":200,"validDays":30,"userDailyLimit":10,"playerDailyLimit":5,"pairDailyLimit":5,"feePercent":0,"captchaSeconds":120,"captchaAttempts":5,"captchaRefreshSeconds":10}','json','reward-grab');
+
+DROP TABLE IF EXISTS order_finance_snapshot;
+CREATE TABLE order_finance_snapshot(order_id BIGINT PRIMARY KEY,cs_rate DECIMAL(8,6),cs_id BIGINT);
+
+UPDATE player SET is_online=1;
+DROP TABLE IF EXISTS player_refund_recovery;
+CREATE TABLE player_refund_recovery(order_id BIGINT,player_id BIGINT,refund_share DECIMAL(16,2),recovered DECIMAL(16,2),remaining DECIMAL(16,2));

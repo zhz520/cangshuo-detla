@@ -56,6 +56,8 @@
           <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
+        <view class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
+        <view class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages/agreement/user')">
           <image class="menu-icon" src="/static/icons/暂无权限.svg" mode="aspectFit" />
           <text>用户协议</text><text class="arrow">></text>

@@ -87,6 +87,7 @@ class PlayerDirectoryIntegrationTest {
     @MockBean TransactionService transactions;
     @MockBean UserService users;
     @MockBean SysConfigService configs;
+    @MockBean com.delta.player.service.PlayerGovernanceService governance;
     @MockBean com.delta.system.service.FeatureAuditService featureAudit;
 
     private RequestPostProcessor role(String role,long id) {
@@ -172,12 +173,13 @@ class PlayerDirectoryIntegrationTest {
         mvc.perform(delete("/admin/player-level/2").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(400));
     }
 
-    @Test void playerEditsOwnHomepageOnlyAndAdminAssignsConfiguredCategory() throws Exception {
+    @Test void playerSubmitsOwnHomepageWithoutPublishingUnreviewedMedia() throws Exception {
         String body="{\"nickname\":\"主页新昵称\",\"level\":1,\"id\":3,\"albumImages\":[\"/file/a.jpg\"],\"story\":\"我的故事\",\"coverImage\":\"/file/cover.jpg\",\"voiceUrl\":\"/file/voice.mp3\",\"voiceDuration\":12}";
         mvc.perform(put("/player/homepage").with(role("USER",1)).contentType("application/json").content(body)).andExpect(jsonPath("$.code").value(403));
         mvc.perform(put("/player/homepage").with(role("PLAYER",1)).contentType("application/json").content(body)).andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=1",Integer.class)).isEqualTo(2);
-        mvc.perform(get("/app/players/1")).andExpect(jsonPath("$.data.story").value("我的故事")).andExpect(jsonPath("$.data.albumImages[0]").value("/file/a.jpg")).andExpect(jsonPath("$.data.voiceDuration").value(12));
+        mvc.perform(get("/app/players/1")).andExpect(jsonPath("$.data.story").isEmpty()).andExpect(jsonPath("$.data.albumImages").isEmpty());
+        org.mockito.Mockito.verify(governance).submit(org.mockito.ArgumentMatchers.eq(1L),org.mockito.ArgumentMatchers.any());
         mvc.perform(put("/player/homepage").with(role("PLAYER",1)).contentType("application/json").content("{\"voiceDuration\":61}")).andExpect(jsonPath("$.code").value(400));
         mvc.perform(put("/player/homepage").with(role("PLAYER",1)).contentType("application/json").content("{\"coverImage\":\"javascript:bad\"}")).andExpect(jsonPath("$.code").value(400));
         mvc.perform(put("/admin/player/1").with(role("ADMIN",1)).contentType("application/json").content("{\"level\":9999}")).andExpect(jsonPath("$.code").value(400));
@@ -214,6 +216,11 @@ class PlayerDirectoryIntegrationTest {
         mvc.perform(post("/app/players/1/chat").with(role("CS",7))).andExpect(jsonPath("$.code").value(403));
     }
 
+    @Test void offDutyPlayerIsHiddenFromDirectoryButHistoricalProfileRemainsReadable()throws Exception{
+        jdbc.update("UPDATE player SET is_online=0 WHERE id=1");
+        mvc.perform(get("/app/players").param("level","2")).andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/app/players/1")).andExpect(jsonPath("$.data.canOrder").value(false));
+    }
     @Test void audioUploadChecksRoleFormatAndSize() throws Exception {
         byte[] mp3=new byte[]{73,68,51,0,0,0,0,0};
         when(files.upload(any())).thenReturn("/file/test.mp3");

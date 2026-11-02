@@ -16,11 +16,11 @@ public class PlayerDirectoryService {
     private final CrossModuleMapper crossModuleMapper;
 
     public LambdaQueryWrapper<Player> visibleQuery() {
-        return new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE")
+        return new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE").eq(Player::getIsOnline,1)
                 .inSql(Player::getLevel,"SELECT id FROM player_level WHERE status=1 AND deleted=0");
     }
     public Player requireVisible(Long id) {
-        Player player=players.getOne(visibleQuery().eq(Player::getId,id));
+        Player player=players.getOne(new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE").inSql(Player::getLevel,"SELECT id FROM player_level WHERE status=1 AND deleted=0").eq(Player::getId,id));
         if(player==null) throw new BusinessException(404,"打手不存在或暂未开放展示");
         return player;
     }
