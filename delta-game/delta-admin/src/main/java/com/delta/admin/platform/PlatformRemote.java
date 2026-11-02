@@ -65,9 +65,30 @@ public class PlatformRemote {
         String version=platform.overview().version();return json.valueToTree(Map.of("backend",version,"admin",version,"h5",version));
     }
     private String effectiveVersion() {
-        var versions=componentVersions();String minimum=platform.overview().version();
+        var versions=componentVersions();String installed=null;
+        String release=versions.path("release").asText();
+        if(release.matches("\\d+\\.\\d+\\.\\d+"))installed=release;
+        String planned=latestInstalledRelease(path("installed-plans"),json);
+        if(planned!=null&&(installed==null||compare(planned,installed)>0))installed=planned;
+        if(installed!=null)return installed;
+        // Older installations have no signed plan marker. Their overall version is
+        // the lowest installed component so no pending component is hidden.
+        String minimum=platform.overview().version();
         for(String component:List.of("backend","admin","h5")){String value=versions.path(component).asText();if(value.matches("\\d+\\.\\d+\\.\\d+")&&compare(value,minimum)<0)minimum=value;}
         return minimum;
+    }
+    static String latestInstalledRelease(Path directory,ObjectMapper json) {
+        String latest=null;
+        if(!Files.isDirectory(directory))return null;
+        try(var files=Files.list(directory)) {
+            for(var file:files.limit(500).toList()) {
+                if(!Files.isRegularFile(file)||Files.size(file)>=500000)continue;
+                try {String value=json.readTree(Files.readString(file)).path("targetVersion").asText();
+                    if(value.matches("\\d+\\.\\d+\\.\\d+")&&(latest==null||compare(value,latest)>0))latest=value;
+                }catch(Exception ignored) {}
+            }
+        }catch(Exception ignored) {}
+        return latest;
     }
     private static int compare(String left,String right){String[] a=left.split("\\."),b=right.split("\\.");try{for(int i=0;i<3;i++){int value=Integer.compare(Integer.parseInt(a[i]),Integer.parseInt(b[i]));if(value!=0)return value;}}catch(Exception ignored){}return 0;}
     public synchronized JsonNode project() {

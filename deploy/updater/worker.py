@@ -226,7 +226,7 @@ def process(job):
         write_json(override,merged);changed=True
         start_services(CONFIG['compose_files']+[str(override)],list(destinations))
         processed.parent.mkdir(exist_ok=True);processed.write_text(json.dumps(plan))
-        versions.update({package['component']:package['version'] for package in plan['packages']});write_json(versions_file,versions)
+        versions.update({package['component']:package['version'] for package in plan['packages']});versions['release']=plan['targetVersion'];write_json(versions_file,versions)
         status('SUCCEEDED',targetVersion=plan['targetVersion'],items=[item['key'] for item in plan['items']],backup=str(backup_dir))
     except Exception as error:
         rolled_back=False
