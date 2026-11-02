@@ -46,6 +46,7 @@ services:
         condition: service_healthy
     volumes:
       - /www/delta/data/upload:/www/data/upload
+      - /www/delta/data/private/wxpay:/www/data/private/wxpay
     networks: [delta-game]
 
   admin:

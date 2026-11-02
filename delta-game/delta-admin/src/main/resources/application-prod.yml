@@ -88,7 +88,7 @@ wx:
     public-key-path: ${WX_PAY_PUBLIC_KEY_PATH:}
     # 微信支付公钥ID（商户平台“微信支付公钥”页面展示的ID）
     public-key-id: ${WX_PAY_PUBLIC_KEY_ID:}
-    key-store-path: ${WX_PAY_KEY_STORE_PATH:/www/data/private/wxpay}
+    # 未设置 WX_PAY_KEY_STORE_PATH 时，程序自动使用 FILE_UPLOAD_PATH/private/wxpay。
 
 # File upload（生产环境，Linux 服务器）
 file:

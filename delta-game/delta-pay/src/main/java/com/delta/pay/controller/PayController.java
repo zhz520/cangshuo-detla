@@ -61,8 +61,12 @@ public class PayController {
     private final WechatOfficialPayService officialPay;
     private final SysConfigService sysConfigService;
 
-    @Value("${wx.pay.key-store-path:/www/data/private/wxpay}")
-    private String uploadPath;
+    @Value("${wx.pay.key-store-path:}")
+    private String configuredKeyStorePath;
+
+    /** 文件上传目录已经由生产 Compose 持久化，支付证书默认放在其 private 子目录。 */
+    @Value("${FILE_UPLOAD_PATH:./uploads/}")
+    private String fileUploadPath;
 
     @PostMapping("/wx/{orderId}")
     public R<Map<String, String>> wxPay(@PathVariable Long orderId) {
@@ -524,7 +528,7 @@ public class PayController {
         String text=new String(file.getBytes(),java.nio.charset.StandardCharsets.US_ASCII);
         if("wx.pay.private-key-path".equals(configKey) ? !text.contains("-----BEGIN PRIVATE KEY-----") : !text.contains("-----BEGIN PUBLIC KEY-----"))
             return R.fail(400,"证书内容不符合要求，请上传对应的PEM密钥");
-        Path dir = Paths.get(uploadPath, datePath);
+        Path dir = resolveKeyStoreDirectory(configuredKeyStorePath, fileUploadPath).resolve(datePath);
         Files.createDirectories(dir);
         try {Files.setPosixFilePermissions(dir,java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));} catch(UnsupportedOperationException ignored) {}
         String ext = lowerName.substring(lowerName.lastIndexOf('.'));
@@ -546,5 +550,12 @@ public class PayController {
     private boolean channelEnabled(String configKey) {
         String value = sysConfigService.getConfigValue(configKey, "true");
         return value == null || value.isBlank() || Boolean.parseBoolean(value);
+    }
+
+    static Path resolveKeyStoreDirectory(String configuredPath, String uploadPath) {
+        String configured = configuredPath == null ? "" : configuredPath.trim();
+        if (!configured.isEmpty()) return Paths.get(configured).toAbsolutePath().normalize();
+        return Paths.get(uploadPath == null || uploadPath.isBlank() ? "./uploads/" : uploadPath,
+                "private", "wxpay").toAbsolutePath().normalize();
     }
 }

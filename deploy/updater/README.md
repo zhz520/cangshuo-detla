@@ -6,6 +6,8 @@
 
 `worker.py /absolute/path/worker.json` 由宿主机 systemd 管理，不监听新端口。配置由运维写入，包括 `root`、`state_dir`、`customer_id`、`product_id`、`repository`、`compose_directory`、`compose_files`、`mysql_container`、`containers`（backend/admin/h5）和 `backup_paths`、`authority_url` 和可选的 `verifier_image`。客户端仅向自己的状态目录提交签名计划，不能提供服务器命令或路径。
 
+微信支付证书与普通上传文件都必须位于持久化目录。当前版本默认把支付证书写入 `FILE_UPLOAD_PATH/private/wxpay`；旧实例仍兼容 `/www/data/private/wxpay`。生产 Compose 应将该目录绑定到宿主机专用目录，并把宿主机目录同时加入 `backup_paths`，否则重建后端容器会导致数据库仍记录证书路径、实际文件却丢失。
+
 执行器先验证 Ed25519 签名、实例绑定、有效期和组件版本，再下载并检查摘要、归档路径和内部版本。安装前暂停新业务、备份 MySQL 与客户文件；通过额外 Compose 挂载独立发布目录，保留原环境变量、支付配置、业务数据、域名和品牌。后端、管理后台和 H5 按依赖顺序分别启动，每一步完成运行与接口健康检查后再启动下一组件，避免较慢的 Java 启动被 Compose 的依赖超时误判。健康检查失败自动回退；回退失败保留业务暂停标记，防止继续运行损坏程序。执行意外中断后按宿主私有日志恢复。备份目录仅 root 可访问。
 
 当前更新包只接受数据库 schemaVersion=1，不执行数据库结构迁移。需要修改表结构的版本必须先增加可验证的迁移及回退协议，不得用当前执行器强行安装。程序回退不覆盖更新期间已确认的支付回调；数据库备份保留供运维恢复。

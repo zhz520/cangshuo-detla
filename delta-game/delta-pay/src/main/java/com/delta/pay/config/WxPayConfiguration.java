@@ -9,6 +9,7 @@ import com.wechat.pay.java.service.payments.h5.H5Service;
 import com.wechat.pay.java.service.payments.jsapi.JsapiServiceExtension;
 import com.wechat.pay.java.service.refund.RefundService;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ import java.util.Objects;
  * 后会自动重建微信支付客户端，不需要重启服务。</p>
  */
 @Service
+@Slf4j
 public class WxPayConfiguration {
     private final SysConfigService sysConfigService;
 
@@ -68,6 +70,8 @@ public class WxPayConfiguration {
         // 关闭开关只禁止新支付，不影响已有订单的回调验签和退款。
         // 只有在没有任何可用凭据时才不创建客户端。
         if (!hasCredentials(config)) {
+            if (config.enabled()) throw new com.delta.common.exception.BusinessException(503,
+                    "微信支付商户证书缺失或无效，请在系统配置中重新上传商户私钥和微信支付公钥");
             return null;
         }
         CachedClients current = cachedClients;
@@ -79,23 +83,29 @@ public class WxPayConfiguration {
             if (current != null && current.getConfig().equals(config)) {
                 return current;
             }
-            Config wxConfig = new RSAPublicKeyConfig.Builder()
-                    .merchantId(config.mchId())
-                    .privateKeyFromPath(config.privateKeyPath())
-                    .merchantSerialNumber(config.certSerialNo())
-                    .apiV3Key(config.apiV3Key())
-                    .publicKeyId(config.publicKeyId())
-                    .publicKeyFromPath(config.publicKeyPath())
-                    .build();
-            CachedClients created = new CachedClients(
-                    config,
-                    new JsapiServiceExtension.Builder().config(wxConfig).build(),
-                    new H5Service.Builder().config(wxConfig).build(),
-                    new RefundService.Builder().config(wxConfig).build(),
-                    new NotificationParser((NotificationConfig) wxConfig)
-            );
-            cachedClients = created;
-            return created;
+            try {
+                Config wxConfig = new RSAPublicKeyConfig.Builder()
+                        .merchantId(config.mchId())
+                        .privateKeyFromPath(config.privateKeyPath())
+                        .merchantSerialNumber(config.certSerialNo())
+                        .apiV3Key(config.apiV3Key())
+                        .publicKeyId(config.publicKeyId())
+                        .publicKeyFromPath(config.publicKeyPath())
+                        .build();
+                CachedClients created = new CachedClients(
+                        config,
+                        new JsapiServiceExtension.Builder().config(wxConfig).build(),
+                        new H5Service.Builder().config(wxConfig).build(),
+                        new RefundService.Builder().config(wxConfig).build(),
+                        new NotificationParser((NotificationConfig) wxConfig)
+                );
+                cachedClients = created;
+                return created;
+            } catch (RuntimeException error) {
+                log.error("微信支付客户端初始化失败: {}", error.getClass().getSimpleName());
+                throw new com.delta.common.exception.BusinessException(503,
+                        "微信支付商户证书或微信支付公钥无效，请检查后重新上传");
+            }
         }
     }
 
