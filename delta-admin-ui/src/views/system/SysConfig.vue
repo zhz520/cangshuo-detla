@@ -28,6 +28,10 @@
             <el-option label="全部不需要押金" value="NONE" />
             <el-option label="入驻免押金，提现前补交" value="BEFORE_WITHDRAW" />
           </el-select>
+          <el-select v-else-if="item.configKey === 'risk.media.review_mode'" v-model="item.configValue" style="width:280px">
+            <el-option label="自动检测，失败时转人工" value="AUTO" />
+            <el-option label="直接人工审核" value="MANUAL" />
+          </el-select>
           <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" :type="isSecretKey(item.configKey)?'password':'text'" :show-password="isSecretKey(item.configKey)" autocomplete="new-password" />
           <el-input-number v-else-if="item.valueType === 'number'" v-model.number="item.configValue" :controls="false" style="width:200px" />
           <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />

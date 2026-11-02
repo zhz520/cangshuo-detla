@@ -101,7 +101,8 @@ public class SysConfigController {
         ensureConfig("settlement.cs_rate","客服提成占俱乐部抽成比例","0","text","结算配置","0至1，按下单时快照计算；如0.2表示俱乐部抽成的20%计入客服提成台账");
         ensureConfig("player.invite_required","仅允许邀请入驻","false","boolean","入驻配置","开启后入驻必须使用有效邀请链接");
         ensureConfig("risk.freeze_threshold","违规冻结阈值","3","text","内容风控","系统拦截或人工明确标记的违规累计达到此次数后冻结接单");
-        ensureConfig("risk.media.endpoint","图片语音系统检测接口","","text","内容风控","HTTPS检测网关，执行图片OCR与语音转写风控，返回verdict: SAFE或BLOCK；未配置时资料保留待检测");
+        ensureConfig("risk.media.review_mode","图片语音审核方式","AUTO","text","内容风控","AUTO：优先自动检测，未配置或不可用时转人工；MANUAL：不调用自动检测，直接进入人工审核");
+        ensureConfig("risk.media.endpoint","图片语音系统检测接口","","text","内容风控","HTTPS检测网关，执行图片OCR与语音转写风控，返回verdict: SAFE或BLOCK；未配置或不可用时转人工审核");
         ensureConfig("risk.media.token","检测接口令牌","","text","内容风控","仅发送到已配置的HTTPS检测接口，保存后不回显");
         ensureConfig("wechat.official.enabled","启用公众号模板通知","false","boolean","公众号通知","公众号模板消息与原小程序订阅通知相互独立");
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
@@ -245,6 +246,9 @@ public class SysConfigController {
         }
         if("player.deposit_mode".equals(key)) {
             if(!java.util.Set.of("REQUIRED","NONE","BEFORE_WITHDRAW").contains(value)) throw new com.delta.common.exception.BusinessException(400,"打手押金政策不正确");
+        }
+        if("risk.media.review_mode".equals(key)) {
+            if(!java.util.Set.of("AUTO","MANUAL").contains(value)) throw new com.delta.common.exception.BusinessException(400,"图片语音审核方式不正确");
         }
         if(java.util.Set.of("withdraw.min_amount","player.deposit_amount","sms.aliyun.player_fee").contains(key)) {
             try{var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.stripTrailingZeros().scale()>2 || n.compareTo(new java.math.BigDecimal("1000000"))>0)throw new IllegalArgumentException();}

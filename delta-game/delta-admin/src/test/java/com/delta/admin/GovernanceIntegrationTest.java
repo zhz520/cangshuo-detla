@@ -88,10 +88,17 @@ class GovernanceIntegrationTest {
   assertThat(jdbc.queryForObject("SELECT nickname FROM player WHERE id=1",String.class)).isEqualTo("待审核昵称");
   mvc.perform(put("/cs/governance/revisions/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true}")).andExpect(jsonPath("$.code").value(409));
  }
- @Test void unavailableMediaScannerDoesNotBypassApproval()throws Exception{
+ @Test void unavailableMediaScannerFallsBackToHumanReview()throws Exception{
   var body=new PlayerHomepageRequest();body.setAvatar("/file/picture.jpg");String id=governance.submit(1L,body);
-  assertThat(jdbc.queryForObject("SELECT status FROM player_homepage_revision WHERE id=?",String.class,id)).isEqualTo("PENDING_SYSTEM");
-  mvc.perform(put("/cs/governance/revisions/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true}")).andExpect(jsonPath("$.code").value(409));
+  assertThat(jdbc.queryForObject("SELECT status FROM player_homepage_revision WHERE id=?",String.class,id)).isEqualTo("PENDING_REVIEW");
+  mvc.perform(put("/cs/governance/revisions/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true}")).andExpect(jsonPath("$.code").value(200));
+ }
+ @Test void manualReviewModeSkipsExternalScanner()throws Exception{
+  when(configs.getConfigValue(eq("risk.media.review_mode"),eq("AUTO"))).thenReturn("MANUAL");
+  var body=new PlayerHomepageRequest();body.setVoiceUrl("/file/voice.mp3");String id=governance.submit(1L,body);
+  assertThat(jdbc.queryForObject("SELECT status FROM player_homepage_revision WHERE id=?",String.class,id)).isEqualTo("PENDING_REVIEW");
+  verify(configs,never()).getConfigValue(eq("risk.media.endpoint"),anyString());
+  mvc.perform(put("/cs/governance/revisions/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true}")).andExpect(jsonPath("$.code").value(200));
  }
  @Test void policyViolationsFreezePlayerAndHideFromOrderIntake(){
   for(int i=0;i<3;i++){var body=new PlayerHomepageRequest();body.setStory("提供外挂服务");governance.submit(1L,body);}

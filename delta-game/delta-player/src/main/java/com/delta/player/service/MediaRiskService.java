@@ -25,8 +25,10 @@ public class MediaRiskService {
         for(var row:jdbc.queryForList("SELECT word FROM sensitive_word WHERE status=1"))if(text.toLowerCase(Locale.ROOT).contains(String.valueOf(row.get("word")).toLowerCase(Locale.ROOT)))return new Result("REJECTED","命中平台敏感词规则，请修改内容");
         boolean media=nonempty(body.getAvatar())||nonempty(body.getCoverImage())||nonempty(body.getVoiceUrl())||body.getAlbumImages()!=null&&!body.getAlbumImages().isEmpty();
         if(!media)return new Result("PENDING_REVIEW","文本系统检测通过，等待人工审核");
+        boolean manual="MANUAL".equalsIgnoreCase(configs.getConfigValue("risk.media.review_mode","AUTO"));
+        if(manual)return new Result("PENDING_REVIEW","已启用人工审核，请人工核验图片和语音内容");
         String endpoint=configs.getConfigValue("risk.media.endpoint",""),token=configs.getConfigValue("risk.media.token","");
-        if(endpoint.isBlank())return new Result("PENDING_SYSTEM","图片/语音检测服务未配置，资料保留待检测，当前公开资料不变");
+        if(endpoint.isBlank())return new Result("PENDING_REVIEW","自动检测服务未配置，已转人工审核，请人工核验图片和语音内容");
         try {
             URI uri=URI.create(endpoint);if(!"https".equals(uri.getScheme())||uri.getUserInfo()!=null)throw new IllegalArgumentException();
             var request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(12)).header("Content-Type","application/json").header("Authorization","Bearer "+token).POST(HttpRequest.BodyPublishers.ofString(JSON.toJSONString(Map.of("text",text,"profile",body)))).build();
@@ -36,7 +38,7 @@ public class MediaRiskService {
             if("SAFE".equals(result))return new Result("PENDING_REVIEW","图片/语音及文本系统检测通过，等待人工审核");
             if("BLOCK".equals(result))return new Result("REJECTED","图片或语音检测未通过，请修改内容");
         }catch(Exception ignored){}
-        return new Result("PENDING_SYSTEM","图片/语音检测暂不可用，请稍后重试");
+        return new Result("PENDING_REVIEW","自动检测暂不可用，已转人工审核，请人工核验图片和语音内容");
     }
     private boolean nonempty(String value){return value!=null&&!value.isBlank();}
 }
