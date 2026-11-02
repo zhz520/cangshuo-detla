@@ -102,6 +102,12 @@ const routes = [
         name: 'SpendingRank',
         component: () => import('@/views/user/SpendingRank.vue'),
         meta: { title: '消费榜单', roles: ['admin', 'cs'] }
+      },
+      {
+        path: 'identity-review',
+        name: 'IdentityReview',
+        component: () => import('@/views/user/IdentityReview.vue'),
+        meta: { title: '实名认证审核', roles: ['admin'], permission: 'user.manage', feature: 'identity_verification' }
       }
     ]
   },

@@ -1,4 +1,4 @@
-import { get, post, put, del } from './request'
+import { get, post, put, del, uploadFile } from './request'
 
 /** 获取用户资料（始终使用 user_token） */
 export const getUserProfile = (opts = {}) => get('/user/profile', {}, { role: 'user', ...opts })
@@ -26,3 +26,8 @@ export const saveDynamicInfo = (data) => post('/user/game-info/dynamic', data, {
 
 /** 删除已保存信息 */
 export const deleteSavedInfo = (id) => del(`/user/game-info/${id}`, {}, { role: 'user' })
+
+/** 实名认证 */
+export const getIdentityStatus = (opts = {}) => get('/user/identity/status', {}, { role: 'user', ...opts })
+export const uploadIdentityImage = (filePath, side) => uploadFile(filePath, `/user/identity/image?side=${encodeURIComponent(side)}`, { role: 'user' })
+export const submitIdentityVerification = data => post('/user/identity/submit', data, { role: 'user' })

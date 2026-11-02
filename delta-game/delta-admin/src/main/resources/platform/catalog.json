@@ -1,5 +1,5 @@
 {
-  "version": "1.3.9",
+  "version": "1.4.0",
   "channel": "stable",
   "schemaVersion": 1,
   "features": [
@@ -8,6 +8,7 @@
       "name": "基础业务系统",
       "description": "保留现有商品、订单、用户、打手、钱包、提现、聊天和收益日报功能。",
       "paid": false,
+      "priceCents": 0,
       "minVersion": "1.0.0",
       "dependencies": [],
       "entryPath": "/dashboard",
@@ -21,6 +22,7 @@
       "name": "收益对比分析",
       "description": "按结算日期比较当前与上一等长周期，查看订单金额、打手收入和平台抽成变化。",
       "paid": true,
+      "priceCents": 9900,
       "minVersion": "1.1.0",
       "dependencies": [
         "core_platform"
@@ -37,6 +39,7 @@
       "name": "公众号模板通知",
       "description": "绑定公众号后发送新订单、接单、订单完成、素材审核和提现审核模板消息。",
       "paid": true,
+      "priceCents": 10000,
       "minVersion": "1.3.5",
       "dependencies": [
         "core_platform"
@@ -47,10 +50,28 @@
         "五类业务模板通知",
         "发送失败自动重试与人工重试"
       ]
+    },
+    {
+      "id": "identity_verification",
+      "name": "实名认证",
+      "description": "用户提交实名资料，由管理员人工核验；支持认证状态、驳回原因和隐私删除。",
+      "paid": true,
+      "priceCents": 2000,
+      "minVersion": "1.4.0",
+      "dependencies": [
+        "core_platform"
+      ],
+      "entryPath": "/user/identity-review",
+      "capabilities": [
+        "姓名与证件信息提交",
+        "证件照片私密传递",
+        "管理员人工审核与驳回重提"
+      ]
     }
   ],
   "releaseNotes": [
     "第三方企业微信客服模式隐藏用户端消息页签，并可独立隐藏首页客服悬浮图标。",
+    "功能商城新增实名认证付费模块，标准价 ¥20.00，支持身份资料私密提交、人工审核、状态回显和删除实名资料。",
     "后端启动前校验并补齐安全新增字段，避免代码升级而数据库未升级导致页面接口报错。",
     "新增短信验证找回密码，重置后撤销原有会话。",
     "补齐邀请入驻、推荐人、设备限制与隐私申请。",

@@ -2,7 +2,7 @@
   <view class="agreement-page">
     <view class="section">
       <text class="title">{{ siteStore.fullName }}隐私政策</text>
-      <text class="update-time">更新日期：2026年1月1日</text>
+      <text class="update-time">更新日期：2026年11月2日</text>
     </view>
 
     <view class="section">
@@ -17,6 +17,7 @@
       <text class="content">2.3 交易信息：我们会收集您的支付记录、钱包余额、提现记录等交易相关信息。</text>
       <text class="content">2.4 设备信息：我们可能会收集您的设备型号、操作系统版本、唯一设备标识符等信息，用于保障服务安全。</text>
       <text class="content">2.5 日志信息：我们会记录您的访问时间、浏览页面、操作日志等信息，用于改善服务质量。</text>
+      <text class="content">2.6 实名认证信息：仅在平台开通实名认证功能并经您同意后，我们会收集姓名、身份证号码及证件照片，用于管理员人工核验身份。证件号码仅保存不可逆摘要和脱敏号码，证件照片在审核完成后自动删除。</text>
     </view>
 
     <view class="section">

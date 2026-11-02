@@ -11,7 +11,7 @@ const sections = [
     { id: 'products', title: '商品管理', icon: 'Goods', paths: ['/product/list', '/product/category', '/product/recommend-category', '/product/form-fields'] }
   ] },
   { id: 'people', title: '人员管理', items: [
-    { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/privacy-requests'] },
+    { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/user/identity-review', '/privacy-requests'] },
     { id: 'players', title: '打手与审核', icon: 'Avatar', paths: ['/player', '/player-level', '/invitations', '/material-review', '/staff-shifts'] }
   ] },
   { id: 'finance', title: '财务结算', items: [

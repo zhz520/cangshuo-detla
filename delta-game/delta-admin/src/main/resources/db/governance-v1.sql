@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS wechat_official_binding (
  user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL,
  PRIMARY KEY(user_type,user_id), UNIQUE(openid,user_type)
 );
+CREATE TABLE IF NOT EXISTS identity_verification (
+  user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL,
+  id_number_masked VARCHAR(32) NOT NULL DEFAULT '', front_image LONGTEXT NULL, front_mime VARCHAR(64) NULL,
+  back_image LONGTEXT NULL, back_mime VARCHAR(64) NULL, status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  privacy_version VARCHAR(32) NOT NULL DEFAULT '', privacy_accepted_at TIMESTAMP NULL,
+  review_note VARCHAR(500) NOT NULL DEFAULT '', reviewer_id BIGINT NULL, submitted_at TIMESTAMP NULL,
+  reviewed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_identity_document(id_number_hash)
+);
 CREATE TABLE IF NOT EXISTS player_refund_recovery (
  order_id BIGINT NOT NULL, player_id BIGINT NOT NULL, refund_share DECIMAL(16,2) NOT NULL,
  recovered DECIMAL(16,2) NOT NULL, remaining DECIMAL(16,2) NOT NULL,

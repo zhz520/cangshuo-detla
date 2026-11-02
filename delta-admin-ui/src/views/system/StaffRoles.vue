@@ -5,7 +5,7 @@ import request from '@/utils/request'
 import {loadStaffPermissions} from '@/utils/staff-permissions'
 import {ElMessage,ElMessageBox} from 'element-plus'
 const data=reactive({roles:[],members:[],permissionCodes:[]}),form=reactive({code:'',name:'',permissions:[],enabled:true}),busy=ref(false),saving=ref(false),visible=ref(false),editing=ref(false)
-const labels={'*':'全部常规权限','order.read':'查看订单','order.manage':'处理订单','order.refund':'执行退款（含售后仲裁）','player.manage':'管理打手与邀请','media.review':'审核主页素材','user.read':'查看用户','user.manage':'管理用户与隐私申请','finance.read':'查看财务','finance.export':'导出对账Excel','withdraw.review':'审核提现','chat.manage':'客服聊天','system.manage':'系统和角色管理'}
+const labels={'*':'全部常规权限','order.read':'查看订单','order.manage':'处理订单','order.refund':'执行退款（含售后仲裁）','player.manage':'管理打手与邀请','media.review':'审核主页素材','user.read':'查看用户','user.manage':'管理用户、隐私与实名资料','finance.read':'查看财务','finance.export':'导出对账Excel','withdraw.review':'审核提现','chat.manage':'客服聊天','system.manage':'系统和角色管理'}
 async function load(){busy.value=true;try{Object.assign(data,(await request.get('/system/roles')).data)}finally{busy.value=false}}
 function edit(row){editing.value=!!row;Object.assign(form,row?{...row,permissions:[...row.permissions],enabled:!!row.enabled}:{code:'',name:'',permissions:[],enabled:true});visible.value=true}
 async function save(){saving.value=true;try{await request.put('/system/roles',form);await loadStaffPermissions(true);visible.value=false;await load();ElMessage.success('角色权限已保存')}finally{saving.value=false}}

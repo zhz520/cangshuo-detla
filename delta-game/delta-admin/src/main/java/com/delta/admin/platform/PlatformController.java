@@ -24,7 +24,19 @@ public class PlatformController {
     public record UpdateSelectionRequest(List<String> components) {}
 
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
-    @GetMapping("/features") public R<List<PlatformService.FeatureView>> features() { return R.ok(platform.features()); }
+    @GetMapping("/features")
+    public R<List<PlatformService.FeatureView>> features() {
+        var commercial = remote.commercialModules();
+        return R.ok(platform.features().stream().map(feature -> {
+            var module = commercial.get(feature.id());
+            if (module == null) return feature;
+            Integer price = module.path("priceCents").isNumber() ? module.path("priceCents").asInt() : feature.priceCents();
+            String minimum = module.path("minVersion").asText(feature.minVersion());
+            return new PlatformService.FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(),
+                    price, minimum, feature.dependencies(), feature.entryPath(), feature.capabilities(), feature.status(),
+                    feature.entitled(), feature.enabled(), feature.reason(), feature.expiresAt());
+        }).toList());
+    }
     @GetMapping("/updates") public R<PlatformService.UpdateInfo> updates() { return R.ok(platform.updates()); }
     @PutMapping("/updates/selection")
     @OpLog(module="platform", operation="选择客户端更新内容")

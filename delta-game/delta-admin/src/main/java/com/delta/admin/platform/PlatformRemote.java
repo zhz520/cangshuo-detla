@@ -47,6 +47,19 @@ public class PlatformRemote {
         result.put("installerAvailable",Files.exists(path("installer-ready")));
         return result;
     }
+    public synchronized Map<String, JsonNode> commercialModules() {
+        if (cached == null) {
+            try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
+            catch(Exception ignored) {}
+        }
+        if (cached == null) return Map.of();
+        var result = new LinkedHashMap<String, JsonNode>();
+        for (var module : cached.path("modules")) {
+            String id = module.path("id").asText();
+            if (!id.isBlank()) result.put(id, module);
+        }
+        return result;
+    }
     JsonNode verify(JsonNode envelope,String format) throws Exception {
         if(!format.equals(envelope.path("format").asText()))throw new IllegalArgumentException();
         String payload=envelope.path("payload").asText(),sig=envelope.path("signature").asText();

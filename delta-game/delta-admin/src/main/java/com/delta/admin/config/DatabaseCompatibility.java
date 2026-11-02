@@ -26,6 +26,10 @@ public class DatabaseCompatibility {
     private record AdditiveColumn(String table, String column, String ddl) {}
 
     private static final List<AdditiveColumn> REQUIRED_COLUMNS = List.of(
+            new AdditiveColumn("identity_verification", "privacy_version",
+                    "ALTER TABLE identity_verification ADD COLUMN privacy_version VARCHAR(32) NOT NULL DEFAULT ''"),
+            new AdditiveColumn("identity_verification", "privacy_accepted_at",
+                    "ALTER TABLE identity_verification ADD COLUMN privacy_accepted_at TIMESTAMP NULL"),
             new AdditiveColumn("player_level", "grab_captcha_required",
                     "ALTER TABLE player_level ADD COLUMN grab_captcha_required TINYINT NOT NULL DEFAULT 1"),
             new AdditiveColumn("player_level", "price_increase_rate",
@@ -69,11 +73,26 @@ public class DatabaseCompatibility {
     @PostConstruct
     public void ensure() {
         try {
+            ensureTable("identity_verification", "CREATE TABLE IF NOT EXISTS identity_verification (" +
+                    "user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL, " +
+                    "id_number_masked VARCHAR(32) NOT NULL DEFAULT '', front_image LONGTEXT NULL, front_mime VARCHAR(64) NULL, " +
+                    "back_image LONGTEXT NULL, back_mime VARCHAR(64) NULL, status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', " +
+                    "privacy_version VARCHAR(32) NOT NULL DEFAULT '', privacy_accepted_at TIMESTAMP NULL, " +
+                    "review_note VARCHAR(500) NOT NULL DEFAULT '', reviewer_id BIGINT NULL, submitted_at TIMESTAMP NULL, " +
+                    "reviewed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_identity_document(id_number_hash))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
         } catch (SQLException error) {
             throw new IllegalStateException("数据库结构兼容检查失败", error);
+        }
+    }
+
+    private void ensureTable(String table, String ddl) throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            if (findTable(connection, table) == null) jdbc.execute(ddl);
         }
     }
 

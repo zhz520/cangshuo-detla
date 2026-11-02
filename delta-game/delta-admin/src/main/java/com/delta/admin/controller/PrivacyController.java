@@ -44,6 +44,7 @@ public class PrivacyController {
         if(body.approved()){
             var users=jdbc.queryForList("SELECT openid FROM `user` WHERE id=? FOR UPDATE",userId);if(users.isEmpty())throw new BusinessException(404,"账号不存在");
             String openid=(String)users.get(0).get("openid");
+            jdbc.update("DELETE FROM identity_verification WHERE user_id=?",userId);
             if("CLOSE_ACCOUNT".equals(row.get("kind"))){
                 management.delete(userId); // Checks unsettled orders, payments, balances, withdrawals and rewards.
                 if(jdbc.queryForObject("SELECT COUNT(*) FROM order_player op JOIN `order` o ON o.id=op.order_id JOIN player p ON p.id=op.player_id WHERE p.openid=? AND op.status='ACCEPTED' AND o.status NOT IN ('CONFIRMED','REVIEWED','SETTLED','CANCELLED','REFUNDED','ARBITRATED')",Long.class,openid)>0)throw new BusinessException(409,"仍有队友订单未完成，请先处理");

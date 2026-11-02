@@ -28,7 +28,7 @@ public class PlatformService {
         this.clock = clock;
     }
 
-    public record FeatureView(String id, String name, String description, boolean paid, String minVersion,
+    public record FeatureView(String id, String name, String description, boolean paid, Integer priceCents, String minVersion,
                               List<String> dependencies, String entryPath, List<String> capabilities,
                               String status, boolean entitled, boolean enabled, String reason, Instant expiresAt) {}
     public record Overview(String customerId, String instanceId, String version, String channel,
@@ -167,7 +167,7 @@ public class PlatformService {
             reason = enabled ? "已启用" : entitled ? "已授权，尚未启用" : expired
                     ? "模块授权已到期，请联系维护人员续期" : "此功能尚未获得有效授权，请联系维护人员开通";
         }
-        return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.minVersion(),
+        return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.priceCents(), feature.minVersion(),
                 feature.dependencies(), feature.entryPath(), feature.capabilities(), status, entitled, enabled, reason,
                 claims != null && claims.features().contains(feature.id()) ? featureExpiry(claims, feature.id()) : null);
     }

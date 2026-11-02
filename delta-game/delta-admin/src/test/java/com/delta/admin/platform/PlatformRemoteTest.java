@@ -32,4 +32,13 @@ class PlatformRemoteTest {
         var pending=remote.currentUpdates(cached,"1.3.4");
         assertThat(pending.path("updateAvailable").asBoolean()).isTrue();assertThat(pending.path("releases")).hasSize(1);
     }
+
+    @Test void cachedCommercialModulesProvidePlatformConfiguredPricing() throws Exception {
+        var properties=new PlatformProperties();properties.setCustomerId("742");properties.setStatePath(directory.resolve("state.json").toString());properties.setPublicKeyPath(directory.resolve("public.pem").toString());
+        Files.writeString(directory.resolve("authority.json"), "{\"modules\":[{\"id\":\"identity_verification\",\"priceCents\":2000,\"minVersion\":\"1.4.0\"}]}");
+        var remote=new PlatformRemote(properties,null,json,java.time.Clock.systemUTC());
+        var module=remote.commercialModules().get("identity_verification");
+        assertThat(module.path("priceCents").asInt()).isEqualTo(2000);
+        assertThat(module.path("minVersion").asText()).isEqualTo("1.4.0");
+    }
 }

@@ -57,6 +57,7 @@
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
         <view class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
+        <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
         <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages/agreement/user')">
           <image class="menu-icon" src="/static/icons/暂无权限.svg" mode="aspectFit" />
@@ -85,6 +86,7 @@ import { useAppStore } from '@/store/app'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
 import { switchToPlayerToken } from '@/api/auth'
 import { getPlayerApplicationStatus } from '@/api/player'
+import { getIdentityStatus } from '@/api/user'
 import { openCustomerService } from '@/utils/customer-service'
 import { useOfficialWechatStore } from '@/store/official-wechat'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -95,6 +97,8 @@ const chatStore = useChatStore()
 const officialWechat = useOfficialWechatStore()
 const longPressCount = ref(0)
 const systemUnread = computed(() => chatStore.messageUnreadCount)
+const identityAvailable=ref(false),identityStatus=ref('')
+const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJECTED:'未通过',DRAFT:'待提交',NOT_SUBMITTED:'未认证'}[identityStatus.value]||'未认证'))
 
 // 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
@@ -106,6 +110,7 @@ onShow(() => {
   if (userStore.token) {
     userStore.fetchProfile(true)
     useChatStore().fetchMessageUnreadCount()
+    getIdentityStatus({loading:false}).then(res=>{identityAvailable.value=!!res.data?.available;identityStatus.value=res.data?.status||''}).catch(()=>{identityAvailable.value=false})
   }
 })
 
@@ -371,6 +376,7 @@ function onLongPress() {
     font-size: 20rpx; color: #fff; background: #d44955; border-radius: 32rpx;
     text-align: center; margin-right: 8rpx; flex-shrink: 0;
   }
+  .identity-state { flex: none; margin-right: 8rpx; font-size: 24rpx; color: #7b879a; }
   .arrow { color: #b9bdc4; flex: none; }
   &:last-child { border-bottom: none; }
 }

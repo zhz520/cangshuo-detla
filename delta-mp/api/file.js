@@ -1,7 +1,7 @@
 import { uploadFile } from './request'
 
 /** 上传文件，返回URL */
-export const upload = (filePath) => uploadFile(filePath)
+export const upload = (filePath, endpoint) => uploadFile(filePath, endpoint)
 
 /**
  * 选择并上传图片（封装uni.chooseImage + upload）

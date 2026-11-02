@@ -120,12 +120,14 @@ class GovernanceIntegrationTest {
  }
  @Test void privacyRequestsCannotBeReadOrApprovedByOtherUsersOrCustomerService()throws Exception{
   mvc.perform(post("/user/privacy/requests").with(role("USER",7)).contentType("application/json").content("{\"kind\":\"ERASE_IDENTITY\",\"note\":\"删除实名\"}")).andExpect(jsonPath("$.code").value(200));
+  jdbc.update("INSERT INTO identity_verification(user_id,real_name,id_number_hash,id_number_masked,status) VALUES(7,'测试实名','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','110***********002X','APPROVED')");
   mvc.perform(get("/user/privacy/requests").with(role("USER",8))).andExpect(jsonPath("$.data").isEmpty());
   String id=jdbc.queryForObject("SELECT id FROM privacy_request WHERE user_id=7",String.class);
   mvc.perform(put("/admin/privacy/requests/"+id).with(role("CS",2)).contentType("application/json").content("{\"approved\":true,\"note\":\"确认\"}")).andExpect(jsonPath("$.code").value(403));
   jdbc.update("UPDATE `user` SET openid='private-openid' WHERE id=7");
   mvc.perform(put("/admin/privacy/requests/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true,\"note\":\"确认删除\"}")).andExpect(jsonPath("$.code").value(200));
   assertThat(jdbc.queryForObject("SELECT real_name FROM player WHERE id=1",String.class)).isEmpty();
+  assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM identity_verification WHERE user_id=7",Long.class)).isZero();
  }
  @Test void accountClosureUsesBusinessGuardsThenErasesIdentityWithoutViolatingNonNullPhone()throws Exception{
   jdbc.update("UPDATE `user` SET openid='private-openid',phone='13900000000' WHERE id=7");

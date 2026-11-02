@@ -4,6 +4,7 @@ DELETE FROM player_enrollment;
 DELETE FROM player_invitation;
 DELETE FROM player_homepage_revision;
 DELETE FROM privacy_request;
+DELETE FROM identity_verification;
 DELETE FROM staff_shift;
 DELETE FROM order_finance_snapshot;
 DELETE FROM order_settlement_ledger;

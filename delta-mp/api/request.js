@@ -178,9 +178,9 @@ function handleUnauthorized(role) {
 /**
  * 文件上传
  */
-export function uploadFile(filePath) {
+export function uploadFile(filePath, endpoint = '/common/file/upload', options = {}) {
   return new Promise((resolve, reject) => {
-    const role = getCurrentRole()
+    const role = options.role || getCurrentRole()
     const token = getTokenByRole(role)
     const header = {}
     if (token) {
@@ -188,7 +188,7 @@ export function uploadFile(filePath) {
     }
 
     uni.uploadFile({
-      url: `${BASE_URL}/common/file/upload`,
+      url: `${BASE_URL}${endpoint}`,
       filePath,
       name: 'file',
       header,
@@ -197,10 +197,16 @@ export function uploadFile(filePath) {
           const data = JSON.parse(res.data)
           if (data.code === 0 || data.code === 200) {
             resolve(data.data) // 返回文件URL
+          } else if (data.code === 401) {
+            handleUnauthorized(role)
+            reject(data)
           } else {
             uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
             reject(data)
           }
+        } else if (res.statusCode === 401) {
+          handleUnauthorized(role)
+          reject(res)
         } else {
           reject(res)
         }

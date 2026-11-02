@@ -7,7 +7,7 @@ import java.util.List;
 
 public record PlatformCatalog(String version, String channel, int schemaVersion,
                               List<Feature> features, List<String> releaseNotes) {
-    public record Feature(String id, String name, String description, boolean paid, String minVersion,
+    public record Feature(String id, String name, String description, boolean paid, Integer priceCents, String minVersion,
                           List<String> dependencies, String entryPath, List<String> capabilities) {}
 
     public static PlatformCatalog load(ObjectMapper json) {

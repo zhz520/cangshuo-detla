@@ -43,6 +43,8 @@ class PlatformServiceTest {
         assertThat(platform.features().get(0).enabled()).isTrue(); assertThat(report().enabled()).isFalse();
         var official=platform.features().stream().filter(feature->feature.id().equals("official_wechat_notifications")).findFirst().orElseThrow();
         assertThat(official.paid()).isTrue(); assertThat(official.enabled()).isFalse(); assertThat(platform.featureEnabled("official_wechat_notifications")).isFalse();
+        var identity=platform.features().stream().filter(feature->feature.id().equals("identity_verification")).findFirst().orElseThrow();
+        assertThat(identity.paid()).isTrue(); assertThat(identity.priceCents()).isEqualTo(2000); assertThat(identity.enabled()).isFalse();
         assertThatThrownBy(() -> platform.setEnabled("advanced_income_reports", true)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> platform.setEnabled("official_wechat_notifications", true)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> platform.requireFeature("advanced_income_reports")).isInstanceOf(BusinessException.class);

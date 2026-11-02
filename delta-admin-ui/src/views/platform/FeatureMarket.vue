@@ -21,7 +21,7 @@
         <div class="section-heading"><h3>{{ feature.name }}</h3><el-tag :type="feature.enabled ? 'success' : 'info'">{{ statusLabels[feature.status] || feature.status }}</el-tag></div>
         <p class="description">{{ feature.description }}</p>
         <ul><li v-for="capability in feature.capabilities" :key="capability">{{ capability }}</li></ul>
-        <p class="muted">{{ feature.paid ? '付费扩展 · 人工报价与开通' : '基础功能 · 已包含' }}</p>
+        <p class="muted">{{ feature.paid ? (feature.priceCents == null ? '付费扩展 · 人工报价与开通' : '付费扩展 · ¥' + (feature.priceCents / 100).toFixed(2) + ' · 人工开通') : '基础功能 · 已包含' }}</p>
         <p v-if="feature.expiresAt" class="muted">模块到期：{{ formatTime(feature.expiresAt) }}</p>
         <p class="muted">最低版本 {{ feature.minVersion }}<span v-if="feature.dependencies.length"> · 依赖基础业务系统</span></p>
         <div class="feature-actions">
