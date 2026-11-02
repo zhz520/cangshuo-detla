@@ -14,6 +14,9 @@ export const useSiteStore = defineStore('site', () => {
   const depositMode = ref('REQUIRED')
   /** 后台微信支付总开关 */
   const wxPayEnabled = ref(false)
+  const wxPayMiniappEnabled = ref(true)
+  const wxPayH5Enabled = ref(true)
+  const wxPayOfficialEnabled = ref(false)
   /** 公告是否在浏览器刷新后再次展示 */
   const noticePopupEveryVisit = ref(false)
   const techSupportText = ref('KK云网络提供技术支持')
@@ -52,6 +55,15 @@ export const useSiteStore = defineStore('site', () => {
         if (data.wx_pay_enabled !== undefined) {
           wxPayEnabled.value = data.wx_pay_enabled === 'true'
         }
+        if (data.wx_pay_miniapp_enabled !== undefined) {
+          wxPayMiniappEnabled.value = data.wx_pay_miniapp_enabled === 'true'
+        }
+        if (data.wx_pay_h5_enabled !== undefined) {
+          wxPayH5Enabled.value = data.wx_pay_h5_enabled === 'true'
+        }
+        if (data.wx_pay_official_enabled !== undefined) {
+          wxPayOfficialEnabled.value = data.wx_pay_official_enabled === 'true'
+        }
         if (data.notice_popup_every_visit !== undefined) {
           noticePopupEveryVisit.value = data.notice_popup_every_visit === 'true'
         }
@@ -87,5 +99,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

@@ -13,6 +13,7 @@ class DatabaseCompatibilityTest {
         dataSource.setURL("jdbc:h2:mem:compatibility;MODE=MySQL;DB_CLOSE_DELAY=-1");
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("CREATE TABLE player_level(id INT PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY)");
 
         DatabaseCompatibility compatibility = new DatabaseCompatibility(jdbc);
         compatibility.ensure();
@@ -22,6 +23,9 @@ class DatabaseCompatibilityTest {
                 "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='PLAYER_LEVEL' AND column_name='WITHDRAW_DEPOSIT_AMOUNT'",
                 Integer.class);
         assertThat(columns).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='PAYMENT' AND column_name='WX_APP_ID'",
+                Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='EMAIL_NOTICE_QUEUE'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_name='EMAIL_NOTICE_QUEUE' AND constraint_type='UNIQUE'", Integer.class)).isGreaterThanOrEqualTo(1);
     }

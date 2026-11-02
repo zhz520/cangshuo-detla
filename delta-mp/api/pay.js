@@ -6,15 +6,22 @@ export const createPayment = (orderId) => post(`/pay/wx/${orderId}`)
 /** 微信 H5 支付（返回 h5Url，H5 页面跳转到该地址） */
 export const createH5Payment = (orderId) => post(`/pay/h5/${orderId}`)
 
+/** 微信公众号支付（返回 authorizeUrl，微信内置浏览器跳转授权并调起 JSAPI） */
+export const createOfficialPayment = (orderId) => post(`/pay/wx/official/${orderId}`)
+
 /** 余额充值微信支付（返回wx.requestPayment参数） */
 export const createRechargePayment = (packageId) => post(`/pay/recharge/wx/${packageId}`)
 
 /** 余额充值微信 H5 支付（返回h5Url） */
 export const createH5RechargePayment = (packageId) => post(`/pay/recharge/h5/${packageId}`)
 
+/** 余额充值微信公众号支付（返回authorizeUrl） */
+export const createOfficialRechargePayment = (packageId) => post(`/pay/recharge/official/${packageId}`)
+
 /** 打手入驻押金支付(100元)，返回paymentNo及wx.requestPayment参数 */
 export const createPlayerDeposit = (options = {}) => post('/pay/player-deposit', {}, options)
 export const createH5PlayerDeposit = (options = {}) => post('/pay/player-deposit/h5', {}, options)
+export const createOfficialPlayerDeposit = (options = {}) => post('/pay/player-deposit/official', { scene: options.scene || '' }, { role: options.role })
 
 /** 余额支付 */
 export const balancePay = (orderId) => post(`/pay/balance/${orderId}`)

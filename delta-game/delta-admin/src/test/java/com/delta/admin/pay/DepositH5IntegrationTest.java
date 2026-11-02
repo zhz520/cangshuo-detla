@@ -14,6 +14,9 @@ import com.delta.pay.controller.PayController;
 import com.delta.pay.entity.Payment;
 import com.delta.pay.service.PaymentService;
 import com.delta.pay.service.TransactionService;
+import com.delta.pay.service.WechatOfficialPayService;
+import com.delta.pay.service.WechatPayScene;
+import com.delta.system.service.SysConfigService;
 import com.delta.user.service.UserService;
 import com.wechat.pay.java.service.payments.h5.H5Service;
 import com.wechat.pay.java.service.payments.h5.model.PrepayRequest;
@@ -65,6 +68,8 @@ class DepositH5IntegrationTest {
     @MockBean WxPayConfiguration configuration;
     @MockBean UserService users;
     @MockBean CrossModuleMapper identities;
+    @MockBean WechatOfficialPayService officialPay;
+    @MockBean SysConfigService configs;
     H5Service h5;
     WxPayConfiguration.CachedClients clients;
 
@@ -81,13 +86,15 @@ class DepositH5IntegrationTest {
         when(clients.getConfig()).thenReturn(new WxPayConfiguration.RuntimeConfig(true, "test-app", "test-merchant",
                 "https://shop.example/pay/wx/notify", null, null, null, null, null, "WAP", "Test shop"));
         when(clients.getH5Service()).thenReturn(h5);
+        when(configs.getConfigValue(anyString(), anyString())).thenAnswer(invocation -> invocation.getArgument(1));
         Payment payment = new Payment();
         payment.setPaymentNo("deposit-h5-test");
         payment.setUserId(7L);
         payment.setAmount(new BigDecimal("40.25"));
         payment.setBizType("PLAYER_DEPOSIT");
         payment.setStatus("PAYING");
-        when(payments.createPlayerDepositPayment(7L)).thenReturn(payment);
+        when(payments.createPlayerDepositPayment(7L, WechatPayScene.H5, "test-app")).thenReturn(payment);
+        when(payments.createPlayerDepositPayment(7L, WechatPayScene.OFFICIAL_ACCOUNT, "wx-official")).thenReturn(payment);
         when(identities.selectUserIdByPlayerId(2L)).thenReturn(7L);
         PrepayResponse response = new PrepayResponse();
         response.setH5Url("https://wx.tenpay.com/test-only");
@@ -107,8 +114,8 @@ class DepositH5IntegrationTest {
         assertThat(captured.getValue().getAmount().getCurrency()).isEqualTo("CNY");
         assertThat(captured.getValue().getOutTradeNo()).isEqualTo("deposit-h5-test");
         assertThat(captured.getValue().getNotifyUrl()).isEqualTo("https://shop.example/pay/wx/notify");
-        verify(payments).createPlayerDepositPayment(7L);
-        verify(payments, never()).createPlayerDepositPayment(8L);
+        verify(payments).createPlayerDepositPayment(7L, WechatPayScene.H5, "test-app");
+        verify(payments, never()).createPlayerDepositPayment(8L, WechatPayScene.H5, "test-app");
         verify(clients, never()).getJsapiService();
         verifyNoInteractions(users, transactions);
     }
@@ -117,8 +124,8 @@ class DepositH5IntegrationTest {
         mvc.perform(post("/pay/player-deposit/h5").with(role("PLAYER", 2)))
                 .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.paymentNo").value("deposit-h5-test"));
         verify(identities).selectUserIdByPlayerId(2L);
-        verify(payments).createPlayerDepositPayment(7L);
-        verify(payments, never()).createPlayerDepositPayment(2L);
+        verify(payments).createPlayerDepositPayment(7L, WechatPayScene.H5, "test-app");
+        verify(payments, never()).createPlayerDepositPayment(2L, WechatPayScene.H5, "test-app");
     }
 
     @Test void anonymousAndStaffCannotInitiatePlayerDeposits() throws Exception {
@@ -141,7 +148,8 @@ class DepositH5IntegrationTest {
     }
 
     @Test void existingDepositPolicyRejectionsDoNotCallThePaymentProvider() throws Exception {
-        when(payments.createPlayerDepositPayment(7L)).thenThrow(new BusinessException(409, "已足额缴纳押金"));
+        when(payments.createPlayerDepositPayment(7L, WechatPayScene.H5, "test-app"))
+                .thenThrow(new BusinessException(409, "已足额缴纳押金"));
         mvc.perform(post("/pay/player-deposit/h5").with(role("USER", 7))).andExpect(jsonPath("$.code").value(409));
         verifyNoInteractions(h5);
     }
@@ -151,5 +159,35 @@ class DepositH5IntegrationTest {
         mvc.perform(post("/pay/player-deposit/h5").with(role("USER", 7))).andExpect(jsonPath("$.code").value(500));
         verify(payments, never()).updateById(any(Payment.class));
         verifyNoInteractions(transactions);
+    }
+
+    @Test void officialAccountDepositReturnsAnAuthorizationUrl() throws Exception {
+        when(officialPay.runtime()).thenReturn(new WechatOfficialPayService.RuntimeConfig(
+                true, "wx-official", "secret", "https://shop.example"));
+        when(officialPay.authorizationUrl("deposit-h5-test", 7L, "PLAYER_DEPOSIT", "/pages-player/withdraw/index"))
+                .thenReturn("https://open.weixin.qq.com/test-only");
+        mvc.perform(post("/pay/player-deposit/official").with(role("PLAYER", 2)).contentType("application/json")
+                        .content("{\"scene\":\"WITHDRAW\"}"))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.authorizeUrl").value("https://open.weixin.qq.com/test-only"));
+        verify(identities).selectUserIdByPlayerId(2L);
+        verify(payments).createPlayerDepositPayment(7L, WechatPayScene.OFFICIAL_ACCOUNT, "wx-official");
+        verifyNoInteractions(h5);
+    }
+
+    @Test void serverRejectsMiniProgramPaymentsWhenTheChannelIsDisabled() throws Exception {
+        when(configs.getConfigValue("wx.pay.miniapp-enabled", "true")).thenReturn("false");
+        mvc.perform(post("/pay/player-deposit").with(role("USER", 7)))
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.msg").value("小程序支付已关闭"));
+        verifyNoInteractions(payments, h5);
+    }
+
+    @Test void serverRejectsExternalH5PaymentsWhenTheChannelIsDisabled() throws Exception {
+        when(configs.getConfigValue("wx.pay.h5-enabled", "true")).thenReturn("false");
+        mvc.perform(post("/pay/player-deposit/h5").with(role("USER", 7)))
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.msg").value("微信外 H5 支付已关闭"));
+        verifyNoInteractions(payments, h5);
     }
 }

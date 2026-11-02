@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,"/user/auth/captcha").permitAll()
                 .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/user/auth/reset-code", "/user/auth/reset-password", "/player/auth/login", "/player/auth/register", "/cs/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
+                .requestMatchers(HttpMethod.GET, "/pay/wx/official/callback").permitAll()
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/file/wxpay/**").denyAll()
@@ -66,7 +67,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/player/apply").hasRole("USER")
                 .requestMatchers(HttpMethod.GET,"/player/invitations/*").permitAll()
                 .requestMatchers("/player/**").hasRole("PLAYER")
-                .requestMatchers("/pay/player-deposit", "/pay/player-deposit/h5").hasAnyRole("USER","PLAYER")
+                .requestMatchers("/pay/player-deposit", "/pay/player-deposit/h5", "/pay/player-deposit/official").hasAnyRole("USER","PLAYER")
                 .requestMatchers("/user/**", "/order/**", "/pay/recharge/**", "/pay/balance/**", "/pay/h5/**", "/pay/wx/**", "/pay/player-deposit").hasRole("USER")
                 .requestMatchers("/product/**", "/app/product/**").hasRole("ADMIN")
                 // 聊天记录: 管理员和客服均可查看

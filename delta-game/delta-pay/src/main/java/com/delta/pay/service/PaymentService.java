@@ -4,12 +4,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.delta.pay.entity.Payment;
 
 public interface PaymentService extends IService<Payment> {
-    Payment createWxPayment(Long orderId, Long userId);
+    Payment createWxPayment(Long orderId, Long userId, WechatPayScene scene, String wxAppId);
     Payment createBalancePayment(Long orderId, Long userId);
     /** 创建余额充值支付单，amount/rechargeBonus 取创建时的套餐快照。 */
-    Payment createRechargePayment(String packageId, Long userId);
+    Payment createRechargePayment(String packageId, Long userId, WechatPayScene scene, String wxAppId);
     /** 创建打手入驻押金支付（金额来自 sys_config: player.deposit_amount），返回Payment含paymentNo */
-    Payment createPlayerDepositPayment(Long userId);
+    Payment createPlayerDepositPayment(Long userId, WechatPayScene scene, String wxAppId);
     /** 当前用户按押金策略和打手等级应缴纳的总押金。 */
     java.math.BigDecimal playerDepositRequiredAmount(Long userId);
     /** 已支付成功的打手押金合计。 */

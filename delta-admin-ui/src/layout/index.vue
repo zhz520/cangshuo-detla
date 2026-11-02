@@ -40,6 +40,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">编辑资料</el-dropdown-item>
+                <el-dropdown-item command="password">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -60,6 +61,7 @@
 
     <!-- 编辑资料弹窗 -->
     <ProfileEditDialog v-model="profileDialogVisible" @saved="onProfileSaved" />
+    <PasswordChangeDialog v-model="passwordDialogVisible" @changed="onPasswordChanged" />
   </el-container>
 </template>
 
@@ -76,6 +78,7 @@ import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
 import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
+import PasswordChangeDialog from '@/components/PasswordChangeDialog.vue'
 import { useChatStore } from '@/stores/chat'
 import { useSiteStore } from '@/stores/site'
 
@@ -119,15 +122,24 @@ const menuGroups = computed(() => {
 })
 
 const profileDialogVisible = ref(false)
+const passwordDialogVisible = ref(false)
 
 function handleCommand(cmd) {
   if (cmd === 'profile') {
     profileDialogVisible.value = true
+  } else if (cmd === 'password') {
+    passwordDialogVisible.value = true
   } else if (cmd === 'logout') {
     chatStore.stop()
     userStore.logout()
     router.push('/login')
   }
+}
+
+function onPasswordChanged() {
+  chatStore.stop()
+  userStore.logout()
+  router.replace('/login')
 }
 
 function onProfileSaved(data) {

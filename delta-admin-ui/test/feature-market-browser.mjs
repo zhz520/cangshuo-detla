@@ -39,7 +39,7 @@ try {
       let data = []
       if (pathname === '/system/config/site') data = { site_name: '见高山电竞', site_admin_title: '见高山电竞管理后台' }
       else if (pathname === '/cs/permissions') data = ['*']
-      else if (pathname === '/admin/platform/overview') data = { customerId: '742', instanceId: 'feature-market-test', version: '1.4.3', channel: 'stable', verifierConfigured: true, licenseStatus: 'VALID', expiresAt: new Date(now + 10 * 86400000).toISOString(), allowedDomains: ['admin.example.com'] }
+      else if (pathname === '/admin/platform/overview') data = { customerId: '742', instanceId: 'feature-market-test', version: '1.4.4', channel: 'stable', verifierConfigured: true, licenseStatus: 'VALID', expiresAt: new Date(now + 10 * 86400000).toISOString(), allowedDomains: ['admin.example.com'] }
       else if (pathname === '/admin/platform/features') data = features
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, data, msg: '' }) })
     })

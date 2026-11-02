@@ -11,6 +11,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -73,6 +74,7 @@ public class EmailNotificationService {
     private final EmailNotificationTemplate templates;
     private final Clock clock;
 
+    @Autowired
     public EmailNotificationService(JdbcTemplate jdbc, SysConfigService configs,
                                     PlatformService platform, EmailNotificationTemplate templates) {
         this(jdbc, configs, platform, templates, Clock.systemUTC());

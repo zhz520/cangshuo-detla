@@ -54,8 +54,9 @@ import { onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
 import PageState from '@/components/PageState.vue'
 import { applyWithdraw, getAccountList, getEarningsSummary, getWithdrawDepositStatus } from '@/api/player'
-import { createPlayerDeposit, createH5PlayerDeposit } from '@/api/pay'
-import { isH5, canStartH5WechatPayment } from '@/utils/platform'
+import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
+import { isH5, canStartH5WechatPayment, wechatPayChannel } from '@/utils/platform'
+import { useSiteStore } from '@/store/site'
 
 const balance = ref('0.00')
 const form = reactive({ amount: '', accountId: '', remark: '' })
@@ -64,6 +65,7 @@ const selectedAccount = ref(null)
 const showAccountPicker = ref(false)
 const depositStatus = ref(null),payingDeposit=ref(false)
 const loading = ref(false), ready = ref(false), loadError = ref(''), submitting = ref(false)
+const siteStore = useSiteStore()
 
 onShow(load)
 async function load() {
@@ -83,10 +85,23 @@ async function load() {
 }
 async function payDeposit(){
   if(payingDeposit.value)return
-  if(isH5() && !canStartH5WechatPayment())return
   payingDeposit.value=true
   try{
-    if(isH5()) {
+    await siteStore.fetchSiteConfig()
+    const channel = siteStore.wxPayEnabled ? wechatPayChannel({
+      miniappEnabled: siteStore.wxPayMiniappEnabled,
+      h5Enabled: siteStore.wxPayH5Enabled,
+      officialEnabled: siteStore.wxPayOfficialEnabled
+    }) : null
+    if (!channel) throw new Error('当前环境未启用可用的微信支付')
+    if (channel === 'OFFICIAL') {
+      const result = await createOfficialPlayerDeposit({ scene: 'WITHDRAW', role: 'player' })
+      if (!result.data?.authorizeUrl) throw new Error('未获取到公众号支付授权地址')
+      window.location.assign(result.data.authorizeUrl)
+      return
+    }
+    if (channel === 'H5') {
+      if (!canStartH5WechatPayment())return
       const result = await createH5PlayerDeposit({role:'player'})
       if (!result.data?.h5Url) throw new Error('未获取到支付地址')
       // #ifdef H5
@@ -95,6 +110,7 @@ async function payDeposit(){
       // #endif
       return
     }
+    if (channel !== 'MINIAPP') throw new Error('当前环境不支持微信支付')
     const res=await createPlayerDeposit({role:'player'})
     const {paymentNo,timeStamp,nonceStr,package:pkg,signType,paySign}=res.data
     await new Promise((resolve,reject)=>uni.requestPayment({provider:'wxpay',timeStamp,nonceStr,package:pkg,signType:signType||'RSA',paySign,success:resolve,fail:reject}))

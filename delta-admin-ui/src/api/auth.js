@@ -12,3 +12,7 @@ export function getCsProfile() {
 export function updateCsProfile(data) {
   return request({ url: '/cs/profile', method: 'put', data })
 }
+
+export function changeCsPassword(data) {
+  return request({ url: '/cs/profile/password', method: 'put', data })
+}

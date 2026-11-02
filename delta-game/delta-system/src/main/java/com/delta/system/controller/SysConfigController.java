@@ -89,6 +89,14 @@ public class SysConfigController {
         map.put("player_deposit_amount", sysConfigService.getConfigValue("player.deposit_amount", "100"));
         // 微信支付总开关（支付模块运行时动态读取）
         map.put("wx_pay_enabled", sysConfigService.getConfigValue("wx.pay.enabled", "false"));
+        map.put("wx_pay_miniapp_enabled", sysConfigService.getConfigValue("wx.pay.miniapp-enabled", "true"));
+        map.put("wx_pay_h5_enabled", sysConfigService.getConfigValue("wx.pay.h5-enabled", "true"));
+        String officialEnabled = sysConfigService.getConfigValue("wx.pay.official-enabled", "false");
+        String officialAppId = sysConfigService.getConfigValue("wx.pay.official-appid", "").trim();
+        String officialSecret = sysConfigService.getConfigValue("wx.pay.official-appsecret", "").trim();
+        String officialOrigin = sysConfigService.getConfigValue("wx.pay.official-return-origin", "").trim();
+        map.put("wx_pay_official_enabled", Boolean.toString("true".equalsIgnoreCase(officialEnabled)
+                && !officialAppId.isBlank() && !officialSecret.isBlank() && !officialOrigin.isBlank()));
         map.put("notice_popup_every_visit", sysConfigService.getConfigValue("notice.popup_every_visit", "true"));
         map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
@@ -144,8 +152,20 @@ public class SysConfigController {
                 "json", "余额配置", "配置用户充值金额及赠送余额，单位：元");
         ensureConfig("wx.pay.enabled", "启用微信支付", String.valueOf(wxPayEnabledFallback), "boolean", "微信支付配置",
                 "关闭后小程序和 H5 均不可发起微信支付，但余额支付不受影响");
-        ensureConfig("wx.pay.appid", "微信支付 AppID", "", "text", "微信支付配置",
-                "支付所属 AppID；小程序支付填写小程序 AppID，H5 支付通常填写公众号 AppID");
+        ensureConfig("wx.pay.miniapp-enabled", "启用小程序支付", "true", "boolean", "微信支付配置",
+                "小程序内使用 JSAPI 支付；需填写小程序 AppID，并与商户号完成 AppID 绑定");
+        ensureConfig("wx.pay.h5-enabled", "启用微信外 H5 支付", "true", "boolean", "微信支付配置",
+                "手机浏览器（非微信内）使用 H5 支付；微信内置浏览器请使用公众号支付");
+        ensureConfig("wx.pay.official-enabled", "启用微信公众号支付", "false", "boolean", "微信支付配置",
+                "开启后，微信内置浏览器会通过公众号网页授权获取 OpenID，并调起 JSAPI 支付");
+        ensureConfig("wx.pay.appid", "小程序支付 AppID", "", "text", "微信支付配置",
+                "仅小程序支付使用；须与商户号绑定。公众号支付请填写下方独立公众号 AppID");
+        ensureConfig("wx.pay.official-appid", "公众号支付 AppID", "", "text", "微信支付配置",
+                "公众号支付使用；必须是已完成认证、已绑定商户号且配置网页授权域名的公众号 AppID");
+        ensureConfig("wx.pay.official-appsecret", "公众号 AppSecret", "", "text", "微信支付配置",
+                "用于 snsapi_base 网页授权换取公众号 OpenID；保存后不回显");
+        ensureConfig("wx.pay.official-return-origin", "公众号支付站点 Origin", "", "text", "微信支付配置",
+                "填写 https://客户正式域名，不含路径；授权回调固定为 /api/pay/wx/official/callback");
         ensureConfig("wx.pay.mch-id", "微信支付商户号", "", "text", "微信支付配置",
                 "微信支付商户平台的商户号");
         ensureConfig("wx.pay.notify-url", "支付回调地址", "", "text", "微信支付配置",
@@ -206,9 +226,16 @@ public class SysConfigController {
             msgTpl.setRemark("用户、打手、客服端通用的消息提醒短信模板");
             sysConfigService.updateById(msgTpl);
         }
+        SysConfig wxAppId = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>()
+                .eq(SysConfig::getConfigKey, "wx.pay.appid"));
+        if (wxAppId != null && !"小程序支付 AppID".equals(wxAppId.getConfigName())) {
+            wxAppId.setConfigName("小程序支付 AppID");
+            wxAppId.setRemark("仅小程序支付使用；公众号支付请填写独立的公众号 AppID");
+            sysConfigService.updateById(wxAppId);
+        }
     }
 
-    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
+    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","wx.pay.official-appsecret","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
     private void updateValue(SysConfig submitted) {
         SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
         if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
@@ -220,6 +247,12 @@ public class SysConfigController {
         if("sms.aliyun.endpoint".equals(key) && !"dysmsapi.aliyuncs.com".equals(value)) throw new com.delta.common.exception.BusinessException(400,"短信服务地址无效");
         if("wx.pay.api-v3-key".equals(key) && !value.isEmpty() && value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length!=32)
             throw new com.delta.common.exception.BusinessException(400,"微信API v3密钥须为32字节");
+        if("wx.pay.official-return-origin".equals(key) && !value.isBlank())try{
+            var uri=java.net.URI.create(value.trim());
+            if(!"https".equalsIgnoreCase(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getQuery()!=null||uri.getFragment()!=null
+                    ||(uri.getPath()!=null&&!uri.getPath().isEmpty()&&!"/".equals(uri.getPath())))throw new IllegalArgumentException();
+            value=uri.getScheme().toLowerCase()+"://"+uri.getRawAuthority();
+        }catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"公众号支付站点 Origin 须是不含路径的 HTTPS 地址");}
         if(java.util.Set.of("settlement.commission_rate","settlement.cs_rate").contains(key)) {
             try {var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.compareTo(java.math.BigDecimal.ONE)>0) throw new IllegalArgumentException();}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"抽佣比例须在0至1之间");}

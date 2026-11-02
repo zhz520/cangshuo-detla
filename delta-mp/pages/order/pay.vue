@@ -9,7 +9,7 @@
     <view class="pay-methods">
       <view v-if="canUseWechatPay" class="method" :class="{ active: payType === 'WECHAT' }" @click="payType='WECHAT'">
         <image class="method-icon" src="/static/icons/钞票.svg" mode="aspectFit" />
-        <text class="method-name">微信支付</text>
+        <text class="method-name">{{ wechatPayLabel }}</text>
         <view class="radio" :class="{ checked: payType === 'WECHAT' }" />
       </view>
       <view class="method" :class="{ active: payType === 'BALANCE' }" @click="payType='BALANCE'">
@@ -28,12 +28,12 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import PriceText from '@/components/PriceText.vue'
-import { createPayment, createH5Payment, balancePay } from '@/api/pay'
+import { createPayment, createH5Payment, createOfficialPayment, balancePay } from '@/api/pay'
 import { getSiteConfig } from '@/api/config'
 import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
-import { isMpWeixin, isH5, canStartH5WechatPayment } from '@/utils/platform'
+import { isH5, isMpWeixin, isWechatBrowser, canStartH5WechatPayment, wechatPayChannel } from '@/utils/platform'
 
 const orderId = ref(0)
 const amount = ref(0)
@@ -49,6 +49,7 @@ const formatCountdown = computed(() => {
   const s = countdown.value % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
+const wechatPayLabel = computed(() => isWechatBrowser() ? '微信公众号支付' : isMpWeixin() ? '微信小程序支付' : '微信 H5 支付')
 
 onLoad(async (opts) => {
   orderId.value = opts.orderId
@@ -57,7 +58,11 @@ onLoad(async (opts) => {
   try {
     const siteRes = await getSiteConfig()
     const enabled = siteRes.data?.wx_pay_enabled === 'true'
-    canUseWechatPay.value = enabled && (isMpWeixin() || isH5())
+    canUseWechatPay.value = enabled && !!wechatPayChannel({
+      miniappEnabled: siteRes.data?.wx_pay_miniapp_enabled !== 'false',
+      h5Enabled: siteRes.data?.wx_pay_h5_enabled !== 'false',
+      officialEnabled: siteRes.data?.wx_pay_official_enabled === 'true'
+    })
     if (canUseWechatPay.value) payType.value = 'WECHAT'
   } catch (e) { /* 微信支付未配置时默认使用余额支付 */ }
 
@@ -144,6 +149,18 @@ async function handlePay() {
         return uni.showToast({ title: '微信支付未开启，请使用余额支付', icon: 'none' })
       }
       if (isH5()) {
+        const site = (await getSiteConfig()).data || {}
+        const channel = wechatPayChannel({
+          miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
+          h5Enabled: site.wx_pay_h5_enabled !== 'false',
+          officialEnabled: site.wx_pay_official_enabled === 'true'
+        })
+        if (channel === 'OFFICIAL') {
+          const res = await createOfficialPayment(orderId.value)
+          if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到公众号支付授权地址', icon: 'none' })
+          window.location.assign(res.data.authorizeUrl)
+          return
+        }
         if (!canStartH5WechatPayment()) return
         const res = await createH5Payment(orderId.value)
         const h5Url = res.data?.h5Url

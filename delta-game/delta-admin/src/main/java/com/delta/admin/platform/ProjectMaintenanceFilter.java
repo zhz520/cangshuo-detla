@@ -20,7 +20,7 @@ public class ProjectMaintenanceFilter extends OncePerRequestFilter {
         boolean recovery=route.startsWith("/admin/platform/")||route.startsWith("/user/auth/")||route.equals("/cs/auth/login")||route.equals("/cs/permissions")
                 ||route.equals("/user/privacy/requests")||route.startsWith("/admin/privacy/requests")
                 ||route.equals("/system/content/key/privacy_policy")||route.equals("/system/content/key/user_agreement")
-                ||route.equals("/system/config/site")||route.equals("/system/maintenance/status")||route.startsWith("/actuator/")||route.equals("/pay/wx/notify")||route.equals("/pay/wx/refund-notify")||"OPTIONS".equals(request.getMethod());
+                ||route.equals("/system/config/site")||route.equals("/system/maintenance/status")||route.startsWith("/actuator/")||route.equals("/pay/wx/notify")||route.equals("/pay/wx/refund-notify")||route.equals("/pay/wx/official/callback")||"OPTIONS".equals(request.getMethod());
         boolean finishExisting="FINISH_EXISTING".equals(remote.project().path("pausePolicy").asText()) && isExistingSettlement(route,request.getMethod());
         if(!recovery && (remote.updating() || (!finishExisting && remote.suspended()))) {
             response.setStatus(503);response.setCharacterEncoding("UTF-8");response.setContentType("application/json");response.setHeader("Retry-After","3600");

@@ -50,9 +50,9 @@ onLoad(async options => {
 
 import ImageUploader from '@/components/ImageUploader.vue'
 import { applyPlayer } from '@/api/player'
-import { createPlayerDeposit, createH5PlayerDeposit } from '@/api/pay'
+import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
 import { useSiteStore } from '@/store/site'
-import { isMpWeixin, isH5, canStartH5WechatPayment } from '@/utils/platform'
+import { isMpWeixin, isH5, canStartH5WechatPayment, wechatPayChannel } from '@/utils/platform'
 const siteStore = useSiteStore()
 const pendingDepositNo = ref('')
 const draftKey = 'cangshuo-enrollment-deposit-draft'
@@ -87,7 +87,23 @@ async function submit() {
 async function submitWithDeposit() {
   let paymentNo = pendingDepositNo.value
   if (!paymentNo) {
-    if (isH5()) {
+    const channel = siteStore.wxPayEnabled ? wechatPayChannel({
+      miniappEnabled: siteStore.wxPayMiniappEnabled,
+      h5Enabled: siteStore.wxPayH5Enabled,
+      officialEnabled: siteStore.wxPayOfficialEnabled
+    }) : null
+    if (!channel) throw new Error('当前环境未启用可用的微信支付')
+    if (channel === 'OFFICIAL') {
+      if (!isH5()) throw new Error('公众号支付仅支持微信网页')
+      const response = await createOfficialPlayerDeposit({ scene: 'APPLY' })
+      if (!response.data?.authorizeUrl || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')
+      // #ifdef H5
+      sessionStorage.setItem(draftKey, JSON.stringify({phone:form.phone,form:{...form},avatarImages:avatarImages.value,proofImages:proofImages.value,agreed:agreed.value,paymentNo:response.data.paymentNo,savedAt:Date.now()}))
+      window.location.assign(response.data.authorizeUrl)
+      // #endif
+      return
+    }
+    if (channel === 'H5') {
       if (!canStartH5WechatPayment()) return
       const response = await createH5PlayerDeposit()
       if (!response.data?.h5Url || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')
@@ -99,7 +115,7 @@ async function submitWithDeposit() {
       // #endif
       return
     }
-    if (!isMpWeixin()) throw new Error('当前环境不支持微信支付')
+    if (channel !== 'MINIAPP' || !isMpWeixin()) throw new Error('当前环境不支持微信支付')
     const res = await createPlayerDeposit()
     const { timeStamp, nonceStr, package: pkg, signType, paySign } = res.data
     paymentNo = res.data.paymentNo

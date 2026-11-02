@@ -22,6 +22,8 @@ public class Payment extends BaseEntity {
     /** 余额充值赠送金额，支付单创建时锁定，避免后台改套餐影响历史订单。 */
     private BigDecimal rechargeBonus;
     private String payMethod;
+    /** 微信支付下单时使用的 AppID；与支付场景一起锁定，防止跨场景复用。 */
+    private String wxAppId;
     private String status;
     private String wxTransactionId;
     private String wxPrepayId;

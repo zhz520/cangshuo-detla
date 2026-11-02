@@ -67,7 +67,9 @@ public class DatabaseCompatibility {
             new AdditiveColumn("user", "password",
                     "ALTER TABLE `user` ADD COLUMN password VARCHAR(100) DEFAULT NULL"),
             new AdditiveColumn("user", "auth_version",
-                    "ALTER TABLE `user` ADD COLUMN auth_version BIGINT NOT NULL DEFAULT 0")
+                    "ALTER TABLE `user` ADD COLUMN auth_version BIGINT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("payment", "wx_app_id",
+                    "ALTER TABLE payment ADD COLUMN wx_app_id VARCHAR(64) DEFAULT NULL")
     );
 
     @PostConstruct

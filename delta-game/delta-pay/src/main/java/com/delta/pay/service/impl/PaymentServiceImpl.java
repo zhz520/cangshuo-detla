@@ -12,6 +12,7 @@ import com.delta.pay.entity.Payment;
 import com.delta.pay.mapper.PaymentMapper;
 import com.delta.pay.service.PaymentService;
 import com.delta.pay.service.TransactionService;
+import com.delta.pay.service.WechatPayScene;
 import com.delta.pay.config.WxPayConfiguration;
 import com.delta.order.service.OrderProgressService;
 import com.delta.product.entity.Product;
@@ -53,7 +54,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Payment createWxPayment(Long orderId, Long userId) {
+    public Payment createWxPayment(Long orderId, Long userId, WechatPayScene scene, String wxAppId) {
         Order order = orderService.getById(orderId);
         if (order == null) throw new BusinessException("订单不存在");
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
@@ -73,7 +74,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
         Payment existingPayment = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getOrderId, orderId)
-                .eq(Payment::getStatus, "PAYING"));
+                .eq(Payment::getStatus, "PAYING")
+                .eq(Payment::getPayMethod, scene.payMethod())
+                .eq(Payment::getWxAppId, normalizedAppId(wxAppId)));
         if (existingPayment != null) {
             return existingPayment;
         }
@@ -84,7 +87,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         payment.setUserId(userId);
         payment.setBizType("ORDER");
         payment.setAmount(order.getAmount());
-        payment.setPayMethod("WECHAT");
+        payment.setPayMethod(scene.payMethod());
+        payment.setWxAppId(normalizedAppId(wxAppId));
         payment.setStatus("PAYING");
         save(payment);
         return payment;
@@ -92,8 +96,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Payment createPlayerDepositPayment(Long userId) {
+    public Payment createPlayerDepositPayment(Long userId, WechatPayScene scene, String wxAppId) {
         lockUser(userId);
+        closeOtherPendingPlayerDeposits(userId, scene, wxAppId);
         BigDecimal amount = playerDepositRequiredAmount(userId);
         if(amount.signum()<=0) throw new BusinessException("当前无需缴纳打手押金");
         BigDecimal paid=playerDepositPaidAmount(userId);
@@ -104,6 +109,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 .eq(Payment::getBizType, "PLAYER_DEPOSIT")
                 .eq(Payment::getStatus, "PAYING")
                 .eq(Payment::getAmount, payable)
+                .eq(Payment::getPayMethod, scene.payMethod())
+                .eq(Payment::getWxAppId, normalizedAppId(wxAppId))
                 .last("LIMIT 1"));
         if (paying != null) return paying;
         Payment payment = new Payment();
@@ -112,7 +119,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         payment.setUserId(userId);
         payment.setBizType("PLAYER_DEPOSIT");
         payment.setAmount(payable);
-        payment.setPayMethod("WECHAT");
+        payment.setPayMethod(scene.payMethod());
+        payment.setWxAppId(normalizedAppId(wxAppId));
         payment.setStatus("PAYING");
         save(payment);
         return payment;
@@ -139,7 +147,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Payment createRechargePayment(String packageId, Long userId) {
+    public Payment createRechargePayment(String packageId, Long userId, WechatPayScene scene, String wxAppId) {
         lockUser(userId);
         RechargePackage rechargePackage = sysConfigService.getRechargePackages(true).stream()
                 .filter(item -> packageId != null && packageId.equals(item.getId()))
@@ -155,6 +163,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 .eq(Payment::getStatus, "PAYING")
                 .eq(Payment::getAmount, rechargePackage.getAmount())
                 .eq(Payment::getRechargeBonus, rechargePackage.getBonus())
+                .eq(Payment::getPayMethod, scene.payMethod())
+                .eq(Payment::getWxAppId, normalizedAppId(wxAppId))
                 .last("LIMIT 1"));
         if (existing != null) return existing;
 
@@ -165,7 +175,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         payment.setBizType("RECHARGE");
         payment.setAmount(rechargePackage.getAmount());
         payment.setRechargeBonus(rechargePackage.getBonus());
-        payment.setPayMethod("WECHAT");
+        payment.setPayMethod(scene.payMethod());
+        payment.setWxAppId(normalizedAppId(wxAppId));
         payment.setStatus("PAYING");
         save(payment);
         return payment;
@@ -198,7 +209,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             throw new BusinessException("订单已超时，请重新下单");
 
         com.delta.common.utils.Money.positive(order.getAmount());
-        if(count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING").eq(Payment::getPayMethod,"WECHAT"))>0)
+        if(count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING")
+                .in(Payment::getPayMethod,"WECHAT",WechatPayScene.MINIAPP.payMethod(),
+                        WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod()))>0)
             throw new BusinessException(409,"订单已发起微信支付，请关闭该笔微信支付后再使用余额");
         return doBalancePay(orderId, userId, order);
     }
@@ -282,7 +295,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         }
     }
 
-    private void applyVerifiedTransaction(Transaction transaction,WxPayConfiguration.CachedClients clients) {
+    void applyVerifiedTransaction(Transaction transaction,WxPayConfiguration.CachedClients clients) {
             String outTradeNo = transaction.getOutTradeNo();
             String transactionId = transaction.getTransactionId();
             Transaction.TradeStateEnum tradeState = transaction.getTradeState();
@@ -300,10 +313,13 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             if(payment.getOrderId()!=null) orderService.getById(payment.getOrderId()); else lockUser(payment.getUserId());
             payment=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getId,payment.getId()).last("FOR UPDATE"));
             var config=clients.getConfig();
-            if(!config.appId().equals(transaction.getAppid()) || !config.mchId().equals(transaction.getMchid())
+            String paymentAppId = payment.getWxAppId();
+            if(paymentAppId==null || paymentAppId.isBlank()) paymentAppId = legacyAppId(payment, config);
+            if(!isWechatPayment(payment) || paymentAppId==null || paymentAppId.isBlank()
+                    || !paymentAppId.equals(transaction.getAppid()) || !config.mchId().equals(transaction.getMchid())
                     || transaction.getAmount()==null || !"CNY".equals(transaction.getAmount().getCurrency())
                     || transaction.getAmount().getTotal()==null || transaction.getAmount().getTotal()!=com.delta.common.utils.Money.cents(payment.getAmount())
-                    || transactionId==null || transactionId.isBlank() || !"WECHAT".equals(payment.getPayMethod()))
+                    || transactionId==null || transactionId.isBlank())
                 throw new BusinessException("支付通知与本地支付单不一致");
             if("PAID".equals(payment.getStatus())) {
                 if(!transactionId.equals(payment.getWxTransactionId())) throw new BusinessException("支付交易号不一致");
@@ -322,6 +338,21 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 }
                 if(!OrderStatusEnum.PENDING_PAYMENT.name().equals(local.getStatus())) throw new BusinessException("订单状态异常，等待支付对账处理");
             } else if(!java.util.Set.of("RECHARGE","PLAYER_DEPOSIT").contains(payment.getBizType())) throw new BusinessException("支付业务类型无效");
+
+            if("PLAYER_DEPOSIT".equals(payment.getBizType())) {
+                BigDecimal required=playerDepositRequiredAmount(payment.getUserId());
+                BigDecimal alreadyPaid=playerDepositPaidAmount(payment.getUserId());
+                if(alreadyPaid.add(payment.getAmount()).compareTo(required)>0) {
+                    payment.setStatus("PAID");
+                    payment.setWxTransactionId(transactionId);
+                    payment.setPaidAt(LocalDateTime.now());
+                    updateById(payment);
+                    processRefund(payment,payment.getAmount(),"押金已足额或超额，自动原路退款",false);
+                    log.warn("打手押金超额自动退款: paymentId={}, userId={}, required={}, alreadyPaid={}, amount={}",
+                            payment.getId(),payment.getUserId(),required,alreadyPaid,payment.getAmount());
+                    return;
+                }
+            }
 
             payment.setStatus("PAID");
             payment.setWxTransactionId(transactionId);
@@ -394,7 +425,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             BigDecimal before=wallet.getBalance();wallet.setBalance(before.add(refundAmount));walletService.updateById(wallet);
             transactionService.record("REFUND","USER",payment.getUserId(),refundAmount,before,wallet.getBalance(),payment.getOrderId(),payment.getId(),null,"退款: "+reason);
             payment.setStatus("REFUNDED");payment.setRefundTime(LocalDateTime.now());
-        } else if("WECHAT".equals(payment.getPayMethod())) {
+        } else if(isWechatPayment(payment)) {
             // This row is a durable outbox. External calls happen only after the DB transaction commits.
             payment.setStatus("REFUNDING");
         } else throw new BusinessException("支付方式无效");
@@ -431,7 +462,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         Payment candidate=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getPaymentNo,paymentNo));
         if(candidate==null) throw new BusinessException("退款支付单不存在");
         Payment payment=lockPayment(candidate.getId());
-        if(!"WECHAT".equals(payment.getPayMethod()) || !java.util.Objects.equals(refundNo,payment.getRefundNo())
+        if(!isWechatPayment(payment) || !java.util.Objects.equals(refundNo,payment.getRefundNo())
                 || transactionId==null || !transactionId.equals(payment.getWxTransactionId()) || amount==null || payment.getRefundAmount()==null
                 || !"CNY".equals(amount.getCurrency()) || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
                 || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund()))
@@ -449,11 +480,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Transactional(rollbackFor=Exception.class)
     public void reconcilePayment(Long paymentId) {
         Payment payment=lockPayment(paymentId);
-        if(!"PAYING".equals(payment.getStatus()) || !"WECHAT".equals(payment.getPayMethod())) return;
+        if(!"PAYING".equals(payment.getStatus()) || !isWechatPayment(payment)) return;
         var clients=wxPayConfiguration.getClients();if(clients==null) return;
-        var query=new com.wechat.pay.java.service.payments.jsapi.model.QueryOrderByOutTradeNoRequest();query.setMchid(clients.getConfig().mchId());query.setOutTradeNo(payment.getPaymentNo());
-        Transaction transaction=clients.getJsapiService().queryOrderByOutTradeNo(query);
-        if(transaction.getTradeState()==Transaction.TradeStateEnum.SUCCESS) applyVerifiedTransaction(transaction,clients);
+        resolvePendingPayment(payment,clients,false);
     }
 
     @Override
@@ -461,19 +490,16 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     public boolean closeWxPayment(Long orderId,Long userId) {
         Order order=orderService.getById(orderId);
         if(order==null || !userId.equals(order.getUserId())) throw new BusinessException(404,"订单不存在");
-        var pending=list(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING").eq(Payment::getPayMethod,"WECHAT").last("FOR UPDATE"));
+        var pending=list(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAYING")
+                .in(Payment::getPayMethod,"WECHAT",WechatPayScene.MINIAPP.payMethod(),
+                        WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod()).last("FOR UPDATE"));
         if(pending.isEmpty()) return true;
         var clients=wxPayConfiguration.getClients();if(clients==null) throw new BusinessException(503,"暂时无法确认微信支付状态，请稍后重试");
         for(Payment payment:pending) {
-            try {
-                var query=new com.wechat.pay.java.service.payments.jsapi.model.QueryOrderByOutTradeNoRequest();query.setMchid(clients.getConfig().mchId());query.setOutTradeNo(payment.getPaymentNo());
-                var result=clients.getJsapiService().queryOrderByOutTradeNo(query);
-                if(result.getTradeState()==Transaction.TradeStateEnum.SUCCESS){applyVerifiedTransaction(result,clients);return false;}
-                var close=new com.wechat.pay.java.service.payments.jsapi.model.CloseOrderRequest();close.setMchid(clients.getConfig().mchId());close.setOutTradeNo(payment.getPaymentNo());clients.getJsapiService().closeOrder(close);
-            } catch(com.wechat.pay.java.core.exception.ServiceException e) {
-                if(!"ORDER_NOT_EXIST".equals(e.getErrorCode()) && !"RESOURCE_NOT_EXISTS".equals(e.getErrorCode())) throw new BusinessException(503,"暂时无法确认微信支付状态，请稍后重试");
-            }
-            Payment update=new Payment();update.setId(payment.getId());update.setStatus("CLOSED");updateById(update);
+            PendingPaymentResolution resolution=resolvePendingPayment(payment,clients,true);
+            if(resolution==PendingPaymentResolution.PAID) return false;
+            if(resolution==PendingPaymentResolution.PROCESSING)
+                throw new BusinessException(409,"微信支付正在处理中，请稍后刷新");
         }
         return true;
     }
@@ -494,6 +520,107 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 balanceBefore, wallet.getBalance(), null, payment.getId(), null,
                 "余额充值：充" + payment.getAmount().stripTrailingZeros().toPlainString()
                         + "送" + bonus.stripTrailingZeros().toPlainString());
+    }
+
+    private String normalizedAppId(String appId) {
+        if(appId==null || appId.isBlank()) throw new BusinessException(400,"微信支付 AppID 未配置");
+        return appId.trim();
+    }
+
+    private void closeOtherPendingPlayerDeposits(Long userId, WechatPayScene scene, String wxAppId) {
+        String targetAppId=normalizedAppId(wxAppId);
+        java.util.List<Payment> pending=list(new LambdaQueryWrapper<Payment>()
+                .eq(Payment::getUserId,userId)
+                .eq(Payment::getBizType,"PLAYER_DEPOSIT")
+                .eq(Payment::getStatus,"PAYING")
+                .last("FOR UPDATE"));
+        java.util.List<Payment> otherScenes=pending.stream().filter(payment ->
+                !scene.payMethod().equals(payment.getPayMethod()) || !targetAppId.equals(payment.getWxAppId()))
+                .toList();
+        if(otherScenes.isEmpty()) return;
+        var clients=wxPayConfiguration.getClients();
+        if(clients==null) throw new BusinessException(503,"暂时无法确认原押金支付状态，请稍后重试");
+        for(Payment payment:otherScenes) {
+            PendingPaymentResolution resolution=resolvePendingPayment(payment,clients,true);
+            if(resolution==PendingPaymentResolution.PAID)
+                throw new BusinessException(409,"押金已支付，请刷新状态");
+            if(resolution==PendingPaymentResolution.PROCESSING)
+                throw new BusinessException(409,"原押金支付正在处理中，请稍后刷新");
+        }
+    }
+
+    enum PendingPaymentResolution { PAID, CLOSED, PROCESSING }
+
+    PendingPaymentResolution resolvePendingPayment(Payment payment, WxPayConfiguration.CachedClients clients,
+                                                   boolean closeUnpaid) {
+        Transaction result;
+        try {
+            var query=new com.wechat.pay.java.service.payments.jsapi.model.QueryOrderByOutTradeNoRequest();
+            query.setMchid(clients.getConfig().mchId());
+            query.setOutTradeNo(payment.getPaymentNo());
+            result=clients.getJsapiService().queryOrderByOutTradeNo(query);
+        } catch(com.wechat.pay.java.core.exception.ServiceException error) {
+            if(remoteOrderAbsentOrClosed(error)) {
+                markPaymentClosed(payment.getId());
+                return PendingPaymentResolution.CLOSED;
+            }
+            throw new BusinessException(503,"暂时无法确认微信支付状态，请稍后重试");
+        }
+        Transaction.TradeStateEnum state=result==null ? null : result.getTradeState();
+        if(state==null) throw new BusinessException(503,"微信支付状态暂不可确认，请稍后重试");
+        if(state==Transaction.TradeStateEnum.SUCCESS) {
+            applyVerifiedTransaction(result,clients);
+            return PendingPaymentResolution.PAID;
+        }
+        if(state==Transaction.TradeStateEnum.CLOSED || state==Transaction.TradeStateEnum.REVOKED
+                || state==Transaction.TradeStateEnum.PAYERROR || state==Transaction.TradeStateEnum.REFUND) {
+            markPaymentClosed(payment.getId());
+            return PendingPaymentResolution.CLOSED;
+        }
+        if(state==Transaction.TradeStateEnum.USERPAYING || state==Transaction.TradeStateEnum.ACCEPT)
+            return PendingPaymentResolution.PROCESSING;
+        if(state!=Transaction.TradeStateEnum.NOTPAY)
+            throw new BusinessException(503,"微信支付状态暂不可确认，请稍后重试");
+        if(!closeUnpaid) return PendingPaymentResolution.PROCESSING;
+        try {
+            var close=new com.wechat.pay.java.service.payments.jsapi.model.CloseOrderRequest();
+            close.setMchid(clients.getConfig().mchId());
+            close.setOutTradeNo(payment.getPaymentNo());
+            clients.getJsapiService().closeOrder(close);
+        } catch(com.wechat.pay.java.core.exception.ServiceException error) {
+            if(!remoteOrderAbsentOrClosed(error)) {
+                if("ORDERPAID".equals(error.getErrorCode()))
+                    throw new BusinessException(409,"微信支付可能已完成，请稍后刷新");
+                throw new BusinessException(503,"暂时无法关闭微信支付，请稍后重试");
+            }
+        }
+        markPaymentClosed(payment.getId());
+        return PendingPaymentResolution.CLOSED;
+    }
+
+    private boolean remoteOrderAbsentOrClosed(com.wechat.pay.java.core.exception.ServiceException error) {
+        return "ORDER_NOT_EXIST".equals(error.getErrorCode()) || "RESOURCE_NOT_EXISTS".equals(error.getErrorCode())
+                || "ORDER_CLOSED".equals(error.getErrorCode());
+    }
+
+    private void markPaymentClosed(Long paymentId) {
+        Payment update=new Payment();
+        update.setId(paymentId);
+        update.setStatus("CLOSED");
+        updateById(update);
+    }
+
+    private boolean isWechatPayment(Payment payment) {
+        return "WECHAT".equals(payment.getPayMethod())
+                || java.util.Set.of(WechatPayScene.MINIAPP.payMethod(),WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),
+                        WechatPayScene.H5.payMethod()).contains(payment.getPayMethod());
+    }
+
+    private String legacyAppId(Payment payment, WxPayConfiguration.RuntimeConfig config) {
+        if(WechatPayScene.OFFICIAL_ACCOUNT.payMethod().equals(payment.getPayMethod())) {
+            return sysConfigService.getConfigValue("wx.pay.official-appid", "").trim();
+        }
+        return config.appId();
     }
 
     private void lockUser(Long userId) {

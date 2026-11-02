@@ -11,8 +11,11 @@ import com.delta.pay.entity.Payment;
 import com.delta.pay.entity.Transaction;
 import com.delta.pay.service.PaymentService;
 import com.delta.pay.service.TransactionService;
+import com.delta.pay.service.WechatOfficialPayService;
+import com.delta.pay.service.WechatPayScene;
 import com.delta.order.entity.Order;
 import com.delta.order.service.OrderService;
+import com.delta.system.service.SysConfigService;
 import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
 import com.wechat.pay.java.core.exception.ServiceException;
@@ -30,6 +33,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -52,26 +58,29 @@ public class PayController {
     private final WxPayConfiguration wxPayConfiguration;
     private final UserService userService;
     private final CrossModuleMapper crossModuleMapper;
+    private final WechatOfficialPayService officialPay;
+    private final SysConfigService sysConfigService;
 
     @Value("${wx.pay.key-store-path:/www/data/private/wxpay}")
     private String uploadPath;
 
     @PostMapping("/wx/{orderId}")
     public R<Map<String, String>> wxPay(@PathVariable Long orderId) {
+        if (!channelEnabled("wx.pay.miniapp-enabled")) return R.fail(403, "小程序支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，请使用余额支付或联系管理员配置支付证书");
         }
 
         Long userId = SecurityUtils.getUserId();
-        Payment payment = paymentService.createWxPayment(orderId, userId);
+        Payment payment = paymentService.createWxPayment(orderId, userId, WechatPayScene.MINIAPP, clients.getConfig().appId());
 
         User user = userService.getById(userId);
         Order order = orderService.getById(orderId);
         String description = (order != null && order.getProductName() != null && !order.getProductName().isEmpty())
                 ? order.getProductName() : "订单支付";
         try {
-            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
+            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(), clients.getConfig().appId(),
                     payment, user.getOpenid(), description);
 
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
@@ -99,18 +108,19 @@ public class PayController {
     /** 小程序余额充值，充值套餐由后台配置，支付金额只取实际充值金额。 */
     @PostMapping("/recharge/wx/{packageId}")
     public R<Map<String, String>> rechargeWxPay(@PathVariable String packageId) {
+        if (!channelEnabled("wx.pay.miniapp-enabled")) return R.fail(403, "小程序支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，暂无法充值");
         }
         Long userId = SecurityUtils.getUserId();
-        Payment payment = paymentService.createRechargePayment(packageId, userId);
+        Payment payment = paymentService.createRechargePayment(packageId, userId, WechatPayScene.MINIAPP, clients.getConfig().appId());
         User user = userService.getById(userId);
         if (user == null || user.getOpenid() == null || user.getOpenid().isBlank()) {
             return R.fail("用户信息不完整，无法发起支付");
         }
         try {
-            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
+            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(), clients.getConfig().appId(),
                     payment, user.getOpenid(), "余额充值");
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
             paymentService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>().eq(Payment::getId,payment.getId()).set(Payment::getWxPrepayId,payment.getWxPrepayId()));
@@ -134,11 +144,12 @@ public class PayController {
     /** H5 余额充值，供浏览器端复用同一充值套餐。 */
     @PostMapping("/recharge/h5/{packageId}")
     public R<Map<String, String>> rechargeH5Pay(@PathVariable String packageId, HttpServletRequest httpRequest) {
+        if (!channelEnabled("wx.pay.h5-enabled")) return R.fail(403, "微信外 H5 支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，暂无法充值");
         }
-        Payment payment = paymentService.createRechargePayment(packageId, SecurityUtils.getUserId());
+        Payment payment = paymentService.createRechargePayment(packageId, SecurityUtils.getUserId(), WechatPayScene.H5, clients.getConfig().appId());
         try {
             com.wechat.pay.java.service.payments.h5.model.PrepayRequest request =
                     new com.wechat.pay.java.service.payments.h5.model.PrepayRequest();
@@ -175,13 +186,14 @@ public class PayController {
      */
     @PostMapping("/h5/{orderId}")
     public R<Map<String, String>> h5Pay(@PathVariable Long orderId, HttpServletRequest httpRequest) {
+        if (!channelEnabled("wx.pay.h5-enabled")) return R.fail(403, "微信外 H5 支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，请使用余额支付或联系管理员配置支付证书");
         }
 
         Long userId = SecurityUtils.getUserId();
-        Payment payment = paymentService.createWxPayment(orderId, userId);
+        Payment payment = paymentService.createWxPayment(orderId, userId, WechatPayScene.H5, clients.getConfig().appId());
         Order order = orderService.getById(orderId);
         String description = order != null && order.getProductName() != null && !order.getProductName().isBlank()
                 ? order.getProductName() : "订单支付";
@@ -226,6 +238,96 @@ public class PayController {
         }
     }
 
+    /** 微信内置浏览器公众号支付：返回网页授权地址，授权回调页直接调起 JSAPI。 */
+    @PostMapping("/wx/official/{orderId}")
+    public R<Map<String, String>> officialPay(@PathVariable Long orderId) {
+        WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
+        if (!wxPayConfiguration.isEnabled() || clients == null) return R.fail("微信支付未启用，请使用余额支付或联系管理员配置支付证书");
+        if (!officialPay.runtime().ready()) return R.fail("微信公众号支付尚未启用或配置不完整");
+        Long userId = SecurityUtils.getUserId();
+        Payment payment = paymentService.createWxPayment(orderId, userId, WechatPayScene.OFFICIAL_ACCOUNT, officialPay.runtime().appId());
+        String authorizeUrl = officialPay.authorizationUrl(payment.getPaymentNo(), userId, "ORDER", "/pages/order/detail?id=" + orderId);
+        return R.ok(Map.of("authorizeUrl", authorizeUrl, "paymentNo", payment.getPaymentNo()));
+    }
+
+    /** 微信内置浏览器公众号余额充值。 */
+    @PostMapping("/recharge/official/{packageId}")
+    public R<Map<String, String>> rechargeOfficialPay(@PathVariable String packageId) {
+        WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
+        if (!wxPayConfiguration.isEnabled() || clients == null) return R.fail("微信支付未启用，暂无法充值");
+        if (!officialPay.runtime().ready()) return R.fail("微信公众号支付尚未启用或配置不完整");
+        Long userId = SecurityUtils.getUserId();
+        Payment payment = paymentService.createRechargePayment(packageId, userId, WechatPayScene.OFFICIAL_ACCOUNT, officialPay.runtime().appId());
+        String authorizeUrl = officialPay.authorizationUrl(payment.getPaymentNo(), userId, "RECHARGE", "/pages/wallet/index");
+        return R.ok(Map.of("authorizeUrl", authorizeUrl, "paymentNo", payment.getPaymentNo()));
+    }
+
+    /** 微信内置浏览器公众号支付补交打手押金。 */
+    @PostMapping("/player-deposit/official")
+    public R<Map<String, String>> playerDepositOfficial(@RequestBody(required = false) Map<String, String> body) {
+        WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
+        if (!wxPayConfiguration.isEnabled() || clients == null) return R.fail("微信支付未启用，暂无法支付押金");
+        if (!officialPay.runtime().ready()) return R.fail("微信公众号支付尚未启用或配置不完整");
+        Long actorId = SecurityUtils.getUserId();
+        Long userId = "PLAYER".equals(SecurityUtils.getUserType()) ? crossModuleMapper.selectUserIdByPlayerId(actorId) : actorId;
+        if (userId == null) return R.fail("未找到押金所属用户");
+        Payment payment = paymentService.createPlayerDepositPayment(userId, WechatPayScene.OFFICIAL_ACCOUNT, officialPay.runtime().appId());
+        String scene = body == null ? "" : String.valueOf(body.getOrDefault("scene", ""));
+        String returnPath = "WITHDRAW".equals(scene) ? "/pages-player/withdraw/index" : "/pages-player/apply/index?depositReturn=1";
+        return R.ok(Map.of(
+                "authorizeUrl", officialPay.authorizationUrl(payment.getPaymentNo(), userId, "PLAYER_DEPOSIT", returnPath),
+                "paymentNo", payment.getPaymentNo()));
+    }
+
+    /** 微信网页授权回调页。页面本身由微信内置浏览器打开，不通过 Bearer 鉴权。 */
+    @GetMapping("/wx/official/callback")
+    public ResponseEntity<String> officialPayCallback(@RequestParam(required = false) String code,
+                                                       @RequestParam(required = false) String state) {
+        WechatOfficialPayService.OAuthIdentity identity = null;
+        try {
+            identity = officialPay.exchange(code, state);
+            Payment payment = paymentService.getOne(new LambdaQueryWrapper<Payment>()
+                    .eq(Payment::getPaymentNo, identity.state().paymentNo()).last("LIMIT 1"));
+            if (payment == null || !identity.state().userId().equals(payment.getUserId()) || !"PAYING".equals(payment.getStatus())) {
+                throw new RuntimeException("payment state mismatch");
+            }
+            if (!identity.state().kind().equals(payment.getBizType())) throw new RuntimeException("payment kind mismatch");
+            WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
+            if (!wxPayConfiguration.isEnabled() || clients == null) throw new RuntimeException("payment disabled");
+            WechatOfficialPayService.RuntimeConfig official = officialPay.runtime();
+            if (!WechatPayScene.OFFICIAL_ACCOUNT.payMethod().equals(payment.getPayMethod())
+                    || payment.getWxAppId() == null || !official.appId().equals(payment.getWxAppId())) {
+                throw new RuntimeException("payment channel mismatch");
+            }
+            String description = switch (payment.getBizType()) {
+                case "ORDER" -> {
+                    Order order = orderService.getById(payment.getOrderId());
+                    if (order == null || !payment.getUserId().equals(order.getUserId())) throw new RuntimeException("order mismatch");
+                    yield order.getProductName() == null || order.getProductName().isBlank() ? "订单支付" : order.getProductName();
+                }
+                case "RECHARGE" -> "余额充值";
+                case "PLAYER_DEPOSIT" -> "打手押金";
+                default -> throw new RuntimeException("unsupported payment type");
+            };
+            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
+                    official.appId(), payment, identity.openid(), description);
+            Map<String, String> params = paymentParams(response);
+            paymentService.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>()
+                    .eq(Payment::getId, payment.getId()).set(Payment::getWxPrepayId,
+                            response.getPackageVal().replace("prepay_id=", "")));
+            String returnUrl = returnUrl(identity.state());
+            return html(officialPay.paymentPage(official.appId(), params, returnUrl));
+        } catch (Exception error) {
+            log.error("微信公众号支付授权回调失败", error);
+            String returnUrl = identity == null ? "" : returnUrl(identity.state());
+            return ResponseEntity.badRequest().contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                    .cacheControl(CacheControl.noStore())
+                    .header("Content-Security-Policy", "default-src 'self' 'unsafe-inline'")
+                    .header("Referrer-Policy", "no-referrer")
+                    .body(officialPay.errorPage("微信支付授权失败，请返回订单重新发起支付。", returnUrl));
+        }
+    }
+
     @PostMapping("/balance/{orderId}")
     public R<Payment> balancePay(@PathVariable Long orderId) {
         if(!paymentService.closeWxPayment(orderId,SecurityUtils.getUserId())) return R.fail(4010,"该订单已通过微信支付，请刷新订单");
@@ -235,6 +337,7 @@ public class PayController {
     /** 打手入驻押金支付（金额来自 sys_config: player.deposit_amount），返回支付参数及paymentNo供提交申请时校验 */
     @PostMapping("/player-deposit")
     public R<Map<String, Object>> playerDeposit() {
+        if (!channelEnabled("wx.pay.miniapp-enabled")) return R.fail(403, "小程序支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，暂无法支付押金");
@@ -243,13 +346,13 @@ public class PayController {
         Long actorId = SecurityUtils.getUserId();
         Long userId = "PLAYER".equals(SecurityUtils.getUserType()) ? crossModuleMapper.selectUserIdByPlayerId(actorId) : actorId;
         if(userId==null) return R.fail("未找到押金所属用户");
-        Payment payment = paymentService.createPlayerDepositPayment(userId);
+        Payment payment = paymentService.createPlayerDepositPayment(userId, WechatPayScene.MINIAPP, clients.getConfig().appId());
         User user = userService.getById(userId);
         if (user == null || user.getOpenid() == null) {
             return R.fail("用户信息不完整，无法发起支付");
         }
         try {
-            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(),
+            PrepayWithRequestPaymentResponse response = createPrepayOrder(clients.getJsapiService(), clients.getConfig(), clients.getConfig().appId(),
                     payment, user.getOpenid(), "打手入驻押金");
             payment.setWxPrepayId(response.getPackageVal().replace("prepay_id=", ""));
             paymentService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>().eq(Payment::getId,payment.getId()).set(Payment::getWxPrepayId,payment.getWxPrepayId()));
@@ -273,6 +376,7 @@ public class PayController {
     /** 浏览器押金支付复用押金支付单、服务端金额计算及微信验签回调。 */
     @PostMapping("/player-deposit/h5")
     public R<Map<String, String>> playerDepositH5(HttpServletRequest httpRequest) {
+        if (!channelEnabled("wx.pay.h5-enabled")) return R.fail(403, "微信外 H5 支付已关闭");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
         if (!wxPayConfiguration.isEnabled() || clients == null) {
             return R.fail("微信支付未启用，暂无法支付押金");
@@ -281,7 +385,7 @@ public class PayController {
         Long userId = "PLAYER".equals(SecurityUtils.getUserType())
                 ? crossModuleMapper.selectUserIdByPlayerId(actorId) : actorId;
         if (userId == null) return R.fail("未找到押金所属用户");
-        Payment payment = paymentService.createPlayerDepositPayment(userId);
+        Payment payment = paymentService.createPlayerDepositPayment(userId, WechatPayScene.H5, clients.getConfig().appId());
         try {
             com.wechat.pay.java.service.payments.h5.model.PrepayRequest request =
                     new com.wechat.pay.java.service.payments.h5.model.PrepayRequest();
@@ -353,11 +457,12 @@ public class PayController {
 
     private PrepayWithRequestPaymentResponse createPrepayOrder(JsapiServiceExtension jsapiServiceExtension,
                                                                WxPayConfiguration.RuntimeConfig wxPayConfiguration,
+                                                               String appId,
                                                                Payment payment,
                                                                String openid,
                                                                String description) {
         PrepayRequest request = new PrepayRequest();
-        request.setAppid(wxPayConfiguration.appId());
+        request.setAppid(appId);
         request.setMchid(wxPayConfiguration.mchId());
         request.setDescription(description);
         request.setOutTradeNo(payment.getPaymentNo());
@@ -373,6 +478,28 @@ public class PayController {
         request.setPayer(payer);
 
         return jsapiServiceExtension.prepayWithRequestPayment(request);
+    }
+
+    private Map<String, String> paymentParams(PrepayWithRequestPaymentResponse response) {
+        Map<String, String> params = new HashMap<>();
+        params.put("timeStamp", response.getTimeStamp());
+        params.put("nonceStr", response.getNonceStr());
+        params.put("package", response.getPackageVal());
+        params.put("signType", response.getSignType());
+        params.put("paySign", response.getPaySign());
+        return params;
+    }
+
+    private String returnUrl(WechatOfficialPayService.CallbackState state) {
+        return state.returnOrigin() + "/#" + state.returnPath();
+    }
+
+    private ResponseEntity<String> html(String body) {
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                .cacheControl(CacheControl.noStore())
+                .header("Content-Security-Policy", "default-src 'self' 'unsafe-inline'")
+                .header("Referrer-Policy", "no-referrer")
+                .body(body);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -414,5 +541,10 @@ public class PayController {
         }
         String realIp = request.getHeader("X-Real-IP");
         return realIp == null || realIp.isBlank() ? request.getRemoteAddr() : realIp;
+    }
+
+    private boolean channelEnabled(String configKey) {
+        String value = sysConfigService.getConfigValue(configKey, "true");
+        return value == null || value.isBlank() || Boolean.parseBoolean(value);
     }
 }

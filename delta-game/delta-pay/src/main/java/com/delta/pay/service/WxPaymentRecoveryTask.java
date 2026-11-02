@@ -28,7 +28,10 @@ public class WxPaymentRecoveryTask {
         if(!configuration.isEnabled()) return;
         var clients=configuration.getClients();if(clients==null || !redis.tryLock("task:wx-payment-recovery",5,TimeUnit.MINUTES)) return;
         try {
-            for(Payment payment:payments.list(new LambdaQueryWrapper<Payment>().eq(Payment::getStatus,"REFUNDING").eq(Payment::getPayMethod,"WECHAT").orderByAsc(Payment::getUpdatedAt).last("LIMIT 20"))) {
+            for(Payment payment:payments.list(new LambdaQueryWrapper<Payment>().eq(Payment::getStatus,"REFUNDING")
+                    .in(Payment::getPayMethod,"WECHAT",WechatPayScene.MINIAPP.payMethod(),
+                            WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod())
+                    .orderByAsc(Payment::getUpdatedAt).last("LIMIT 20"))) {
                 try {
                     QueryByOutRefundNoRequest query=new QueryByOutRefundNoRequest();query.setOutRefundNo(payment.getRefundNo());
                     Refund result;
@@ -45,7 +48,11 @@ public class WxPaymentRecoveryTask {
                     payments.acceptRefundResult(result);
                 } catch(Exception e){log.error("微信退款待恢复: paymentId={}",payment.getId(),e);}
             }
-            for(Payment payment:payments.list(new LambdaQueryWrapper<Payment>().eq(Payment::getStatus,"PAYING").eq(Payment::getPayMethod,"WECHAT").lt(Payment::getCreatedAt,java.time.LocalDateTime.now().minusMinutes(1)).orderByAsc(Payment::getUpdatedAt).last("LIMIT 20"))) {
+            for(Payment payment:payments.list(new LambdaQueryWrapper<Payment>().eq(Payment::getStatus,"PAYING")
+                    .in(Payment::getPayMethod,"WECHAT",WechatPayScene.MINIAPP.payMethod(),
+                            WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod())
+                    .lt(Payment::getCreatedAt,java.time.LocalDateTime.now().minusMinutes(1))
+                    .orderByAsc(Payment::getUpdatedAt).last("LIMIT 20"))) {
                 try{payments.reconcilePayment(payment.getId());}catch(Exception e){log.error("微信支付待对账: paymentId={}",payment.getId(),e);}
             }
         } finally {redis.unlock("task:wx-payment-recovery");}

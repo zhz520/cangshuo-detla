@@ -6,6 +6,7 @@ import com.delta.common.security.service.TokenService;
 import com.delta.common.security.service.VerificationService;
 import com.delta.order.service.OrderService;
 import com.delta.pay.service.PaymentService;
+import com.delta.pay.service.WechatOfficialPayService;
 import com.delta.pay.controller.PayController;
 import com.delta.pay.config.WxPayConfiguration;
 import com.delta.player.controller.PlayerHomeController;
@@ -65,6 +66,7 @@ class PlayerBusinessRegressionTest {
     @MockBean org.springframework.data.redis.core.StringRedisTemplate strings;
     @MockBean ChatSessionService chats;
     @MockBean PaymentService payments;
+    @MockBean WechatOfficialPayService officialPay;
     @MockBean WxPayConfiguration wxPayConfiguration;
 
     @BeforeEach void withdrawalFixtures() {

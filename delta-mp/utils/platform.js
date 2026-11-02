@@ -37,3 +37,26 @@ export function canStartH5WechatPayment() {
   uni.showModal({ title: '支付提示', content: message, showCancel: false, confirmText: '我知道了' })
   return false
 }
+
+/**
+ * 选择当前环境可用的微信支付通道。
+ * 小程序使用小程序 JSAPI；微信内置浏览器使用公众号 JSAPI；普通手机浏览器使用 H5 支付。
+ */
+export function wechatPayChannel({ miniappEnabled = true, h5Enabled = true, officialEnabled = false } = {}) {
+  return resolveWechatPayChannel({
+    miniapp: isMpWeixin(),
+    web: isH5(),
+    inWechat: isWechatBrowser(),
+    mobile: isMobileBrowser(),
+    miniappEnabled,
+    h5Enabled,
+    officialEnabled
+  })
+}
+
+export function resolveWechatPayChannel({ miniapp, web, inWechat, mobile, miniappEnabled, h5Enabled, officialEnabled }) {
+  if (miniapp) return miniappEnabled ? 'MINIAPP' : null
+  if (!web) return null
+  if (inWechat) return officialEnabled && mobile ? 'OFFICIAL' : null
+  return h5Enabled ? 'H5' : null
+}

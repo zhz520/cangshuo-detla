@@ -5,6 +5,8 @@
       <el-tabs v-model="activeGroup" v-if="groupNames.length > 1">
         <el-tab-pane v-for="g in groupNames" :key="g" :label="g" :name="g" />
       </el-tabs>
+      <el-alert v-if="activeGroup === '微信支付配置'" title="公众号支付配置提醒" type="info" :closable="false" show-icon
+        description="公众号支付仅用于微信内置浏览器。公众平台需配置网页授权域名；微信支付商户平台需配置 JSAPI 支付授权目录（当前程序为 /api/pay/wx/official/）。小程序 AppID 与公众号 AppID 分开填写，不能混用 OpenID。" />
       <el-form v-loading="loading" label-width="200px" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
           <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>
@@ -51,7 +53,7 @@ import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 const loading = ref(false), submitting = ref(false)
-function isSecretKey(key){return ['wx.pay.api-v3-key','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
+function isSecretKey(key){return ['wx.pay.api-v3-key','wx.pay.official-appsecret','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
 const visibleConfigList = computed(() => configList.value.filter(c => !['wallet.recharge.packages','features.reward_grab','player.deposit_required'].includes(c.configKey) && !c.configKey.startsWith('email.notifications.') && (c.configGroup !== '公众号通知' || enabledPlatformFeatures.value?.has('official_wechat_notifications'))))
