@@ -55,7 +55,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import PageState from '@/components/PageState.vue'
 import { applyWithdraw, getAccountList, getEarningsSummary, getWithdrawDepositStatus } from '@/api/player'
 import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
-import { isH5, wechatPayChannel } from '@/utils/platform'
+import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 import { useSiteStore } from '@/store/site'
 
 const balance = ref('0.00')
@@ -94,14 +94,14 @@ async function payDeposit(){
       officialEnabled: siteStore.wxPayOfficialEnabled
     }) : null
     if (!channel) throw new Error('未启用可用的微信支付方式')
+    if (showWechatPaymentEnvironmentPrompt(channel)) return
     if (channel === 'OFFICIAL') {
       const result = await createOfficialPlayerDeposit({ scene: 'WITHDRAW', role: 'player' })
-      if (!result.data?.authorizeUrl) throw new Error('未获取到公众号支付授权地址')
+      if (!result.data?.authorizeUrl) throw new Error('未获取到微信支付授权地址')
       window.location.assign(result.data.authorizeUrl)
       return
     }
     if (channel === 'H5') {
-      if (!isH5()) throw new Error('H5 支付请在网页中继续')
       const result = await createH5PlayerDeposit({role:'player'})
       if (!result.data?.h5Url) throw new Error('未获取到支付地址')
       // #ifdef H5

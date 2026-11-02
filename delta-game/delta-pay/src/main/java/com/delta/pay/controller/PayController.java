@@ -19,6 +19,7 @@ import com.delta.system.service.SysConfigService;
 import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
 import com.wechat.pay.java.core.exception.ServiceException;
+import com.wechat.pay.java.core.exception.ValidationException;
 import com.wechat.pay.java.service.payments.h5.H5Service;
 import com.wechat.pay.java.service.payments.h5.model.H5Info;
 import com.wechat.pay.java.service.payments.h5.model.PrepayResponse;
@@ -321,6 +322,15 @@ public class PayController {
                             response.getPackageVal().replace("prepay_id=", "")));
             String returnUrl = returnUrl(identity.state());
             return html(officialPay.paymentPage(official.appId(), params, returnUrl));
+        } catch (ValidationException error) {
+            log.error("微信支付应答验签失败，请从商户 {} 的商户平台重新下载微信支付公钥和公钥 ID",
+                    wxPayConfiguration.getRuntimeConfig().mchId(), error);
+            String returnUrl = identity == null ? "" : returnUrl(identity.state());
+            return ResponseEntity.status(503).contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                    .cacheControl(CacheControl.noStore())
+                    .header("Content-Security-Policy", "default-src 'self' 'unsafe-inline'")
+                    .header("Referrer-Policy", "no-referrer")
+                    .body(officialPay.errorPage("微信支付配置校验失败，请联系管理员处理。", returnUrl));
         } catch (Exception error) {
             log.error("微信公众号支付授权回调失败", error);
             String returnUrl = identity == null ? "" : returnUrl(identity.state());
@@ -328,7 +338,7 @@ public class PayController {
                     .cacheControl(CacheControl.noStore())
                     .header("Content-Security-Policy", "default-src 'self' 'unsafe-inline'")
                     .header("Referrer-Policy", "no-referrer")
-                    .body(officialPay.errorPage("微信支付授权失败，请返回订单重新发起支付。", returnUrl));
+                    .body(officialPay.errorPage("微信支付暂时不可用，请返回订单重试或联系客服。", returnUrl));
         }
     }
 

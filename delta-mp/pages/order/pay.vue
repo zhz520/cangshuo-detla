@@ -33,12 +33,11 @@ import { getSiteConfig } from '@/api/config'
 import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
-import { isH5, wechatPayChannel } from '@/utils/platform'
+import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 
 const orderId = ref(0)
 const amount = ref(0)
 const canUseWechatPay = ref(false)
-const wechatChannel = ref('')
 const payType = ref('BALANCE')
 const walletBalance = ref('0.00')
 const countdown = ref(0)
@@ -50,7 +49,7 @@ const formatCountdown = computed(() => {
   const s = countdown.value % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
-const wechatPayLabel = computed(() => ({ MINIAPP: '微信小程序支付', OFFICIAL: '微信公众号支付', H5: '微信 H5 支付' }[wechatChannel.value] || '微信支付'))
+const wechatPayLabel = '微信支付'
 
 onLoad(async (opts) => {
   orderId.value = opts.orderId
@@ -59,12 +58,12 @@ onLoad(async (opts) => {
   try {
     const siteRes = await getSiteConfig()
     const enabled = siteRes.data?.wx_pay_enabled === 'true'
-    wechatChannel.value = enabled ? wechatPayChannel({
+    const channel = enabled ? wechatPayChannel({
       miniappEnabled: siteRes.data?.wx_pay_miniapp_enabled !== 'false',
       h5Enabled: siteRes.data?.wx_pay_h5_enabled !== 'false',
       officialEnabled: siteRes.data?.wx_pay_official_enabled === 'true'
     }) : ''
-    canUseWechatPay.value = Boolean(wechatChannel.value)
+    canUseWechatPay.value = Boolean(channel)
     if (canUseWechatPay.value) payType.value = 'WECHAT'
   } catch (e) { /* 微信支付未配置时默认使用余额支付 */ }
 
@@ -156,16 +155,14 @@ async function handlePay() {
         h5Enabled: site.wx_pay_h5_enabled !== 'false',
         officialEnabled: site.wx_pay_official_enabled === 'true'
       })
-      wechatChannel.value = channel || ''
+      if (showWechatPaymentEnvironmentPrompt(channel)) return
       if (channel === 'OFFICIAL') {
-        if (!isH5()) return uni.showToast({ title: '公众号支付请在网页中继续', icon: 'none' })
         const res = await createOfficialPayment(orderId.value)
-        if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到公众号支付授权地址', icon: 'none' })
+        if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到微信支付授权地址', icon: 'none' })
         window.location.assign(res.data.authorizeUrl)
         return
       }
       if (channel === 'H5') {
-        if (!isH5()) return uni.showToast({ title: 'H5 支付请在网页中继续', icon: 'none' })
         const res = await createH5Payment(orderId.value)
         const h5Url = res.data?.h5Url
         if (!h5Url) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
@@ -194,6 +191,8 @@ async function handlePay() {
   } catch (e) {
     if (e && e.code === 4010) {
       handleAlreadyPaid()
+    } else {
+      uni.showToast({ title: e?.data?.msg || e?.msg || e?.message || '支付失败，请稍后重试', icon: 'none' })
     }
   }
 }

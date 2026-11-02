@@ -22,33 +22,26 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getRechargePackages, getSiteConfig } from '@/api/config'
 import { createH5RechargePayment, createOfficialRechargePayment, createRechargePayment } from '@/api/pay'
-import { isH5, wechatPayChannel } from '@/utils/platform'
+import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 import EmptyState from '@/components/EmptyState.vue'
 
 const packages = ref([])
 const selected = ref(null)
 const loading = ref(false)
 const paying = ref(false)
-const wechatChannel = ref('')
-const payButtonText = computed(() => ({ MINIAPP: '小程序微信支付充值', OFFICIAL: '公众号支付充值', H5: '微信 H5 支付充值' }[wechatChannel.value] || '微信支付充值'))
+const payButtonText = '微信支付充值'
 function money(value) { return Number(value || 0).toFixed(2) }
 
 onLoad(async () => {
   loading.value = true
   try {
-    const [res, siteRes] = await Promise.all([getRechargePackages(), getSiteConfig()])
+    const res = await getRechargePackages()
     packages.value = res.data || []
     selected.value = packages.value[0] || null
-    const site = siteRes.data || {}
-    wechatChannel.value = site.wx_pay_enabled === 'true' ? wechatPayChannel({
-      miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
-      h5Enabled: site.wx_pay_h5_enabled !== 'false',
-      officialEnabled: site.wx_pay_official_enabled === 'true'
-    }) || '' : ''
   } finally { loading.value = false }
 })
 
@@ -62,17 +55,15 @@ async function pay() {
       h5Enabled: site.wx_pay_h5_enabled !== 'false',
       officialEnabled: site.wx_pay_official_enabled === 'true'
     }) : null
-    wechatChannel.value = channel || ''
     if (!channel) return uni.showToast({ title: '未启用可用的微信支付方式', icon: 'none' })
+    if (showWechatPaymentEnvironmentPrompt(channel)) return
     if (channel === 'OFFICIAL') {
-      if (!isH5()) return uni.showToast({ title: '公众号支付请在网页中继续', icon: 'none' })
       const res = await createOfficialRechargePayment(selected.value.id)
-      if (!res.data?.authorizeUrl) throw new Error('未获取到公众号支付授权地址')
+      if (!res.data?.authorizeUrl) throw new Error('未获取到微信支付授权地址')
       window.location.assign(res.data.authorizeUrl)
       return
     }
     if (channel === 'H5') {
-      if (!isH5()) return uni.showToast({ title: 'H5 支付请在网页中继续', icon: 'none' })
       const res = await createH5RechargePayment(selected.value.id)
       if (!res.data?.h5Url) throw new Error('未获取到微信支付地址')
       window.location.assign(res.data.h5Url)

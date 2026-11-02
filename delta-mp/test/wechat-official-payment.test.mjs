@@ -12,7 +12,7 @@ test('official-account pay is exposed for orders, recharge and player deposits',
 
   const order = await read('../pages/order/pay.vue')
   assert.match(order, /channel === 'OFFICIAL'[\s\S]*createOfficialPayment[\s\S]*authorizeUrl/)
-  assert.match(order, /微信公众号支付/)
+  assert.match(order, /const wechatPayLabel = '微信支付'/)
 
   const recharge = await read('../pages/wallet/recharge.vue')
   assert.match(recharge, /channel === 'OFFICIAL'[\s\S]*createOfficialRechargePayment/)
