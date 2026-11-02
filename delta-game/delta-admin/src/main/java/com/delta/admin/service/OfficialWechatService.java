@@ -28,7 +28,7 @@ public class OfficialWechatService {
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
  private volatile String accessToken="";private volatile long tokenUntil=0;
- private static final String FEATURE_ID="official_wechat_notifications";
+ public static final String FEATURE_ID="official_wechat_notifications";
  private static final Set<String> EVENTS=Set.of("ORDER_PAID","ORDER_ACCEPTED","ORDER_ASSIGNED","ORDER_COMPLETED","MATERIAL_REVIEWED","WITHDRAW_COMPLETED","WITHDRAW_REJECTED","PLAYER_FROZEN");
  @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
  @Transactional(propagation=Propagation.REQUIRES_NEW)
@@ -74,8 +74,8 @@ public class OfficialWechatService {
   accessToken=value;tokenUntil=System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L;return value;
  }
  public Map<String,Object> binding(String type,Long id){boolean licensed=platform.featureEnabled(FEATURE_ID);return Map.of("enabled",licensed&&"true".equals(configs.getConfigValue("wechat.official.enabled","false")),"licensed",licensed,"bound",jdbc.queryForObject("SELECT COUNT(*) FROM wechat_official_binding WHERE user_type=? AND user_id=?",Long.class,type,id)>0);}
- public String startBinding(String type,Long id){
-  platform.requireFeature(FEATURE_ID);
+ public String startBinding(String type,Long id,String requestDomain){
+  platform.requireFeature(FEATURE_ID,requestDomain);
   if(!"true".equals(configs.getConfigValue("wechat.official.enabled","false")))throw new BusinessException(503,"公众号通知尚未启用");
   String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue("wechat.official.redirect_url","");URI uri;
   try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,"请先配置公众号授权回调页面的HTTPS地址");}
@@ -84,8 +84,8 @@ public class OfficialWechatService {
   return "https://open.weixin.qq.com/connect/oauth2/authorize?appid="+encode(appId)+"&redirect_uri="+encode(redirect)+"&response_type=code&scope=snsapi_base&state="+state+"#wechat_redirect";
  }
  @Transactional(rollbackFor=Exception.class)
- public void finishBinding(String type,Long id,String code,String state)throws Exception{
-  platform.requireFeature(FEATURE_ID);
+ public void finishBinding(String type,Long id,String code,String state,String requestDomain)throws Exception{
+  platform.requireFeature(FEATURE_ID,requestDomain);
   if(state==null||!state.matches("[a-f0-9]{32}")||code==null||code.length()>256)throw new BusinessException(400,"绑定凭据无效");
   String value=redis.opsForValue().getAndDelete("wechat:binding:"+state);if(value==null)throw new BusinessException(400,"绑定凭据已过期，请重新操作");
   JSONObject claim=JSON.parseObject(value);if(!type.equals(claim.getString("type"))||id.longValue()!=claim.getLongValue("id"))throw new BusinessException(403,"绑定身份不匹配");

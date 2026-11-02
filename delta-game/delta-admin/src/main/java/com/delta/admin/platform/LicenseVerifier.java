@@ -49,7 +49,7 @@ final class LicenseVerifier {
                     || !Objects.equals(instanceId, claims.instanceId()) || claims.issuedAt() == null
                     || claims.notBefore() == null || claims.issuedAt().isAfter(now.plusSeconds(300))
                     || (claims.expiresAt() != null && !claims.expiresAt().isAfter(claims.notBefore()))
-                    || claims.features() == null || claims.features().isEmpty() || claims.features().size() > 50
+                    || claims.features() == null || claims.features().size() > 50
                     || !featureIds.containsAll(claims.features())
                     || new HashSet<>(claims.features()).size() != claims.features().size()) throw new IllegalArgumentException();
             if (claims.featureExpiresAt() != null) {
@@ -72,4 +72,5 @@ final class LicenseVerifier {
             throw new BusinessException(400, "授权签名、客户编号或实例信息不匹配，请使用本实例的有效授权文件");
         }
     }
+
 }

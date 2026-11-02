@@ -4,6 +4,7 @@ import com.delta.admin.platform.PlatformService;
 import com.delta.admin.service.EmailNotificationService;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,36 +31,39 @@ public class EmailNotificationController {
     }
 
     @GetMapping({"", "/settings"})
-    public R<EmailNotificationService.Settings> settings() {
-        platform.requireFeature(EmailNotificationService.FEATURE_ID);
+    public R<EmailNotificationService.Settings> settings(HttpServletRequest request) {
+        platform.requireFeature(EmailNotificationService.FEATURE_ID, request.getServerName());
         service.ensureDefaults();
         return R.ok(service.settings());
     }
 
     @PutMapping("/settings")
     @OpLog(module = "email", operation = "保存邮件通知配置")
-    public R<EmailNotificationService.Settings> save(@RequestBody EmailNotificationService.SettingsRequest request) {
-        platform.requireFeature(EmailNotificationService.FEATURE_ID);
-        return R.ok(service.save(request));
+    public R<EmailNotificationService.Settings> save(@RequestBody EmailNotificationService.SettingsRequest body,
+                                                     HttpServletRequest request) {
+        platform.requireFeature(EmailNotificationService.FEATURE_ID, request.getServerName());
+        return R.ok(service.save(body));
     }
 
     @PostMapping("/test")
     @OpLog(module = "email", operation = "邮件通知发送测试")
-    public R<Integer> test(@RequestBody(required = false) EmailNotificationService.TestRequest request) {
-        platform.requireFeature(EmailNotificationService.FEATURE_ID);
-        return R.ok(service.test(request), "测试邮件已进入发送队列");
+    public R<Integer> test(@RequestBody(required = false) EmailNotificationService.TestRequest body,
+                           HttpServletRequest request) {
+        platform.requireFeature(EmailNotificationService.FEATURE_ID, request.getServerName());
+        return R.ok(service.test(body), "测试邮件已进入发送队列");
     }
 
     @GetMapping("/records")
-    public R<List<Map<String, Object>>> records(@RequestParam(defaultValue = "200") int limit) {
-        platform.requireFeature(EmailNotificationService.FEATURE_ID);
+    public R<List<Map<String, Object>>> records(@RequestParam(defaultValue = "200") int limit,
+                                                HttpServletRequest request) {
+        platform.requireFeature(EmailNotificationService.FEATURE_ID, request.getServerName());
         return R.ok(service.records(limit));
     }
 
     @PostMapping("/records/{id}/retry")
     @OpLog(module = "email", operation = "重试邮件通知")
-    public R<Void> retry(@PathVariable String id) {
-        platform.requireFeature(EmailNotificationService.FEATURE_ID);
+    public R<Void> retry(@PathVariable String id, HttpServletRequest request) {
+        platform.requireFeature(EmailNotificationService.FEATURE_ID, request.getServerName());
         service.retry(id);
         return R.ok();
     }

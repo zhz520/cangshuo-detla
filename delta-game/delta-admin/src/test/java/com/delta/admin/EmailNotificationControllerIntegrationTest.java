@@ -70,26 +70,26 @@ class EmailNotificationControllerIntegrationTest {
         when(service.records(200)).thenReturn(List.of(Map.of("id", "record-1", "status", "FAILED",
                 "event_type", "ORDER_PAID", "recipient", "ops@example.com")));
 
-        mvc.perform(get("/admin/email-notifications/settings").with(role("ADMIN", 1)))
+        mvc.perform(get("/admin/email-notifications/settings").with(role("ADMIN", 1)).with(host("admin.example.com")))
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.passwordConfigured").value(true))
                 .andExpect(jsonPath("$.data.password").value(""))
                 .andExpect(jsonPath("$.data.licensed").value(true))
                 .andExpect(jsonPath("$.data.availableEvents[0].id").value("ORDER_PAID"));
-        mvc.perform(put("/admin/email-notifications/settings").with(role("ADMIN", 1))
+        mvc.perform(put("/admin/email-notifications/settings").with(role("ADMIN", 1)).with(host("admin.example.com"))
                         .contentType("application/json").content("{\"enabled\":true}"))
                 .andExpect(jsonPath("$.code").value(200));
-        mvc.perform(post("/admin/email-notifications/test").with(role("ADMIN", 1))
+        mvc.perform(post("/admin/email-notifications/test").with(role("ADMIN", 1)).with(host("admin.example.com"))
                         .contentType("application/json").content("{\"recipients\":\"ops@example.com\"}"))
                 .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data").value(2));
-        mvc.perform(get("/admin/email-notifications/records").param("limit", "200").with(role("ADMIN", 1)))
+        mvc.perform(get("/admin/email-notifications/records").param("limit", "200").with(role("ADMIN", 1)).with(host("admin.example.com")))
                 .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data[0].status").value("FAILED"));
-        mvc.perform(post("/admin/email-notifications/records/record-1/retry").with(role("ADMIN", 1)))
+        mvc.perform(post("/admin/email-notifications/records/record-1/retry").with(role("ADMIN", 1)).with(host("admin.example.com")))
                 .andExpect(jsonPath("$.code").value(200));
 
-        verify(platform, times(5)).requireFeature("email_notifications");
+        verify(platform, times(5)).requireFeature("email_notifications", "admin.example.com");
         InOrder order = inOrder(platform, service);
-        order.verify(platform).requireFeature("email_notifications");
+        order.verify(platform).requireFeature("email_notifications", "admin.example.com");
         order.verify(service).ensureDefaults();
         order.verify(service).settings();
     }
@@ -101,17 +101,17 @@ class EmailNotificationControllerIntegrationTest {
                 .andExpect(jsonPath("$.code").value(403));
         mvc.perform(get("/admin/email-notifications/settings").with(role("ADMIN", 1)))
                 .andExpect(jsonPath("$.code").value(403));
-        verify(platform, never()).requireFeature("email_notifications");
+        verify(platform, never()).requireFeature(any(), any());
         verify(service, never()).settings();
     }
 
     @Test
     void unlicensedFeatureIsRejectedBeforeReadingOrChangingMailConfiguration() throws Exception {
         when(permissions.allowed("system.manage")).thenReturn(true);
-        doThrow(new BusinessException(403, "此功能尚未获得有效授权")).when(platform).requireFeature("email_notifications");
-        mvc.perform(get("/admin/email-notifications/settings").with(role("ADMIN", 1)))
+        doThrow(new BusinessException(403, "此功能尚未获得有效授权")).when(platform).requireFeature("email_notifications", "admin.example.com");
+        mvc.perform(get("/admin/email-notifications/settings").with(role("ADMIN", 1)).with(host("admin.example.com")))
                 .andExpect(jsonPath("$.code").value(403));
-        mvc.perform(put("/admin/email-notifications/settings").with(role("ADMIN", 1))
+        mvc.perform(put("/admin/email-notifications/settings").with(role("ADMIN", 1)).with(host("admin.example.com"))
                         .contentType("application/json").content("{}"))
                 .andExpect(jsonPath("$.code").value(403));
         verify(service, never()).settings();
@@ -121,5 +121,9 @@ class EmailNotificationControllerIntegrationTest {
     private RequestPostProcessor role(String type, long id) {
         return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId", id, "userType", type),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + type))));
+    }
+
+    private RequestPostProcessor host(String host) {
+        return request -> { request.setServerName(host); return request; };
     }
 }

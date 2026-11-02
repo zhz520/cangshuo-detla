@@ -1,6 +1,7 @@
 package com.delta.admin.platform;
 
 import com.delta.common.exception.BusinessException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,12 +29,14 @@ public class PlatformService {
         this.clock = clock;
     }
 
-    public record FeatureView(String id, String name, String description, boolean paid, Integer priceCents, String minVersion,
+    public record FeatureView(String id, String name, String description, boolean paid, Integer priceCents, Integer termDays,
+                              String minVersion,
                               List<String> dependencies, String entryPath, List<String> capabilities,
-                              String status, boolean entitled, boolean enabled, String reason, Instant expiresAt) {}
+                              String status, boolean entitled, boolean enabled, String reason, Instant startsAt,
+                              Instant expiresAt, boolean managedByAuthority) {}
     public record Overview(String customerId, String instanceId, String version, String channel,
                            boolean verifierConfigured, String licenseStatus, String licenseId, Instant expiresAt,
-                           String purchaseMode, String updateMode, List<String> allowedDomains) {}
+                           String purchaseMode, String updateMode, List<String> allowedDomains, boolean managedByAuthority) {}
     public record UpdateInfo(String version, String channel, int schemaVersion, List<String> releaseNotes,
                              boolean automaticUpdateAvailable, String status, String message,
                              String sourceUrl, List<UpdateOption> components) {}
@@ -47,7 +50,8 @@ public class PlatformService {
         return new Overview(properties.getCustomerId(), state.instanceId(), catalog.version(), catalog.channel(),
                 verifier.configured(), licenseStatus(state, claims), claims == null ? null : claims.licenseId(),
                 claims == null ? null : claims.expiresAt(), "MANUAL", "MANUAL",
-                claims == null || claims.allowedDomains() == null ? List.of() : claims.allowedDomains());
+                claims == null || claims.allowedDomains() == null ? List.of() : claims.allowedDomains(),
+                !state.remoteFeatureEnabled().isEmpty() || state.remoteProject() != null);
     }
 
     public synchronized List<FeatureView> features() {
@@ -74,7 +78,9 @@ public class PlatformService {
         if (!allowed.containsAll(requested) || new HashSet<>(requested).size() != requested.size())
             throw new BusinessException(400, "更新内容包含未知项目");
         var state = store.load();
-        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), state.enabledFeatures(), Set.copyOf(requested)));
+        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), state.enabledFeatures(),
+                state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
+                Set.copyOf(requested), state.remoteProject()));
         return updates();
     }
     public synchronized ReportPayload reportPayload() {
@@ -84,8 +90,82 @@ public class PlatformService {
         return new ReportPayload(properties.getCustomerId(), state.instanceId(), catalog.version(), state.license());
     }
 
+    /** Applies one verified authority response to the license and switches in a single atomic state write. */
+    synchronized void applyVerifiedAuthoritySnapshot(PlatformLicense.Envelope envelope,
+                                                     JsonNode project,
+                                                     Map<String, Boolean> advertisedEnabled,
+                                                     Map<String, Instant> advertisedStartsAt,
+                                                     Map<String, Instant> advertisedExpiresAt) {
+        if ((advertisedEnabled == null) != (advertisedStartsAt == null)
+                || (advertisedStartsAt == null) != (advertisedExpiresAt == null))
+            throw new IllegalArgumentException("remote feature controls must be supplied together");
+        if (advertisedStartsAt != null && !advertisedStartsAt.keySet().equals(advertisedExpiresAt.keySet()))
+            throw new IllegalArgumentException("remote feature period keys do not match");
+        if (advertisedEnabled != null && !advertisedEnabled.keySet().containsAll(advertisedStartsAt.keySet()))
+            throw new IllegalArgumentException("remote feature periods lack enablement state");
+        if (advertisedStartsAt != null) for (var entry : advertisedStartsAt.entrySet()) {
+            Instant expiry = advertisedExpiresAt.get(entry.getKey());
+            if (entry.getValue() == null || expiry == null || !entry.getValue().isBefore(expiry))
+                throw new IllegalArgumentException("remote feature period is invalid");
+        }
+        var state = store.load();
+        if (project != null) {
+            Instant incoming = projectIssuedAt(project), previous = state.remoteProject() == null ? null : projectIssuedAt(state.remoteProject());
+            if (previous != null && !incoming.isAfter(previous))
+                throw new IllegalArgumentException("project snapshot is not newer");
+        }
+        if (advertisedEnabled != null) {
+            if (project == null) throw new IllegalArgumentException("verified project snapshot is required");
+        } else if (!state.remoteFeatureEnabled().isEmpty()) {
+            throw new IllegalArgumentException("remote feature controls cannot be removed by an older protocol response");
+        }
+        var license = state.license();
+        var enabled = new HashSet<>(state.enabledFeatures());
+        PlatformLicense.Claims next = null;
+        String projectLicenseId = project == null ? null : projectLicenseId(project);
+        if (envelope != null) {
+            next = verifyReplacement(state, envelope);
+            if (advertisedEnabled != null && !next.licenseId().equals(projectLicenseId))
+                throw new IllegalArgumentException("project and license snapshots do not match");
+            license = envelope;
+            enabled.retainAll(next.features());
+        } else if (projectLicenseId != null) {
+            throw new IllegalArgumentException("project snapshot references a missing license");
+        }
+        if (advertisedEnabled != null) {
+            var current = next != null ? next : claims(state);
+            for (var entry : advertisedEnabled.entrySet()) if (entry.getValue() && (current == null
+                    || !current.features().contains(entry.getKey())))
+                throw new IllegalArgumentException("remote feature is absent from the license");
+        }
+        Map<String, Boolean> managed;
+        if (advertisedEnabled == null) {
+            managed = state.remoteFeatureEnabled();
+        } else {
+            var replaced = new LinkedHashMap<>(advertisedEnabled);
+            for (var feature : catalog.features()) if (feature.paid()) replaced.putIfAbsent(feature.id(), false);
+            managed = Map.copyOf(replaced);
+        }
+        Map<String, Instant> startsAt = advertisedStartsAt == null ? state.remoteFeatureStartsAt() : Map.copyOf(advertisedStartsAt);
+        Map<String, Instant> expiresAt = advertisedExpiresAt == null ? state.remoteFeatureExpiresAt() : Map.copyOf(advertisedExpiresAt);
+        store.save(new PlatformStateStore.State(1, state.instanceId(), license, enabled, managed, startsAt, expiresAt,
+                state.updateComponents(), project == null ? state.remoteProject() : project));
+    }
+
     public synchronized Overview importLicense(PlatformLicense.Envelope envelope) {
         var state = store.load();
+        if (!state.remoteFeatureEnabled().isEmpty() || state.remoteProject() != null)
+            throw new BusinessException(409, "该实例已由授权中心托管，请等待自动同步或联系运营人员更新授权");
+        var next = verifyReplacement(state, envelope);
+        var enabled = new HashSet<>(state.enabledFeatures());
+        enabled.retainAll(next.features());
+        store.save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled,
+                state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
+                state.updateComponents(), state.remoteProject()));
+        return overview();
+    }
+
+    private PlatformLicense.Claims verifyReplacement(PlatformStateStore.State state, PlatformLicense.Envelope envelope) {
         var next = verifier.verify(envelope, state.instanceId(), clock.instant());
         if (next.expiresAt() != null && !next.expiresAt().isAfter(clock.instant()))
             throw new BusinessException(400, "该授权已经到期，请联系维护人员续期");
@@ -93,10 +173,7 @@ public class PlatformService {
         if (previous != null && (next.issuedAt().isBefore(previous.issuedAt())
                 || (next.issuedAt().equals(previous.issuedAt()) && !next.licenseId().equals(previous.licenseId()))))
             throw new BusinessException(409, "不能使用旧授权覆盖当前授权，请联系维护人员重新签发");
-        var enabled = new HashSet<>(state.enabledFeatures());
-        enabled.retainAll(next.features());
-        store.save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled, state.updateComponents()));
-        return overview();
+        return next;
     }
 
     public synchronized List<FeatureView> setEnabled(String id, boolean enabled) {
@@ -104,6 +181,8 @@ public class PlatformService {
                 .orElseThrow(() -> new BusinessException(404, "功能模块不存在"));
         if (!feature.paid()) throw new BusinessException(400, "基础业务功能始终可用，无需开关");
         var state = store.load();
+        if (state.remoteFeatureEnabled().containsKey(id))
+            throw new BusinessException(409, "功能启用状态由授权中心管理");
         var claims = claims(state);
         var current = view(feature, state, claims);
         if (enabled && !current.entitled()) throw new BusinessException(403, current.reason());
@@ -115,9 +194,13 @@ public class PlatformService {
             throw new BusinessException(409, "请先关闭依赖此模块的功能");
         var selected = new HashSet<>(state.enabledFeatures());
         if (enabled) selected.add(id); else selected.remove(id);
-        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected, state.updateComponents()));
+        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected,
+                state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
+                state.updateComponents(), state.remoteProject()));
         return features();
     }
+
+    synchronized JsonNode remoteProject() { return store.load().remoteProject(); }
 
     public synchronized void requireFeature(String id) {
         requireFeature(id, null);
@@ -157,22 +240,48 @@ public class PlatformService {
         boolean entitled, enabled;
         if (!feature.paid()) { status = "INCLUDED"; entitled = true; enabled = true; reason = "基础功能已包含"; }
         else {
+            boolean managedByAuthority = state.remoteFeatureEnabled().containsKey(feature.id());
             String licenseStatus = licenseStatus(state, claims);
-            boolean purchased = claims != null && claims.features().contains(feature.id());
-            Instant expiry = purchased ? featureExpiry(claims, feature.id()) : null;
+            boolean licensedFeature = claims != null && claims.features().contains(feature.id());
+            boolean remoteFeature = state.remoteFeatureStartsAt().containsKey(feature.id())
+                    || state.remoteFeatureExpiresAt().containsKey(feature.id());
+            boolean purchased = licensedFeature || remoteFeature;
+            Instant start = state.remoteFeatureStartsAt().get(feature.id());
+            if (start == null && licensedFeature) start = claims.notBefore();
+            Instant expiry = state.remoteFeatureExpiresAt().get(feature.id());
+            if (expiry == null && licensedFeature) expiry = featureExpiry(claims, feature.id());
             boolean expired = purchased && ("EXPIRED".equals(licenseStatus) || (expiry != null && !clock.instant().isBefore(expiry)));
             entitled = "VALID".equals(licenseStatus) && purchased && !expired;
-            enabled = entitled && state.enabledFeatures().contains(feature.id());
+            enabled = entitled && (managedByAuthority
+                    ? state.remoteFeatureEnabled().get(feature.id())
+                    : state.enabledFeatures().contains(feature.id()));
             status = enabled ? "ENABLED" : entitled ? "DISABLED" : expired ? "EXPIRED" : "NOT_PURCHASED";
-            reason = enabled ? "已启用" : entitled ? "已授权，尚未启用" : expired
+            reason = enabled ? "已启用" : entitled ? (managedByAuthority
+                    ? "功能启用状态由授权中心管理" : "已授权，尚未启用") : expired
                     ? "模块授权已到期，请联系维护人员续期" : "此功能尚未获得有效授权，请联系维护人员开通";
+            return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.priceCents(), feature.termDays(),
+                    feature.minVersion(), feature.dependencies(), feature.entryPath(), feature.capabilities(), status,
+                    entitled, enabled, reason, purchased ? start : null, purchased ? expiry : null, managedByAuthority);
         }
-        return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.priceCents(), feature.minVersion(),
+        return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.priceCents(), feature.termDays(), feature.minVersion(),
                 feature.dependencies(), feature.entryPath(), feature.capabilities(), status, entitled, enabled, reason,
-                claims != null && claims.features().contains(feature.id()) ? featureExpiry(claims, feature.id()) : null);
+                null,
+                claims != null && claims.features().contains(feature.id()) ? featureExpiry(claims, feature.id()) : null,
+                false);
     }
     private Instant featureExpiry(PlatformLicense.Claims claims, String id) {
         return claims.featureExpiresAt() == null ? claims.expiresAt() : claims.featureExpiresAt().get(id);
+    }
+    private static Instant projectIssuedAt(JsonNode project) {
+        try { return Instant.parse(project.path("issuedAt").asText()); }
+        catch (Exception error) { throw new IllegalArgumentException("invalid project issuedAt", error); }
+    }
+    private static String projectLicenseId(JsonNode project) {
+        var value = project.get("licenseId");
+        if (value == null || value.isNull()) return null;
+        if (!value.isTextual()) throw new IllegalArgumentException("invalid project licenseId");
+        try { return UUID.fromString(value.asText()).toString(); }
+        catch (IllegalArgumentException error) { throw new IllegalArgumentException("invalid project licenseId", error); }
     }
     private UpdateOption option(String id, String name, String description, Set<String> selected) {
         return new UpdateOption(id, name, description, selected == null || selected.contains(id));

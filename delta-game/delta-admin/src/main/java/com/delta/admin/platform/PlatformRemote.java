@@ -130,6 +130,7 @@ public class PlatformRemote {
     }
     private static int compare(String left,String right){String[] a=left.split("\\."),b=right.split("\\.");try{for(int i=0;i<3;i++){int value=Integer.compare(Integer.parseInt(a[i]),Integer.parseInt(b[i]));if(value!=0)return value;}}catch(Exception ignored){}return 0;}
     public synchronized JsonNode project() {
+        if(platform!=null){var stored=platform.remoteProject();if(stored!=null&&!stored.isEmpty())return stored;}
         if(cached==null)status();
         if(cached==null)return json.createObjectNode();
         try{return verify(cached.path("project"),"cangshuo-project-v1");}catch(Exception error){return json.createObjectNode();}
@@ -158,13 +159,53 @@ public class PlatformRemote {
             request.put("version",effectiveVersion());
             request.set("updateResult",status().path("job"));
             var response=send(properties.getReportUrl(),request);
-            verify(response.path("project"),"cangshuo-project-v1");
-            if(response.hasNonNull("license")) platform.importLicense(json.treeToValue(response.path("license"),PlatformLicense.Envelope.class));
+            var project=verify(response.path("project"),"cangshuo-project-v1");
+            var featureEnabled=remoteFeatureEnabled(project);
+            var featureStartsAt=remoteFeatureTimes(project,"featureStartsAt");
+            var featureExpiresAt=remoteFeatureTimes(project,"featureExpiresAt");
+            if ((featureEnabled==null)!=(featureStartsAt==null)||(featureStartsAt==null)!=(featureExpiresAt==null)
+                    || featureStartsAt!=null&&(!featureStartsAt.keySet().equals(featureExpiresAt.keySet())
+                    || !featureEnabled.keySet().containsAll(featureStartsAt.keySet())))throw new IllegalArgumentException();
+            var license=response.hasNonNull("license")
+                    ? json.treeToValue(response.path("license"),PlatformLicense.Envelope.class) : null;
+            if(license==null&&featureEnabled!=null&&featureEnabled.containsValue(true))
+                throw new IllegalArgumentException("feature state requires a valid license");
+            platform.applyVerifiedAuthoritySnapshot(license,project,featureEnabled,featureStartsAt,featureExpiresAt);
             ((com.fasterxml.jackson.databind.node.ObjectNode)response).put("receivedAt",clock.instant().toString());
-            atomic(path("authority.json"),json.writeValueAsBytes(response));cached=response;
+            cached=response;
+            try{atomic(path("authority.json"),json.writeValueAsBytes(response));}
+            catch(Exception cacheError){log.warn("授权中心缓存更新失败：{}",cacheError.getClass().getSimpleName());}
             return status();
         } catch(InterruptedException error){Thread.currentThread().interrupt();throw new BusinessException(503,"授权中心连接已中断");}
         catch(Exception error){log.warn("授权中心同步失败：{}",error.getClass().getSimpleName());throw new BusinessException(503,"授权中心暂时无法连接，保留上次检查结果");}
+    }
+    static Map<String,Boolean> remoteFeatureEnabled(JsonNode project)throws IllegalArgumentException {
+        var values=project.get("featureEnabled");
+        if(values==null)return null;
+        if(!values.isObject()||values.size()>100)throw new IllegalArgumentException();
+        var result=new LinkedHashMap<String,Boolean>();
+        var fields=values.fields();
+        while(fields.hasNext()) {
+            var entry=fields.next();
+            if(entry.getKey().length()>100||!entry.getValue().isBoolean())throw new IllegalArgumentException();
+            result.put(entry.getKey(),entry.getValue().booleanValue());
+        }
+        return Map.copyOf(result);
+    }
+    static Map<String,Instant> remoteFeatureTimes(JsonNode project,String field)throws IllegalArgumentException {
+        var values=project.get(field);
+        if(values==null)return null;
+        if(!values.isObject()||values.size()>100)throw new IllegalArgumentException();
+        var result=new LinkedHashMap<String,Instant>();
+        var fields=values.fields();
+        while(fields.hasNext()) {
+            var entry=fields.next();
+            if(entry.getKey().length()>100||!entry.getValue().isTextual()||entry.getValue().asText().length()>64)
+                throw new IllegalArgumentException();
+            try { result.put(entry.getKey(),Instant.parse(entry.getValue().asText())); }
+            catch(java.time.format.DateTimeParseException error) { throw new IllegalArgumentException("invalid feature time",error); }
+        }
+        return Map.copyOf(result);
     }
     private JsonNode send(String target,JsonNode body)throws Exception {
         if(target==null||target.isBlank())throw new IllegalArgumentException();

@@ -28,16 +28,20 @@ public class PlatformController {
     public R<List<PlatformService.FeatureView>> features() {
         return R.ok(withCommercialMetadata(platform.features()));
     }
-    private List<PlatformService.FeatureView> withCommercialMetadata(List<PlatformService.FeatureView> source) {
+    List<PlatformService.FeatureView> withCommercialMetadata(List<PlatformService.FeatureView> source) {
         var commercial = remote.commercialModules();
         return source.stream().map(feature -> {
             var module = commercial.get(feature.id());
             if (module == null) return feature;
             Integer price = module.path("priceCents").isNumber() ? module.path("priceCents").asInt() : feature.priceCents();
+            Integer termDays = module.path("termDays").isIntegralNumber()
+                    && module.path("termDays").asInt() >= 0 && module.path("termDays").asInt() <= 3660
+                    ? module.path("termDays").asInt() : feature.termDays();
             String minimum = module.path("minVersion").asText(feature.minVersion());
             return new PlatformService.FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(),
-                    price, minimum, feature.dependencies(), feature.entryPath(), feature.capabilities(), feature.status(),
-                    feature.entitled(), feature.enabled(), feature.reason(), feature.expiresAt());
+                    price, termDays, minimum, feature.dependencies(), feature.entryPath(), feature.capabilities(), feature.status(),
+                    feature.entitled(), feature.enabled(), feature.reason(), feature.startsAt(), feature.expiresAt(),
+                    feature.managedByAuthority());
         }).toList();
     }
     @GetMapping("/updates") public R<PlatformService.UpdateInfo> updates() { return R.ok(platform.updates()); }

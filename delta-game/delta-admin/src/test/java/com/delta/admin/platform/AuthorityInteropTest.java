@@ -20,7 +20,8 @@ class AuthorityInteropTest {
         Path publicKey = directory.resolve("public.txt");
         try (var input = new ClassPathResource("platform/authority-interop.public.txt").getInputStream()) { Files.copy(input, publicKey); }
         var properties = new PlatformProperties(); properties.setCustomerId(claims.customerId()); properties.setPublicKeyPath(publicKey.toString()); properties.setStatePath(directory.resolve("state.json").toString());
-        new PlatformStateStore(properties.getStatePath(), json).save(new PlatformStateStore.State(1, claims.instanceId(), null, Set.of(), null));
+        new PlatformStateStore(properties.getStatePath(), json).save(new PlatformStateStore.State(
+                1, claims.instanceId(), null, Set.of(), java.util.Map.of(), java.util.Map.of(), java.util.Map.of(), null, null));
         var service = new PlatformService(properties, json, Clock.fixed(claims.issuedAt(), ZoneOffset.UTC));
         service.importLicense(envelope); service.setEnabled("advanced_income_reports", true); service.requireFeature("advanced_income_reports", "jaxapi.kkimg.top");
         assertThatThrownBy(() -> service.requireFeature("advanced_income_reports", "unlicensed.example"))

@@ -1,19 +1,27 @@
 package com.delta.admin.platform;
 
 import com.delta.common.exception.BusinessException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /** Instance-local commercial state, separate from customer business tables. */
 final class PlatformStateStore {
     record State(int formatVersion, String instanceId, PlatformLicense.Envelope license, Set<String> enabledFeatures,
-                 Set<String> updateComponents) {
+                 Map<String, Boolean> remoteFeatureEnabled, Map<String, Instant> remoteFeatureStartsAt,
+                 Map<String, Instant> remoteFeatureExpiresAt, Set<String> updateComponents, JsonNode remoteProject) {
         State {
             enabledFeatures = enabledFeatures == null ? Set.of() : Set.copyOf(enabledFeatures);
+            remoteFeatureEnabled = remoteFeatureEnabled == null ? Map.of() : Map.copyOf(remoteFeatureEnabled);
+            remoteFeatureStartsAt = remoteFeatureStartsAt == null ? Map.of() : Map.copyOf(remoteFeatureStartsAt);
+            remoteFeatureExpiresAt = remoteFeatureExpiresAt == null ? Map.of() : Map.copyOf(remoteFeatureExpiresAt);
             updateComponents = updateComponents == null ? null : Set.copyOf(updateComponents);
+            remoteProject = remoteProject == null || remoteProject.isNull() ? null : remoteProject;
         }
     }
     private final Path path;
@@ -26,7 +34,7 @@ final class PlatformStateStore {
 
     State load() {
         if (!Files.exists(path)) {
-            var state = new State(1, UUID.randomUUID().toString(), null, Set.of(), null);
+            var state = new State(1, UUID.randomUUID().toString(), null, Set.of(), Map.of(), Map.of(), Map.of(), null, null);
             save(state);
             return state;
         }
