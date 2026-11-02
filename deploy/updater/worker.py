@@ -138,6 +138,15 @@ def compose(files, services):
     for file in files:command+=['-f',file]
     return run(command+['up','-d','--no-deps']+services,timeout=300)
 
+def start_services(files, services):
+    # Start in dependency order and wait ourselves. Compose otherwise enforces the
+    # admin -> backend health condition inside one update command and can abort
+    # before a slower application startup has finished.
+    for service in ('backend','admin','h5'):
+        if service not in services:continue
+        compose(files,[service])
+        health([service])
+
 def backup(folder):
     folder.mkdir(mode=0o700,parents=True)
     # Single transaction preserves a consistent MySQL snapshot without exposing credentials.
@@ -215,7 +224,7 @@ def process(job):
             merged['services'][component]={'volumes':[str(source)+':'+destination+':ro']}
         write_json(ROOT/'update-journal.json',{'previous':prior.decode() if prior else None,'services':list(destinations),'id':job_id})
         write_json(override,merged);changed=True
-        compose(CONFIG['compose_files']+[str(override)],list(destinations));health(list(destinations))
+        start_services(CONFIG['compose_files']+[str(override)],list(destinations))
         processed.parent.mkdir(exist_ok=True);processed.write_text(json.dumps(plan))
         versions.update({package['component']:package['version'] for package in plan['packages']});write_json(versions_file,versions)
         status('SUCCEEDED',targetVersion=plan['targetVersion'],items=[item['key'] for item in plan['items']],backup=str(backup_dir))
@@ -225,7 +234,7 @@ def process(job):
             try:
                 if prior is None:remove(override)
                 else:override.write_bytes(prior)
-                compose(CONFIG['compose_files']+([str(override)] if prior else []),list(destinations));health(list(destinations));rolled_back=True
+                start_services(CONFIG['compose_files']+([str(override)] if prior else []),list(destinations));rolled_back=True
             except Exception:pass
             retain_gate=not rolled_back
         # Do not log command output or secrets. Backups remain private on the host.
@@ -243,7 +252,7 @@ def main():
         interrupted=json.loads(journal.read_text());override=ROOT/'compose.self-update.json'
         if interrupted['previous'] is None:remove(override)
         else:override.write_text(interrupted['previous'])
-        compose(CONFIG['compose_files']+([str(override)] if interrupted['previous'] else []),interrupted['services']);health(interrupted['services'])
+        start_services(CONFIG['compose_files']+([str(override)] if interrupted['previous'] else []),interrupted['services'])
         write_json(STATE/'update-result.json',{'id':interrupted['id'],'status':'ROLLED_BACK','message':'上次更新意外中断，已回退原程序'})
         journal.unlink();remove(STATE/'updating');remove(STATE/'update-job.json')
     (STATE/'installer-ready').touch()

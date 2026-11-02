@@ -48,6 +48,11 @@ class UpdaterTests(unittest.TestCase):
         with zipfile.ZipFile(archive,'w') as zipped:
             zipped.writestr('index.html','test');zipped.writestr('cangshuo-version.json',json.dumps({'component':'admin','version':'9.0.0'}))
         with self.assertRaises(ValueError):self.worker.extract(archive,self.directory/'wrong',{'component':'admin','version':'1.2.0'})
+    def test_services_start_in_dependency_order_and_wait_for_each_health_check(self):
+        with patch.object(self.worker,'compose') as compose,patch.object(self.worker,'health') as health:
+            self.worker.start_services(['base.yml'],['h5','admin','backend'])
+        self.assertEqual([call.args[1] for call in compose.call_args_list],[['backend'],['admin'],['h5']])
+        self.assertEqual([call.args[0] for call in health.call_args_list],[['backend'],['admin'],['h5']])
     def test_failed_health_check_restores_previous_compose_and_keeps_private_backup(self):
         override=self.directory/'compose.self-update.json';original=json.dumps({'services':{'admin':{'volumes':['old:/usr/share/nginx/html:ro']}}});override.write_text(original)
         job=self.state/'update-job.json';job.write_text(json.dumps(self.envelope()))
