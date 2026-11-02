@@ -16,7 +16,7 @@ function openExternal(url) {
 export async function openCustomerService(product = null) {
   const siteStore = useSiteStore()
   await siteStore.fetchSiteConfig()
-  const external = siteStore.customerServiceMode === 'external' && /^https:\/\//i.test(siteStore.customerServiceUrl)
+  const external = siteStore.externalCustomerServiceEnabled
   if (external) {
     openExternal(siteStore.customerServiceUrl)
     return

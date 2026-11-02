@@ -97,7 +97,7 @@
     <CustomTabBar :current="0" />
 
     <!-- 悬浮客服按钮 -->
-    <DraggableSupport @activate="goCustomerService" />
+    <DraggableSupport v-if="siteStore.customerServiceHomeIconVisible" @activate="goCustomerService" />
 
     <!-- 公告弹窗 - 支持多公告叠加 -->
     <view class="notice-popup" v-if="showNoticePopup" @click="closeNoticePopup">

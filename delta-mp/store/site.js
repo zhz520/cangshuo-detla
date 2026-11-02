@@ -20,6 +20,10 @@ export const useSiteStore = defineStore('site', () => {
   const techSupportUrl = ref('')
   const customerServiceMode = ref('internal')
   const customerServiceUrl = ref('')
+  const customerServiceHomeIconVisible = ref(true)
+  const externalCustomerServiceEnabled = computed(() =>
+    customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
+  )
   let pendingConfigRequest = null
   let noticePopupShownThisSession = false
 
@@ -63,6 +67,9 @@ export const useSiteStore = defineStore('site', () => {
         if (data.customer_service_external_url !== undefined) {
           customerServiceUrl.value = String(data.customer_service_external_url || '').trim()
         }
+        if (data.customer_service_home_icon_visible !== undefined) {
+          customerServiceHomeIconVisible.value = data.customer_service_home_icon_visible !== 'false'
+        }
       } catch (e) {
         console.warn('[SiteStore] fetch site config failed', e)
       } finally {
@@ -80,5 +87,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

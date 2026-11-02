@@ -94,6 +94,7 @@ public class SysConfigController {
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
         map.put("customer_service_mode", sysConfigService.getConfigValue("customer_service.mode", "internal"));
         map.put("customer_service_external_url", sysConfigService.getConfigValue("customer_service.external_url", ""));
+        map.put("customer_service_home_icon_visible", sysConfigService.getConfigValue("customer_service.home_icon_visible", "true"));
         return R.ok(map);
     }
 
@@ -117,6 +118,8 @@ public class SysConfigController {
                 "internal：使用系统内置客服；external：跳转第三方企业微信客服链接");
         ensureConfig("customer_service.external_url", "第三方企业微信客服链接", "", "text", "客服配置",
                 "选择 external 时填写企业微信客服的 HTTPS 链接；未填写时仍使用内置客服");
+        ensureConfig("customer_service.home_icon_visible", "首页客服悬浮图标", "true", "boolean", "客服配置",
+                "关闭后首页不显示悬浮客服图标；商品详情页和“我的”页面客服入口不受影响");
         ensureConfig("notice.popup_every_visit", "首页公告每次刷新都弹窗", "true", "boolean", "公告配置",
                 "开启后浏览器刷新会展示已发布的首页公告，切换页面不会重复弹出；关闭后仅在新版本公告首次出现时提醒");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
@@ -234,6 +237,9 @@ public class SysConfigController {
         }
         if("customer_service.mode".equals(key)) {
             if(!java.util.Set.of("internal","external").contains(value)) throw new com.delta.common.exception.BusinessException(400,"客服接入方式不正确");
+        }
+        if("customer_service.home_icon_visible".equals(key)) {
+            if(!java.util.Set.of("true","false").contains(value)) throw new com.delta.common.exception.BusinessException(400,"首页客服图标显示设置不正确");
         }
         if("customer_service.external_url".equals(key) && !value.isBlank()) {
             try {

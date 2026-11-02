@@ -26,6 +26,7 @@ import { onShow, onHide } from '@dcloudio/uni-app'
 import { useAppStore } from '@/store/app'
 import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
+import { useSiteStore } from '@/store/site'
 import { ROLE_TABS } from '@/utils/role'
 
 const props = defineProps({
@@ -35,10 +36,20 @@ const props = defineProps({
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const remindStore = useRemindStore()
-const currentIndex = ref(props.current)
+const siteStore = useSiteStore()
 const safeBottom = ref(0)
 
-const currentTabs = computed(() => ROLE_TABS[appStore.role] || ROLE_TABS.user)
+const baseTabs = computed(() => ROLE_TABS[appStore.role] || ROLE_TABS.user)
+const currentTabs = computed(() => {
+  if (appStore.role === 'user' && siteStore.externalCustomerServiceEnabled) {
+    return baseTabs.value.filter(tab => tab.pagePath !== '/pages/chat/list')
+  }
+  return baseTabs.value
+})
+const currentIndex = computed(() => {
+  const requestedPath = baseTabs.value[props.current]?.pagePath
+  return currentTabs.value.findIndex(tab => tab.pagePath === requestedPath)
+})
 
 /** 我的 tab 是否有系统消息未读（显示小红点） */
 const mineRedDot = computed(() => {
