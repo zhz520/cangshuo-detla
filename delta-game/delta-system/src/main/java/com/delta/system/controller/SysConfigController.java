@@ -153,11 +153,11 @@ public class SysConfigController {
         ensureConfig("wx.pay.enabled", "启用微信支付", String.valueOf(wxPayEnabledFallback), "boolean", "微信支付配置",
                 "关闭后小程序和 H5 均不可发起微信支付，但余额支付不受影响");
         ensureConfig("wx.pay.miniapp-enabled", "启用小程序支付", "true", "boolean", "微信支付配置",
-                "小程序内使用 JSAPI 支付；需填写小程序 AppID，并与商户号完成 AppID 绑定");
-        ensureConfig("wx.pay.h5-enabled", "启用微信外 H5 支付", "true", "boolean", "微信支付配置",
-                "手机浏览器（非微信内）使用 H5 支付；微信内置浏览器请使用公众号支付");
+                "独立开关；开启后所有支付页面均可选择小程序支付");
+        ensureConfig("wx.pay.h5-enabled", "启用 H5 支付", "true", "boolean", "微信支付配置",
+                "独立开关；开启后所有 H5 支付页面均可选择 H5 支付，不再按浏览器类型自动隐藏");
         ensureConfig("wx.pay.official-enabled", "启用微信公众号支付", "false", "boolean", "微信支付配置",
-                "开启后，微信内置浏览器会通过公众号网页授权获取 OpenID，并调起 JSAPI 支付");
+                "独立开关；开启后 H5 支付入口优先使用公众号支付，不按是否微信内置浏览器隐藏");
         ensureConfig("wx.pay.appid", "小程序支付 AppID", "", "text", "微信支付配置",
                 "仅小程序支付使用；须与商户号绑定。公众号支付请填写下方独立公众号 AppID");
         ensureConfig("wx.pay.official-appid", "公众号支付 AppID", "", "text", "微信支付配置",
@@ -232,6 +232,18 @@ public class SysConfigController {
             wxAppId.setConfigName("小程序支付 AppID");
             wxAppId.setRemark("仅小程序支付使用；公众号支付请填写独立的公众号 AppID");
             sysConfigService.updateById(wxAppId);
+        }
+        for (String[] meta : java.util.List.of(
+                new String[]{"wx.pay.miniapp-enabled", "启用小程序支付", "独立开关；开启后所有支付页面均可选择小程序支付"},
+                new String[]{"wx.pay.h5-enabled", "启用 H5 支付", "独立开关；开启后所有 H5 支付页面均可选择 H5 支付，不再按浏览器类型自动隐藏"},
+                new String[]{"wx.pay.official-enabled", "启用微信公众号支付", "独立开关；开启后 H5 支付入口优先使用公众号支付，不按是否微信内置浏览器隐藏"})) {
+            SysConfig toggle = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>()
+                    .eq(SysConfig::getConfigKey, meta[0]));
+            if (toggle != null && (!meta[1].equals(toggle.getConfigName()) || !meta[2].equals(toggle.getRemark()))) {
+                toggle.setConfigName(meta[1]);
+                toggle.setRemark(meta[2]);
+                sysConfigService.updateById(toggle);
+            }
         }
     }
 

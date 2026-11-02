@@ -33,11 +33,12 @@ import { getSiteConfig } from '@/api/config'
 import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
-import { isH5, isMpWeixin, isWechatBrowser, canStartH5WechatPayment, wechatPayChannel } from '@/utils/platform'
+import { isH5, wechatPayChannel } from '@/utils/platform'
 
 const orderId = ref(0)
 const amount = ref(0)
 const canUseWechatPay = ref(false)
+const wechatChannel = ref('')
 const payType = ref('BALANCE')
 const walletBalance = ref('0.00')
 const countdown = ref(0)
@@ -49,7 +50,7 @@ const formatCountdown = computed(() => {
   const s = countdown.value % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
-const wechatPayLabel = computed(() => isWechatBrowser() ? '微信公众号支付' : isMpWeixin() ? '微信小程序支付' : '微信 H5 支付')
+const wechatPayLabel = computed(() => ({ MINIAPP: '微信小程序支付', OFFICIAL: '微信公众号支付', H5: '微信 H5 支付' }[wechatChannel.value] || '微信支付'))
 
 onLoad(async (opts) => {
   orderId.value = opts.orderId
@@ -58,11 +59,12 @@ onLoad(async (opts) => {
   try {
     const siteRes = await getSiteConfig()
     const enabled = siteRes.data?.wx_pay_enabled === 'true'
-    canUseWechatPay.value = enabled && !!wechatPayChannel({
+    wechatChannel.value = enabled ? wechatPayChannel({
       miniappEnabled: siteRes.data?.wx_pay_miniapp_enabled !== 'false',
       h5Enabled: siteRes.data?.wx_pay_h5_enabled !== 'false',
       officialEnabled: siteRes.data?.wx_pay_official_enabled === 'true'
-    })
+    }) : ''
+    canUseWechatPay.value = Boolean(wechatChannel.value)
     if (canUseWechatPay.value) payType.value = 'WECHAT'
   } catch (e) { /* 微信支付未配置时默认使用余额支付 */ }
 
@@ -148,26 +150,29 @@ async function handlePay() {
       if (!canUseWechatPay.value) {
         return uni.showToast({ title: '微信支付未开启，请使用余额支付', icon: 'none' })
       }
-      if (isH5()) {
-        const site = (await getSiteConfig()).data || {}
-        const channel = wechatPayChannel({
-          miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
-          h5Enabled: site.wx_pay_h5_enabled !== 'false',
-          officialEnabled: site.wx_pay_official_enabled === 'true'
-        })
-        if (channel === 'OFFICIAL') {
-          const res = await createOfficialPayment(orderId.value)
-          if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到公众号支付授权地址', icon: 'none' })
-          window.location.assign(res.data.authorizeUrl)
-          return
-        }
-        if (!canStartH5WechatPayment()) return
+      const site = (await getSiteConfig()).data || {}
+      const channel = wechatPayChannel({
+        miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
+        h5Enabled: site.wx_pay_h5_enabled !== 'false',
+        officialEnabled: site.wx_pay_official_enabled === 'true'
+      })
+      wechatChannel.value = channel || ''
+      if (channel === 'OFFICIAL') {
+        if (!isH5()) return uni.showToast({ title: '公众号支付请在网页中继续', icon: 'none' })
+        const res = await createOfficialPayment(orderId.value)
+        if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到公众号支付授权地址', icon: 'none' })
+        window.location.assign(res.data.authorizeUrl)
+        return
+      }
+      if (channel === 'H5') {
+        if (!isH5()) return uni.showToast({ title: 'H5 支付请在网页中继续', icon: 'none' })
         const res = await createH5Payment(orderId.value)
         const h5Url = res.data?.h5Url
         if (!h5Url) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
         window.location.href = h5Url
         return
       }
+      if (channel !== 'MINIAPP') return uni.showToast({ title: '未启用可用的微信支付方式', icon: 'none' })
       const res = await createPayment(orderId.value)
       const payParams = res.data
       uni.requestPayment({

@@ -6,7 +6,7 @@
         <el-tab-pane v-for="g in groupNames" :key="g" :label="g" :name="g" />
       </el-tabs>
       <el-alert v-if="activeGroup === '微信支付配置'" title="公众号支付配置提醒" type="info" :closable="false" show-icon
-        description="公众号支付仅用于微信内置浏览器。公众平台需配置网页授权域名；微信支付商户平台需配置 JSAPI 支付授权目录（当前程序为 /api/pay/wx/official/）。小程序 AppID 与公众号 AppID 分开填写，不能混用 OpenID。" />
+        description="每个支付开关独立生效，支付页面不再根据浏览器类型自动隐藏已启用方式。公众号支付优先用于 H5；公众平台仍需配置网页授权域名，商户平台需配置 JSAPI 支付授权目录。小程序 AppID 与公众号 AppID 分开填写，不能混用 OpenID。" />
       <el-form v-loading="loading" label-width="200px" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
           <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>

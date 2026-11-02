@@ -52,7 +52,7 @@ import ImageUploader from '@/components/ImageUploader.vue'
 import { applyPlayer } from '@/api/player'
 import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
 import { useSiteStore } from '@/store/site'
-import { isMpWeixin, isH5, canStartH5WechatPayment, wechatPayChannel } from '@/utils/platform'
+import { isH5, wechatPayChannel } from '@/utils/platform'
 const siteStore = useSiteStore()
 const pendingDepositNo = ref('')
 const draftKey = 'cangshuo-enrollment-deposit-draft'
@@ -92,7 +92,7 @@ async function submitWithDeposit() {
       h5Enabled: siteStore.wxPayH5Enabled,
       officialEnabled: siteStore.wxPayOfficialEnabled
     }) : null
-    if (!channel) throw new Error('当前环境未启用可用的微信支付')
+    if (!channel) throw new Error('未启用可用的微信支付方式')
     if (channel === 'OFFICIAL') {
       if (!isH5()) throw new Error('公众号支付仅支持微信网页')
       const response = await createOfficialPlayerDeposit({ scene: 'APPLY' })
@@ -104,7 +104,7 @@ async function submitWithDeposit() {
       return
     }
     if (channel === 'H5') {
-      if (!canStartH5WechatPayment()) return
+      if (!isH5()) throw new Error('H5 支付请在网页中继续')
       const response = await createH5PlayerDeposit()
       if (!response.data?.h5Url || !response.data?.paymentNo) throw new Error('未获取到押金支付信息')
       // Only this tab retains the draft for one hour; it is removed on successful submission.
@@ -115,7 +115,7 @@ async function submitWithDeposit() {
       // #endif
       return
     }
-    if (channel !== 'MINIAPP' || !isMpWeixin()) throw new Error('当前环境不支持微信支付')
+    if (channel !== 'MINIAPP') throw new Error('未启用可用的微信支付方式')
     const res = await createPlayerDeposit()
     const { timeStamp, nonceStr, package: pkg, signType, paySign } = res.data
     paymentNo = res.data.paymentNo
