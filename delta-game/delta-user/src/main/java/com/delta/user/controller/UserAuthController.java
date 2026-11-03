@@ -109,7 +109,7 @@ public class UserAuthController {
     }
 
     @PostMapping("/h5-login")
-    public R<LoginResponse> h5Login(@RequestBody H5LoginRequest request) {
+    public R<LoginResponse> h5Login(@jakarta.validation.Valid @RequestBody H5LoginRequest request) {
         String phone = request.getPhone() == null ? "" : request.getPhone().trim();
         String code = request.getCode() == null ? "" : request.getCode().trim();
         if (!phone.matches("^1\\d{10}$")) {

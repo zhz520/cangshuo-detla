@@ -108,7 +108,7 @@
         </view>
         <scroll-view scroll-y class="popup-body">
           <text class="popup-notice-title">{{ popupNotices[popupCurrentIndex]?.title }}</text>
-          <rich-text v-if="popupNotices[popupCurrentIndex]?.content" :nodes="popupNotices[popupCurrentIndex].content" />
+          <rich-text v-if="noticeHtml" :nodes="noticeHtml" />
         </scroll-view>
         <view class="popup-footer">
           <view class="popup-nav" v-if="popupNotices.length > 1">
@@ -133,13 +133,14 @@
 <script setup>
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow, onPullDownRefresh, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import ProductCard from '@/components/ProductCard.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import DraggableSupport from '@/components/DraggableSupport.vue'
 import ProductSortPicker from '@/components/ProductSortPicker.vue'
 import { productSortParams } from '@/utils/product-sort'
+import { productDescriptionHtml } from '@/utils/product-content'
 import { bannerAction } from '@/utils/banner'
 import { getRecommendProducts, getRecommendCategories } from '@/api/product'
 import { getActiveBanners } from '@/api/banner'
@@ -178,6 +179,7 @@ let recommendRequest = 0
 const showNoticePopup = ref(false)
 const popupNotices = ref([])
 const popupCurrentIndex = ref(0)
+const noticeHtml = computed(() => productDescriptionHtml(popupNotices.value[popupCurrentIndex.value]?.content || ''))
 const showNoticeList = ref(false)
 
 function noticeRevision(notice) {

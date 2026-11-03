@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketSessionManager {
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
-    public void add(String key, WebSocketSession session) { sessions.put(key, session); }
-    public void remove(String key) { sessions.remove(key); }
+    public WebSocketSession add(String key, WebSocketSession session) { return sessions.put(key, session); }
+    public void remove(String key, WebSocketSession session) { sessions.remove(key, session); }
     public WebSocketSession get(String key) { return sessions.get(key); }
     public boolean isOnline(String key) { return sessions.containsKey(key); }
     public int getOnlineCount() { return sessions.size(); }

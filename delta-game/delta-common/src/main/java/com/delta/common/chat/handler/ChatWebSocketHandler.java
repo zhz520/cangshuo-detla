@@ -6,6 +6,7 @@ import com.delta.common.chat.domain.entity.ChatSession;
 import com.delta.common.chat.service.ChatServiceImpl;
 import com.delta.common.chat.util.ChatParticipantId;
 import com.delta.common.security.service.TokenService;
+import com.delta.common.security.service.RateLimitService;
 import com.delta.common.websocket.manager.WebSocketSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,14 +25,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final WebSocketSessionManager sessionManager;
     private final ChatServiceImpl chatService;
     private final TokenService tokenService;
+    private final RateLimitService limits;
 
     /** session -> userKey 映射，用于断开时清理 */
     private final ConcurrentHashMap<String, String> sessionUserMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> unauthenticated = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         session.setTextMessageSizeLimit(16384);
+        activeSessions.put(session.getId(),session);
         unauthenticated.put(session.getId(),System.currentTimeMillis());
     }
 
@@ -50,7 +54,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             catch(com.delta.common.exception.BusinessException e){closeQuietly(session);return;}
             Long userId=((Number)principal.get("userId")).longValue();
             String userKey=WebSocketSessionManager.buildKey(userType,userId);
-            sessionManager.add(userKey,session);sessionUserMap.put(session.getId(),userKey);
+            WebSocketSession replaced=sessionManager.add(userKey,session);
+            if(replaced!=null&&replaced!=session)closeQuietly(replaced);
+            sessionUserMap.put(session.getId(),userKey);
             session.getAttributes().put("authenticatedToken",token);unauthenticated.remove(session.getId());
             session.sendMessage(new TextMessage("{\"type\":\"auth\",\"success\":true}"));
             log.info("WebSocket authenticated: {} -> {}",session.getId(),userKey);return;
@@ -104,6 +110,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             closeQuietly(session);
             return;
         }
+        try { limits.check("chat-message:"+userKey,30,60); }
+        catch (com.delta.common.exception.BusinessException error) {
+            closeQuietly(session);
+            return;
+        }
         String senderType = parts[0];
         long rawSenderId;
         try {
@@ -143,10 +154,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        activeSessions.remove(session.getId());
         unauthenticated.remove(session.getId());
         String userKey = sessionUserMap.remove(session.getId());
         if (userKey != null) {
-            sessionManager.remove(userKey);
+            sessionManager.remove(userKey, session);
         }
         log.info("WebSocket disconnected: {} -> {}", session.getId(), userKey);
     }
@@ -154,10 +166,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay=30000)
     public void closeStaleUnauthenticated() {
         long cutoff=System.currentTimeMillis()-30000;
-        unauthenticated.forEach((id,started)->{
-            if(started<cutoff && !sessionUserMap.containsKey(id)){
-                unauthenticated.remove(id);
-                sessionManager.getAll().stream().filter(s->id.equals(s.getId())).findFirst().ifPresent(this::closeQuietly);
+        activeSessions.forEach((id,session)->{
+            if(!session.isOpen()){afterConnectionClosed(session,CloseStatus.SESSION_NOT_RELIABLE);return;}
+            Long started=unauthenticated.get(id);
+            if(started!=null&&started<cutoff){closeQuietly(session);return;}
+            Object token=session.getAttributes().get("authenticatedToken");
+            if(token instanceof String value){
+                try{if(tokenService.authenticate(value)==null)closeQuietly(session);}
+                catch(RuntimeException ignored){closeQuietly(session);}
             }
         });
     }
@@ -184,8 +200,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession memberSession = sessionManager.get(key);
         if (memberSession != null && memberSession.isOpen()) {
             try {
+                Object token=memberSession.getAttributes().get("authenticatedToken");
+                if(!(token instanceof String value)||tokenService.authenticate(value)==null){closeQuietly(memberSession);return;}
                 memberSession.sendMessage(new TextMessage(msgJson));
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
+                closeQuietly(memberSession);
                 log.warn("推送消息到{}失败", key);
             }
         }

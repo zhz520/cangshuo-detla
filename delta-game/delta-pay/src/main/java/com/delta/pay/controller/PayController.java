@@ -549,12 +549,7 @@ public class PayController {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        return realIp == null || realIp.isBlank() ? request.getRemoteAddr() : realIp;
+        return request.getRemoteAddr();
     }
 
     private boolean channelEnabled(String configKey) {

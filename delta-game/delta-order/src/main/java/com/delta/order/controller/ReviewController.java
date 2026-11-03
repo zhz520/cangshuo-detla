@@ -28,6 +28,7 @@ public class ReviewController {
     private final ReviewService reviewService;
     private final OrderService orderService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.delta.common.security.service.RateLimitService limits;
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
@@ -39,6 +40,7 @@ public class ReviewController {
         review.setContent(request.content().trim());
         review.setImages(request.images());
         Long userId = SecurityUtils.getUserId();
+        limits.check("review-create:"+userId,10,3600);
         if (!"USER".equals(SecurityUtils.getUserType())) return R.fail(403, "仅下单用户可以评价");
         review.setUserId(userId);
 
@@ -62,7 +64,7 @@ public class ReviewController {
 
         review.setPlayerId(order.getPlayerId());
         review.setProductId(order.getProductId());
-        review.setImages(ImageListUtils.normalize(review.getImages()));
+        review.setImages(ImageListUtils.normalizeLocal(review.getImages(), 9));
         review.setCreatedAt(LocalDateTime.now());
         reviewService.save(review);
 

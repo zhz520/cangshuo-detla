@@ -59,12 +59,30 @@ public class CsRelayController {
     @PostMapping("/{id}/approve")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> approve(@PathVariable Long id, @RequestBody Map<String, Long> body) {
-        OrderRelayRequest relay = relayRequestService.getById(id);
+        OrderRelayRequest relay = relayRequestService.getOne(new LambdaQueryWrapper<OrderRelayRequest>()
+                .eq(OrderRelayRequest::getId,id).last("FOR UPDATE"));
         if (relay == null) return R.fail("申请不存在");
         if (!"PENDING".equals(relay.getStatus())) return R.fail("申请已处理");
         Long newPlayerId = body.get("newPlayerId");
         if (newPlayerId == null) return R.fail("请选择接力打手");
 
+        Order order = orderService.getById(relay.getOrderId());
+        if (order == null) return R.fail("订单不存在");
+        if(!"IN_PROGRESS".equals(order.getStatus()))return R.fail(409,"当前订单状态不允许接力");
+        if(!relay.getOriginalPlayerId().equals(order.getPlayerId()))return R.fail(409,"订单接单员已变化，请刷新后重试");
+        if(newPlayerId.equals(relay.getOriginalPlayerId()))return R.fail(400,"不能选择原接单员接力");
+        if(crossModuleMapper.lockActivePlayer(newPlayerId)==null)return R.fail(409,"接力打手当前不在线或不可接单");
+        if(order.getRequestedPlayerLevelId()!=null&&!order.getRequestedPlayerLevelId().equals(crossModuleMapper.selectPlayerLevel(newPlayerId)))
+            return R.fail(403,"接力打手等级不符合订单要求");
+        int maxActive=5;
+        try{maxActive=Math.max(1,Integer.parseInt(crossModuleMapper.selectConfigValue("order.max_active_per_player")));}catch(Exception ignored){}
+        if(crossModuleMapper.countActivePlayerOrders(newPlayerId)>=maxActive)return R.fail(409,"接力打手当前订单已满");
+        OrderPlayer originalOp = orderPlayerService.getOne(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, order.getId())
+                .eq(OrderPlayer::getPlayerId, relay.getOriginalPlayerId())
+                .eq(OrderPlayer::getRole, "PRIMARY")
+                .last("LIMIT 1 FOR UPDATE"));
+        if(originalOp==null)return R.fail(409,"原接单记录已变化，请刷新后重试");
         relay.setStatus("APPROVED");
         relay.setNewPlayerId(newPlayerId);
         relay.setReviewedBy(SecurityUtils.getUserId());
@@ -72,53 +90,38 @@ public class CsRelayController {
         relay.setUpdatedAt(LocalDateTime.now());
         relayRequestService.updateById(relay);
 
-        Order order = orderService.getById(relay.getOrderId());
-        if (order != null) {
-            // Update original player's OrderPlayer role
-            OrderPlayer originalOp = orderPlayerService.getOne(new LambdaQueryWrapper<OrderPlayer>()
-                    .eq(OrderPlayer::getOrderId, order.getId())
-                    .eq(OrderPlayer::getPlayerId, relay.getOriginalPlayerId())
-                    .eq(OrderPlayer::getRole, "PRIMARY")
-                    .last("LIMIT 1"));
-            if (originalOp != null) {
-                originalOp.setRole("RELAY_OUT");
-                originalOp.setSplitType(relay.getSplitType());
-                originalOp.setSplitAmount(relay.getSplitAmount());
-                orderPlayerService.updateById(originalOp);
-            }
+        // Update original player's OrderPlayer role
+        originalOp.setRole("RELAY_OUT");
+        originalOp.setSplitType(relay.getSplitType());
+        originalOp.setSplitAmount(relay.getSplitAmount());
+        orderPlayerService.updateById(originalOp);
 
-            // Create new OrderPlayer for relay player
-            OrderPlayer newOp = new OrderPlayer();
-            newOp.setOrderId(order.getId());
-            newOp.setPlayerId(newPlayerId);
-            newOp.setRole("RELAY_IN");
-            newOp.setStatus("INVITED");
-            newOp.setCreatedAt(LocalDateTime.now());
-            orderPlayerService.save(newOp);
+        // Set order to ASSIGNED for new player to accept
+        orderService.update(null,new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Order>()
+                .eq(Order::getId,order.getId()).set(Order::getPlayerId,newPlayerId)
+                .set(Order::getStatus,OrderStatusEnum.ASSIGNED.name()).set(Order::getAssignTime,LocalDateTime.now())
+                .set(Order::getAcceptTime,null).set(Order::getStartTime,null).set(Order::getCompleteTime,null)
+                .set(Order::getAutoConfirmDeadline,null).set(Order::getUpdatedAt,LocalDateTime.now()));
 
-            // Set order to ASSIGNED for new player to accept
-            order.setPlayerId(newPlayerId);
-            order.setStatus(OrderStatusEnum.ASSIGNED.name());
-            order.setAssignTime(LocalDateTime.now());
-            order.setUpdatedAt(LocalDateTime.now());
-            orderService.updateById(order);
-
-            eventPublisher.publishEvent(new BusinessEvent(this, "RELAY_APPROVED",
-                    "PLAYER", newPlayerId, order.getId(), "您收到一个接力订单，请尽快接单"));
-            eventPublisher.publishEvent(new BusinessEvent(this, "RELAY_APPROVED",
-                    "PLAYER", relay.getOriginalPlayerId(), order.getId(), "接力申请已通过，新打手已指派"));
-        }
+        eventPublisher.publishEvent(new BusinessEvent(this, "RELAY_APPROVED",
+                "PLAYER", newPlayerId, order.getId(), "您收到一个接力订单，请尽快接单"));
+        eventPublisher.publishEvent(new BusinessEvent(this, "RELAY_APPROVED",
+                "PLAYER", relay.getOriginalPlayerId(), order.getId(), "接力申请已通过，新打手已指派"));
         return R.ok();
     }
 
     @OpLog(module = "relay", operation = "拒绝接力申请")
     @PostMapping("/{id}/reject")
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> reject(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
-        OrderRelayRequest relay = relayRequestService.getById(id);
+        OrderRelayRequest relay = relayRequestService.getOne(new LambdaQueryWrapper<OrderRelayRequest>()
+                .eq(OrderRelayRequest::getId,id).last("FOR UPDATE"));
         if (relay == null) return R.fail("申请不存在");
         if (!"PENDING".equals(relay.getStatus())) return R.fail("申请已处理");
+        String reason=body != null ? body.getOrDefault("reason", "") : "";
+        if(reason.length()>500)return R.fail(400,"拒绝原因不能超过500字");
         relay.setStatus("REJECTED");
-        relay.setRejectReason(body != null ? body.getOrDefault("reason", "") : "");
+        relay.setRejectReason(reason);
         relay.setReviewedBy(SecurityUtils.getUserId());
         relay.setReviewedAt(LocalDateTime.now());
         relay.setUpdatedAt(LocalDateTime.now());

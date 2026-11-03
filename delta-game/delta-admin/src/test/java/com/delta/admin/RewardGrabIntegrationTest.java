@@ -63,7 +63,7 @@ class RewardGrabIntegrationTest {
             OperationLogServiceImpl.class,SysConfigServiceImpl.class,WalletServiceImpl.class,PlayerWalletServiceImpl.class,UserServiceImpl.class,
             PlayerServiceImpl.class,PlayerLevelService.class,com.delta.order.service.OrderPricingService.class,com.delta.order.controller.OrderController.class,OrderServiceImpl.class,OrderPlayerServiceImpl.class,OrderProgressServiceImpl.class,
             TransactionServiceImpl.class,PlayerOrderController.class,com.delta.player.controller.PlayerEarningsController.class,com.delta.order.controller.PlayerWorkController.class,SecurityConfig.class,JwtAuthenticationFilter.class,
-            AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class})
+            AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,RateLimitService.class})
     static class Config {
         @Bean MybatisPlusInterceptor pagination(){var p=new MybatisPlusInterceptor();p.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));return p;}
     }
@@ -79,6 +79,7 @@ class RewardGrabIntegrationTest {
     @MockBean com.delta.order.service.PlayerReplaceRequestService replaceRequests;
     @MockBean RedisService redis;
     @MockBean org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    @MockBean RateLimitService rateLimits;
     @MockBean ChatSessionService chats;
     @SpyBean TransactionService transactions;
 

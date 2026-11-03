@@ -43,7 +43,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         if (product == null) {
             return;
         }
-        product.setImages(ImageListUtils.normalize(product.getImages()));
+        product.setImages(ImageListUtils.normalizeSafe(product.getImages(), 12));
         normalizePerUserLimit(product);
     }
 

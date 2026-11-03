@@ -5,6 +5,7 @@ services:
     image: mysql:8.0
     container_name: delta-mysql
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     env_file: /www/delta/.env
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci"]
     volumes:
@@ -22,6 +23,7 @@ services:
     image: redis:7-alpine
     container_name: delta-redis
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     env_file: /www/delta/.env
     command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
@@ -38,6 +40,7 @@ services:
     platform: linux/amd64
     container_name: delta-backend
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     env_file: /www/delta/.env
     depends_on:
       mysql:
@@ -54,8 +57,9 @@ services:
     platform: linux/amd64
     container_name: delta-admin-ui
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     depends_on: [backend]
-    ports: ["8081:80"]
+    ports: ["127.0.0.1:8081:80"]
     volumes:
       - /www/delta/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks: [delta-game]
@@ -65,8 +69,9 @@ services:
     platform: linux/amd64
     container_name: delta-h5
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     depends_on: [backend]
-    ports: ["8082:80"]
+    ports: ["127.0.0.1:8082:80"]
     volumes:
       - /www/delta/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks: [delta-game]

@@ -34,7 +34,8 @@ public class UserPlayerController {
 
     @GetMapping("/available-players")
     public R<Map<String, Object>> availablePlayers(PageQuery query,
-                                                    @RequestParam(value = "keyword", required = false) String keyword) {
+                                                    @RequestParam(value = "keyword", required = false) @jakarta.validation.constraints.Size(max = 50) String keyword) {
+        if(keyword!=null&&keyword.length()>50)return R.fail(400,"搜索内容过长");
         LambdaQueryWrapper<Player> w = directory.visibleQuery()
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword))
                 .orderByDesc(Player::getIsOnline).orderByDesc(Player::getAvgRating);

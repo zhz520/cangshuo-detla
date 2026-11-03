@@ -39,6 +39,7 @@ public class UserManagementService {
     private final PasswordEncoder encoder;
     private final CrossModuleMapper identities;
     private final OperationLogService logs;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     public record UserRequest(@NotBlank @Pattern(regexp="1[0-9]{10}") String phone,
             @NotBlank @Size(max=64) String nickname,@Size(max=512) String avatar,
             @NotNull @Min(0) @Max(1) Integer status,@Size(max=72) String password) {
@@ -98,6 +99,7 @@ public class UserManagementService {
                 .notIn(Order::getStatus,"CONFIRMED","REVIEWED","CANCELLED","REFUNDED","ARBITRATED"))>0) throw new BusinessException(409,"用户或关联打手仍有未完成订单，请先处理");
         if(payments.count(new LambdaQueryWrapper<Payment>().eq(Payment::getUserId,id).in(Payment::getStatus,"PENDING","PAYING","REFUNDING"))>0) throw new BusinessException(409,"用户仍有未完成支付或退款");
         var before=snapshot(user);user.setStatus(0);user.setAuthVersion((user.getAuthVersion()==null?0:user.getAuthVersion())+1);users.updateById(user);users.removeById(id);
+        jdbc.update("DELETE FROM identity_verification WHERE user_id=?",id);
         if(player!=null){Player update=new Player();update.setId(player.getId());update.setStatus("FROZEN");update.setIsOnline(0);players.updateById(update);}
         audit("删除用户（保留业务记录）",id,before,Map.of("deleted",true,"historyRetained",true));
     }

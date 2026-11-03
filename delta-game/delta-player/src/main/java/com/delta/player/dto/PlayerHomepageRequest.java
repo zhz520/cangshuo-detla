@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 public class PlayerHomepageRequest {
-    public static final String MEDIA_URL = "^(?:https?://[^\\s]+|/(?!/)[^\\s]*)?$";
+    public static final String MEDIA_URL = "^(?:/file/[^\\s]*)?$";
     @Size(max=32) private String nickname;
     @Size(max=512) @Pattern(regexp=MEDIA_URL) private String avatar;
     @Size(max=1000) private String introduction;

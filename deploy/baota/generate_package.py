@@ -23,7 +23,8 @@ def main():
     redis_password = secrets.token_hex(20)
     jwt_secret = secrets.token_hex(32)
     aes_key = secrets.token_hex(8)
-    login_code = str(secrets.randbelow(900000) + 100000)
+    identity_pepper = secrets.token_hex(32)
+    identity_encryption_key = secrets.token_hex(32)
     alphabet = string.ascii_letters + string.digits
     admin_password = "".join(secrets.choice(alphabet) for _ in range(24))
     password_hash = bcrypt.hashpw(
@@ -46,7 +47,8 @@ def main():
         "REPLACE_WITH_RANDOM_REDIS_PASSWORD": redis_password,
         "REPLACE_WITH_RANDOM_SECRET_AT_LEAST_32_ASCII_CHARACTERS": jwt_secret,
         "REPLACE_16_CHARS!": aes_key,
-        "REPLACE_WITH_RANDOM_6_DIGITS": login_code,
+        "REPLACE_WITH_RANDOM_IDENTITY_HASH_PEPPER": identity_pepper,
+        "REPLACE_WITH_RANDOM_IDENTITY_ENCRYPTION_KEY": identity_encryption_key,
     }
     for old, new in replacements.items():
         env = env.replace(old, new)
@@ -66,12 +68,11 @@ def main():
     shutil.copyfile(template / "宝塔操作说明.md", output / "宝塔操作说明.md")
     (output / "登录信息.txt").write_text(
         "本次首次安装信息；请妥善保管，不要公开。\n\n"
-        "管理后台：http://你的服务器公网IP:8081\n"
-        "H5用户端：http://你的服务器公网IP:8082\n"
+        "管理后台：通过已绑定并启用 HTTPS 的域名访问\n"
+        "H5用户端：通过已绑定并启用 HTTPS 的域名访问\n"
         "管理员账号：admin\n"
         f"管理员初始密码：{admin_password}\n"
-        f"H5首次测试固定验证码：{login_code}\n\n"
-        "该固定验证码不是短信校验，正式运营前需完善实际身份验证。\n"
+        "H5手机号登录需先配置并验收阿里云短信验证码服务。\n"
         "数据库与Redis密码见上传包内 delta/.env；不是宝塔已有数据库密码。\n"
         "原README中的UIUIUIUI属于演示环境，本次安装不使用该密码。\n"
         "ZIP仅用于空数据目录的首次安装，不要覆盖已有生产数据库。\n",

@@ -124,21 +124,21 @@ const menuGroups = computed(() => {
 const profileDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
 
-function handleCommand(cmd) {
+async function handleCommand(cmd) {
   if (cmd === 'profile') {
     profileDialogVisible.value = true
   } else if (cmd === 'password') {
     passwordDialogVisible.value = true
   } else if (cmd === 'logout') {
     chatStore.stop()
-    userStore.logout()
+    await userStore.logout()
     router.push('/login')
   }
 }
 
-function onPasswordChanged() {
+async function onPasswordChanged() {
   chatStore.stop()
-  userStore.logout()
+    await userStore.logout()
   router.replace('/login')
 }
 

@@ -25,6 +25,7 @@ public class ChatController {
     private final ChatSmsReminderService chatSmsReminderService;
     private final JdbcTemplate jdbcTemplate;
     private final CrossModuleMapper crossModuleMapper;
+    private final com.delta.common.security.service.RateLimitService limits;
 
     /** 会话列表：id1=我的编码ID OR id2=我的编码ID */
     @GetMapping("/session/list")
@@ -45,6 +46,7 @@ public class ChatController {
     @PostMapping("/session/create")
     public R<ChatSession> createSession(@RequestParam long id1, @RequestParam long id2) {
         long myEncodedId = getMyEncodedId(null);
+        limits.check("chat-create:"+myEncodedId,10,60);
         if(id1==id2 || id1!=myEncodedId && id2!=myEncodedId) return R.fail(403,"无权限创建该会话");
         long other=id1==myEncodedId?id2:id1;
         int entity=ChatParticipantId.getEntityType(other);
@@ -118,6 +120,7 @@ public class ChatController {
     public R<ChatSession> createCsSession() {
         long userId = SecurityUtils.getUserId();
         long encodedUser = getMyEncodedId(null);
+        limits.check("chat-create:"+encodedUser,10,60);
         List<java.util.Map<String, Object>> csList = jdbcTemplate.queryForList(
                 "SELECT id FROM admin WHERE role IN ('CS','BOTH','ADMIN') AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
         if (csList.isEmpty()) return R.fail("暂无可用客服，请稍后再试");
@@ -132,7 +135,9 @@ public class ChatController {
     public R<?> send(@RequestBody ChatMessage msg, @RequestParam(required = false) String chatRole) {
         Long userId = SecurityUtils.getUserId();
         String userType = resolveChatRole(chatRole);
-        com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(msg.getSessionId()),getMyEncodedId(chatRole));
+        long myEncodedId=getMyEncodedId(chatRole);
+        limits.check("chat-http:"+myEncodedId,30,60);
+        com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(msg.getSessionId()),myEncodedId);
         if(msg.getSenderType()!=null && !userType.equals(msg.getSenderType())) return R.fail(403,"聊天身份不匹配");
         com.delta.common.chat.util.ChatIdentity.validateMessage(msg.getType(),msg.getContent());
         msg.setId(null);

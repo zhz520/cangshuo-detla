@@ -2,14 +2,14 @@
   "name": "三角洲",
   "appid": "",
   "description": "三角洲游戏服务平台",
-  "versionName": "1.5.0",
-  "versionCode": "150",
+  "versionName": "1.5.1",
+  "versionCode": "151",
   "transformPx": false,
   "vueVersion": "3",
   "mp-weixin": {
     "appid": "",
     "setting": {
-      "urlCheck": false,
+      "urlCheck": true,
       "es6": true,
       "minified": true,
       "postcss": true
@@ -26,11 +26,6 @@
     },
     "optimization": {
       "subPackages": true
-    },
-    "permission": {
-      "scope.userLocation": {
-        "desc": "用于获取您的位置信息"
-      }
     }
   }
 }

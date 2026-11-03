@@ -75,17 +75,9 @@ public class OpLogAspect {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
-                String ip = request.getHeader("X-Forwarded-For");
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = request.getHeader("X-Real-IP");
-                }
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = request.getRemoteAddr();
-                }
-                if (ip != null && ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                record.setIp(ip);
+                // Tomcat RemoteIpValve applies X-Forwarded-For only for configured
+                // proxy networks. Do not persist the client-controlled header itself.
+                record.setIp(request.getRemoteAddr());
             }
         } catch (Exception ignored) {}
 

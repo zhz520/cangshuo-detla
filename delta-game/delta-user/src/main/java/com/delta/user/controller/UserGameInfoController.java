@@ -36,6 +36,11 @@ public class UserGameInfoController {
     /** 旧接口保留：保存固定字段 */
     @PostMapping
     public R<Void> save(@RequestBody SaveGameInfoRequest request) {
+        if(request==null || request.getGameAccount()==null || request.getGameAccount().isBlank()
+                || request.getContact()==null || request.getContact().isBlank()
+                || request.getGameAccount().trim().length()>256 || request.getContact().trim().length()>100
+                || request.getRemark()!=null && request.getRemark().length()>2000)
+            return R.fail(400,"下单信息格式不正确");
         Long userId = SecurityUtils.getUserId();
         userGameInfoService.save(
                 userId,
@@ -48,6 +53,12 @@ public class UserGameInfoController {
     /** 新接口：保存动态字段 */
     @PostMapping("/dynamic")
     public R<Void> saveDynamic(@RequestBody SaveDynamicRequest request) {
+        if(request==null || request.getCategoryId()==null || request.getCategoryId()<=0
+                || request.getLabel()!=null && request.getLabel().length()>64
+                || request.getSavedFields()!=null && (request.getSavedFields().size()>30
+                || request.getSavedFields().entrySet().stream().anyMatch(entry->entry.getKey()==null||entry.getKey().isBlank()
+                ||entry.getKey().length()>64||entry.getValue()==null||entry.getValue().length()>500)))
+            return R.fail(400,"动态下单信息格式不正确");
         Long userId = SecurityUtils.getUserId();
         // 将 Map 转为 JSON 字符串存储
         String json = null;

@@ -22,6 +22,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -109,9 +110,11 @@ class EmailNotificationServiceTest {
         jdbc.update("INSERT INTO email_notice_queue(id,event_type,event_hash,recipient,subject,plain_body,html_body,status) " +
                         "VALUES(?,?,?,?,?,?,?,'PENDING')", id, "ORDER_PAID", "a".repeat(64), "ops@example.com",
                 "订单通知", "password=do-not-leak body=do-not-leak", "<html>do-not-leak</html>");
+        Timestamp expiredAt = Timestamp.valueOf("2026-10-31 09:00:00");
         jdbc.update("INSERT INTO email_notice_queue(id,event_type,event_hash,recipient,subject,plain_body,html_body,status,created_at,next_at) " +
-                        "VALUES(?,?,?,?,?,?,?,'PENDING',CURRENT_TIMESTAMP - INTERVAL '2' DAY,CURRENT_TIMESTAMP - INTERVAL '2' DAY)",
-                UUID.randomUUID().toString(), "ORDER_PAID", "b".repeat(64), "ops@example.com", "过期", "过期", "<html>过期</html>");
+                        "VALUES(?,?,?,?,?,?,?,'PENDING',?,?)",
+                UUID.randomUUID().toString(), "ORDER_PAID", "b".repeat(64), "ops@example.com", "过期", "过期", "<html>过期</html>",
+                expiredAt, expiredAt);
         doThrow(new AuthenticationFailedException("secret password and message content"))
                 .when(transport).sendMessage(any(), any());
 

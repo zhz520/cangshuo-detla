@@ -124,13 +124,19 @@ public class PlayerWorkController {
         Order order = orderService.getById(id);
         if (order == null) return R.fail("订单不存在");
         if (!playerId.equals(order.getPlayerId())) return R.fail("无权操作");
+        String content = req == null || req.getContent() == null ? "" : req.getContent().trim();
+        if (content.length() > 2000) return R.fail(400,"进度内容不能超过2000字");
+        String images;
+        try { images = ImageListUtils.normalizeLocal(req == null ? null : req.getImages(), 9); }
+        catch (com.delta.common.exception.BusinessException error) { return R.fail(error.getCode(), error.getMessage()); }
+        if (content.isEmpty() && images == null) return R.fail(400,"请填写进度或上传图片");
         OrderProgress progress = new OrderProgress();
         progress.setOrderId(id);
         progress.setType("PROGRESS_UPDATE");
         progress.setOperatorType("PLAYER");
         progress.setOperatorId(playerId);
-        progress.setContent(req.getContent());
-        progress.setImages(ImageListUtils.normalize(req.getImages()));
+        progress.setContent(content.isEmpty() ? null : content);
+        progress.setImages(images);
         progress.setCreatedAt(LocalDateTime.now());
         orderProgressService.save(progress);
         return R.ok();

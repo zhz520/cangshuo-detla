@@ -56,6 +56,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Long userId, CreateOrderRequest req) {
+        if(userId==null || jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 AND status=1 FOR UPDATE",userId).isEmpty())
+            throw new BusinessException(403,"账号不可用，请重新登录");
+        if(req.getExtraFields()!=null&&req.getExtraFields().entrySet().stream().anyMatch(entry->entry.getKey()==null||entry.getKey().isBlank()||entry.getKey().length()>64||entry.getValue()==null||entry.getValue().length()>500))
+            throw new BusinessException(400,"下单附加信息格式不正确");
         // 1. 查询商品并校验状态
         Product product = productService.getById(req.getProductId());
         if (product == null) throw new BusinessException("商品不存在");
@@ -452,7 +456,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     private String normalizeImages(String images) {
-        return ImageListUtils.normalize(images);
+        return ImageListUtils.normalizeLocal(images, 9);
     }
 
     private void transition(Order order, OrderStatusEnum to, String operatorType, Long operatorId, String content) {

@@ -56,7 +56,8 @@ class UserAccountIntegrationTest {
     @MapperScan({"com.delta.user.mapper","com.delta.player.mapper","com.delta.common.mapper","com.delta.system.mapper"})
     @Import({UserServiceImpl.class,WalletServiceImpl.class,PlayerServiceImpl.class,PlayerWalletServiceImpl.class,OperationLogServiceImpl.class,
             com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,UserPasswordService.class,UserManagementService.class,UserAuthController.class,AdminUserController.class,
-            SecurityConfig.class,JwtAuthenticationFilter.class,TokenService.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class})
+            SecurityConfig.class,JwtAuthenticationFilter.class,TokenService.class,com.delta.common.security.controller.LogoutController.class,
+            AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class})
     static class Config {}
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -206,6 +207,12 @@ class UserAccountIntegrationTest {
         mvc.perform(post("/user/auth/reset-password").contentType("application/json").content(body)).andExpect(jsonPath("$.code").value(400));
         assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class)).isNull();
         assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=8",String.class)).isNull();
+    }
+    @Test void explicitLogoutRevokesThePresentedBearerToken()throws Exception{
+        String token=tokens.createToken(7L,"USER");
+        assertThat(tokens.authenticate(token)).isNotNull();
+        mvc.perform(post("/auth/logout").header("Authorization","Bearer "+token)).andExpect(jsonPath("$.code").value(200));
+        assertThat(tokens.authenticate(token)).isNull();
     }
 
 }

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getUserToken, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
-import { userLogin, h5Login, setupUserPassword, userPasswordLogin } from '@/api/auth'
+import { getUserToken, getPlayerToken, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
+import { userLogin, h5Login, setupUserPassword, userPasswordLogin, revokeSession } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
 
@@ -73,12 +73,17 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /** 退出登录 */
-  function logout() {
-    token.value = ''
-    userInfo.value = null
-    removeUserToken()
-    removePlayerToken()
-    uni.reLaunch({ url: '/pages/login/index' })
+  async function logout() {
+    const tokens=[getUserToken(),getPlayerToken()].filter(Boolean)
+    useChatStore().disconnect()
+    try { await Promise.allSettled(tokens.map(value=>revokeSession(value))) }
+    finally {
+      token.value = ''
+      userInfo.value = null
+      removeUserToken()
+      removePlayerToken()
+      uni.reLaunch({ url: '/pages/login/index' })
+    }
   }
 
   /** 检查登录态，未登录则跳登录页 */

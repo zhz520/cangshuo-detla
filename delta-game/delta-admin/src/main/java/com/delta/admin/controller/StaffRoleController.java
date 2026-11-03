@@ -20,7 +20,7 @@ import java.util.*;
 public class StaffRoleController {
     private final JdbcTemplate jdbc;
     private final StaffPermissions permissions;
-    public static final List<String> CODES=List.of("*","order.read","order.manage","order.refund","player.manage","media.review","user.read","user.manage","finance.read","finance.export","withdraw.review","chat.manage","system.manage");
+    public static final List<String> CODES=List.of("*","order.read","order.manage","order.refund","product.manage","player.manage","media.review","user.read","user.manage","finance.read","finance.manage","finance.export","withdraw.review","chat.manage","system.manage");
     @GetMapping("/cs/permissions") public R<List<String>> mine(){return R.ok(permissions.forStaff(SecurityUtils.getUserId(),SecurityUtils.getUserType()));}
     @GetMapping("/system/roles")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")

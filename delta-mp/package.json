@@ -1,6 +1,6 @@
 {
   "name": "delta-mp",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "三角洲游戏服务平台小程序",
   "main": "main.js",
   "scripts": {
@@ -36,6 +36,15 @@
     "ws": "8.22.0",
     "yaml": "1.10.3",
     "postcss": "8.5.31",
-    "source-map-js": "1.2.2"
+    "source-map-js": "1.2.2",
+    "follow-redirects": "1.16.2",
+    "jpeg-js": "0.4.4",
+    "adm-zip": "0.6.1",
+    "postcss-selector-parser@6.1.2": "6.1.5",
+    "@intlify/core-base@9.1.9": "9.14.5",
+    "@intlify/message-compiler@9.1.9": "9.14.5",
+    "@intlify/message-resolver@9.1.9": "9.14.5",
+    "@intlify/runtime@9.1.9": "9.14.5",
+    "@intlify/vue-devtools@9.1.9": "9.14.5"
   }
 }

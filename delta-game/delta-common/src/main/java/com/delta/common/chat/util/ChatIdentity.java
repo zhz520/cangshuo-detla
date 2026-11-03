@@ -26,7 +26,18 @@ public final class ChatIdentity {
         if(type==null || !java.util.Set.of("TEXT","IMAGE","PRODUCT","ORDER").contains(type)
                 || content==null || content.isBlank() || content.length()>4000)
             throw new BusinessException(400,"消息类型或长度不符合要求");
-        if("IMAGE".equals(type) && !(content.startsWith("/file/") || content.startsWith("https://")))
+        if("IMAGE".equals(type) && !content.matches("/file/[A-Za-z0-9_./-]+"))
             throw new BusinessException(400,"图片地址无效");
+        if("PRODUCT".equals(type)) {
+            try {
+                var card=com.alibaba.fastjson2.JSON.parseObject(content);
+                String cover=card.getString("coverImage");
+                if(card.getLongValue("id")<=0 || card.getString("name")==null || card.getString("name").length()>100
+                        || cover!=null && !cover.isBlank() && !cover.matches("/file/[A-Za-z0-9_./-]+"))
+                    throw new IllegalArgumentException();
+            } catch (RuntimeException error) {
+                throw new BusinessException(400,"商品消息格式无效");
+            }
+        }
     }
 }

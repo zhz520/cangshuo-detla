@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { login as loginApi } from '@/api/auth'
+import { login as loginApi, logout as logoutApi } from '@/api/auth'
 import { getToken, setToken, removeToken, getUserInfo, setUserInfo } from '@/utils/auth'
 
 export const useUserStore = defineStore('user', () => {
@@ -32,13 +32,16 @@ export const useUserStore = defineStore('user', () => {
     setUserInfo({ ...info, nickname: nickname.value, avatar: avatar.value })
   }
 
-  function logout() {
-    token.value = ''
-    adminId.value = null
-    nickname.value = ''
-    avatar.value = ''
-    role.value = ''
-    removeToken()
+  async function logout() {
+    try { await logoutApi() } catch (_) { /* local logout must still complete */ }
+    finally {
+      token.value = ''
+      adminId.value = null
+      nickname.value = ''
+      avatar.value = ''
+      role.value = ''
+      removeToken()
+    }
   }
 
   return { token, adminId, nickname, avatar, role, login, logout, updateProfile }

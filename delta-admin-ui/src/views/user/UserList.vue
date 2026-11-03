@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <el-card>
-      <template #header><div class="user-header"><span>用户管理</span><el-button v-if="isAdmin" type="primary" @click="openUserEditor()">新增用户</el-button></div></template>
+      <template #header><div class="user-header"><span>用户管理</span><el-button v-if="isAdmin && can('user.manage')" type="primary" @click="openUserEditor()">新增用户</el-button></div></template>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item><el-input v-model="query.keyword" placeholder="用户名/手机号" clearable @keyup.enter="searchUsers" /></el-form-item>
         <el-form-item><el-select v-model="query.status" placeholder="状态" clearable><el-option label="正常" :value="1" /><el-option label="封禁" :value="0" /></el-select></el-form-item>
@@ -20,10 +20,10 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button link type="info" @click="showUserOrders(row)">订单</el-button>
-            <el-button v-if="isAdmin" link type="warning" @click="openBalanceDialog(row)">余额</el-button>
-            <el-button v-if="isAdmin" link type="primary" @click="openUserEditor(row)">编辑</el-button>
-            <el-button v-if="isAdmin" link type="danger" @click="deleteUser(row)">删除</el-button>
-            <el-popconfirm :title="row.status === 1 ? '确认封禁该用户？' : '确认解封该用户？'" @confirm="handleToggleStatus(row)">
+            <el-button v-if="isAdmin && can('finance.manage')" link type="warning" @click="openBalanceDialog(row)">余额</el-button>
+            <el-button v-if="isAdmin && can('user.manage')" link type="primary" @click="openUserEditor(row)">编辑</el-button>
+            <el-button v-if="isAdmin && can('user.manage')" link type="danger" @click="deleteUser(row)">删除</el-button>
+            <el-popconfirm v-if="can('user.manage')" :title="row.status === 1 ? '确认封禁该用户？' : '确认解封该用户？'" @confirm="handleToggleStatus(row)">
               <template #reference><el-button link :type="row.status === 1 ? 'danger' : 'success'">{{ row.status === 1 ? '封禁' : '解封' }}</el-button></template>
             </el-popconfirm>
           </template>
@@ -115,6 +115,7 @@ import ImageUpload from '@/components/ImageUpload.vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+import { can } from '@/utils/staff-permissions'
 
 const { isCompact, isNarrow } = useResponsive()
 

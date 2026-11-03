@@ -36,7 +36,7 @@ public class UserController {
     @PutMapping("/profile")
     public R<Void> updateProfile(@RequestBody User user) {
         if(user.getNickname()!=null && (user.getNickname().isBlank() || user.getNickname().length()>64)) return R.fail(400,"昵称长度不符合要求");
-        if(user.getAvatar()!=null && !(user.getAvatar().isEmpty() || user.getAvatar().startsWith("/file/") || user.getAvatar().startsWith("https://"))) return R.fail(400,"头像地址无效");
+        if(user.getAvatar()!=null && !(user.getAvatar().isEmpty() || user.getAvatar().matches("/file/.{1,500}"))) return R.fail(400,"头像地址无效");
         User update=new User();update.setId(SecurityUtils.getUserId());update.setNickname(user.getNickname());update.setAvatar(user.getAvatar());
         userService.updateById(update);
         // Player public profile is independently reviewed; do not copy user avatar/nickname into it.

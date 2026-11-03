@@ -27,5 +27,5 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <logger name="com.delta" level="DEBUG"/>
+    <logger name="com.delta" level="${LOG_LEVEL:INFO}"/>
 </configuration>

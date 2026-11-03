@@ -46,6 +46,10 @@ class GovernanceIntegrationTest {
  static class Config{}
  @RestController static class RefundProbe {
   @PostMapping("/cs/order/{id}/refund") @PreAuthorize("@staffPermissions.allowed('order.refund')") public R<Void> refund(@PathVariable Long id){return R.ok();}
+  @PostMapping("/admin/unmapped-probe") public R<Void> unmappedAdmin(){return R.ok();}
+  @PostMapping("/admin/user/{id}/balance") public R<Void> balance(@PathVariable Long id){return R.ok();}
+  @PostMapping("/cs/product/probe") public R<Void> csProduct(){return R.ok();}
+  @PostMapping("/product/probe") public R<Void> product(){return R.ok();}
  }
  @Autowired MockMvc mvc;@Autowired JdbcTemplate jdbc;@Autowired PlayerGovernanceService governance;
  @MockBean TokenService tokens;@MockBean SysConfigService configs;
@@ -68,6 +72,28 @@ class GovernanceIntegrationTest {
   mvc.perform(put("/system/roles").with(role("CS",2)).contentType("application/json").content("{\"code\":\"evil\",\"name\":\"x\",\"enabled\":true,\"permissions\":[\"*\"]}")).andExpect(jsonPath("$.code").value(403));
   mvc.perform(put("/system/roles/members/2").with(role("ADMIN",1)).contentType("application/json").content("{\"roleCode\":\"ADMIN\"}")).andExpect(jsonPath("$.code").value(400));
   mvc.perform(delete("/system/roles/ADMIN").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(400));
+ }
+ @Test void limitedAdministratorCannotSlideIntoUnmappedPrivilegedRoutes()throws Exception{
+  jdbc.update("INSERT INTO staff_role(code,name,permissions,enabled) VALUES ('LIMITED','受限管理员','[\"user.manage\"]',1)");
+  jdbc.update("INSERT INTO staff_role_member(admin_id,role_code) VALUES (1,'LIMITED')");
+  mvc.perform(get("/admin/privacy/requests").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(200));
+  mvc.perform(post("/admin/unmapped-probe").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(403));
+ }
+ @Test void catalogWritesRequireExplicitProductPermission()throws Exception{
+  jdbc.update("INSERT INTO staff_role(code,name,permissions,enabled) VALUES ('CATALOG','目录维护','[\"order.read\"]',1)");
+  jdbc.update("INSERT INTO staff_role_member(admin_id,role_code) VALUES (1,'CATALOG')");
+  mvc.perform(post("/cs/product/probe").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(403));
+  mvc.perform(post("/product/probe").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(403));
+  jdbc.update("UPDATE staff_role SET permissions='[\"product.manage\"]' WHERE code='CATALOG'");
+  mvc.perform(post("/cs/product/probe").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(200));
+  mvc.perform(post("/product/probe").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(200));
+ }
+ @Test void userManagersCannotCreditWalletsWithoutFinancePermission()throws Exception{
+  jdbc.update("INSERT INTO staff_role(code,name,permissions,enabled) VALUES ('USEROP','用户运营','[\"user.manage\"]',1)");
+  jdbc.update("INSERT INTO staff_role_member(admin_id,role_code) VALUES (1,'USEROP')");
+  mvc.perform(post("/admin/user/7/balance").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(403));
+  jdbc.update("UPDATE staff_role SET permissions='[\"finance.manage\"]' WHERE code='USEROP'");
+  mvc.perform(post("/admin/user/7/balance").with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(200));
  }
  @Test void disabledInvitesCannotRegisterAndDeviceAttributionIsImmutable(){
   jdbc.update("INSERT INTO player_invitation(token,name,referrer_id,one_device) VALUES ('valid','邀请',2,1)");

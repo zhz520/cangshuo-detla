@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container"><el-card><template #header><div class="header"><span>打赏记录</span><el-button @click="$router.push('/system/reward-grab')">打赏与抢单设置</el-button></div></template>
+  <div class="page-container"><el-card><template #header><div class="header"><span>打赏记录</span><el-button v-if="can('system.manage')" @click="$router.push('/system/reward-grab')">打赏与抢单设置</el-button></div></template>
     <el-form inline :model="query" class="search-form">
       <el-form-item label="客户ID"><el-input v-model="query.userId" clearable style="width:110px" /></el-form-item>
       <el-form-item label="打手ID"><el-input v-model="query.playerId" clearable style="width:110px" /></el-form-item>
@@ -16,7 +16,7 @@
       <el-table-column prop="amount" label="打赏金额" width="100" /><el-table-column prop="fee" label="服务费" width="90" /><el-table-column prop="income" label="打手实收" width="100" />
       <el-table-column label="状态" width="120"><template #default="{row}"><el-tag :type="row.status==='REVERSAL_PENDING'?'warning':row.status==='REVERSED'?'info':'success'">{{ statuses[row.status] }}</el-tag></template></el-table-column>
       <el-table-column prop="pendingRecovery" label="待追回" width="100" /><el-table-column prop="createdAt" label="时间" min-width="170" />
-      <el-table-column label="操作" width="100" :fixed="isCompact ? false : 'right'"><template #default="{row}"><el-button link @click="show(row)">详情</el-button><el-button v-if="row.status!=='REVERSED'" link type="danger" @click="reverse(row)">{{ row.status==='REVERSAL_PENDING'?'重试冲正':'冲正' }}</el-button></template></el-table-column>
+      <el-table-column label="操作" width="100" :fixed="isCompact ? false : 'right'"><template #default="{row}"><el-button link @click="show(row)">详情</el-button><el-button v-if="can('finance.manage') && row.status!=='REVERSED'" link type="danger" @click="reverse(row)">{{ row.status==='REVERSAL_PENDING'?'重试冲正':'冲正' }}</el-button></template></el-table-column>
     </el-table>
     <el-pagination v-model:current-page="query.pageNum" :page-size="20" :total="total" :pager-count="isCompact ? 5 : 7" layout="total, prev, pager, next" @current-change="load" style="margin-top:20px" />
   </el-card><el-dialog v-model="visible" title="打赏详情" width="680px"><el-descriptions v-if="selected" :column="1" border><el-descriptions-item v-for="(label,key) in detailFields" :key="key" :label="label">{{ selected[key] ?? '-' }}</el-descriptions-item></el-descriptions><p>以上余额为操作时的账目快照；管理操作记录可在系统操作日志中查询。</p></el-dialog></div>
@@ -26,6 +26,7 @@ import { useResponsive } from '@/utils/responsive'
 import {ref,reactive,onMounted} from 'vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
 import {getRewards,reverseReward} from '@/api/reward'
+import {can} from '@/utils/staff-permissions'
 const { isCompact } = useResponsive()
 
 const query=reactive({pageNum:1,pageSize:20,userId:'',playerId:'',orderNo:'',status:''}),dates=ref([]),records=ref([]),total=ref(0),loading=ref(false),visible=ref(false),selected=ref(null)

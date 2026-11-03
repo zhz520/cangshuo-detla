@@ -14,6 +14,8 @@ import java.util.UUID;
 
 @Service
 public class LocalFileServiceImpl implements FileService {
+    private static final java.util.concurrent.Semaphore IMAGE_DECODE_SLOTS =
+            new java.util.concurrent.Semaphore(2, true);
     @Value("${file.upload.path:/data/upload}")
     private String uploadPath;
     @Value("${file.upload.url-prefix:/upload/}")
@@ -38,21 +40,26 @@ public class LocalFileServiceImpl implements FileService {
 
         Path target = dir.resolve(fileName);
         if(image) {
-            try(var input=javax.imageio.ImageIO.createImageInputStream(file.getInputStream())) {
-                var readers=javax.imageio.ImageIO.getImageReaders(input);
-                if(!readers.hasNext()) throw new com.delta.common.exception.BusinessException(400,"图片内容无效");
-                var reader=readers.next();
-                try {
-                    reader.setInput(input,true,true);
-                    int width=reader.getWidth(0),height=reader.getHeight(0);
-                    if(width<1 || height<1 || (long)width*height>16_000_000L) throw new com.delta.common.exception.BusinessException(400,"图片分辨率过大");
-                    java.awt.image.BufferedImage decoded=reader.read(0);
-                    decoded = com.delta.common.file.service.ImageEncoding.resize(decoded, 1920, 1920);
-                    boolean transparent = com.delta.common.file.service.ImageEncoding.hasTransparency(decoded);
-                    fileName = UUID.randomUUID().toString().replace("-", "") + (transparent ? ".png" : ".jpg");
-                    target = dir.resolve(fileName);
-                    com.delta.common.file.service.ImageEncoding.write(decoded, target, transparent);
-                } finally {reader.dispose();}
+            if(!IMAGE_DECODE_SLOTS.tryAcquire()) throw new com.delta.common.exception.BusinessException(429,"图片处理繁忙，请稍后重试");
+            try {
+                try(var input=javax.imageio.ImageIO.createImageInputStream(file.getInputStream())) {
+                    var readers=javax.imageio.ImageIO.getImageReaders(input);
+                    if(!readers.hasNext()) throw new com.delta.common.exception.BusinessException(400,"图片内容无效");
+                    var reader=readers.next();
+                    try {
+                        reader.setInput(input,true,true);
+                        int width=reader.getWidth(0),height=reader.getHeight(0);
+                        if(width<1 || height<1 || (long)width*height>16_000_000L) throw new com.delta.common.exception.BusinessException(400,"图片分辨率过大");
+                        java.awt.image.BufferedImage decoded=reader.read(0);
+                        decoded = com.delta.common.file.service.ImageEncoding.resize(decoded, 1920, 1920);
+                        boolean transparent = com.delta.common.file.service.ImageEncoding.hasTransparency(decoded);
+                        fileName = UUID.randomUUID().toString().replace("-", "") + (transparent ? ".png" : ".jpg");
+                        target = dir.resolve(fileName);
+                        com.delta.common.file.service.ImageEncoding.write(decoded, target, transparent);
+                    } finally {reader.dispose();}
+                }
+            } finally {
+                IMAGE_DECODE_SLOTS.release();
             }
         } else {
             byte[] bytes;

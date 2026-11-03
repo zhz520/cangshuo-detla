@@ -19,7 +19,7 @@ public class FileController {
 
     @PostMapping("/upload")
     public R<String> upload(@RequestParam("file") MultipartFile file) throws Exception {
-        limits.check("upload:"+com.delta.common.security.utils.SecurityUtils.getUserType()+":"+com.delta.common.security.utils.SecurityUtils.getUserId(),30,60);
+        checkUploadRate();
         String url = fileService.upload(file);
         return R.ok(url);
     }
@@ -27,7 +27,7 @@ public class FileController {
     @PostMapping("/profile-audio")
     @PreAuthorize("hasAnyRole('ADMIN','PLAYER')")
     public R<String> profileAudio(@RequestParam("file") MultipartFile file) throws Exception {
-        limits.check("upload:"+com.delta.common.security.utils.SecurityUtils.getUserType()+":"+com.delta.common.security.utils.SecurityUtils.getUserId(),30,60);
+        checkUploadRate();
         String name=file.getOriginalFilename()==null?"":file.getOriginalFilename().toLowerCase(Locale.ROOT);
         String ext=name.substring(name.lastIndexOf('.')+1);
         if(file.isEmpty()||file.getSize()>10*1024*1024) throw new BusinessException(400,"语音文件大小须在10MB以内");
@@ -43,5 +43,13 @@ public class FileController {
             (bytes[0]&255)==26&&(bytes[1]&255)==69&&(bytes[2]&255)==223&&(bytes[3]&255)==163);
         if(!audio) throw new BusinessException(400,"无法识别该音频文件");
         return R.ok(fileService.upload(file));
+    }
+
+    private void checkUploadRate() {
+        String type=com.delta.common.security.utils.SecurityUtils.getUserType();
+        String actor=type+":"+com.delta.common.security.utils.SecurityUtils.getUserId();
+        boolean staff="ADMIN".equals(type)||"CS".equals(type);
+        limits.check("upload-minute:"+actor,staff?60:10,60);
+        limits.check("upload-day:"+actor,staff?1000:100,86400);
     }
 }

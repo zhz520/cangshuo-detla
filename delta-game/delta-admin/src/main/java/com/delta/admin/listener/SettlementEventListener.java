@@ -81,17 +81,36 @@ public class SettlementEventListener {
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getRole, "TEAMMATE")
                 .eq(OrderPlayer::getStatus, "ACCEPTED"));
+        List<OrderPlayer> relayOuts = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, orderId)
+                .eq(OrderPlayer::getRole, "RELAY_OUT")
+                .eq(OrderPlayer::getStatus, "ACCEPTED"));
+        int sharingPeople = teammates.size() + relayOuts.size();
 
         // Lock all participant wallets in ascending ID order to avoid cross-order lock inversion.
         var participantIds=new java.util.TreeSet<Long>();participantIds.add(primaryPlayerId);teammates.forEach(p->participantIds.add(p.getPlayerId()));
+        relayOuts.forEach(p->participantIds.add(p.getPlayerId()));
         for(Long participant:participantIds){if(playerWalletService.getByPlayerId(participant)==null){playerWalletService.initWallet(participant);playerWalletService.getByPlayerId(participant);}}
         BigDecimal primaryIncome = playerTotalIncome; // 默认全归主打手
-        BigDecimal totalTeammates=teammates.stream().map(tm -> calcTeammateIncome(playerTotalIncome,tm,teammates.size())).reduce(BigDecimal.ZERO,BigDecimal::add);
-        if(totalTeammates.signum()<0 || totalTeammates.compareTo(playerTotalIncome)>0) throw new com.delta.common.exception.BusinessException("队友分成总额超过可结算收益");
+        BigDecimal totalShares=java.util.stream.Stream.concat(teammates.stream(),relayOuts.stream())
+                .map(tm -> calcTeammateIncome(playerTotalIncome,tm,sharingPeople))
+                .reduce(BigDecimal.ZERO,BigDecimal::add);
+        if(totalShares.signum()<0 || totalShares.compareTo(playerTotalIncome)>0) throw new com.delta.common.exception.BusinessException("协作分成总额超过可结算收益");
+
+        for (OrderPlayer relayOut : relayOuts) {
+            BigDecimal income = calcTeammateIncome(playerTotalIncome, relayOut, sharingPeople);
+            if (income.signum() <= 0) continue;
+            primaryIncome = primaryIncome.subtract(income);
+            creditWallet(relayOut.getPlayerId(), income, orderId,
+                    String.format("接力分成: 订单金额¥%s, 分成¥%s", orderAmount.toPlainString(), income.toPlainString()));
+            relayOut.setSettleAmount(income);
+            relayOut.setSettledAt(LocalDateTime.now());
+            orderPlayerService.updateById(relayOut);
+        }
 
         // 给每位队友结算
         for (OrderPlayer tm : teammates) {
-            BigDecimal tmIncome = calcTeammateIncome(playerTotalIncome, tm, teammates.size());
+            BigDecimal tmIncome = calcTeammateIncome(playerTotalIncome, tm, sharingPeople);
             if (tmIncome.compareTo(BigDecimal.ZERO) <= 0) continue;
             primaryIncome = primaryIncome.subtract(tmIncome);
             // 更新队友钱包
@@ -134,8 +153,8 @@ public class SettlementEventListener {
         order.setSettleTime(LocalDateTime.now());
         orderService.updateById(order);
 
-        log.info("订单结算完成: orderId={}, 订单金额={}, 抽成={}, 打手总收入={}, 主打手实得={}, 队友数={}",
-                orderId, orderAmount, commission, playerTotalIncome, primaryIncome, teammates.size());
+        log.info("订单结算完成: orderId={}, 订单金额={}, 抽成={}, 打手总收入={}, 主打手实得={}, 协作人数={}",
+                orderId, orderAmount, commission, playerTotalIncome, primaryIncome, sharingPeople);
     }
 
     /**

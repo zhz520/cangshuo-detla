@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/admin/user")
@@ -80,8 +81,13 @@ public class AdminUserController {
     @PutMapping("/{id}/balance")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> adjustBalance(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        String remark = body.getOrDefault("remark", "").toString();
+        if (body == null || body.get("amount") == null) throw new BusinessException(400,"请输入调整金额");
+        BigDecimal amount;
+        try { amount = new BigDecimal(body.get("amount").toString()); }
+        catch (NumberFormatException error) { throw new BusinessException(400,"调整金额格式不正确"); }
+        com.delta.common.utils.Money.positive(amount.abs());
+        String remark = Objects.toString(body.getOrDefault("remark", ""),"").trim();
+        if (remark.length() > 200) throw new BusinessException(400,"调整备注不能超过200字");
         if (amount.compareTo(BigDecimal.ZERO) == 0) {
             throw new BusinessException("调整金额不能为0");
         }

@@ -1,0 +1,76 @@
+package com.delta.admin;
+
+import com.delta.admin.listener.SettlementEventListener;
+import com.delta.admin.service.SettlementRecoveryService;
+import com.delta.common.event.OrderConfirmedEvent;
+import com.delta.order.entity.Order;
+import com.delta.order.entity.OrderPlayer;
+import com.delta.order.service.OrderPlayerService;
+import com.delta.order.service.OrderService;
+import com.delta.pay.service.TransactionService;
+import com.delta.player.entity.PlayerWallet;
+import com.delta.player.service.PlayerWalletService;
+import com.delta.system.service.SysConfigService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+class SettlementRelayTest {
+    private final Map<Long,PlayerWallet> wallets=new HashMap<>();
+    private SettlementEventListener listener;
+
+    @BeforeEach
+    void setup() throws Exception {
+        var dataSource=new DriverManagerDataSource("jdbc:h2:mem:settlement_relay_"+UUID.randomUUID()+";MODE=MySQL;DB_CLOSE_DELAY=-1","sa","");
+        JdbcTemplate jdbc=new JdbcTemplate(dataSource);
+        try(var connection=dataSource.getConnection()) {
+            ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
+        }
+        OrderService orders=mock(OrderService.class);
+        SettlementRecoveryService recovery=mock(SettlementRecoveryService.class);
+        OrderPlayerService participants=mock(OrderPlayerService.class);
+        PlayerWalletService playerWallets=mock(PlayerWalletService.class);
+        TransactionService transactions=mock(TransactionService.class);
+        SysConfigService configs=mock(SysConfigService.class);
+
+        Order order=new Order();order.setId(100L);order.setUserId(7L);order.setPlayerId(3L);order.setStatus("CONFIRMED");
+        order.setAmount(new BigDecimal("100.00"));order.setCommissionRate(new BigDecimal("0.20"));order.setSettled(0);
+        when(orders.getById(100L)).thenReturn(order);
+
+        OrderPlayer teammate=new OrderPlayer();teammate.setPlayerId(2L);teammate.setRole("TEAMMATE");teammate.setStatus("ACCEPTED");teammate.setSplitType("FIFTY_FIFTY");
+        OrderPlayer relayOut=new OrderPlayer();relayOut.setPlayerId(1L);relayOut.setRole("RELAY_OUT");relayOut.setStatus("ACCEPTED");relayOut.setSplitType("CUSTOM");relayOut.setSplitAmount(new BigDecimal("10.00"));
+        OrderPlayer primary=new OrderPlayer();primary.setPlayerId(3L);primary.setRole("PRIMARY");primary.setStatus("ACCEPTED");
+        when(participants.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(List.of(teammate),List.of(relayOut),List.of(primary));
+        when(playerWallets.getByPlayerId(anyLong())).thenAnswer(invocation->{
+            long id=invocation.getArgument(0);return wallets.computeIfAbsent(id,key->{var wallet=new PlayerWallet();wallet.setPlayerId(key);wallet.setBalance(BigDecimal.ZERO);wallet.setTotalIncome(BigDecimal.ZERO);return wallet;});
+        });
+        listener=new SettlementEventListener(orders,recovery,jdbc,participants,playerWallets,transactions,configs);
+    }
+
+    @Test
+    void relayAndTeammateSharesAreDeductedFromPrimaryWithoutCreatingMoney() {
+        listener.onOrderConfirmed(new OrderConfirmedEvent(this,100L,"SYSTEM"));
+
+        assertThat(wallets.get(1L).getBalance()).isEqualByComparingTo("10.00");
+        assertThat(wallets.get(2L).getBalance()).isEqualByComparingTo("26.67");
+        assertThat(wallets.get(3L).getBalance()).isEqualByComparingTo("43.33");
+        assertThat(wallets.values().stream().map(PlayerWallet::getBalance).reduce(BigDecimal.ZERO,BigDecimal::add))
+                .isEqualByComparingTo("80.00");
+    }
+}

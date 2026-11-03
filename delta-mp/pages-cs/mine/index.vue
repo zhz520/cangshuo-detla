@@ -63,7 +63,8 @@ import TechSupportFooter from '@/components/TechSupportFooter.vue'
 import { useAppStore } from '@/store/app'
 import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
-import { getCsInfo, removeCsToken } from '@/utils/auth'
+import { getCsInfo, getCsToken, removeCsToken } from '@/utils/auth'
+import { revokeSession } from '@/api/auth'
 import { useOfficialWechatStore } from '@/store/official-wechat'
 
 const appStore = useAppStore()
@@ -80,9 +81,11 @@ function doLogout() {
   uni.showModal({
     title: '确认退出',
     content: '确定退出客服登录吗？',
-    success(r) {
+  async success(r) {
       if (r.confirm) {
         useChatStore().disconnect()
+        const token=getCsToken()
+        if(token)await Promise.allSettled([revokeSession(token)])
         removeCsToken()
         appStore.switchToUser()
       }

@@ -12,5 +12,11 @@ export const h5Login = (data) => post('/user/auth/h5-login', data, { auth: false
 export const setupUserPassword = data => post('/user/auth/set-password',data,{auth:false})
 export const userPasswordLogin = data => post('/user/auth/password-login',data,{auth:false})
 
+/** Revoke a token explicitly before removing it from local storage. */
+export const revokeSession = token => post('/auth/logout', {}, {
+  auth: false, loading: false, silent: true, timeout: 1500,
+  header: token ? { Authorization: `Bearer ${token}` } : {}
+})
+
 /** 用户切换到打手端：携带 user_token，返回 player_token（每次切换都需重新获取） */
 export const switchToPlayerToken = () => post('/user/auth/switch-to-player', {}, { role: 'user', loading: true })

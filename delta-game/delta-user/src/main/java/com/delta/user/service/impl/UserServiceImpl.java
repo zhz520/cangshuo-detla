@@ -9,6 +9,7 @@ import com.delta.user.service.UserService;
 import com.delta.user.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -54,8 +55,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setNickname((nickname != null && !nickname.isEmpty()) ? nickname : generateRandomNickname());
             user.setAvatar(avatar);
             user.setStatus(1);
-            save(user);
-            walletService.initWallet(user.getId());
+            try {
+                save(user);
+                walletService.initWallet(user.getId());
+            } catch (DuplicateKeyException race) {
+                user = getByOpenid(openid);
+                if (user == null) throw race;
+            }
         }
         return user;
     }
@@ -72,8 +78,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setAvatar("");
             user.setPhone(phone);
             user.setStatus(1);
-            save(user);
-            walletService.initWallet(user.getId());
+            try {
+                save(user);
+                walletService.initWallet(user.getId());
+            } catch (DuplicateKeyException race) {
+                user = getByPhone(phone);
+                if (user == null) throw race;
+            }
         } else if (user.getPhone() == null || user.getPhone().isEmpty()) {
             user.setPhone(phone);
             updateById(user);

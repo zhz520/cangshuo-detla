@@ -79,7 +79,7 @@ public class PlayerController {
         // Real identity is maintained by staff and privacy requests, not the public editor.
         update.setSkillTags(player.getSkillTags());
         update.setGameLevel(player.getGameLevel());
-        if (player.getProofImages() != null) update.setProofImages(ImageListUtils.normalize(player.getProofImages()));
+        if (player.getProofImages() != null) update.setProofImages(ImageListUtils.normalizeLocal(player.getProofImages(), 4));
         update.setServiceTypes(player.getServiceTypes());
         // Public introduction changes go through the reviewed homepage endpoint.
         playerService.updateById(update);
@@ -99,7 +99,7 @@ public class PlayerController {
     public R<Void> apply(@RequestBody Player player) {
         Player supplied=player;player=new Player();
         if(!Boolean.TRUE.equals(supplied.getPrivacyAccepted()))return R.fail(400,"请同意用户协议和隐私政策");
-        if(supplied.getNickname()==null||supplied.getNickname().isBlank()||supplied.getNickname().length()>32||supplied.getRealName()==null||supplied.getRealName().isBlank()||supplied.getRealName().length()>50||supplied.getAvatar()==null||!supplied.getAvatar().matches("(?:/file/|https://).{1,500}"))return R.fail(400,"请上传头像并填写接单名和真实姓名");
+        if(supplied.getNickname()==null||supplied.getNickname().isBlank()||supplied.getNickname().length()>32||supplied.getRealName()==null||supplied.getRealName().isBlank()||supplied.getRealName().length()>50||supplied.getAvatar()==null||!supplied.getAvatar().matches("/file/.{1,500}"))return R.fail(400,"请上传头像并填写接单名和真实姓名");
         player.setNickname(supplied.getNickname());player.setAvatar(supplied.getAvatar());player.setRealName(supplied.getRealName());
         player.setSkillTags(supplied.getSkillTags());player.setGameLevel(supplied.getGameLevel());player.setIntroduction(supplied.getIntroduction());
         player.setProofImages(supplied.getProofImages());player.setServiceTypes(supplied.getServiceTypes());player.setDepositPaymentNo(supplied.getDepositPaymentNo());
@@ -126,7 +126,7 @@ public class PlayerController {
         Player existing = playerService.getByOpenid(applicant.getOpenid());
         if(existing!=null && !"REJECTED".equals(existing.getStatus())) return R.fail(409,"已有入驻记录，请查看当前状态");
         player.setPhone(applicant.getPhone());
-        player.setProofImages(ImageListUtils.normalize(player.getProofImages()));
+        player.setProofImages(ImageListUtils.normalizeLocal(player.getProofImages(), 4));
         if (existing == null) {
             // 从用户表获取基本信息
             User user = userService.getById(userId);

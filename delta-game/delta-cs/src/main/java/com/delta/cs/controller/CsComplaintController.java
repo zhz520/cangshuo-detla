@@ -54,6 +54,7 @@ public class CsComplaintController {
     @PostMapping("/create")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> create(@RequestBody Complaint complaint) {
+        if(complaint==null) return R.fail(400,"投诉内容不能为空");
         // 1. 校验订单存在
         Order order = orderService.getById(complaint.getOrderId());
         if (order == null) return R.fail("订单不存在");
@@ -64,16 +65,22 @@ public class CsComplaintController {
                 .eq(Complaint::getOrderId, complaint.getOrderId())
                 .in(Complaint::getStatus, "PENDING", "PROCESSING"));
         if (existCount > 0) return R.fail("该订单已有进行中的投诉");
-        // 4. 创建投诉
-        complaint.setPlayerId(order.getPlayerId());
-        complaint.setImages(ImageListUtils.normalize(complaint.getImages()));
-        complaint.setStatus("PENDING");
-        complaintService.save(complaint);
+        if(!java.util.Set.of("服务态度","服务质量","代练质量","账号安全","违规操作","其他").contains(complaint.getType()))
+            return R.fail(400,"投诉类型不正确");
+        String content=complaint.getContent()==null?"":complaint.getContent().trim();
+        if(content.isEmpty()||content.length()>2000) return R.fail(400,"投诉内容须为1至2000字");
+        if(complaint.getExpectedResult()!=null&&(complaint.getExpectedResult().length()>50||!java.util.Set.of("退款","重新服务","赔偿","道歉").contains(complaint.getExpectedResult())))
+            return R.fail(400,"期望结果不正确");
+        if(!java.util.Set.of("IN_PROGRESS","COMPLETED","CONFIRMED").contains(order.getStatus()))
+            return R.fail(400,"当前订单状态不允许投诉");
+        // 4. 创建投诉，只复制允许由客服填写的字段
+        Complaint created=new Complaint();created.setOrderId(order.getId());created.setUserId(order.getUserId());
+        created.setPlayerId(order.getPlayerId());created.setType(complaint.getType());created.setContent(content);
+        created.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));created.setExpectedResult(complaint.getExpectedResult());
+        created.setStatus("PENDING");created.setCreatedAt(LocalDateTime.now());
+        complaintService.save(created);
         // 5. 更新订单状态为 DISPUTED（如果订单状态允许）
-        String status = order.getStatus();
-        if ("IN_PROGRESS".equals(status) || "COMPLETED".equals(status) || "CONFIRMED".equals(status)) {
-            orderService.disputeOrder(complaint.getOrderId());
-        }
+        orderService.disputeOrder(order.getId());
         return R.ok();
     }
 
@@ -123,8 +130,9 @@ public class CsComplaintController {
      */
     @OpLog(module = "complaint", operation = "受理投诉")
     @PutMapping("/{id}/process")
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> process(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
-        Complaint c = complaintService.getById(id);
+        Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
         if (!"PENDING".equals(c.getStatus())) return R.fail("只有待处理的投诉可以受理");
         c.setStatus("PROCESSING");
@@ -157,11 +165,21 @@ public class CsComplaintController {
         if(!java.util.Set.of("PENDING","PROCESSING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
         if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
         if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()))staffPermissions.require("order.refund");
+        String resultReason=complaint.getResultReason()==null?"":complaint.getResultReason().trim();
+        if(resultReason.length()>500) return R.fail(400,"处理说明不能超过500字");
+        if("PARTIAL_REFUND".equals(complaint.getResult())){
+            try{com.delta.common.utils.Money.positive(complaint.getRefundAmount());}
+            catch(com.delta.common.exception.BusinessException error){return R.fail(error.getCode(),error.getMessage());}
+        }
         Long operatorId = SecurityUtils.getUserId();
+        Payment refundPayment=java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult())
+                ? findPaidPayment(c.getOrderId()) : null;
+        if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()) && refundPayment==null)
+            return R.fail(409,"未找到可退款的已支付记录，请先核对支付台账");
 
         c.setResult(complaint.getResult());
         c.setRefundAmount(complaint.getRefundAmount());
-        c.setResultReason(complaint.getResultReason());
+        c.setResultReason(resultReason);
         c.setPlayerPenalty(complaint.getPlayerPenalty());
         c.setOperatorId(operatorId);
         c.setResolvedAt(LocalDateTime.now());
@@ -177,20 +195,14 @@ public class CsComplaintController {
         switch (result != null ? result : "") {
             case "FULL_REFUND" -> {
                 // 全额退款
-                Payment payment = findPaidPayment(c.getOrderId());
-                if (payment != null) {
-                    paymentService.refund(payment.getId(), order.getAmount(), "仲裁全额退款: " + complaint.getResultReason());
-                    // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
-                }
+                paymentService.refund(refundPayment.getId(), order.getAmount(), "仲裁全额退款: " + resultReason);
+                // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
                 notifyBoth(order, c, "投诉已处理，全额退款中", "订单仲裁结果：全额退款");
             }
             case "PARTIAL_REFUND" -> {
                 // 部分退款
-                Payment payment = findPaidPayment(c.getOrderId());
-                if (payment != null && complaint.getRefundAmount() != null) {
-                    paymentService.refund(payment.getId(), complaint.getRefundAmount(), "仲裁部分退款: " + complaint.getResultReason());
-                    // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
-                }
+                paymentService.refund(refundPayment.getId(), complaint.getRefundAmount(), "仲裁部分退款: " + resultReason);
+                // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
                 notifyBoth(order, c, "投诉已处理，部分退款 " + complaint.getRefundAmount() + " 元",
                         "订单仲裁结果：部分退款 " + complaint.getRefundAmount() + " 元");
             }
@@ -203,7 +215,7 @@ public class CsComplaintController {
                 orderService.updateById(order);
                 addProgress(order.getId(), rejectFrom, "CONFIRMED", "CS", operatorId, "仲裁驳回投诉，订单正常确认");
                 eventPublisher.publishEvent(new OrderConfirmedEvent(this, order.getId(), "CS"));
-                notifyBoth(order, c, "投诉已驳回，原因：" + complaint.getResultReason(),
+                notifyBoth(order, c, "投诉已驳回，原因：" + resultReason,
                         "投诉已驳回，订单正常结算");
             }
             case "REDO" -> {

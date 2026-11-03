@@ -5,9 +5,9 @@ import org.springframework.util.StringUtils;
 
 public class IpUtils {
     public static String getIpAddr(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (!StringUtils.hasText(ip) || "unknown".equalsIgnoreCase(ip)) ip = request.getHeader("X-Real-IP");
-        if (!StringUtils.hasText(ip) || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
+        // Tomcat's RemoteIpValve resolves forwarded headers only from trusted proxies.
+        String ip = request.getRemoteAddr();
+        if (!StringUtils.hasText(ip)) ip = "unknown";
         return "0:0:0:0:0:0:0:1".equals(ip) ? "127.0.0.1" : ip;
     }
 }

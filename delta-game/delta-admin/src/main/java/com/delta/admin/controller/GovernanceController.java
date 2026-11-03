@@ -21,7 +21,10 @@ import java.util.*;
 public class GovernanceController {
     private final JdbcTemplate jdbc;
     private final PlayerGovernanceService governance;
-    @GetMapping("/player/invitations/{token}") public R<Map<String,Object>> invite(@PathVariable String token){return R.ok(governance.invitation(token));}
+    @GetMapping("/player/invitations/{token}") public R<Map<String,Object>> invite(@PathVariable String token){
+        Map<String,Object> source=governance.invitation(token);
+        return R.ok(Map.of("name",source.get("name"),"oneDevice",source.get("one_device")));
+    }
     @GetMapping("/player/homepage/revisions") public R<List<Map<String,Object>>> history(){return R.ok(governance.history(SecurityUtils.getUserId()));}
     @GetMapping("/cs/governance/revisions")
     @PreAuthorize("@staffPermissions.allowed('media.review')")

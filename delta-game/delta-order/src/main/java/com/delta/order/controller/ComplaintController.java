@@ -28,13 +28,20 @@ public class ComplaintController {
     private final ApplicationEventPublisher eventPublisher;
     private final OrderProgressService orderProgressService;
     private final CrossModuleMapper crossModuleMapper;
+    private final com.delta.common.security.service.RateLimitService limits;
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> create(@RequestBody Complaint complaint) {
         Complaint supplied=complaint;complaint=new Complaint();complaint.setOrderId(supplied.getOrderId());complaint.setType(supplied.getType());
         complaint.setContent(supplied.getContent());complaint.setImages(supplied.getImages());complaint.setExpectedResult(supplied.getExpectedResult());
+        if(!java.util.Set.of("服务态度","服务质量","代练质量","账号安全","违规操作","其他").contains(complaint.getType()))
+            return R.fail(400,"投诉类型不正确");
+        if(complaint.getExpectedResult()!=null&&(complaint.getExpectedResult().length()>50||!java.util.Set.of("退款","重新服务","赔偿","道歉").contains(complaint.getExpectedResult())))
+            return R.fail(400,"期望结果不正确");
         if(complaint.getContent()==null || complaint.getContent().isBlank() || complaint.getContent().length()>2000) return R.fail(400,"投诉内容长度不符合要求");
         Long userId = SecurityUtils.getUserId();
+        limits.check("complaint-create:"+userId,10,3600);
 
         // 1. 校验订单存在且属于当前用户
         Order order = orderService.getById(complaint.getOrderId());
@@ -56,7 +63,7 @@ public class ComplaintController {
         // 4. 从订单获取打手ID
         complaint.setUserId(userId);
         complaint.setPlayerId(order.getPlayerId());
-        complaint.setImages(ImageListUtils.normalize(complaint.getImages()));
+        complaint.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));
         complaint.setStatus("PENDING");
         complaintService.save(complaint);
 
@@ -109,9 +116,12 @@ public class ComplaintController {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
         if (!c.getUserId().equals(SecurityUtils.getUserId())) return R.fail("无权操作");
+        limits.check("complaint-appeal:"+SecurityUtils.getUserId(),10,3600);
         if (!"RESOLVED".equals(c.getStatus())) return R.fail("当前状态不允许申诉");
-        c.setAppealReason(appeal.getAppealReason());
-        c.setAppealImages(ImageListUtils.normalize(appeal.getAppealImages()));
+        String reason = appeal.getAppealReason() == null ? "" : appeal.getAppealReason().trim();
+        if (reason.isEmpty() || reason.length() > 2000) return R.fail(400,"申诉原因须为1至2000字");
+        c.setAppealReason(reason);
+        c.setAppealImages(ImageListUtils.normalizeLocal(appeal.getAppealImages(), 9));
         c.setStatus("APPEALING");
         complaintService.updateById(c);
         return R.ok();

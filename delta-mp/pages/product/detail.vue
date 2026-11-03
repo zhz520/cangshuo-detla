@@ -52,7 +52,7 @@
         <view class="section-line"></view>
       </view>
       <view class="detail-body">
-        <rich-text :nodes="product.detail" />
+        <rich-text :nodes="detailHtml" />
       </view>
     </view>
 
@@ -121,6 +121,7 @@ const limitLabel = computed(() => {
     : ''
 })
 const descriptionHtml = computed(() => productDescriptionHtml(product.value?.description))
+const detailHtml = computed(() => productDescriptionHtml(product.value?.detail))
 
 const images = computed(() => {
   if (!product.value) return []

@@ -55,9 +55,12 @@ public class SecurityConfig {
                 // 以上 product 接口供匿名访问（含首页热门推荐、热门分类 Tab）
                 .requestMatchers(HttpMethod.GET, "/app/product/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/app/players/*/reviewable-orders").hasRole("USER")
-                .requestMatchers(HttpMethod.GET, "/app/players", "/app/players/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/app/players", "/app/players/levels", "/app/players/categories",
+                        "/app/players/layout", "/app/players/{id}", "/app/players/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/order/review/product/**", "/order/review/player/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/system/maintenance/status", "/system/banner/active", "/system/notice/active", "/system/content/key/**", "/system/config/site", "/system/recharge-packages").permitAll()
+                .requestMatchers(HttpMethod.GET, "/system/maintenance/status", "/system/banner/active", "/system/notice/active",
+                        "/system/content/key/privacy_policy", "/system/content/key/user_agreement",
+                        "/system/config/site", "/system/recharge-packages").permitAll()
                 .requestMatchers("/doc.html", "/webjars/**", "/v3/api-docs/**", "/swagger-resources/**").hasRole("ADMIN")
                 // 下单选打手：普通用户、打手、客服、管理员均可访问（复用客服指派打手接口）
                 .requestMatchers("/cs/player/assign-list").hasAnyRole("ADMIN", "CS")

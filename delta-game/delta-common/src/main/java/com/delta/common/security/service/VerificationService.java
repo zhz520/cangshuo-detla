@@ -88,7 +88,7 @@ public class VerificationService {
         String access=value("sms.aliyun.access_key_id"),key=value("sms.aliyun.access_key_secret"),sign=value("sms.aliyun.sign_name");
         if(template.isBlank() || access.isBlank() || key.isBlank() || sign.isBlank()
                 || access.startsWith("YOUR_") || key.startsWith("YOUR_")) throw new BusinessException(503,"短信验证码服务暂不可用");
-        limits.check("otp-ip:"+ip,120,3600);
+        limits.check("otp-ip:"+ip,30,3600);
         consume("captcha:"+safeId(captchaId),digest("CAPTCHA",captchaId,"",captchaCode));
         limits.check("otp-minute:"+phone,1,60);limits.check("otp-hour:"+phone,5,3600);limits.check("otp-day:"+phone,10,86400);
         limits.check("otp-global",1000,86400);

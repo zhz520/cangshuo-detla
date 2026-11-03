@@ -181,6 +181,8 @@ public class PlayerOrderController {
             reason = body.getOrDefault("reason", "");
         }
         if (reason == null) reason = "";
+        reason=reason.trim();
+        if(reason.length()>500) return R.fail(400,"拒绝原因不能超过500字");
         orderService.rejectAssign(orderId, playerId, reason);
         return R.ok();
     }
@@ -202,6 +204,7 @@ public class PlayerOrderController {
             return R.fail("当前状态不允许邀请队友");
         }
         if (!playerId.equals(order.getPlayerId())) return R.fail("只有主打手可以邀请队友");
+        if (req == null || req.getInviteePlayerId() == null) return R.fail(400,"请选择要邀请的打手");
 
         // 校验不能邀请自己
         if (req.getInviteePlayerId().equals(playerId)) {
@@ -210,15 +213,17 @@ public class PlayerOrderController {
 
         // 校验被邀请打手
         Player invitee = playerService.getById(req.getInviteePlayerId());
-        if (invitee == null || !"ACTIVE".equals(invitee.getStatus())) {
+        if (invitee == null || !"ACTIVE".equals(invitee.getStatus()) || !Integer.valueOf(1).equals(invitee.getIsOnline())) {
             return R.fail("被邀请打手不可用");
         }
 
         // 自定义分成金额校验
-        if ("CUSTOM".equals(req.getSplitType())) {
-            if (req.getCustomAmount() == null || req.getCustomAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                return R.fail("自定义分成金额必须大于0");
-            }
+        String splitType=req.getSplitType();
+        if(!java.util.Set.of("FIFTY_FIFTY","FORTY_SIXTY","THIRTY_SEVENTY","CUSTOM").contains(splitType))
+            return R.fail(400,"请选择有效的分成方式");
+        if ("CUSTOM".equals(splitType)) {
+            try{com.delta.common.utils.Money.positive(req.getCustomAmount());}
+            catch(BusinessException error){return R.fail(error.getCode(),error.getMessage());}
             // 校验不超过打手总收入（订单金额 * (1 - 抽成比例)）
             java.math.BigDecimal rate = order.getCommissionRate() != null
                     ? order.getCommissionRate()
@@ -229,6 +234,19 @@ public class PlayerOrderController {
                 return R.fail("自定义金额不可超过打手总收入");
             }
         }
+
+        LocalDateTime now=LocalDateTime.now();
+        List<OrderPlayer> pending=orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
+                .eq(OrderPlayer::getStatus,"INVITED"));
+        for(OrderPlayer item:pending)if(item.getInviteDeadline()!=null&&item.getInviteDeadline().isBefore(now)){
+            item.setStatus("EXPIRED");item.setRejectedAt(now);orderPlayerService.updateById(item);
+        }
+        int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
+        long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
+                .in(OrderPlayer::getStatus,"INVITED","ACCEPTED"));
+        if(occupiedTeam>=requiredTeam)return R.fail(409,"当前订单队伍人数已满");
 
         // 检查是否已邀请
         long existing = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
@@ -247,20 +265,20 @@ public class PlayerOrderController {
         op.setPlayerId(req.getInviteePlayerId());
         op.setRole("TEAMMATE");
         op.setStatus("INVITED");
-        op.setSplitType(req.getSplitType());
-        op.setSplitAmount(req.getCustomAmount());
+        op.setSplitType(splitType);
+        op.setSplitAmount("CUSTOM".equals(splitType)?req.getCustomAmount():null);
         op.setInvitedBy(playerId);
         op.setInvitedAt(LocalDateTime.now());
         // 队友邀请有效期：5分钟内未接受则自动失效
-        op.setInviteDeadline(LocalDateTime.now().plusMinutes(5));
-        op.setCreatedAt(LocalDateTime.now());
+        op.setInviteDeadline(now.plusMinutes(5));
+        op.setCreatedAt(now);
         orderPlayerService.save(op);
 
         // 如果当前是 ACCEPTED，自动转入 WAITING_TEAMMATE
         if (OrderStatusEnum.ACCEPTED.name().equals(order.getStatus())) {
             order.setStatus(OrderStatusEnum.WAITING_TEAMMATE.name());
-            order.setTeammateDeadline(LocalDateTime.now().plusHours(2));
-            order.setUpdatedAt(LocalDateTime.now());
+            order.setTeammateDeadline(now.plusHours(2));
+            order.setUpdatedAt(now);
             orderService.updateById(order);
         }
 
@@ -301,6 +319,11 @@ public class PlayerOrderController {
         if (crossModuleMapper.lockActivePlayer(playerId) == null) {
             throw new BusinessException(403, "打手未上班、未通过审核或账号已冻结，无法接单");
         }
+        int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
+        long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
+                .eq(OrderPlayer::getStatus,"ACCEPTED"));
+        if(occupiedTeam>=requiredTeam)throw new BusinessException(409,"当前订单队伍人数已满");
         int max = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
         if (crossModuleMapper.countActivePlayerOrders(playerId) >= max) {
             throw new BusinessException(400, "您当前进行中的订单已达上限(" + max + "单)");
@@ -382,6 +405,7 @@ public class PlayerOrderController {
             w.notIn(Player::getId, invitedPlayerIds);
         }
         if (keyword != null && !keyword.isEmpty()) {
+            if(keyword.length()>50)return R.fail(400,"搜索内容过长");
             w.and(qw -> qw.like(Player::getNickname, keyword));
         }
         w.orderByDesc(Player::getAvgRating);
@@ -436,13 +460,19 @@ public class PlayerOrderController {
         if (order == null || !"IN_PROGRESS".equals(order.getStatus())) {
             return R.fail("订单状态不允许更新进度");
         }
+        String content = req == null || req.getContent() == null ? "" : req.getContent().trim();
+        if (content.length() > 2000) return R.fail(400,"进度内容不能超过2000字");
+        String images;
+        try { images = ImageListUtils.normalizeLocal(req == null ? null : req.getImages(), 9); }
+        catch (BusinessException error) { return R.fail(error.getCode(), error.getMessage()); }
+        if (content.isEmpty() && images == null) return R.fail(400,"请填写进度或上传图片");
         OrderProgress progress = new OrderProgress();
         progress.setOrderId(orderId);
         progress.setType("PROGRESS_UPDATE");
         progress.setOperatorType("PLAYER");
         progress.setOperatorId(playerId);
-        progress.setContent(req.getContent());
-        progress.setImages(ImageListUtils.normalize(req.getImages()));
+        progress.setContent(content.isEmpty() ? null : content);
+        progress.setImages(images);
         progress.setCreatedAt(LocalDateTime.now());
         orderProgressService.save(progress);
         // 通知用户
@@ -552,6 +582,7 @@ public class PlayerOrderController {
     /** 解析逗号分隔的分类 id 为 List，忽略无效值 */
     private static List<Long> parseCategoryIds(String categoryIds) {
         if (categoryIds == null || categoryIds.trim().isEmpty()) return Collections.emptyList();
+        if(categoryIds.length()>2000) throw new BusinessException(400,"分类筛选条件过长");
         List<Long> list = new ArrayList<>();
         for (String s : categoryIds.split(",")) {
             s = s.trim();
@@ -559,6 +590,7 @@ public class PlayerOrderController {
             try {
                 list.add(Long.valueOf(s));
             } catch (NumberFormatException ignored) { }
+            if(list.size()>=100) break;
         }
         return list;
     }

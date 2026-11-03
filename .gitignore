@@ -9,6 +9,7 @@
 /.local-feature/
 /.local-security/
 /.local-deploy-temp/
+/.tmp/
 **/node_modules/
 **/dist/
 **/target/

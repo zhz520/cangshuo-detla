@@ -184,6 +184,11 @@ CREATE TABLE `player_reward` (id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
  CONSTRAINT player_reward_uk_reward_no UNIQUE(reward_no), CONSTRAINT player_reward_uk_order_reward UNIQUE(order_id),
  CONSTRAINT player_reward_uk_user_reward_request UNIQUE(user_id,request_id));
 
+CREATE TABLE `identity_verification` (
+  user_id BIGINT PRIMARY KEY,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT'
+);
+
 INSERT INTO player_level(id,name,sort_order,status,grab_captcha_required) VALUES(1,'普通打手',1,1,1),(2,'金牌打手',2,1,0);
 INSERT INTO `user`(id,openid,nickname,status,phone) VALUES(7,'user-seven','客户甲',1,'13900000007'),(8,'user-eight','客户乙',1,'13900000008');
 INSERT INTO player(id,openid,nickname,status,level,phone) VALUES(1,'player-one','普通打手甲','ACTIVE',1,'13900000001'),(2,'player-two','金牌打手乙','ACTIVE',2,'13900000002');

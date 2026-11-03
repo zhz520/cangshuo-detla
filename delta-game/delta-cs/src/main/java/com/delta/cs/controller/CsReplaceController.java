@@ -65,13 +65,17 @@ public class CsReplaceController {
     @PutMapping("/{id}/approve")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> approve(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
-        PlayerReplaceRequest req = replaceRequestService.getById(id);
+        PlayerReplaceRequest req = replaceRequestService.getOne(new LambdaQueryWrapper<PlayerReplaceRequest>()
+                .eq(PlayerReplaceRequest::getId,id).last("FOR UPDATE"));
         if (req == null) return R.fail("申请不存在");
         if (!"PENDING".equals(req.getStatus())) return R.fail("该申请已处理");
         Long operatorId = SecurityUtils.getUserId();
 
         Order order = orderService.getById(req.getOrderId());
         if (order == null) return R.fail("订单不存在");
+        if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail(409,"订单状态已变化，不能换人");
+        String remark=body==null?null:body.get("remark");
+        if(remark!=null&&remark.length()>500)return R.fail(400,"处理备注不能超过500字");
 
         Long oldPlayerId = order.getPlayerId();
 
@@ -112,7 +116,7 @@ public class CsReplaceController {
         // 4. 更新申请状态
         req.setStatus("APPROVED");
         req.setOperatorId(operatorId);
-        req.setOperatorRemark(body != null ? body.get("remark") : null);
+        req.setOperatorRemark(remark);
         req.setProcessedAt(LocalDateTime.now());
         replaceRequestService.updateById(req);
 
@@ -131,19 +135,22 @@ public class CsReplaceController {
 
     @OpLog(module = "order", operation = "拒绝换人")
     @PutMapping("/{id}/reject")
+    @Transactional(rollbackFor = Exception.class)
     public R<Void> reject(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
-        PlayerReplaceRequest req = replaceRequestService.getById(id);
+        PlayerReplaceRequest req = replaceRequestService.getOne(new LambdaQueryWrapper<PlayerReplaceRequest>()
+                .eq(PlayerReplaceRequest::getId,id).last("FOR UPDATE"));
         if (req == null) return R.fail("申请不存在");
         if (!"PENDING".equals(req.getStatus())) return R.fail("该申请已处理");
+        String remark = body == null ? null : body.get("remark");
+        if(remark!=null&&remark.length()>500)return R.fail(400,"处理备注不能超过500字");
 
         req.setStatus("REJECTED");
         req.setOperatorId(SecurityUtils.getUserId());
-        req.setOperatorRemark(body != null ? body.get("remark") : null);
+        req.setOperatorRemark(remark);
         req.setProcessedAt(LocalDateTime.now());
         replaceRequestService.updateById(req);
 
         // 通知用户
-        String remark = body != null ? body.get("remark") : "";
         eventPublisher.publishEvent(new BusinessEvent(this, "REPLACE_REJECTED",
                 "USER", req.getUserId(), req.getOrderId(),
                 "您的换人申请被拒绝" + (remark != null && !remark.isEmpty() ? "：" + remark : "")));

@@ -100,7 +100,7 @@ function paste(event) {
 function insertLink() {
   const value = prompt('请输入链接地址', 'https://')
   if (!value) return
-  if (!/^https?:\/\/[^\s]+$/i.test(value.trim())) { ElMessage.warning('请填写 http 或 https 链接'); return }
+  if (!/^https?:\/\/[^\s"'<>]+$/i.test(value.trim())) { ElMessage.warning('请填写安全的 http 或 https 链接'); return }
   exec('createLink', value.trim())
 }
 async function insertImage() {

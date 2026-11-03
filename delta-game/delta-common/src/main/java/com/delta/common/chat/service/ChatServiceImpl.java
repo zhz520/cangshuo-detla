@@ -10,6 +10,7 @@ import com.delta.common.chat.mapper.ChatSessionMapper;
 import com.delta.common.chat.util.ChatParticipantId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import java.time.LocalDateTime;
 
 @Service
@@ -31,7 +32,13 @@ public class ChatServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSession>
             s.setId1(id1);
             s.setId2(id2);
             s.setStatus("ACTIVE");
-            save(s);
+            try { save(s); }
+            catch (DuplicateKeyException race) {
+                s = getOne(new LambdaQueryWrapper<ChatSession>()
+                        .eq(ChatSession::getId1, id1).eq(ChatSession::getId2, id2)
+                        .eq(ChatSession::getStatus, "ACTIVE"), false);
+                if (s == null) throw race;
+            }
         }
         return s;
     }

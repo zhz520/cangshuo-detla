@@ -65,7 +65,7 @@ public class TokenService {
         try {
             return Jwts.parser().verifyWith(getKey()).build().parseSignedClaims(token).getPayload();
         } catch (Exception e) {
-            log.debug("Token解析失败: {}", e.getMessage());
+            log.debug("Token解析失败: {}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -91,7 +91,14 @@ public class TokenService {
     }
 
     public void removeToken(String uuid) {
+        if (uuid == null || uuid.isBlank()) return;
         redisService.delete(CacheConstants.LOGIN_TOKEN_KEY + uuid);
+    }
+
+    public void revoke(String token) {
+        if (token == null || token.isBlank()) return;
+        Claims claims = parseToken(token);
+        if (claims != null) removeToken(claims.get("uuid", String.class));
     }
 
     public Map<String, Object> authenticate(String token) {

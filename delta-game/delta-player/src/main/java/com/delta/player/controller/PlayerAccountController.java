@@ -22,7 +22,11 @@ public class PlayerAccountController {
     }
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public R<Void> add(@RequestBody PlayerAccount account) {
+        Long playerId=SecurityUtils.getUserId();
+        if(playerAccountService.count(new LambdaQueryWrapper<PlayerAccount>().eq(PlayerAccount::getPlayerId,playerId))>=10)
+            return R.fail(409,"最多保存10个收款账户");
         playerAccountService.save(clean(account,null));
         return R.ok();
     }
@@ -51,7 +55,7 @@ public class PlayerAccountController {
                 || input.getAccountName()==null || input.getAccountName().isBlank() || input.getAccountName().length()>128
                 || input.getAccountNo()==null || input.getAccountNo().isBlank() || input.getAccountNo().length()>256)
             throw new com.delta.common.exception.BusinessException(400,"收款账户信息不完整");
-        if(input.getQrcodeUrl()!=null && !(input.getQrcodeUrl().isBlank() || input.getQrcodeUrl().startsWith("/file/") || input.getQrcodeUrl().startsWith("https://")))
+        if(input.getQrcodeUrl()!=null && !(input.getQrcodeUrl().isBlank() || input.getQrcodeUrl().matches("/file/.{1,500}")))
             throw new com.delta.common.exception.BusinessException(400,"收款码地址无效");
         PlayerAccount result=new PlayerAccount();result.setId(id);result.setPlayerId(SecurityUtils.getUserId());
         result.setType(input.getType());result.setAccountName(input.getAccountName());result.setAccountNo(input.getAccountNo());result.setQrcodeUrl(input.getQrcodeUrl());

@@ -15,9 +15,7 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
     private final RateLimitService limits;
     @Override
     public boolean beforeHandshake(ServerHttpRequest request,ServerHttpResponse response,WebSocketHandler handler,Map<String,Object> attributes) {
-        String forwarded=request.getHeaders().getFirst("X-Real-IP");
-        String remote=forwarded!=null && forwarded.matches("[0-9a-fA-F:.]{2,64}") ? forwarded
-                : request.getRemoteAddress()==null ? "unknown" : request.getRemoteAddress().getAddress().getHostAddress();
+        String remote=request.getRemoteAddress()==null ? "unknown" : request.getRemoteAddress().getAddress().getHostAddress();
         try {limits.check("ws-handshake:"+remote,30,60);} catch(Exception e){return false;}
         attributes.put("remoteIp",remote);
         return true;

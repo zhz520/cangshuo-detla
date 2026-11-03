@@ -185,7 +185,7 @@ public class ChatSmsReminderService {
 
     private void chargePlayerSmsFee(Long playerId, BigDecimal fee) {
         Map<String, Object> row = jdbcTemplate.queryForList(
-                "SELECT id, balance FROM player_wallet WHERE player_id = ? LIMIT 1", playerId)
+                "SELECT id, balance FROM player_wallet WHERE player_id = ? LIMIT 1 FOR UPDATE", playerId)
                 .stream()
                 .findFirst()
                 .orElse(null);

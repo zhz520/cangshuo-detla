@@ -31,6 +31,7 @@ public class OrderController {
     private final PlayerReplaceRequestService replaceRequestService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.common.mapper.CrossModuleMapper crossModuleMapper;
+    private final com.delta.common.security.service.RateLimitService limits;
 
     @GetMapping("/quote")
     public R<com.delta.order.dto.OrderQuote> quote(@RequestParam Long productId,
@@ -41,8 +42,10 @@ public class OrderController {
     }
 
     @PostMapping
-    public R<Order> create(@RequestBody CreateOrderRequest request) {
-        return R.ok(orderService.createOrder(SecurityUtils.getUserId(), request));
+    public R<Order> create(@jakarta.validation.Valid @RequestBody CreateOrderRequest request) {
+        Long userId=SecurityUtils.getUserId();
+        limits.check("order-create:"+userId,10,60);
+        return R.ok(orderService.createOrder(userId, request));
     }
 
     @GetMapping("/my")
@@ -127,7 +130,9 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/replace")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> requestReplace(@PathVariable Long id, @RequestBody PlayerReplaceRequest req) {
+        if(req==null) return R.fail(400,"请填写换人原因");
         PlayerReplaceRequest supplied=req;req=new PlayerReplaceRequest();req.setReason(supplied.getReason());
         if(req.getReason()==null || req.getReason().isBlank() || req.getReason().length()>1000) return R.fail(400,"换人原因长度不符合要求");
         Long userId = SecurityUtils.getUserId();
