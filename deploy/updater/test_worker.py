@@ -53,6 +53,17 @@ class UpdaterTests(unittest.TestCase):
             self.worker.start_services(['base.yml'],['h5','admin','backend'])
         self.assertEqual([call.args[1] for call in compose.call_args_list],[['backend'],['admin'],['h5']])
         self.assertEqual([call.args[0] for call in health.call_args_list],[['backend'],['admin'],['h5']])
+    def test_history_pruning_keeps_latest_backups_and_active_release(self):
+        backups=self.directory/'update-backups';releases=self.directory/'self-update-releases'
+        backups.mkdir();releases.mkdir()
+        for index in range(6):
+            path=backups/f'backup-{index}';path.mkdir();os.utime(path,(index,index))
+            release=releases/f'release-{index}';release.mkdir();os.utime(release,(index,index))
+        override=self.directory/'compose.self-update.json';active=releases/'old-active';active.mkdir();os.utime(active,(0,0))
+        override.write_text(json.dumps({'services':{'admin':{'volumes':[str(active)+':/html:ro']}}}))
+        self.worker.prune_history(override)
+        self.assertEqual(sorted(path.name for path in backups.iterdir()),['backup-3','backup-4','backup-5'])
+        self.assertEqual(sorted(path.name for path in releases.iterdir()),['old-active','release-3','release-4','release-5'])
     def test_failed_health_check_restores_previous_compose_and_keeps_private_backup(self):
         override=self.directory/'compose.self-update.json';original=json.dumps({'services':{'admin':{'volumes':['old:/usr/share/nginx/html:ro']}}});override.write_text(original)
         job=self.state/'update-job.json';job.write_text(json.dumps(self.envelope()))
@@ -61,6 +72,6 @@ class UpdaterTests(unittest.TestCase):
                 zipped.writestr('index.html','test');zipped.writestr('cangshuo-version.json',json.dumps({'component':'admin','version':'1.2.0'}))
         with patch.object(self.worker,'run',side_effect=self.openssl),patch.object(self.worker,'download',side_effect=download),patch.object(self.worker,'backup',side_effect=lambda path:path.mkdir(parents=True)),patch.object(self.worker,'compose') as compose,patch.object(self.worker,'health',side_effect=[RuntimeError('failed'),None]):
             self.worker.process(job)
-        self.assertEqual(json.loads((self.state/'update-result.json').read_text())['status'],'ROLLED_BACK');self.assertEqual(override.read_text(),original);self.assertEqual(compose.call_count,2);self.assertFalse((self.state/'updating').exists());self.assertFalse(job.exists())
+        self.assertEqual(json.loads((self.state/'update-result.json').read_text(encoding='utf-8'))['status'],'ROLLED_BACK');self.assertEqual(override.read_text(),original);self.assertEqual(compose.call_count,2);self.assertFalse((self.state/'updating').exists());self.assertFalse(job.exists())
 
 if __name__=='__main__':unittest.main()

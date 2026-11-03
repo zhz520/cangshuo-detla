@@ -29,6 +29,22 @@ def remove(path):
     try:path.unlink()
     except FileNotFoundError:pass
 
+def prune_directories(parent, keep, preserve=()):
+    """Retain a bounded rollback history without following symlinked directories."""
+    parent=parent.resolve()
+    if not parent.is_dir():
+        return
+    preserve={path.resolve() for path in preserve if path}
+    entries=[]
+    for path in parent.iterdir():
+        if path.is_dir() and not path.is_symlink() and inside(path,parent):
+            entries.append((path.stat().st_mtime,path))
+    entries.sort(key=lambda item:(item[0],item[1].name),reverse=True)
+    retained={path.resolve() for _,path in entries[:max(0,int(keep))]}|preserve
+    for _,path in entries:
+        if path.resolve() not in retained:
+            shutil.rmtree(path,ignore_errors=True)
+
 def instant(value):
     value=re.sub(r'\+00:00$','Z',value)
     for pattern in ['%Y-%m-%dT%H:%M:%S.%fZ','%Y-%m-%dT%H:%M:%SZ']:
@@ -157,6 +173,22 @@ def backup(folder):
             source=Path(name)
             if source.exists():archive.add(source,arcname=str(source).lstrip('/'))
 
+def active_release_paths(override):
+    if not override.exists():
+        return set()
+    try:merged=json.loads(override.read_text())
+    except (json.JSONDecodeError,OSError):return set()
+    paths=set()
+    for service in merged.get('services',{}).values():
+        for volume in service.get('volumes',[]):
+            match=re.fullmatch(r'(.+):(/[^:]+)(?::(?:ro|rw|z))?',str(volume))
+            if match:paths.add(Path(match.group(1)))
+    return paths
+
+def prune_history(override):
+    prune_directories(ROOT/'update-backups',CONFIG.get('backup_retention',3))
+    prune_directories(ROOT/'self-update-releases',CONFIG.get('release_retention',3),active_release_paths(override))
+
 def health(services):
     for _ in range(90):
         healthy=True
@@ -212,7 +244,8 @@ def process(job):
         status('BACKING_UP');backup(backup_dir)
         if instant(plan['expiresAt'])<=datetime.now(timezone.utc):raise ValueError('Update plan expired before installation')
         status('INSTALLING')
-        release_dir=ROOT/'self-update-releases'/job_id;release_dir.parent.mkdir(exist_ok=True);release_dir.parent.chmod(0o755);shutil.copytree(scratch,release_dir)
+        release_dir=ROOT/'self-update-releases'/job_id;release_dir.parent.mkdir(exist_ok=True);release_dir.parent.chmod(0o755);release_dir.mkdir()
+        for component,target in destinations.items():shutil.copytree(target,release_dir/component)
         release_dir.chmod(0o755)
         for artifact in release_dir.rglob('*'):
             artifact.chmod(0o755 if artifact.is_dir() else 0o644)
@@ -228,6 +261,7 @@ def process(job):
         processed.parent.mkdir(exist_ok=True);processed.write_text(json.dumps(plan))
         versions.update({package['component']:package['version'] for package in plan['packages']});versions['release']=plan['targetVersion'];write_json(versions_file,versions)
         status('SUCCEEDED',targetVersion=plan['targetVersion'],items=[item['key'] for item in plan['items']],backup=str(backup_dir))
+        prune_history(override)
     except Exception as error:
         rolled_back=False
         if changed:
@@ -240,14 +274,19 @@ def process(job):
         # Do not log command output or secrets. Backups remain private on the host.
         write_json(STATE/'update-result.json',{'id':job_id,'status':'ROLLED_BACK' if rolled_back else 'FAILED','error':type(error).__name__,'message':'更新失败，已回退原程序' if rolled_back else '更新失败，请联系维护人员检查','backup':str(backup_dir) if backup_dir.exists() else None})
     finally:
+        shutil.rmtree(scratch,ignore_errors=True)
         if not retain_gate:
             remove(ROOT/'update-journal.json')
             remove(STATE/'updating')
         remove(job)
+        prune_history(override)
 
 def main():
     STATE.mkdir(parents=True,exist_ok=True)
     journal=ROOT/'update-journal.json'
+    shutil.rmtree(ROOT/'update-staging',ignore_errors=True)
+    (ROOT/'update-staging').mkdir(exist_ok=True)
+    prune_history(ROOT/'compose.self-update.json')
     if journal.exists():
         interrupted=json.loads(journal.read_text());override=ROOT/'compose.self-update.json'
         if interrupted['previous'] is None:remove(override)
