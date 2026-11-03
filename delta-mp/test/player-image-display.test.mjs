@@ -8,6 +8,7 @@ test('player cover and cards request retina-safe thumbnail widths', async () => 
   const detail = await read('../pages/players/detail.vue')
   assert.match(detail, /<AppImage class="cover-main" :width="1080" eager[^>]+mode="widthFix"/)
   assert.doesNotMatch(detail, /cover-backdrop/)
+  assert.match(detail, /\.cover \{ height:auto; overflow:hidden;/)
 
   const card = await read('../components/PlayerShowcaseCard.vue')
   assert.match(card, /<AppImage :width="320"[^>]*:src="player\.avatar/)
