@@ -158,6 +158,36 @@ class PlatformRemoteTest {
         } finally { server.stop(0); }
     }
 
+    @Test void hostedCheckoutLinkMustBeSignedAndUseTheAuthorityHost() throws Exception {
+        var serviceJson=new ObjectMapper().findAndRegisterModules();
+        var keys=KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        var publicKey=directory.resolve("checkout-public.pem");
+        Files.writeString(publicKey,"-----BEGIN PUBLIC KEY-----\n"+Base64.getEncoder().encodeToString(keys.getPublic().getEncoded())+"\n-----END PUBLIC KEY-----\n");
+        var properties=new PlatformProperties();properties.setCustomerId("742");properties.setStatePath(directory.resolve("checkout-state.json").toString());properties.setPublicKeyPath(publicKey.toString());
+        Instant now=Instant.parse("2026-11-01T00:00:00Z");Clock clock=Clock.fixed(now,ZoneOffset.UTC);
+        var platform=new PlatformService(properties,serviceJson,clock);platform.importLicense(license(keys,serviceJson,platform.overview().instanceId(),now));
+        var wrongHost=new AtomicBoolean();
+        var server=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),0),0);
+        server.createContext("/checkout",exchange->{
+            try{
+                var claims=serviceJson.createObjectNode().put("customerId","742").put("instanceId",platform.overview().instanceId())
+                        .put("issuedAt",now.plusSeconds(1).toString()).put("expiresAt",now.plusSeconds(600).toString())
+                        .put("moduleId","advanced_income_reports").put("amountCents",9900)
+                        .put("checkoutUrl",(wrongHost.get()?"https://evil.example.com":"https://127.0.0.1")+"/pay/"+"A".repeat(43));
+                byte[] body=serviceJson.writeValueAsBytes(serviceJson.createObjectNode().set("checkout",signed("cangshuo-checkout-v1",claims,keys,serviceJson)));
+                exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);
+            }catch(Exception error){throw new RuntimeException(error);}finally{exchange.close();}
+        });
+        server.start();
+        try{
+            properties.setReportUrl("http://127.0.0.1:"+server.getAddress().getPort()+"/report");
+            var remote=new PlatformRemote(properties,platform,serviceJson,clock);
+            assertThat(remote.checkout("advanced_income_reports")).endsWith("/pay/"+"A".repeat(43));
+            wrongHost.set(true);
+            assertThatThrownBy(()->remote.checkout("advanced_income_reports")).isInstanceOf(BusinessException.class);
+        }finally{server.stop(0);}
+    }
+
     private PlatformLicense.Envelope license(KeyPair keys, ObjectMapper mapper, String instanceId, Instant now) throws Exception {
         var claims = new PlatformLicense.Claims(UUID.randomUUID().toString(), "742", instanceId, now, now,
                 now.plusSeconds(3600), List.of("advanced_income_reports"), null, null);

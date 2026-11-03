@@ -229,5 +229,27 @@ public class PlatformRemote {
             var result=json.createObjectNode();result.put("id",plan.path("id").asText());result.put("status","QUEUED");atomic(path("update-result.json"),json.writeValueAsBytes(result));return result;
         }catch(BusinessException error){throw error;}catch(InterruptedException error){Thread.currentThread().interrupt();throw new BusinessException(503,"更新请求已中断");}catch(Exception error){throw new BusinessException(503,"更新计划暂不可用，请稍后重试");}finally{planning.set(false);}
     }
+    public String checkout(String moduleId) {
+        if(moduleId==null||!moduleId.matches("[A-Za-z0-9_-]{1,64}"))throw new BusinessException(400,"功能编号不正确");
+        var payload=platform.reportPayload();if(payload==null)throw new BusinessException(403,"维护授权无效，暂时不能购买功能");
+        if(properties.getReportUrl()==null||properties.getReportUrl().isBlank())throw new BusinessException(503,"尚未连接授权中心");
+        try {
+            var request=json.createObjectNode();request.set("license",json.valueToTree(payload.license()));request.put("moduleId",moduleId);request.put("version",effectiveVersion());
+            String target=properties.getReportUrl().replaceFirst("/report$","/checkout");
+            var response=send(target,request);var claims=verify(response.path("checkout"),"cangshuo-checkout-v1");
+            if(!Instant.parse(claims.path("expiresAt").asText()).isAfter(clock.instant()))throw new IllegalArgumentException();
+            if(!moduleId.equals(claims.path("moduleId").asText())||!claims.path("amountCents").canConvertToInt()
+                    ||claims.path("amountCents").asInt()<1)throw new IllegalArgumentException();
+            String checkoutUrl=claims.path("checkoutUrl").asText();
+            if(checkoutUrl.isBlank()||checkoutUrl.length()>2048)throw new IllegalArgumentException();
+            var checkoutUri=URI.create(checkoutUrl);var authorityUri=URI.create(properties.getReportUrl());
+            if(!"https".equalsIgnoreCase(checkoutUri.getScheme())||checkoutUri.getHost()==null
+                    ||!checkoutUri.getHost().equalsIgnoreCase(authorityUri.getHost())
+                    ||checkoutUri.getPath()==null||!checkoutUri.getPath().matches("/pay/[A-Za-z0-9_-]{43}"))throw new IllegalArgumentException();
+            return checkoutUrl;
+        } catch(BusinessException error){throw error;}
+        catch(InterruptedException error){Thread.currentThread().interrupt();throw new BusinessException(503,"购买请求已中断");}
+        catch(Exception error){throw new BusinessException(503,"暂时无法创建功能购买订单，请稍后重试");}
+    }
     static void atomic(Path file,byte[] data)throws Exception {Files.createDirectories(file.getParent());var temp=Files.createTempFile(file.getParent(),".authority-",".tmp");try{Files.write(temp,data);Files.move(temp,file,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);}finally{Files.deleteIfExists(temp);}}
 }

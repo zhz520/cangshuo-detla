@@ -150,26 +150,33 @@ class PlatformServiceTest {
         assertThat(Files.readString(Path.of(properties.getStatePath()))).isEqualTo(before); platform.requireFeature("advanced_income_reports");
     }
 
-    @Test void remoteFeatureMapReplacesLocalSwitchesAndDefaultsEveryPaidFeatureOff() throws Exception {
+    @Test void authorityControlsEntitlementWhileTheLocalOwnerControlsTheSwitch() throws Exception {
         platform.importLicense(grant()); platform.setEnabled("advanced_income_reports", true);
         assertThat(report().enabled()).isTrue();
 
-        platform.applyVerifiedAuthoritySnapshot(null, project(now.plusSeconds(1), null), Map.of(), Map.of(), Map.of());
+        platform.applyVerifiedAuthoritySnapshot(null, project(now.plusSeconds(1), null),
+                Map.of("advanced_income_reports", true), Map.of("advanced_income_reports", now.minusSeconds(60)),
+                Map.of("advanced_income_reports", now.plusSeconds(600)));
 
-        assertThat(report().managedByAuthority()).isTrue(); assertThat(report().enabled()).isFalse();
-        assertThat(platform.features().stream().filter(PlatformService.FeatureView::paid))
-                .allMatch(PlatformService.FeatureView::managedByAuthority).allMatch(feature -> !feature.enabled());
-        assertThatThrownBy(() -> platform.setEnabled("advanced_income_reports", true))
-                .isInstanceOfSatisfying(BusinessException.class, error -> {
-                    assertThat(error.getCode()).isEqualTo(409);
-                    assertThat(error).hasMessage("功能启用状态由授权中心管理");
-                });
+        assertThat(report().managedByAuthority()).isTrue(); assertThat(report().entitled()).isTrue(); assertThat(report().enabled()).isTrue();
+        platform.setEnabled("advanced_income_reports", false);
+        assertThat(report().entitled()).isTrue(); assertThat(report().enabled()).isFalse();
+        platform.setEnabled("advanced_income_reports", true);
+        assertThat(report().enabled()).isTrue();
+
+        platform.applyVerifiedAuthoritySnapshot(null, project(now.plusSeconds(2), null),
+                Map.of("advanced_income_reports", false), Map.of("advanced_income_reports", now.minusSeconds(60)),
+                Map.of("advanced_income_reports", now.plusSeconds(600)));
+        assertThat(report().entitled()).isFalse(); assertThat(report().enabled()).isFalse();
+        assertThat(report().status()).isEqualTo("REVOKED");
     }
 
     @Test void remoteEnabledStillRequiresAnUnexpiredEntitlement() throws Exception {
         platform.importLicense(grant());
         platform.applyVerifiedAuthoritySnapshot(null, project(now.plusSeconds(1), null), Map.of("advanced_income_reports", true), Map.of(), Map.of());
-        assertThat(report().entitled()).isTrue(); assertThat(report().enabled()).isTrue();
+        assertThat(report().entitled()).isTrue(); assertThat(report().enabled()).isFalse();
+        platform.setEnabled("advanced_income_reports", true);
+        assertThat(report().enabled()).isTrue();
         assertThat(report().startsAt()).isEqualTo(now); assertThat(report().expiresAt()).isEqualTo(now.plusSeconds(3600));
 
         platform = service(now.plusSeconds(3600));
@@ -188,6 +195,7 @@ class PlatformServiceTest {
                 Base64.getUrlEncoder().withoutPadding().encodeToString(signature.sign())));
         platform.applyVerifiedAuthoritySnapshot(null, project(now.plusSeconds(1), null), Map.of("email_notifications", true),
                 Map.of("email_notifications", now), Map.of("email_notifications", now.plusSeconds(3600)));
+        platform.setEnabled("email_notifications", true);
 
         platform.requireFeature("email_notifications", "admin.example.com");
         assertThatThrownBy(() -> platform.requireFeature("email_notifications"))
@@ -241,12 +249,12 @@ class PlatformServiceTest {
                 Map.of("advanced_income_reports", now.minusSeconds(120)),
                 Map.of("advanced_income_reports", now.plusSeconds(600)));
 
-        assertThat(report().entitled()).isTrue();
+        assertThat(report().entitled()).isFalse();
         assertThat(report().enabled()).isFalse();
         assertThat(report().managedByAuthority()).isTrue();
         assertThat(report().startsAt()).isEqualTo(now.minusSeconds(120));
         assertThat(report().expiresAt()).isEqualTo(now.plusSeconds(600));
-        assertThat(report().status()).isEqualTo("DISABLED");
+        assertThat(report().status()).isEqualTo("REVOKED");
     }
 
     @Test void authoritySnapshotRejectsPeriodsWhoseStartIsNotBeforeExpiry() throws Exception {

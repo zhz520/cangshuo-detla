@@ -7,6 +7,8 @@
       </el-tabs>
       <el-alert v-if="activeGroup === '微信支付配置'" title="公众号支付配置提醒" type="info" :closable="false" show-icon
         description="每个支付开关独立生效，支付页面不再根据浏览器类型自动隐藏已启用方式。微信支付公钥和公钥 ID 必须从当前微信支付商户号的“账户中心 > API安全 > 微信支付公钥”成对下载；两者不匹配会产生“WechatPay signature is incorrect”。公众平台仍需配置网页授权域名，商户平台需配置 JSAPI 支付授权目录。" />
+      <el-alert v-if="activeGroup === '微信支付配置'" title="客户端业务支付与功能购买分开" type="warning" :closable="false" show-icon
+        description="本页只配置客户自己的订单、充值和押金收款。客户端功能商城的购买款由授权中心统一收取，使用授权中心的微信商户和回调，不读取本页配置。" />
       <el-form v-loading="loading" label-width="200px" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
           <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>

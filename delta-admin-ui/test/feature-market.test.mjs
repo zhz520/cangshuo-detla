@@ -15,7 +15,7 @@ test('paid cards show the catalog price and reference term before purchase', () 
   const feature = { paid: true, priceCents: 5000, termDays: 365, status: 'NOT_PURCHASED' }
   const maintenanceUntil = new Date(now + 10 * 86400000).toISOString()
   assert.equal(helpers.purchaseTerms(feature, now, maintenanceUntil),
-    '付费扩展 · ¥50.00 · 参考 365 天 · 本次最多可购 10 天 · 人工开通')
+    '付费扩展 · ¥50.00 · 参考 365 天 · 本次最多可购 10 天 · 在线购买')
   assert.equal(helpers.purchaseTerms({ paid: false }), '基础功能 · 已包含')
   assert.equal(helpers.licensePeriodText(feature, now), '授权期限：未授权')
 })
@@ -38,15 +38,16 @@ test('missing expiry explicitly means long-term or unauthorized', () => {
   assert.equal(helpers.licensePeriodText({ paid: true, entitled: false, status: 'EXPIRED' }, now), '授权期限：未授权')
 })
 
-test('feature market disables authority-managed switches and provides manual renewal information', () => {
+test('feature market keeps local switches available when authority marks the entitlement valid', () => {
   const parsed = parse(source, { filename })
   assert.equal(parsed.errors.length, 0)
   const compiled = compileScript(parsed.descriptor, { id: 'feature-market-ui', inlineTemplate: true })
   assert.match(compiled.content, /managedByAuthority/)
-  assert.match(compiled.content, /功能启用状态由授权中心管理/)
-  assert.match(source, /feature\.managedByAuthority \|\| !!changing/)
-  assert.match(source, /启用状态由授权中心控制/)
+  assert.doesNotMatch(compiled.content, /功能启用状态由授权中心管理/)
+  assert.match(source, /!feature\.entitled \|\| !!changing/)
+  assert.doesNotMatch(source, /启用状态由授权中心控制/)
+  assert.match(source, /是否实际启用由本系统管理员自行控制/)
   assert.match(source, /续费/)
-  assert.match(source, /人工收款/)
-  assert.doesNotMatch(source, /pay[A-Z]|payment/i)
+  assert.match(source, /createPlatformCheckout/)
+  assert.match(source, /window\.location\.assign\(checkoutUrl\)/)
 })

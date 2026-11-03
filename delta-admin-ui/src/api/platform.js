@@ -6,6 +6,7 @@ export const getPlatformUpdates = () => request.get('/admin/platform/updates')
 export const setPlatformUpdateSelection = components => request.put('/admin/platform/updates/selection', { components })
 export const importPlatformLicense = envelope => request.post('/admin/platform/license/import', envelope)
 export const setPlatformFeatureEnabled = (id, enabled) => request.put(`/admin/platform/features/${encodeURIComponent(id)}/enabled`, { enabled })
+export const createPlatformCheckout = moduleId => request.post('/admin/platform/checkout', { moduleId }, { timeout: 55000 })
 export const getIncomeComparison = params => request.get('/admin/platform/reports/income', { params })
 
 export const getRemoteUpdates = (config = {}) => request.get('/admin/platform/updates/remote', config)

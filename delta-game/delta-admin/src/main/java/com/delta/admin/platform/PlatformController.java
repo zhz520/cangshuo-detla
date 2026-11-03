@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/platform")
@@ -22,6 +23,7 @@ public class PlatformController {
     private final IncomeAnalysisService analysis;
     public record EnableRequest(@NotNull Boolean enabled) {}
     public record UpdateSelectionRequest(List<String> components) {}
+    public record CheckoutRequest(String moduleId) {}
 
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
     @GetMapping("/features")
@@ -52,6 +54,11 @@ public class PlatformController {
     }
 
     @GetMapping("/updates/remote") public R<com.fasterxml.jackson.databind.JsonNode> remoteStatus() { return R.ok(remote.status()); }
+    @PostMapping("/checkout")
+    @OpLog(module="platform", operation="发起功能购买")
+    public R<Map<String,String>> checkout(@RequestBody CheckoutRequest body) {
+        return R.ok(Map.of("checkoutUrl",remote.checkout(body.moduleId())));
+    }
     @PostMapping("/updates/check") public R<com.fasterxml.jackson.databind.JsonNode> checkUpdates() { return R.ok(remote.refresh()); }
     @PostMapping("/updates/install") public R<com.fasterxml.jackson.databind.JsonNode> install(@RequestBody com.fasterxml.jackson.databind.JsonNode body) { return R.ok(remote.install(body.path("selection"))); }
 

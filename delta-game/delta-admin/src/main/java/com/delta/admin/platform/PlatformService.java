@@ -181,8 +181,6 @@ public class PlatformService {
                 .orElseThrow(() -> new BusinessException(404, "功能模块不存在"));
         if (!feature.paid()) throw new BusinessException(400, "基础业务功能始终可用，无需开关");
         var state = store.load();
-        if (state.remoteFeatureEnabled().containsKey(id))
-            throw new BusinessException(409, "功能启用状态由授权中心管理");
         var claims = claims(state);
         var current = view(feature, state, claims);
         if (enabled && !current.entitled()) throw new BusinessException(403, current.reason());
@@ -260,14 +258,15 @@ public class PlatformService {
             Instant expiry = state.remoteFeatureExpiresAt().get(feature.id());
             if (expiry == null && licensedFeature) expiry = featureExpiry(claims, feature.id());
             boolean expired = purchased && ("EXPIRED".equals(licenseStatus) || (expiry != null && !clock.instant().isBefore(expiry)));
-            entitled = "VALID".equals(licenseStatus) && purchased && !expired;
-            enabled = entitled && (managedByAuthority
-                    ? state.remoteFeatureEnabled().get(feature.id())
-                    : state.enabledFeatures().contains(feature.id()));
-            status = enabled ? "ENABLED" : entitled ? "DISABLED" : expired ? "EXPIRED" : "NOT_PURCHASED";
-            reason = enabled ? "已启用" : entitled ? (managedByAuthority
-                    ? "功能启用状态由授权中心管理" : "已授权，尚未启用") : expired
-                    ? "模块授权已到期，请联系维护人员续期" : "此功能尚未获得有效授权，请联系维护人员开通";
+            boolean authorityAuthorized = !managedByAuthority || Boolean.TRUE.equals(state.remoteFeatureEnabled().get(feature.id()));
+            entitled = "VALID".equals(licenseStatus) && purchased && !expired && authorityAuthorized;
+            enabled = entitled && state.enabledFeatures().contains(feature.id());
+            status = enabled ? "ENABLED" : entitled ? "DISABLED" : expired ? "EXPIRED"
+                    : managedByAuthority && !authorityAuthorized && purchased ? "REVOKED" : "NOT_PURCHASED";
+            reason = enabled ? "已启用" : entitled ? "已授权，尚未启用" : expired
+                    ? "模块授权已到期，请联系维护人员续期"
+                    : managedByAuthority && !authorityAuthorized && purchased ? "授权中心已暂停此功能授权"
+                    : "此功能尚未获得有效授权，请联系维护人员开通";
             return new FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(), feature.priceCents(), feature.termDays(),
                     feature.minVersion(), feature.dependencies(), feature.entryPath(), feature.capabilities(), status,
                     entitled, enabled, reason, purchased ? start : null, purchased ? expiry : null, managedByAuthority);
