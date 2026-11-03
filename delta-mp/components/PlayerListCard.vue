@@ -1,7 +1,7 @@
 <template>
   <view class="player-list-card" :class="{ compact }" @click="open">
     <view class="media">
-      <AppImage :width="320" :src="player.coverImage || player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+      <AppImage :width="320" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
       <text class="presence" :class="{ online: online }">{{ online ? '在线接单' : '暂时离线' }}</text>
       <text v-if="player.voiceUrl" class="voice">语音 {{ Number(player.voiceDuration || 0) }}″</text>
     </view>

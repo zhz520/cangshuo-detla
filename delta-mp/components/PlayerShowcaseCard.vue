@@ -1,6 +1,6 @@
 <template>
   <view class="showcase-card" @click="open">
-    <view class="portrait"><AppImage :width="320" :src="player.coverImage || player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" /><text class="presence" :class="{online:player.isOnline===1}">{{ player.isOnline===1?'在线':'离线' }}</text></view>
+    <view class="portrait"><AppImage :width="320" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" /><text class="presence" :class="{online:player.isOnline===1}">{{ player.isOnline===1?'在线':'离线' }}</text></view>
     <view class="card-info"><text class="card-name">{{ player.nickname || '打手' }}</text><text class="card-level">{{ player.levelName || `Lv.${player.level||1}` }}</text><text class="card-meta">★ {{ Number(player.avgRating||0).toFixed(1) }} · {{ player.orderCount||0 }} 单</text></view>
   </view>
 </template>

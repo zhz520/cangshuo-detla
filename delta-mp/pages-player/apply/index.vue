@@ -1,7 +1,7 @@
 <template>
   <view class="apply-page">
     <view v-if="inviteName" class="deposit-tip">邀请：{{inviteName}}</view>
-    <view class="form-item"><text class="label">头像 *</text><ImageUploader v-model="avatarImages" :max="1"/></view>
+    <view class="form-item"><text class="label">头像 *</text><ImageUploader v-model="avatarImages" :max="1"/><text class="upload-tip">使用 1:1 方图，建议 640×640 像素以上；头像会展示在打手列表和主页。</text></view>
     <view class="form-item"><text class="label">接单名 *</text><input v-model="form.nickname" maxlength="32" placeholder="对外展示的接单名"/></view>
     <view class="form-item"><text class="label">真实姓名</text><input v-model="form.realName" placeholder="请输入" /></view>
     <view class="form-item"><text class="label">联系电话</text><input v-model="form.phone" disabled placeholder="登录后自动使用已验证的手机号" /></view>
@@ -162,5 +162,6 @@ async function reopenPayment() { if (submitting.value) return; pendingDepositNo.
 .apply-page { padding:24rpx; background: #ffffff; min-height: var(--app-page-height, 100vh); }
 .form-item { background: #f4f5f6; padding:24rpx; border-radius:12rpx; margin-bottom:20rpx; .label { font-size:26rpx; color: #666b73; margin-bottom:12rpx; display:block; } input { height:72rpx; background: rgba(0,0,0,0.05); border-radius:8rpx; padding:0 24rpx; font-size:28rpx; } }
 .deposit-tip { font-size:24rpx; color:#73777e; margin-top:16rpx; margin-bottom:8rpx; }
+.upload-tip { display:block; font-size:22rpx; line-height:1.7; color:#858992; margin-top:12rpx; }
 .btn { height:88rpx; line-height:88rpx; text-align:center; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; &.disabled { opacity:0.7; } }
 </style>
