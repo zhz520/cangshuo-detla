@@ -24,6 +24,6 @@ test('player editors explain the recommended upload ratios', async () => {
   assert.match(apply, /1:1 方图，建议 640×640 像素以上/)
 
   const homepage = await read('../pages-player/profile/introduction.vue')
-  assert.match(homepage, /15:8 横图，建议 1500×800 像素以上/)
+  assert.match(homepage, /21:9 横图，建议 1680×720 像素以上/)
   assert.match(homepage, /1:1 方图，建议 1000×1000 像素以上/)
 })
