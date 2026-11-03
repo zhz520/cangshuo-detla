@@ -110,4 +110,6 @@ function previewImages(images,index) { uni.previewImage({ urls: images.split(','
 .cover .cover-main { position:relative; z-index:1; }
 .cover-shade { pointer-events:none; z-index:2; }
 .cover-label { z-index:3; }
+.profile-card { margin:0 24rpx; }
+.avatar { margin-top:0; }
 </style>
