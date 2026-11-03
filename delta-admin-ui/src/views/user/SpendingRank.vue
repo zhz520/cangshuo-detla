@@ -20,7 +20,7 @@
         <el-table-column label="用户" min-width="180">
           <template #default="{ row }">
             <div class="user-cell">
-              <el-avatar :src="row.avatar" :size="32" />
+              <el-avatar :src="thumbnailUrl(row.avatar,160)" :size="32" />
               <span class="nickname">{{ row.nickname || ('ID: ' + row.id) }}</span>
             </div>
           </template>
@@ -38,6 +38,7 @@
 import { ref, onMounted } from 'vue'
 import { getSpendingRank } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
+import {thumbnailUrl} from '@/utils/image'
 
 const userStore = useUserStore()
 const loading = ref(false)

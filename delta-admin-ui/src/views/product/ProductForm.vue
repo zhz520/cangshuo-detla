@@ -54,7 +54,7 @@
             <el-form-item label="商品图片" class="image-form-item">
               <div class="multi-images">
                 <div v-for="(img, idx) in imageList" :key="idx" class="img-item">
-                  <el-image lazy :src="img" fit="contain" class="product-image" :preview-src-list="imageList" :initial-index="idx" preview-teleported />
+                  <el-image lazy :src="thumbnailUrl(img,640)" fit="contain" class="product-image" :preview-src-list="imageList" :initial-index="idx" preview-teleported />
                   <el-button circle type="danger" size="small" class="img-del" @click="imageList.splice(idx, 1)">×</el-button>
                 </div>
                 <ImageUpload v-model="newImage" @update:model-value="onImageAdd" />
@@ -151,6 +151,7 @@ import { getProductDetail, addProduct, updateProduct, getCategoryTree, getRecomm
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import { thumbnailUrl } from '@/utils/image'
 const route = useRoute(), router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const pageLoading = ref(false), submitting = ref(false), formRef = ref(null), categoryTree = ref([]), recommendCategories = ref([])

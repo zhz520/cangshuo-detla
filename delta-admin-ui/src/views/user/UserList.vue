@@ -9,7 +9,7 @@
       </el-form>
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="avatar" label="头像" width="70"><template #default="{ row }"><el-avatar :src="row.avatar" :size="36" /></template></el-table-column>
+        <el-table-column prop="avatar" label="头像" width="70"><template #default="{ row }"><el-avatar :src="thumbnailUrl(row.avatar,160)" :size="36" /></template></el-table-column>
         <el-table-column prop="nickname" label="昵称" width="120" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column label="登录密码" width="100"><template #default="{row}"><el-tag :type="row.passwordSet?'success':'info'" size="small">{{ row.passwordSet?'已设置':'待设置' }}</el-tag></template></el-table-column>
@@ -116,6 +116,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 import { can } from '@/utils/staff-permissions'
+import {thumbnailUrl} from '@/utils/image'
 
 const { isCompact, isNarrow } = useResponsive()
 

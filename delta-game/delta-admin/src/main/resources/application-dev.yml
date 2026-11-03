@@ -86,6 +86,9 @@ file:
   upload:
     path: D:/data/upload
     url-prefix: http://localhost:8080/file/
+  thumbnail:
+    retention-days: ${FILE_THUMBNAIL_RETENTION_DAYS:45}
+    max-size-mb: ${FILE_THUMBNAIL_MAX_SIZE_MB:2048}
 
 # Settlement
 delta:

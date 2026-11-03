@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/file/wxpay/**").denyAll()
+                .requestMatchers("/file/.thumbnails/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/file/**").permitAll()
                 .requestMatchers("/common/file/**").hasAnyRole("ADMIN", "CS", "USER", "PLAYER")
                 .requestMatchers(HttpMethod.GET, "/product/list", "/product/recommend", "/product/recommend/categories", "/product/{id}", "/product/category/list", "/product/category/all", "/product/category/tree", "/product/category/*/form-fields").permitAll()

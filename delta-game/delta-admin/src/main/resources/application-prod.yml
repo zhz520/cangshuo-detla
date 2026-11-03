@@ -98,6 +98,9 @@ file:
   upload:
     path: /www/data/upload
     url-prefix: ${FILE_UPLOAD_URL_PREFIX:/file/}
+  thumbnail:
+    retention-days: ${FILE_THUMBNAIL_RETENTION_DAYS:45}
+    max-size-mb: ${FILE_THUMBNAIL_MAX_SIZE_MB:2048}
 
 # Settlement
 delta:

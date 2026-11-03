@@ -66,7 +66,8 @@ public class ImageThumbnailController {
                 workers.release();
             }
         }
-        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic()
+                        .immutable().staleWhileRevalidate(Duration.ofDays(7)))
                 .eTag(digest).contentType(result.equals(png) ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG)
                 .header("X-Content-Type-Options", "nosniff").body(new FileSystemResource(result));
     }

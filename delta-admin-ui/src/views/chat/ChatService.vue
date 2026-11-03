@@ -19,7 +19,7 @@
           @keydown.space.prevent="selectSession(s)"
         >
           <div class="session-row">
-            <el-avatar :src="s.avatar" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
+            <el-avatar :src="thumbnailUrl(s.avatar,160)" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
             <div class="session-body">
               <div class="session-top">
                 <span class="session-name">{{ s.targetName || '用户 #' + s.id }}</span>
@@ -54,10 +54,10 @@
               <!-- 文本 -->
               <template v-if="m.type === 'TEXT'">{{ m.content }}</template>
               <!-- 图片 -->
-              <el-image lazy v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
+              <el-image lazy v-else-if="m.type === 'IMAGE'" :src="thumbnailUrl(m.content,640)" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
               <!-- 商品卡片 -->
               <div v-else-if="m.type === 'PRODUCT'" class="card-msg" @click="showProductDetail(parseJSON(m.content))">
-                <el-image lazy v-if="parseJSON(m.content).coverImage" :src="parseJSON(m.content).coverImage" class="card-cover" fit="cover" />
+                <el-image lazy v-if="parseJSON(m.content).coverImage" :src="thumbnailUrl(parseJSON(m.content).coverImage,320)" class="card-cover" fit="cover" />
                 <div class="card-info">
                   <div class="card-name">{{ parseJSON(m.content).name }}</div>
                   <div class="card-price">¥{{ Number(parseJSON(m.content).price || 0).toFixed(2) }}</div>
@@ -134,7 +134,7 @@
               @click="doSendProduct(p)"
             >
               <div class="picker-card-cover">
-                <el-image lazy v-if="p.coverImage" :src="p.coverImage" fit="cover" style="width:100%;height:100%" />
+                <el-image lazy v-if="p.coverImage" :src="thumbnailUrl(p.coverImage,160)" fit="cover" style="width:100%;height:100%" />
                 <div v-else class="picker-card-noimg">暂无图片</div>
               </div>
               <div class="picker-card-body">
@@ -164,10 +164,10 @@
           <div class="product-gallery">
             <el-carousel v-if="productAllImages.length > 1" height="280px" indicator-position="outside">
               <el-carousel-item v-for="(img, i) in productAllImages" :key="i">
-                <el-image lazy :src="img" fit="contain" style="width:100%;height:280px" :preview-src-list="productAllImages" :initial-index="i" />
+                <el-image lazy :src="thumbnailUrl(img,640)" fit="contain" style="width:100%;height:280px" :preview-src-list="productAllImages" :initial-index="i" />
               </el-carousel-item>
             </el-carousel>
-            <el-image lazy v-else-if="productAllImages.length === 1" :src="productAllImages[0]" fit="contain" style="width:100%;height:280px;border-radius:8px" :preview-src-list="productAllImages" />
+            <el-image lazy v-else-if="productAllImages.length === 1" :src="thumbnailUrl(productAllImages[0],640)" fit="contain" style="width:100%;height:280px;border-radius:8px" :preview-src-list="productAllImages" />
             <div v-else class="no-image">暂无图片</div>
           </div>
           <!-- 信息区 -->
@@ -199,7 +199,7 @@
       <el-form ref="complaintFormRef" :model="complaintForm" :rules="complaintRules" label-width="90px">
         <el-form-item label="用户">
           <div class="selected-info">
-            <el-avatar :src="complaintForm._userAvatar" :size="28">{{ (complaintForm._userName || '')[0] || '用' }}</el-avatar>
+            <el-avatar :src="thumbnailUrl(complaintForm._userAvatar,160)" :size="28">{{ (complaintForm._userName || '')[0] || '用' }}</el-avatar>
             <span>{{ complaintForm._userName || '-' }}</span>
             <el-tag size="small" type="info">ID: {{ complaintForm.userId }}</el-tag>
           </div>
@@ -245,7 +245,7 @@
           <!-- 用户 & 打手信息卡片 -->
           <div class="order-people">
             <div class="person-card">
-              <el-avatar :src="orderDetail.userAvatar" :size="42">用户</el-avatar>
+              <el-avatar :src="thumbnailUrl(orderDetail.userAvatar,160)" :size="42">用户</el-avatar>
               <div class="person-info">
                 <div class="person-label">下单用户</div>
                 <div class="person-name">{{ orderDetail.userNickname || ('ID: ' + orderDetail.userId) }}</div>
@@ -253,7 +253,7 @@
             </div>
             <div class="person-arrow">→</div>
             <div class="person-card">
-              <el-avatar :src="orderDetail.playerAvatar" :size="42">打手</el-avatar>
+              <el-avatar :src="thumbnailUrl(orderDetail.playerAvatar,160)" :size="42">打手</el-avatar>
               <div class="person-info">
                 <div class="person-label">服务打手</div>
                 <div class="person-name">{{ orderDetail.playerName || (orderDetail.playerId ? 'ID: ' + orderDetail.playerId : '未指派') }}</div>
@@ -306,7 +306,7 @@
                   <el-image lazy
                     v-for="(img, imgIdx) in p.images.split(',')"
                     :key="img + imgIdx"
-                    :src="img"
+                    :src="thumbnailUrl(img,640)"
                     :preview-src-list="p.images.split(',')"
                     :initial-index="imgIdx"
                     fit="cover"
@@ -332,6 +332,7 @@ import { useUserStore } from '@/stores/user'
 import { useChatStore } from '@/stores/chat'
 import { sendWsMessage } from '@/utils/websocket'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {thumbnailUrl} from '@/utils/image'
 
 const { isCompact, isNarrow } = useResponsive()
 

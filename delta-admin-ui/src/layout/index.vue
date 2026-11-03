@@ -34,7 +34,7 @@
           </el-tag>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
-              <el-avatar v-if="userStore.avatar" :src="userStore.avatar" :size="28" style="margin-right:8px" />
+              <el-avatar v-if="userStore.avatar" :src="thumbnailUrl(userStore.avatar,160)" :size="28" style="margin-right:8px" />
               <span class="user-name" :title="nickname">{{ nickname }}</span> <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -81,6 +81,7 @@ import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
 import PasswordChangeDialog from '@/components/PasswordChangeDialog.vue'
 import { useChatStore } from '@/stores/chat'
 import { useSiteStore } from '@/stores/site'
+import {thumbnailUrl} from '@/utils/image'
 
 const route = useRoute()
 const router = useRouter()

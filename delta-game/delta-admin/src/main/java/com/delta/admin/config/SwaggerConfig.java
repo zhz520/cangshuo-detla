@@ -37,7 +37,8 @@ public class SwaggerConfig implements WebMvcConfigurer {
         if (!location.endsWith("/")) location += "/";
         registry.addResourceHandler("/file/**")
                 .addResourceLocations(location)
-                .setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(30)).cachePublic())
+                .setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(365))
+                        .cachePublic().immutable().staleWhileRevalidate(java.time.Duration.ofDays(7)))
                 .resourceChain(true).addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
                     @Override protected org.springframework.core.io.Resource getResource(String resourcePath,org.springframework.core.io.Resource location) throws java.io.IOException {
                         if(!resourcePath.matches("\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif|webp|mp3|m4a|wav|aac|ogg|webm)")) return null;

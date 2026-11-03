@@ -32,7 +32,7 @@
         </el-table-column>
         <el-table-column prop="icon" label="图标" width="80">
           <template #default="{ row }">
-            <el-image lazy v-if="row.icon" :src="row.icon" style="width:50px;height:50px" fit="contain" :preview-src-list="[row.icon]" preview-teleported />
+            <el-image lazy v-if="row.icon" :src="thumbnailUrl(row.icon,160)" style="width:50px;height:50px" fit="contain" :preview-src-list="[row.icon]" preview-teleported />
           </template>
         </el-table-column>
         <el-table-column prop="sortOrder" label="排序" width="80" />
@@ -92,6 +92,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { getCategoryTree, addCategory, updateCategory, deleteCategory } from '@/api/product'
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
+import {thumbnailUrl} from '@/utils/image'
 
 const loading = ref(false)
 const tree = ref([])

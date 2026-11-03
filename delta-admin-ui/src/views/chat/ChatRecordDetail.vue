@@ -17,7 +17,7 @@
           </div>
           <div class="msg-bubble">
             <template v-if="m.type === 'TEXT'">{{ m.content }}</template>
-            <el-image lazy v-else-if="m.type === 'IMAGE'" :src="m.content" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
+            <el-image lazy v-else-if="m.type === 'IMAGE'" :src="thumbnailUrl(m.content,640)" style="max-width:200px;border-radius:4px" fit="cover" :preview-src-list="[m.content]" />
             <span v-else-if="m.type === 'PRODUCT'">[商品卡片]</span>
             <span v-else-if="m.type === 'ORDER'">[订单卡片]</span>
             <span v-else>{{ m.content }}</span>
@@ -37,6 +37,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { adminChatMessageList, csChatMessageList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import Pagination from '@/components/Pagination.vue'
+import {thumbnailUrl} from '@/utils/image'
 
 const route = useRoute()
 const router = useRouter()

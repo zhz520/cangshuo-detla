@@ -31,7 +31,7 @@
         </el-table-column>
         <el-table-column label="收款码" width="80" align="center">
           <template #default="{ row }">
-            <el-image lazy v-if="row.qrcodeUrl" :src="row.qrcodeUrl" :preview-src-list="[row.qrcodeUrl]" preview-teleported fit="cover" style="width:40px;height:40px;border-radius:4px;cursor:pointer" />
+            <el-image lazy v-if="row.qrcodeUrl" :src="thumbnailUrl(row.qrcodeUrl,160)" :preview-src-list="[row.qrcodeUrl]" preview-teleported fit="cover" style="width:40px;height:40px;border-radius:4px;cursor:pointer" />
             <span v-else style="color:#999;font-size:12px">无</span>
           </template>
         </el-table-column>
@@ -68,7 +68,7 @@
         <p>提现金额：<b>¥{{ approveRow.amount }}</b></p>
         <div v-if="approveRow.qrcodeUrl" style="margin-top:8px">
           <p style="margin-bottom:4px">收款码：</p>
-          <el-image lazy :src="approveRow.qrcodeUrl" :preview-src-list="[approveRow.qrcodeUrl]" preview-teleported fit="contain" style="max-width:200px;max-height:200px;border:1px solid #eee;border-radius:4px" />
+          <el-image lazy :src="thumbnailUrl(approveRow.qrcodeUrl,320)" :preview-src-list="[approveRow.qrcodeUrl]" preview-teleported fit="contain" style="max-width:200px;max-height:200px;border:1px solid #eee;border-radius:4px" />
         </div>
       </div>
       <el-form label-width="100px" style="margin-top:16px">
@@ -90,7 +90,7 @@
         </el-descriptions>
         <div style="margin-top:16px">
           <p style="margin-bottom:8px;font-weight:bold">打款凭证：</p>
-          <el-image lazy v-if="proofRow.proofImage" :src="proofRow.proofImage" :preview-src-list="[proofRow.proofImage]" preview-teleported fit="contain" style="max-width:100%;max-height:400px" />
+          <el-image lazy v-if="proofRow.proofImage" :src="thumbnailUrl(proofRow.proofImage,640)" :preview-src-list="[proofRow.proofImage]" preview-teleported fit="contain" style="max-width:100%;max-height:400px" />
           <span v-else style="color:#999">无凭证</span>
         </div>
       </div>
@@ -106,6 +106,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 import ImageUpload from '@/components/ImageUpload.vue'
+import { thumbnailUrl } from '@/utils/image'
 const { isCompact } = useResponsive()
 
 const userStore = useUserStore()

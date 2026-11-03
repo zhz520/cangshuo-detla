@@ -16,7 +16,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
-            <el-avatar :src="row.avatar" :size="32">{{ (row.nickname || '')[0] || '打' }}</el-avatar>
+            <el-avatar :src="thumbnailUrl(row.avatar,160)" :size="32">{{ (row.nickname || '')[0] || '打' }}</el-avatar>
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" width="140" />
@@ -65,7 +65,7 @@
       <div v-loading="detailLoading" class="player-detail">
         <template v-if="detailData">
         <div class="player-detail-header">
-          <el-avatar :src="detailData.avatar" :size="56">{{ (detailData.nickname || '')[0] || '打' }}</el-avatar>
+          <el-avatar :src="thumbnailUrl(detailData.avatar,320)" :size="56">{{ (detailData.nickname || '')[0] || '打' }}</el-avatar>
           <div class="player-detail-main">
             <div class="player-detail-name">{{ detailData.nickname || ('ID: ' + detailData.id) }}</div>
             <div class="player-detail-sub">
@@ -218,6 +218,7 @@ import { adminReviewList, adminReviewDelete } from '@/api/business'
 import Pagination from '@/components/Pagination.vue'
 import PlayerHomepageFields from '@/components/PlayerHomepageFields.vue'
 import {playerLevelList} from '@/api/business'
+import {thumbnailUrl} from '@/utils/image'
 const { isCompact, isNarrow } = useResponsive()
 
 const userStore = useUserStore()

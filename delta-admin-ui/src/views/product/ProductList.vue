@@ -10,7 +10,7 @@
       </el-form>
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="80"><template #default="{ row }"><el-image lazy v-if="row.coverImage" :src="row.coverImage" style="width:50px;height:50px" fit="contain" :preview-src-list="[row.coverImage]" preview-teleported /></template></el-table-column>
+        <el-table-column label="图片" width="80"><template #default="{ row }"><el-image lazy v-if="row.coverImage" :src="thumbnailUrl(row.coverImage,160)" style="width:50px;height:50px" fit="contain" :preview-src-list="[row.coverImage]" preview-teleported /></template></el-table-column>
         <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
         <el-table-column label="价格" width="120"><template #default="{ row }">{{ row.price != null ? '¥' + Number(row.price).toFixed(2) : '-' }}</template></el-table-column>
         <el-table-column label="分类" width="120"><template #default="{ row }">{{ getCategoryName(row.categoryId) }}</template></el-table-column>
@@ -38,6 +38,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { getProductList, deleteProduct, updateProductStatus, getAllCategories } from '@/api/product'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+import {thumbnailUrl} from '@/utils/image'
 const { isCompact } = useResponsive()
 
 const loading = ref(false), list = ref([]), total = ref(0), categories = ref([])

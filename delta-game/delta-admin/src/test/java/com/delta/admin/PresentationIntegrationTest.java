@@ -96,7 +96,13 @@ class PresentationIntegrationTest {
     @Test void thumbnailReducesExistingImagesAndUsesCache() throws Exception {
         Path source=directory.resolve(imagePath); Files.createDirectories(source.getParent()); byte[] original=image(false,1400,900); Files.write(source,original);
         String url="/file/thumbnail/320/"+imagePath;
-        var response=mvc.perform(get(url)).andExpect(status().isOk()).andExpect(content().contentType("image/jpeg")).andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("max-age="))).andReturn().getResponse();
+        var response=mvc.perform(get(url)).andExpect(status().isOk()).andExpect(content().contentType("image/jpeg"))
+                .andExpect(header().string("Cache-Control",org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("max-age="),
+                        org.hamcrest.Matchers.containsString("public"),
+                        org.hamcrest.Matchers.containsString("immutable"),
+                        org.hamcrest.Matchers.containsString("stale-while-revalidate="))))
+                .andReturn().getResponse();
         var decoded=ImageIO.read(new ByteArrayInputStream(response.getContentAsByteArray()));
         assertThat(decoded.getWidth()).isEqualTo(320); assertThat(decoded.getHeight()).isEqualTo(206);
         assertThat(response.getContentAsByteArray().length).isLessThan(original.length);
