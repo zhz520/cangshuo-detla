@@ -6,7 +6,8 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8')
 
 test('player cover and cards request retina-safe thumbnail widths', async () => {
   const detail = await read('../pages/players/detail.vue')
-  assert.match(detail, /<view class="cover"><AppImage :width="1080" eager[^>]+mode="aspectFit"/)
+  assert.match(detail, /<AppImage class="cover-main" :width="1080" eager[^>]+mode="aspectFit"/)
+  assert.match(detail, /cover-backdrop[^>]+mode="aspectFill"/)
 
   const card = await read('../components/PlayerShowcaseCard.vue')
   assert.match(card, /<AppImage :width="320"[^>]*:src="player\.avatar/)
