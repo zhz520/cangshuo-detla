@@ -42,7 +42,7 @@ public class SecurityConfig {
             .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint)
                                      .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET,"/user/auth/captcha").permitAll()
+                .requestMatchers(HttpMethod.GET,"/user/auth/captcha","/cs/auth/captcha").permitAll()
                 .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/user/auth/reset-code", "/user/auth/reset-password", "/player/auth/login", "/player/auth/register", "/cs/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
                 .requestMatchers(HttpMethod.GET, "/pay/wx/official/callback").permitAll()

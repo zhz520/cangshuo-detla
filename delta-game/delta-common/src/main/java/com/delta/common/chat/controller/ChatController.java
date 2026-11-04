@@ -70,11 +70,13 @@ public class ChatController {
         java.util.Map<String, Object> row = rows.get(0);
         Long userId = ((Number) row.get("user_id")).longValue();
         Number playerIdNum = (Number) row.get("player_id");
+        long encoded1 = ChatParticipantId.encodeUser(userId);
+        if (myEncodedId != encoded1 && (playerIdNum == null
+                || myEncodedId != ChatParticipantId.encodePlayer(playerIdNum.longValue())))
+            return R.fail(404, "订单不存在");
         if (playerIdNum == null) return R.fail("该订单还未指派打手，暂无法聊天");
         long playerId = playerIdNum.longValue();
-        long encoded1 = ChatParticipantId.encodeUser(userId);
         long encoded2 = ChatParticipantId.encodePlayer(playerId);
-        if(myEncodedId!=encoded1 && myEncodedId!=encoded2) return R.fail(403,"无权限查看该会话");
         ChatSession s = chatService.findOrCreate(encoded1, encoded2);
         if (!isSessionMember(s, myEncodedId)) return R.fail("无权限查看该会话");
         enrichSession(s, myEncodedId);
@@ -150,9 +152,11 @@ public class ChatController {
     }
 
     @PostMapping("/sms-reminder")
-    public R<Void> sendSmsReminder(@RequestBody SmsReminderRequest request,
+    public R<Void> sendSmsReminder(@RequestBody SmsReminderRequest request, jakarta.servlet.http.HttpServletRequest servletRequest,
                                    @RequestParam(required = false) String chatRole) {
         long myEncodedId = getMyEncodedId(chatRole);
+        limits.check("chat-sms-sender:"+myEncodedId,5,3600);
+        limits.check("chat-sms-ip:"+servletRequest.getRemoteAddr(),20,3600);
         chatSmsReminderService.sendReminder(request.getSessionId(), myEncodedId, request.getReminderCode());
         return R.ok();
     }

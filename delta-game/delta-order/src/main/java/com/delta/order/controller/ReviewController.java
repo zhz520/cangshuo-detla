@@ -47,11 +47,10 @@ public class ReviewController {
         // 1. 订单状态校验：必须是CONFIRMED状态
         Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
                 .eq(Order::getId, review.getOrderId()).last("FOR UPDATE"));
-        if (order == null) return R.fail("订单不存在");
+        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
         if (!OrderStatusEnum.CONFIRMED.name().equals(order.getStatus())) {
             return R.fail("订单状态不允许评价");
         }
-        if (!order.getUserId().equals(userId)) return R.fail("无权评价");
 
         // 2. 检查是否已评价
         long existCount = reviewService.count(new LambdaQueryWrapper<Review>()

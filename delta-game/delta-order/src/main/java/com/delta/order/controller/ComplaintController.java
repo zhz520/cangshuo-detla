@@ -45,8 +45,7 @@ public class ComplaintController {
 
         // 1. 校验订单存在且属于当前用户
         Order order = orderService.getById(complaint.getOrderId());
-        if (order == null) return R.fail("订单不存在");
-        if (!order.getUserId().equals(userId)) return R.fail("无权操作");
+        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
 
         // 2. 校验订单状态
         String status = order.getStatus();

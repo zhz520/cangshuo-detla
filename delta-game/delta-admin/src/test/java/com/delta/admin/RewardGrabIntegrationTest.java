@@ -96,6 +96,15 @@ class RewardGrabIntegrationTest {
         jdbc.update("UPDATE player_level SET price_increase_rate=10 WHERE id=2");
     }
 
+    @Test void foreignAndMissingOrdersAreIndistinguishableOnConfirm() throws Exception {
+        for(long id:new long[]{102,999999}) {
+            mvc.perform(post("/order/"+id+"/confirm").with(role("USER",7)))
+                    .andExpect(jsonPath("$.code").value(404))
+                    .andExpect(jsonPath("$.msg").value("订单不存在"));
+        }
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=102",String.class)).isEqualTo("REVIEWED");
+    }
+
     @Test void quoteUsesLevelOrIndividualRateAndRejectsUnavailableOrAmbiguousChoices() throws Exception {
         pricedProduct("50");
         mvc.perform(get("/order/quote").param("productId","11")).andExpect(jsonPath("$.code").value(401));

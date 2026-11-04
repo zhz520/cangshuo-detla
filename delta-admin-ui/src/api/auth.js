@@ -4,6 +4,10 @@ export function login(data) {
   return request({ url: '/cs/auth/login', method: 'post', data })
 }
 
+export function getLoginCaptcha() {
+  return request({ url: '/cs/auth/captcha', method: 'get', silent: true, loading: false })
+}
+
 export function logout() {
   return request({ url: '/auth/logout', method: 'post', silent: true, loading: false, timeout: 2000 })
 }

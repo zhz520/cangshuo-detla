@@ -116,6 +116,10 @@ public class VerificationService {
         limits.check("password-captcha:"+ip,60,600);
         consume("captcha:"+safeId(id),digest("CAPTCHA",id,"",code));
     }
+    public void verifyAdminLoginCaptcha(String id,String code,String ip) {
+        limits.check("admin-captcha:"+ip,20,600);
+        consume("captcha:"+safeId(id),digest("CAPTCHA",id,"",code));
+    }
     private void consume(String key,String expected) {
         Long result=redis.execute(CONSUME,List.of(key,key+":attempts"),expected);
         if(!Long.valueOf(1).equals(result)) throw new BusinessException(400,"验证码错误或已过期");

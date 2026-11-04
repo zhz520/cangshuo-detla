@@ -29,8 +29,34 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PaymentSceneIsolationTest {
+    @Test
+    void foreignOrderStatusIsNeverDisclosedToPaymentCallers() {
+        TransactionService transactions = mock(TransactionService.class);
+        OrderService orders = mock(OrderService.class);
+        OrderProgressService progress = mock(OrderProgressService.class);
+        WalletService wallets = mock(WalletService.class);
+        ProductService products = mock(ProductService.class);
+        SysConfigService configs = mock(SysConfigService.class);
+        WxPayConfiguration wx = mock(WxPayConfiguration.class);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        PaymentServiceImpl service = new PaymentServiceImpl(transactions, orders, progress, wallets, products,
+                configs, wx, redis, events, jdbc);
+        Order foreign = new Order();
+        foreign.setId(100L);
+        foreign.setUserId(8L);
+        foreign.setStatus(OrderStatusEnum.COMPLETED.name());
+        when(orders.getById(100L)).thenReturn(foreign);
+
+        assertThatThrownBy(() -> service.createWxPayment(100L, 7L, WechatPayScene.MINIAPP, "wx-mini"))
+                .hasMessage("订单不存在");
+        assertThatThrownBy(() -> service.createBalancePayment(100L, 7L))
+                .hasMessage("订单不存在");
+    }
     @Test
     void differentWechatScenesNeverReuseTheSameOutTradeNo() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), Payment.class);

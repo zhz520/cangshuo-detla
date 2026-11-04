@@ -64,11 +64,10 @@ public class UserPlayerController {
     public R<Void> designatePlayer(@PathVariable Long id, @RequestBody Map<String, Long> body) {
         Long userId = SecurityUtils.getUserId();
         Order order = orderService.getById(id);
-        if (order == null) return R.fail("订单不存在");
-        if (!order.getUserId().equals(userId)) return R.fail("无权操作");
+        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
         if (!"PAID".equals(order.getStatus())) return R.fail("当前状态不允许指定打手");
         if (order.getPlayerId() != null) return R.fail("订单已分配打手，无需重复指定");
-        Long playerId = body.get("playerId");
+        Long playerId = body == null ? null : body.get("playerId");
         if (playerId == null) return R.fail("请选择打手");
         var quote=pricing.quote(order.getProductId(),playerId,null);
         java.math.BigDecimal paidRate=order.getPriceIncreaseRate()==null?java.math.BigDecimal.ZERO:order.getPriceIncreaseRate();

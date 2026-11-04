@@ -137,8 +137,7 @@ public class OrderController {
         if(req.getReason()==null || req.getReason().isBlank() || req.getReason().length()>1000) return R.fail(400,"换人原因长度不符合要求");
         Long userId = SecurityUtils.getUserId();
         Order order = orderService.getById(id);
-        if (order == null) return R.fail("订单不存在");
-        if (!order.getUserId().equals(userId)) return R.fail("无权操作");
+        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
         if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail("当前状态不允许申请换人");
         // 防重复
         long pending = replaceRequestService.count(new LambdaQueryWrapper<PlayerReplaceRequest>()

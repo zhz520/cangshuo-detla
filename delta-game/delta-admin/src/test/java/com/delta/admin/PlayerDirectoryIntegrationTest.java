@@ -168,7 +168,8 @@ class PlayerDirectoryIntegrationTest {
         Order order=new Order();order.setId(100L);order.setUserId(7L);order.setPlayerId(1L);order.setProductId(11L);order.setStatus("CONFIRMED");
         when(orders.getOne(any())).thenReturn(order);
         String body="{\"orderId\":100,\"rating\":5,\"content\":\"配合很好\",\"playerId\":999,\"id\":777}";
-        mvc.perform(post("/order/review").with(role("USER",8)).contentType("application/json").content(body)).andExpect(jsonPath("$.msg").value("无权评价"));
+        mvc.perform(post("/order/review").with(role("USER",8)).contentType("application/json").content(body))
+                .andExpect(jsonPath("$.code").value(404)).andExpect(jsonPath("$.msg").value("订单不存在"));
         order.setStatus("IN_PROGRESS");
         mvc.perform(post("/order/review").with(role("USER",7)).contentType("application/json").content(body)).andExpect(jsonPath("$.msg").value("订单状态不允许评价"));
         order.setStatus("CONFIRMED");

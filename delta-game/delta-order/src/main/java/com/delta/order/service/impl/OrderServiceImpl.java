@@ -146,8 +146,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId, Long userId) {
         Order order = getById(orderId);
-        if (order == null) throw new BusinessException("订单不存在");
-        if (!order.getUserId().equals(userId)) throw new BusinessException("无权操作");
+        if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
         String status = order.getStatus();
         if (OrderStatusEnum.PENDING_PAYMENT.name().equals(status)) {
             // 未支付取消
@@ -373,8 +372,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void confirmOrder(Long orderId, Long userId) {
         Order order = getById(orderId);
+        if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
         validateStatus(order, OrderStatusEnum.COMPLETED);
-        if (!order.getUserId().equals(userId)) throw new BusinessException("无权操作");
         order.setConfirmTime(LocalDateTime.now());
         transition(order, OrderStatusEnum.CONFIRMED, "USER", userId, "用户确认完成");
         // 发布订单确认事件，触发结算
@@ -432,7 +431,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private void validateStatus(Order order, OrderStatusEnum expected) {
         if (order == null) throw new BusinessException("订单不存在");
         if (!expected.name().equals(order.getStatus()))
-            throw new BusinessException("当前状态不允许此操作, 期望:" + expected.name() + " 实际:" + order.getStatus());
+            throw new BusinessException("当前状态不允许此操作");
     }
 
     private String normalizeAssignOperatorType(String operatorType) {

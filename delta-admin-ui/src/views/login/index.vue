@@ -11,6 +11,15 @@
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" aria-label="密码" autocomplete="current-password" prefix-icon="Lock" show-password />
         </el-form-item>
+        <el-form-item prop="captchaCode">
+          <div class="captcha-row">
+            <el-input v-model="form.captchaCode" maxlength="6" placeholder="图形验证码" aria-label="图形验证码" autocomplete="one-time-code" prefix-icon="Key" />
+            <button type="button" class="captcha-image" :disabled="captchaLoading" aria-label="刷新图形验证码" title="点击刷新验证码" @click="refreshCaptcha">
+              <img v-if="captchaImage" :src="captchaImage" alt="图形验证码" />
+              <span v-else>{{ captchaLoading ? '加载中' : '点击刷新' }}</span>
+            </button>
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button class="login-btn" native-type="submit" :loading="loading">登 录</el-button>
         </el-form-item>
@@ -24,6 +33,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
+import { getLoginCaptcha } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -33,10 +43,28 @@ const siteStore = useSiteStore()
 
 const formRef = ref(null)
 const loading = ref(false)
-const form = reactive({ username: '', password: '' })
+const captchaLoading = ref(false)
+const captchaImage = ref('')
+const form = reactive({ username: '', password: '', captchaId: '', captchaCode: '' })
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入图形验证码', trigger: 'blur' }, { pattern: /^[0-9]{6}$/, message: '请输入6位数字验证码', trigger: 'blur' }]
+}
+
+async function refreshCaptcha() {
+  if (captchaLoading.value) return
+  captchaLoading.value = true
+  try {
+    const result = await getLoginCaptcha()
+    form.captchaId = result.data?.captchaId || ''
+    captchaImage.value = result.data?.image || ''
+  } catch {
+    captchaImage.value = ''
+  } finally {
+    form.captchaCode = ''
+    captchaLoading.value = false
+  }
 }
 
 async function handleLogin() {
@@ -51,6 +79,7 @@ async function handleLogin() {
     await router.push(typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch (e) {
     // error handled by request interceptor
+    await refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -85,6 +114,7 @@ class Particle {
   }
 }
 onMounted(() => {
+  refreshCaptcha()
   const canvas = canvasRef.value; if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -191,6 +221,25 @@ onUnmounted(() => stopParticles())
   letter-spacing: 4px;
   border-radius: 999px;
   &:hover { background: #30343a; color: #ffffff; }
+}
+.captcha-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 10px;
+}
+.captcha-image {
+  height: 40px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e6e7e9;
+  border-radius: 8px;
+  background: #f5f6f8;
+  color: #73777e;
+  font-size: 12px;
+  cursor: pointer;
+  img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  &:disabled { cursor: wait; opacity: .7; }
 }
 :deep(.el-input__wrapper) {
   background: #fafafb;

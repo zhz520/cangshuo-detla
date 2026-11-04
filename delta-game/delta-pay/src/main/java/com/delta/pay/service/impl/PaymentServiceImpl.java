@@ -56,10 +56,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Transactional(rollbackFor = Exception.class)
     public Payment createWxPayment(Long orderId, Long userId, WechatPayScene scene, String wxAppId) {
         Order order = orderService.getById(orderId);
-        if (order == null) throw new BusinessException("订单不存在");
+        if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
             throw new BusinessException("订单状态不允许支付");
-        if (!order.getUserId().equals(userId)) throw new BusinessException("无权操作");
         com.delta.common.utils.Money.positive(order.getAmount());
         if (order.getPayDeadline() != null && order.getPayDeadline().isBefore(LocalDateTime.now()))
             throw new BusinessException("订单已超时，请重新下单");
@@ -201,10 +200,9 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Transactional(rollbackFor = Exception.class)
     public Payment createBalancePayment(Long orderId, Long userId) {
         Order order = orderService.getById(orderId);
-        if (order == null) throw new BusinessException("订单不存在");
+        if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
             throw new BusinessException("订单状态不允许支付");
-        if (!order.getUserId().equals(userId)) throw new BusinessException("无权操作");
         if (order.getPayDeadline() != null && order.getPayDeadline().isBefore(LocalDateTime.now()))
             throw new BusinessException("订单已超时，请重新下单");
 
@@ -335,6 +333,10 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 if(java.util.Set.of("CANCELLED","REFUNDING","REFUNDED").contains(local.getStatus()) || count(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,payment.getOrderId()).eq(Payment::getStatus,"PAID"))>0) {
                     payment.setStatus("PAID");payment.setWxTransactionId(transactionId);payment.setPaidAt(LocalDateTime.now());updateById(payment);
                     processRefund(payment,payment.getAmount(),"迟到或重复支付自动原路退款",false);return;
+                }
+                if(local.getPayDeadline()!=null && local.getPayDeadline().isBefore(LocalDateTime.now())) {
+                    payment.setStatus("PAID");payment.setWxTransactionId(transactionId);payment.setPaidAt(LocalDateTime.now());updateById(payment);
+                    processRefund(payment,payment.getAmount(),"订单已超过支付期限，自动原路退款",false);return;
                 }
                 if(!OrderStatusEnum.PENDING_PAYMENT.name().equals(local.getStatus())) throw new BusinessException("订单状态异常，等待支付对账处理");
             } else if(!java.util.Set.of("RECHARGE","PLAYER_DEPOSIT").contains(payment.getBizType())) throw new BusinessException("支付业务类型无效");
