@@ -32,7 +32,8 @@ test('desktop and mobile WeChat user agents are distinguished without misclassif
   assert.equal(isMobileUserAgent(macWechat), false)
   assert.equal(isMobileUserAgent(androidWechat), true)
   assert.equal(isMobileUserAgent(iphoneWechat), true)
-  assert.equal(isMobileUserAgent(ipadDesktopMode, 5), true)
+  assert.equal(isMobileUserAgent(ipadDesktopMode, 5, 'MacIntel'), true)
+  assert.equal(isMobileUserAgent(macWechat, 10, 'Win32'), false)
   assert.equal(isMobileUserAgent('Mozilla/5.0 (Windows NT 10.0) Chrome/140.0 Safari/537.36', 0), false)
 })
 

@@ -22,14 +22,14 @@ export function isWechatBrowser() {
   return isH5() && typeof navigator !== 'undefined' && isWechatUserAgent(navigator.userAgent)
 }
 
-export function isMobileUserAgent(userAgent = '', maxTouchPoints = 0) {
+export function isMobileUserAgent(userAgent = '', maxTouchPoints = 0, platform = '') {
   return /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|OpenHarmony|Windows Phone|IEMobile/i.test(userAgent) ||
-    (/Macintosh/i.test(userAgent) && Number(maxTouchPoints) > 1)
+    (/Macintosh/i.test(userAgent) && /Mac|iPhone|iPad/i.test(platform) && Number(maxTouchPoints) > 1)
 }
 
 export function isMobileBrowser() {
   if (!isH5() || typeof navigator === 'undefined') return false
-  return isMobileUserAgent(navigator.userAgent, navigator.maxTouchPoints)
+  return isMobileUserAgent(navigator.userAgent, navigator.maxTouchPoints, navigator.platform)
 }
 
 /**
