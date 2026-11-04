@@ -44,6 +44,9 @@ export function resolveWechatPayChannel({ miniapp, web, inWechat, mobile, miniap
   if (miniapp) return miniappEnabled ? 'MINIAPP' : null
   if (!web) return null
   if (inWechat) {
+    // 电脑微信的 UA 也包含 MicroMessenger，但桌面端不能可靠调用公众号 JSAPI 收银台。
+    // 改用授权地址二维码，由手机微信扫码后进入公众号支付链路。
+    if (!mobile) return officialEnabled ? 'OFFICIAL_QR' : h5Enabled ? 'OPEN_IN_BROWSER' : null
     if (officialEnabled) return 'OFFICIAL'
     return h5Enabled ? 'OPEN_IN_BROWSER' : null
   }

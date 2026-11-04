@@ -7,12 +7,14 @@ test('each configured WeChat payment method is routed to a compatible browser sc
   const base = { miniappEnabled: true, h5Enabled: true, officialEnabled: false }
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: true, web: false }), 'MINIAPP')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: true, officialEnabled: true }), 'OFFICIAL')
+  assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: false, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: true }), 'H5')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: true, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, h5Enabled: false, miniapp: false, web: true, inWechat: false, mobile: true, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: false, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: false, officialEnabled: false }), 'OPEN_IN_MOBILE_BROWSER')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: true, h5Enabled: true, officialEnabled: false }), 'OPEN_IN_BROWSER')
+  assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: false, h5Enabled: true, officialEnabled: false }), 'OPEN_IN_BROWSER')
   assert.equal(resolveWechatPayChannel({ ...base, miniappEnabled: false, miniapp: true, web: false }), null)
 })
 
