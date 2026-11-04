@@ -58,8 +58,8 @@ export function resolveWechatPayChannel({ miniapp, web, inWechat, mobile, miniap
     if (officialEnabled) return 'OFFICIAL'
     return h5Enabled ? 'OPEN_IN_BROWSER' : null
   }
-  if (officialEnabled) return 'OFFICIAL_QR'
   if (mobile && h5Enabled) return 'H5'
+  if (officialEnabled) return 'OFFICIAL_QR'
   return h5Enabled ? 'OPEN_IN_MOBILE_BROWSER' : null
 }
 
