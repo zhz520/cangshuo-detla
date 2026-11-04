@@ -56,7 +56,7 @@ async function pay() {
     const site = (await getSiteConfig()).data || {}
     const channel = site.wx_pay_enabled === 'true' ? wechatPayChannel({
       miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
-      h5Enabled: site.wx_pay_h5_enabled !== 'false',
+      h5Enabled: site.wx_pay_h5_enabled === 'true',
       officialEnabled: site.wx_pay_official_enabled === 'true'
     }) : null
     if (!channel) return uni.showToast({ title: '未启用可用的微信支付方式', icon: 'none' })

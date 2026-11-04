@@ -37,6 +37,18 @@ test('desktop and mobile WeChat user agents are distinguished without misclassif
   assert.equal(isMobileUserAgent('Mozilla/5.0 (Windows NT 10.0) Chrome/140.0 Safari/537.36', 0), false)
 })
 
+test('H5 payment is opt-in when the H5 site may not be deployed', async () => {
+  const platform = await readFile(new URL('../utils/platform.js', import.meta.url), 'utf8')
+  const store = await readFile(new URL('../store/site.js', import.meta.url), 'utf8')
+  const order = await readFile(new URL('../pages/order/pay.vue', import.meta.url), 'utf8')
+  const recharge = await readFile(new URL('../pages/wallet/recharge.vue', import.meta.url), 'utf8')
+  assert.match(platform, /h5Enabled = false/)
+  assert.match(store, /wxPayH5Enabled = ref\(false\)/)
+  assert.match(order, /h5Enabled: siteRes\.data\?\.wx_pay_h5_enabled === 'true'/)
+  assert.match(order, /h5Enabled: site\.wx_pay_h5_enabled === 'true'/)
+  assert.match(recharge, /h5Enabled: site\.wx_pay_h5_enabled === 'true'/)
+})
+
 test('payment pages share browser routing and never open WeChat OAuth outside WeChat', async () => {
   const paths = [
     '../pages/order/pay.vue',

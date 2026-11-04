@@ -36,7 +36,7 @@ export function isMobileBrowser() {
  * 按浏览器场景和后台开关选择可实际完成的微信支付通道。
  * 微信内置浏览器使用公众号 JSAPI；微信外手机浏览器使用 H5；电脑端需要引导到微信完成。
  */
-export function wechatPayChannel({ miniappEnabled = true, h5Enabled = true, officialEnabled = false } = {}) {
+export function wechatPayChannel({ miniappEnabled = true, h5Enabled = false, officialEnabled = false } = {}) {
   return resolveWechatPayChannel({
     miniapp: isMpWeixin(),
     web: isH5(),

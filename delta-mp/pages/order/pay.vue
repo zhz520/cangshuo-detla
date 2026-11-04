@@ -64,7 +64,7 @@ onLoad(async (opts) => {
     const enabled = siteRes.data?.wx_pay_enabled === 'true'
     const channel = enabled ? wechatPayChannel({
       miniappEnabled: siteRes.data?.wx_pay_miniapp_enabled !== 'false',
-      h5Enabled: siteRes.data?.wx_pay_h5_enabled !== 'false',
+      h5Enabled: siteRes.data?.wx_pay_h5_enabled === 'true',
       officialEnabled: siteRes.data?.wx_pay_official_enabled === 'true'
     }) : ''
     canUseWechatPay.value = Boolean(channel)
@@ -156,7 +156,7 @@ async function handlePay() {
       const site = (await getSiteConfig()).data || {}
       const channel = wechatPayChannel({
         miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
-        h5Enabled: site.wx_pay_h5_enabled !== 'false',
+        h5Enabled: site.wx_pay_h5_enabled === 'true',
         officialEnabled: site.wx_pay_official_enabled === 'true'
       })
       if (showWechatPaymentEnvironmentPrompt(channel)) return

@@ -15,6 +15,16 @@ import static org.mockito.Mockito.when;
 
 class SysConfigPublicSiteTest {
     @Test
+    void h5PaymentStaysDisabledWhenItsDeploymentSettingIsAbsent() {
+        SysConfigService service = mock(SysConfigService.class);
+        when(service.list(org.mockito.ArgumentMatchers.<com.baomidou.mybatisplus.core.conditions.Wrapper<com.delta.system.entity.SysConfig>>any()))
+                .thenReturn(List.of());
+        when(service.getConfigValue(anyString(), anyString())).thenAnswer(call -> call.getArgument(1));
+        Map<String, String> site = new SysConfigController(service).getSiteConfig().getData();
+        assertThat(site).containsEntry("wx_pay_h5_enabled", "false");
+    }
+
+    @Test
     void exposesIndependentWechatPaymentSceneSwitchesWithoutSecrets() {
         SysConfigService service = mock(SysConfigService.class);
         when(service.list(org.mockito.ArgumentMatchers.<com.baomidou.mybatisplus.core.conditions.Wrapper<com.delta.system.entity.SysConfig>>any()))

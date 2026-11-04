@@ -15,7 +15,8 @@ export const useSiteStore = defineStore('site', () => {
   /** 后台微信支付总开关 */
   const wxPayEnabled = ref(false)
   const wxPayMiniappEnabled = ref(true)
-  const wxPayH5Enabled = ref(true)
+  // H5 支付只会在明确启用后使用，不能把“未返回配置”当成 H5 已部署。
+  const wxPayH5Enabled = ref(false)
   const wxPayOfficialEnabled = ref(false)
   /** 公告是否在浏览器刷新后再次展示 */
   const noticePopupEveryVisit = ref(false)

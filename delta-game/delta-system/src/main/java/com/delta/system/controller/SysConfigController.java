@@ -90,7 +90,7 @@ public class SysConfigController {
         // 微信支付总开关（支付模块运行时动态读取）
         map.put("wx_pay_enabled", sysConfigService.getConfigValue("wx.pay.enabled", "false"));
         map.put("wx_pay_miniapp_enabled", sysConfigService.getConfigValue("wx.pay.miniapp-enabled", "true"));
-        map.put("wx_pay_h5_enabled", sysConfigService.getConfigValue("wx.pay.h5-enabled", "true"));
+        map.put("wx_pay_h5_enabled", sysConfigService.getConfigValue("wx.pay.h5-enabled", "false"));
         String officialEnabled = sysConfigService.getConfigValue("wx.pay.official-enabled", "false");
         String officialAppId = sysConfigService.getConfigValue("wx.pay.official-appid", "").trim();
         String officialSecret = sysConfigService.getConfigValue("wx.pay.official-appsecret", "").trim();
@@ -154,8 +154,8 @@ public class SysConfigController {
                 "关闭后小程序和 H5 均不可发起微信支付，但余额支付不受影响");
         ensureConfig("wx.pay.miniapp-enabled", "启用小程序支付", "true", "boolean", "微信支付配置",
                 "独立开关；开启后所有支付页面均可选择小程序支付");
-        ensureConfig("wx.pay.h5-enabled", "启用 H5 支付", "true", "boolean", "微信支付配置",
-                "独立开关；开启后所有 H5 支付页面均可选择 H5 支付，不再按浏览器类型自动隐藏");
+        ensureConfig("wx.pay.h5-enabled", "启用 H5 支付", "false", "boolean", "微信支付配置",
+                "仅在 H5 站点已实际部署并可访问时开启；未开启时移动端浏览器回退公众号二维码");
         ensureConfig("wx.pay.official-enabled", "启用微信公众号支付", "false", "boolean", "微信支付配置",
                 "独立开关；开启后 H5 支付入口优先使用公众号支付，不按是否微信内置浏览器隐藏");
         ensureConfig("wx.pay.appid", "小程序支付 AppID", "", "text", "微信支付配置",
