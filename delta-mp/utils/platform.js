@@ -14,14 +14,22 @@ export function isMpWeixin() {
   return result
 }
 
+export function isWechatUserAgent(userAgent = '') {
+  return /MicroMessenger|WindowsWechat|MacWechat/i.test(userAgent)
+}
+
 export function isWechatBrowser() {
-  return isH5() && typeof navigator !== 'undefined' && /MicroMessenger/i.test(navigator.userAgent)
+  return isH5() && typeof navigator !== 'undefined' && isWechatUserAgent(navigator.userAgent)
+}
+
+export function isMobileUserAgent(userAgent = '', maxTouchPoints = 0) {
+  return /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|OpenHarmony|Windows Phone|IEMobile/i.test(userAgent) ||
+    (/Macintosh/i.test(userAgent) && Number(maxTouchPoints) > 1)
 }
 
 export function isMobileBrowser() {
   if (!isH5() || typeof navigator === 'undefined') return false
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-    (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+  return isMobileUserAgent(navigator.userAgent, navigator.maxTouchPoints)
 }
 
 /**
