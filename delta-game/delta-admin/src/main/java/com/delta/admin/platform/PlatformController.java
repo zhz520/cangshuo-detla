@@ -34,12 +34,19 @@ public class PlatformController {
         var commercial = remote.commercialModules();
         return source.stream().map(feature -> {
             var module = commercial.get(feature.id());
-            if (module == null) return feature;
-            Integer price = module.path("priceCents").isNumber() ? module.path("priceCents").asInt() : feature.priceCents();
-            Integer termDays = module.path("termDays").isIntegralNumber()
+            if (module == null && !feature.managedByAuthority()) return feature;
+            Integer price;
+            if (module != null && module.path("priceCents").isNumber()) {
+                price = module.path("priceCents").asInt();
+            } else if (feature.managedByAuthority()) {
+                price = null;
+            } else {
+                price = feature.priceCents();
+            }
+            Integer termDays = module != null && module.path("termDays").isIntegralNumber()
                     && module.path("termDays").asInt() >= 0 && module.path("termDays").asInt() <= 3660
                     ? module.path("termDays").asInt() : feature.termDays();
-            String minimum = module.path("minVersion").asText(feature.minVersion());
+            String minimum = module == null ? feature.minVersion() : module.path("minVersion").asText(feature.minVersion());
             return new PlatformService.FeatureView(feature.id(), feature.name(), feature.description(), feature.paid(),
                     price, termDays, minimum, feature.dependencies(), feature.entryPath(), feature.capabilities(), feature.status(),
                     feature.entitled(), feature.enabled(), feature.reason(), feature.startsAt(), feature.expiresAt(),

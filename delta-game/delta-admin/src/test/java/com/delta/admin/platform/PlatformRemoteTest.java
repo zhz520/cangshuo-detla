@@ -138,9 +138,12 @@ class PlatformRemoteTest {
             assertThat(advanced.expiresAt()).isEqualTo(now.plusSeconds(600));
             assertThat(platform.features().stream().filter(PlatformService.FeatureView::paid)).allMatch(PlatformService.FeatureView::managedByAuthority);
             var controller = new PlatformController(null, new PlatformRemote(properties, platform, serviceJson, clock), null);
-            var email = controller.withCommercialMetadata(platform.features()).stream()
+            var pricedFeatures = controller.withCommercialMetadata(platform.features());
+            var email = pricedFeatures.stream()
                     .filter(item -> item.id().equals("email_notifications")).findFirst().orElseThrow();
             assertThat(email.priceCents()).isEqualTo(6200); assertThat(email.termDays()).isEqualTo(45);
+            assertThat(pricedFeatures.stream().filter(item -> item.id().equals("advanced_income_reports")).findFirst().orElseThrow().priceCents())
+                    .as("managed modules must not fall back to a stale bundled price").isNull();
             Files.deleteIfExists(directory.resolve("authority.json"));
             assertThat(new PlatformRemote(properties, platform, serviceJson, clock).project().path("instanceId").asText())
                     .isEqualTo(platform.overview().instanceId());

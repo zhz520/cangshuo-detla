@@ -23,7 +23,7 @@
       "name": "收益对比分析",
       "description": "按结算日期比较当前与上一等长周期，查看订单金额、打手收入和平台抽成变化。",
       "paid": true,
-      "priceCents": 9900,
+      "priceCents": 0,
       "termDays": 365,
       "minVersion": "1.1.0",
       "dependencies": [
