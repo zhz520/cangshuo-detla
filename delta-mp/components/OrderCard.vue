@@ -53,6 +53,8 @@ import StatusTag from './StatusTag.vue'
 const props = defineProps({
   order: { type: Object, required: true },
   detailPath: { type: String, default: '/pages/order/detail' },
+  /** False for a linked guest-history row that cannot use member-only actions. */
+  ownerActions: { type: Boolean, default: true },
   /** 嵌入模式：无背景/边框/外边距，由外层作为卡片容器 */
   embed: { type: Boolean, default: false }
 })
@@ -75,7 +77,7 @@ const playerIncomeAmount = computed(() => {
 
 // 有接单员且处于服务进行中的状态才显示聊天按钮
 const showChat = computed(() => {
-  if (!props.order.playerId) return false
+  if (!props.ownerActions || !props.order.playerId) return false
   const chatStatuses = ['ACCEPTED', 'WAITING_TEAMMATE', 'IN_PROGRESS', 'COMPLETED', 'CONFIRMED']
   return chatStatuses.includes(props.order.status)
 })
@@ -89,6 +91,7 @@ const actionText = computed(() => {
     }
     return playerMap[props.order.status] || ''
   }
+  if (!props.ownerActions) return ''
   const map = {
     PENDING_PAYMENT: '去支付',
     COMPLETED: '确认完成',

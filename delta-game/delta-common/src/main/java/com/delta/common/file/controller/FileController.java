@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.delta.common.exception.BusinessException;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import java.util.Set;
 
@@ -18,8 +19,15 @@ public class FileController {
     private final com.delta.common.security.service.RateLimitService limits;
 
     @PostMapping("/upload")
-    public R<String> upload(@RequestParam("file") MultipartFile file) throws Exception {
-        checkUploadRate();
+    public R<String> upload(@RequestParam("file") MultipartFile file, HttpServletRequest request) throws Exception {
+        checkUploadRate(request);
+        if ("GUEST".equals(com.delta.common.security.utils.SecurityUtils.getUserType())) {
+            if(file.getSize()>5*1024*1024) throw new BusinessException(400,"游客图片须在5MB以内");
+            String name=file.getOriginalFilename()==null?"":file.getOriginalFilename().toLowerCase(Locale.ROOT);
+            String ext=name.contains(".")?name.substring(name.lastIndexOf('.')+1):"";
+            if(!Set.of("jpg","jpeg","png","gif").contains(ext))
+                throw new BusinessException(400,"游客仅可上传订单、投诉或聊天图片");
+        }
         String url = fileService.upload(file);
         return R.ok(url);
     }
@@ -27,7 +35,7 @@ public class FileController {
     @PostMapping("/profile-audio")
     @PreAuthorize("hasAnyRole('ADMIN','PLAYER')")
     public R<String> profileAudio(@RequestParam("file") MultipartFile file) throws Exception {
-        checkUploadRate();
+        checkUploadRate(null);
         String name=file.getOriginalFilename()==null?"":file.getOriginalFilename().toLowerCase(Locale.ROOT);
         String ext=name.substring(name.lastIndexOf('.')+1);
         if(file.isEmpty()||file.getSize()>10*1024*1024) throw new BusinessException(400,"语音文件大小须在10MB以内");
@@ -45,11 +53,16 @@ public class FileController {
         return R.ok(fileService.upload(file));
     }
 
-    private void checkUploadRate() {
+    private void checkUploadRate(HttpServletRequest request) {
         String type=com.delta.common.security.utils.SecurityUtils.getUserType();
         String actor=type+":"+com.delta.common.security.utils.SecurityUtils.getUserId();
         boolean staff="ADMIN".equals(type)||"CS".equals(type);
-        limits.check("upload-minute:"+actor,staff?60:10,60);
-        limits.check("upload-day:"+actor,staff?1000:100,86400);
+        boolean guest="GUEST".equals(type);
+        limits.check("upload-minute:"+actor,staff?60:guest?5:10,60);
+        limits.check("upload-day:"+actor,staff?1000:guest?10:100,86400);
+        if(guest && request!=null) {
+            String ip=request.getRemoteAddr();
+            if(ip!=null && !ip.isBlank()) limits.check("upload-guest-ip:"+ip,20,86400);
+        }
     }
 }

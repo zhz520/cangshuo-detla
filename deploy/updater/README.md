@@ -2,7 +2,7 @@
 
 客户在系统更新页面检查授权中心同步的正式版，并选择当前版本之后每个版本的更新内容。GitHub 正式发布后，由发布方通知客户自行登录后台点击更新；发布方不代客户点击，也不直接替换线上客户端。授权中心只签发维护期内、符合付费授权的更新计划。非必要内容可以逐项随时取消；必要更新和所选内容的依赖自动加入，依赖被取消时其可选后续项也会取消。客户端只有验证公钥。
 
-`package_release.py D:\CodexData\outputs\detla-release` 将已验证的后端、后台、H5 产物打为三个 ZIP。上传至对应版本 GitHub Release；授权中心通过 Releases API 读取 GitHub 提供的 SHA-256 digest。无 digest、预览版、草稿和未配置更新内容的版本不能安装。
+`package_release.py D:\CodexData\outputs\detla-release` 将已验证的后端、后台、H5 产物打为三个 ZIP，并生成包含 Git commit、工作区是否干净和三个 SHA-256 的 `release-manifest.json`。上传至对应版本 GitHub Release；授权中心通过 Releases API 读取 GitHub 提供的 SHA-256 digest。无 digest、预览版、草稿和未配置更新内容的版本不能安装。
 
 `worker.py /absolute/path/worker.json` 由宿主机 systemd 管理，不监听新端口。配置由运维写入，包括 `root`、`state_dir`、`customer_id`、`product_id`、`repository`、`compose_directory`、`compose_files`、`mysql_container`、`containers`（backend/admin/h5）和 `backup_paths`、`authority_url` 和可选的 `verifier_image`。客户端仅向自己的状态目录提交签名计划，不能提供服务器命令或路径。
 

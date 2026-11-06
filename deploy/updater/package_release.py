@@ -1,6 +1,9 @@
 """Create independent GitHub release assets from a validated build."""
 from pathlib import Path
+from datetime import datetime, timezone
+import hashlib
 import json
+import subprocess
 import sys
 import zipfile
 
@@ -12,6 +15,7 @@ catalog=json.loads((root/'delta-game/delta-admin/src/main/resources/platform/cat
 version=catalog['version']
 if '-' in version:raise SystemExit('Only stable releases can be packaged')
 sources={'backend':root/'delta-game/delta-admin/target/delta-admin.jar','admin':root/'delta-admin-ui/dist','h5':root/'delta-mp/dist/build/h5'}
+assets=[]
 for component,source in sources.items():
     if not source.exists():raise SystemExit('Build artifact missing: '+str(source))
     target=output/('cangshuo-'+component+'.zip')
@@ -22,3 +26,17 @@ for component,source in sources.items():
                 if file.is_file():archive.write(file,file.relative_to(source).as_posix())
             archive.writestr('cangshuo-version.json',json.dumps({'version':version,'component':component}))
     print(component,version,target.stat().st_size)
+    digest=hashlib.sha256()
+    with target.open('rb') as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
+    assets.append({'component':component,'name':target.name,'size':target.stat().st_size,'sha256':digest.hexdigest()})
+
+try:
+    commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
+    dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=root,text=True).strip())
+except (OSError,subprocess.CalledProcessError):
+    commit=None
+    dirty=None
+manifest={'schemaVersion':1,'version':version,'commit':commit,'dirty':dirty,'createdAt':datetime.now(timezone.utc).isoformat(),'assets':assets}
+(output/'release-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+print('manifest',version,commit,dirty)

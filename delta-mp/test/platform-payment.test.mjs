@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isMobileUserAgent, isWechatUserAgent, resolveWechatPayChannel } from '../utils/platform.js'
+import { isMobileUserAgent, isWechatUserAgent, resolveWechatPayChannel, withH5PaymentReturnUrl } from '../utils/platform.js'
 
 test('each configured WeChat payment method is routed to a compatible browser scene', () => {
   const base = { miniappEnabled: true, h5Enabled: true, officialEnabled: false }
@@ -47,6 +47,16 @@ test('H5 payment is opt-in when the H5 site may not be deployed', async () => {
   assert.match(order, /h5Enabled: siteRes\.data\?\.wx_pay_h5_enabled === 'true'/)
   assert.match(order, /h5Enabled: site\.wx_pay_h5_enabled === 'true'/)
   assert.match(recharge, /h5Enabled: site\.wx_pay_h5_enabled === 'true'/)
+})
+
+test('H5 payment URLs preserve the encoded business return page', () => {
+  const result = withH5PaymentReturnUrl('https://wxpay.example/pay?prepay_id=abc',
+    'https://shop.example/#/pages/order/detail?id=123')
+  const parsed = new URL(result)
+  assert.equal(parsed.searchParams.get('prepay_id'), 'abc')
+  assert.equal(parsed.searchParams.get('redirect_url'), 'https://shop.example/#/pages/order/detail?id=123')
+  assert.equal(withH5PaymentReturnUrl('http://unsafe.example/pay', 'https://shop.example/#/pages/wallet/index'), '')
+  assert.equal(withH5PaymentReturnUrl('not-a-url', 'https://shop.example/#/pages/wallet/index'), '')
 })
 
 test('payment pages share browser routing and never open WeChat OAuth outside WeChat', async () => {

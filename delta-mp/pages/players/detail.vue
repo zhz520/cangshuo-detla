@@ -53,9 +53,21 @@ const activeTab = ref('story'), chatting = ref(false)
 const album = computed(() => player.value?.albumImages || [])
 const playerId = ref(null), player = ref(null), loading = ref(true), errorMessage = ref('')
 const reviews = ref([]), reviewTotal = ref(0), reviewLoading = ref(false), reviewFinished = ref(false), reviewError = ref(false)
-let reviewPage = 1, choosingOrder = false, reviewGeneration = 0
+let reviewPage = 1, choosingOrder = false, reviewGeneration = 0, closedRedirect = false
 onLoad(options => { playerId.value = Number(options.id) || null })
-onShow(() => { loadRewardOrders(); loadPlayer(); reviewGeneration++; reviews.value = []; reviewPage = 1; reviewFinished.value = false; reviewLoading.value = false; loadReviews() })
+onShow(async () => {
+  await siteStore.fetchSiteConfig()
+  if (!siteStore.playerDirectoryEnabled) {
+    if (!closedRedirect) {
+      closedRedirect = true
+      uni.showToast({ title: '打手页面暂未开放', icon: 'none' })
+      setTimeout(() => uni.switchTab({ url: '/pages/index/index' }), 500)
+    }
+    return
+  }
+  closedRedirect = false
+  loadRewardOrders(); loadPlayer(); reviewGeneration++; reviews.value = []; reviewPage = 1; reviewFinished.value = false; reviewLoading.value = false; loadReviews()
+})
 async function loadPlayer() {
   loading.value = true
   try { player.value = (await getPublicPlayer(playerId.value)).data; errorMessage.value = '' }
@@ -97,11 +109,6 @@ async function privateChat() {
 function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({title:'购买功能已暂停',icon:'none'})
   if (!player.value.canOrder) return uni.showToast({title:player.value.orderUnavailableReason || '暂不可接单',icon:'none'})
-  const userStore = useUserStore()
-  if (!userStore.isLoggedIn && !siteStore.guestCheckoutEnabled) return userStore.checkLogin()
-  if (!userStore.isLoggedIn && siteStore.guestCheckoutEnabled) {
-    return uni.navigateTo({url:'/pages/product/list?playerId=' + playerId.value})
-  }
   uni.navigateTo({url:`/pages/product/list?playerId=${playerId.value}`})
 }
 function previewAlbum(index) { uni.previewImage({urls:album.value,current:index}) }

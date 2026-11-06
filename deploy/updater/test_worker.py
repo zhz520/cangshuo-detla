@@ -64,6 +64,19 @@ class UpdaterTests(unittest.TestCase):
         self.worker.prune_history(override)
         self.assertEqual(sorted(path.name for path in backups.iterdir()),['backup-3','backup-4','backup-5'])
         self.assertEqual(sorted(path.name for path in releases.iterdir()),['old-active','release-3','release-4','release-5'])
+
+    def test_frontend_health_requires_the_installed_version_file(self):
+        inspected={'NetworkSettings':{'Networks':{'default':{'IPAddress':'172.20.0.5'}}}}
+        class Response:
+            status=200
+            def __init__(self,body):self.body=body
+            def read(self,size):return self.body
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+        with patch.object(self.worker.urllib.request,'urlopen',return_value=Response(b'{"component":"admin","version":"1.2.0"}')):
+            self.assertTrue(self.worker.service_http_healthy('admin',inspected,{'admin':'1.2.0'}))
+        with patch.object(self.worker.urllib.request,'urlopen',return_value=Response(b'{"component":"admin","version":"1.1.0"}')):
+            self.assertFalse(self.worker.service_http_healthy('admin',inspected,{'admin':'1.2.0'}))
     def test_failed_health_check_restores_previous_compose_and_keeps_private_backup(self):
         override=self.directory/'compose.self-update.json';original=json.dumps({'services':{'admin':{'volumes':['old:/usr/share/nginx/html:ro']}}});override.write_text(original)
         job=self.state/'update-job.json';job.write_text(json.dumps(self.envelope()))
@@ -73,5 +86,15 @@ class UpdaterTests(unittest.TestCase):
         with patch.object(self.worker,'run',side_effect=self.openssl),patch.object(self.worker,'download',side_effect=download),patch.object(self.worker,'backup',side_effect=lambda path:path.mkdir(parents=True)),patch.object(self.worker,'compose') as compose,patch.object(self.worker,'health',side_effect=[RuntimeError('failed'),None]):
             self.worker.process(job)
         self.assertEqual(json.loads((self.state/'update-result.json').read_text(encoding='utf-8'))['status'],'ROLLED_BACK');self.assertEqual(override.read_text(),original);self.assertEqual(compose.call_count,2);self.assertFalse((self.state/'updating').exists());self.assertFalse(job.exists())
+
+    def test_interrupted_recovery_restores_component_versions_and_removes_plan_marker(self):
+        job_id=str(uuid.uuid4());plans=self.state/'installed-plans';plans.mkdir()
+        marker=plans/job_id;marker.write_text('{}')
+        (self.state/'component-versions.json').write_text(json.dumps({'backend':'1.2.0','admin':'1.2.0','h5':'1.2.0','release':'1.2.0'}))
+        (self.directory/'update-journal.json').write_text(json.dumps({'id':job_id,'previous':None,'services':['admin'],'versionsBefore':{'backend':'1.1.0','admin':'1.1.0','h5':'1.1.0','release':'1.1.0'}}))
+        with patch.object(self.worker,'start_services'):self.worker.recover_interrupted()
+        restored=json.loads((self.state/'component-versions.json').read_text())
+        self.assertEqual(restored['backend'],'1.1.0');self.assertFalse(marker.exists());self.assertFalse((self.directory/'update-journal.json').exists())
+        self.assertEqual(json.loads((self.state/'update-result.json').read_text(encoding='utf-8'))['status'],'ROLLED_BACK')
 
 if __name__=='__main__':unittest.main()

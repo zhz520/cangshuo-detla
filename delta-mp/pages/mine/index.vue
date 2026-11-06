@@ -9,6 +9,10 @@
             <text class="phone" v-if="userStore.phone">{{ formatPhone(userStore.phone) }}</text>
             <text v-else class="phone">完善手机号，方便接收服务通知</text>
           </view>
+          <view class="profile-info" v-else-if="userStore.isGuest">
+            <text class="name">{{ userStore.guestInfo?.nickname || '游客' }}</text>
+            <text class="phone">{{ userStore.guestInfo?.maskedPhone || '游客会话' }} · 点击登录正式账号</text>
+          </view>
           <view class="profile-info" v-else>
             <text class="name">点击登录</text>
             <text class="phone">登录后查看订单和钱包</text>
@@ -17,16 +21,16 @@
         </view>
       </view>
 
-      <view class="quick-panel">
-        <view class="quick-item" @click="go('/pages/order/list')">
+      <view class="quick-panel" :class="{ 'guest-quick-panel': !userStore.isLoggedIn }">
+        <view class="quick-item" @click="goOrders">
           <image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" />
           <text>订单</text>
         </view>
-        <view class="quick-item" @click="go('/pages/wallet/index')">
+        <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/wallet/index')">
           <image class="quick-icon" src="/static/icons/钞票.svg" mode="aspectFit" />
           <text>钱包</text>
         </view>
-        <view class="quick-item" @click="go('/pages/message/index')">
+        <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/message/index')">
           <view class="quick-icon-wrap">
             <image class="quick-icon" src="/static/icons/提示.svg" mode="aspectFit" />
             <view v-if="systemUnread > 0" class="quick-badge">{{ systemUnread > 99 ? '99+' : systemUnread }}</view>
@@ -52,15 +56,15 @@
 
       <view class="section-card">
         <text class="section-title">服务与支持</text>
-        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/order/lookup')">
+        <view v-if="siteStore.guestCheckoutEnabled" class="menu-item guest-order-menu" @click="go('/pages/order/lookup')">
           <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
-          <text>游客订单查询与绑定</text><text class="arrow">></text>
+          <text>{{ userStore.isLoggedIn ? '游客订单查询与绑定' : '游客订单查询' }}</text><text class="guest-order-tag">{{ userStore.isLoggedIn ? '绑定历史订单' : '无需登录' }}</text><text class="arrow">></text>
         </view>
         <view class="menu-item" @click="go('/pages/complaint/list')">
           <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
-        <view class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
+        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
         <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
         <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages/agreement/user')">
@@ -74,6 +78,7 @@
       </view>
 
       <view v-if="userStore.isLoggedIn" class="logout" @click="userStore.logout()">退出登录</view>
+      <view v-if="userStore.isGuest" class="logout guest-logout" @click="userStore.exitGuest()">退出游客会话</view>
       <TechSupportFooter />
       <view class="tab-page-bottom-spacer"></view>
     </scroll-view>
@@ -87,6 +92,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
 import { useAppStore } from '@/store/app'
+import { useSiteStore } from '@/store/site'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
 import { switchToPlayerToken } from '@/api/auth'
 import { getPlayerApplicationStatus } from '@/api/player'
@@ -96,6 +102,7 @@ import { useOfficialWechatStore } from '@/store/official-wechat'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import TechSupportFooter from '@/components/TechSupportFooter.vue'
 const userStore = useUserStore()
+const siteStore = useSiteStore()
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const officialWechat = useOfficialWechatStore()
@@ -106,6 +113,7 @@ const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJE
 
 // 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
+  userStore.syncSessionFromStorage()
   officialWechat.load('user')
   const savedToken = getUserToken()
   if (savedToken && !userStore.token) {
@@ -125,6 +133,11 @@ function go(url) {
   } else {
     uni.navigateTo({ url })
   }
+}
+function goOrders() {
+  if (userStore.isLoggedIn || userStore.isGuest) return go('/pages/order/list')
+  if (siteStore.guestCheckoutEnabled) return go('/pages/order/lookup')
+  uni.showToast({ title: '请先登录后查看订单', icon: 'none' })
 }
 function goLogin() { uni.navigateTo({ url: '/pages/login/index' }) }
 function formatPhone(p) {
@@ -259,6 +272,11 @@ function onLongPress() {
   position: relative;
   z-index: 1;
 }
+.quick-panel.guest-quick-panel {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+}
 .quick-item {
   min-width: 0;
   display: flex;
@@ -381,6 +399,7 @@ function onLongPress() {
     text-align: center; margin-right: 8rpx; flex-shrink: 0;
   }
   .identity-state { flex: none; margin-right: 8rpx; font-size: 24rpx; color: #7b879a; }
+  .guest-order-tag { flex: none; margin-right: 8rpx; padding: 4rpx 10rpx; border-radius: 999rpx; background: #f1f2f4; color: #73777e; font-size: 20rpx; }
   .arrow { color: #b9bdc4; flex: none; }
   &:last-child { border-bottom: none; }
 }
@@ -397,5 +416,6 @@ function onLongPress() {
   position: relative;
   z-index: 1;
 }
+.guest-logout { color: #555b63; }
 
 </style>

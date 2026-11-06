@@ -15,7 +15,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/platform")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
 @RequiredArgsConstructor
 public class PlatformController {
     private final PlatformService platform;
@@ -67,7 +67,9 @@ public class PlatformController {
         return R.ok(Map.of("checkoutUrl",remote.checkout(body.moduleId())));
     }
     @PostMapping("/updates/check") public R<com.fasterxml.jackson.databind.JsonNode> checkUpdates() { return R.ok(remote.refresh()); }
-    @PostMapping("/updates/install") public R<com.fasterxml.jackson.databind.JsonNode> install(@RequestBody com.fasterxml.jackson.databind.JsonNode body) { return R.ok(remote.install(body.path("selection"))); }
+    @PostMapping("/updates/install")
+    @OpLog(module="platform", operation="安装客户端更新")
+    public R<com.fasterxml.jackson.databind.JsonNode> install(@RequestBody com.fasterxml.jackson.databind.JsonNode body) { return R.ok(remote.install(body.path("selection"))); }
 
     // License payloads are deliberately excluded from the generic request-body operation logger.
     @PostMapping("/license/import")

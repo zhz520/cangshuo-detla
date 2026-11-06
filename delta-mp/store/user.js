@@ -51,8 +51,11 @@ export const useUserStore = defineStore('user', () => {
 
   function applyLoginResult(data) {
     if(!data?.token) throw new Error('登录凭据无效')
+    const previousGuest = getGuestToken()
     token.value = data.token
     setUserToken(data.token)
+    clearGuestSession()
+    if (previousGuest) revokeSession(previousGuest).catch(() => {})
     userInfo.value = data
     const chatStore = useChatStore()
     chatStore.fetchMessageUnreadCount()
@@ -66,6 +69,21 @@ export const useUserStore = defineStore('user', () => {
     clearGuestStorage()
     guestToken.value = ''
     guestInfo.value = null
+  }
+  function syncSessionFromStorage() {
+    token.value = getUserToken()
+    guestToken.value = getGuestToken()
+    guestInfo.value = getGuestInfo()
+    if (!token.value) userInfo.value = null
+  }
+  async function exitGuest() {
+    const current = getGuestToken()
+    useChatStore().disconnect()
+    try { if (current) await revokeSession(current) }
+    finally {
+      clearGuestSession()
+      uni.reLaunch({ url: '/pages/index/index' })
+    }
   }
   async function completePasswordSetup(data) {
     const response=await setupUserPassword(data);applyLoginResult(response.data);return response.data
@@ -87,7 +105,7 @@ export const useUserStore = defineStore('user', () => {
 
   /** 退出登录 */
   async function logout() {
-    const tokens=[getUserToken(),getPlayerToken()].filter(Boolean)
+    const tokens=[getUserToken(),getPlayerToken(),getGuestToken()].filter(Boolean)
     useChatStore().disconnect()
     try { await Promise.allSettled(tokens.map(value=>revokeSession(value))) }
     finally {
@@ -95,6 +113,7 @@ export const useUserStore = defineStore('user', () => {
       userInfo.value = null
       removeUserToken()
       removePlayerToken()
+      clearGuestSession()
       uni.reLaunch({ url: '/pages/login/index' })
     }
   }
@@ -102,7 +121,15 @@ export const useUserStore = defineStore('user', () => {
   /** 检查登录态，未登录则跳登录页 */
   function checkLogin() {
     if (!token.value) {
-      uni.navigateTo({ url: '/pages/login/index' })
+      uni.showModal({
+        title: '需要登录',
+        content: '该功能需要使用正式账号登录',
+        confirmText: '去登录',
+        cancelText: '暂不',
+        success(result) {
+          if (result.confirm) uni.navigateTo({ url: '/pages/login/index' })
+        }
+      })
       return false
     }
     return true
@@ -125,6 +152,8 @@ export const useUserStore = defineStore('user', () => {
     fetchProfile,
     setGuestSession,
     clearGuestSession,
+    syncSessionFromStorage,
+    exitGuest,
     logout,
     checkLogin
   }

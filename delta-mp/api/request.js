@@ -156,8 +156,7 @@ function handleUnauthorized(role, expectedToken) {
   }
 
   uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
-  const current=getCurrentPages().slice(-1)[0]?.route
-  const redirect=current&&!current.startsWith('pages/login/')?'/'+current:''
+  const redirect = currentRedirectPath()
   if (role === 'cs') {
     uni.reLaunch({ url: '/pages/login/index?expired=1'+(redirect?'&redirect='+encodeURIComponent(redirect):'') })
   } else if (role === 'player') {
@@ -167,6 +166,22 @@ function handleUnauthorized(role, expectedToken) {
     uni.reLaunch({ url: '/pages/login/index?expired=1'+(redirect?'&redirect='+encodeURIComponent(redirect):'') })
   }
   setTimeout(() => { _handlingUnauthorized = false }, 1500)
+}
+
+function currentRedirectPath() {
+  const page = getCurrentPages().slice(-1)[0]
+  if (!page) return ''
+  let fullPath = page.$page?.fullPath || page.fullPath || ''
+  if (!fullPath && page.route) {
+    const query = Object.entries(page.options || {})
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&')
+    fullPath = '/' + page.route + (query ? '?' + query : '')
+  }
+  if (!fullPath.startsWith('/')) fullPath = '/' + fullPath
+  if (!fullPath.startsWith('/pages/') || fullPath.startsWith('/pages/login/') || fullPath.includes('://')) return ''
+  return fullPath
 }
 
 /**

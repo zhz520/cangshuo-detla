@@ -46,7 +46,7 @@
     </view>
     <view v-if="!userStore.isLoggedIn" class="section guest-section">
       <view class="section-title">游客下单凭证</view>
-      <template v-if="siteStore.guestCheckoutEnabled && guestPlatformSupported">
+      <template v-if="siteStore.guestCheckoutEnabled && guestPlatformSupported && guestPaymentAvailable">
         <text class="guest-tip">无需注册即可下单。请填写手机号和查单码并妥善保存；后续凭这两项查询订单。</text>
         <view class="guest-field">
           <text class="label">手机号<text class="required">*</text></text>
@@ -66,7 +66,7 @@
         <view class="guest-actions"><text @click="goLookup">已有游客订单，去查单</text><text @click="goLogin">已有账号，去登录</text></view>
       </template>
       <template v-else>
-        <text class="guest-tip">游客下单当前未开放，请登录后继续下单。</text>
+        <text class="guest-tip">{{ siteStore.guestCheckoutEnabled && guestPlatformSupported ? '游客在线支付暂未启用，请登录后继续下单。' : '游客下单当前未开放，请登录后继续下单。' }}</text>
         <view class="guest-login-button" @click="goLogin">去登录</view>
       </template>
     </view>
@@ -173,8 +173,10 @@ const guestPrivacyAccepted = ref(false)
 const wantDesignate = computed(() => selectionMode.value === 'designated')
 const playerLevelId = computed(() => selectionMode.value.startsWith('level:') ? Number(selectionMode.value.slice(6)) : undefined)
 const quoteReady = computed(() => !!quote.value && !quoteLoading.value && !quoteError.value && (!wantDesignate.value || !!selectedPlayer.value))
+const guestPaymentAvailable = computed(() => siteStore.wxPayEnabled && (siteStore.wxPayH5Enabled || siteStore.wxPayOfficialEnabled))
 const canSubmit = computed(() => siteStore.orderPurchaseEnabled && quoteReady.value
   && (userStore.isLoggedIn || (siteStore.guestCheckoutEnabled && guestPlatformSupported.value
+    && guestPaymentAvailable.value
     && /^1[0-9]{10}$/.test(guestPhone.value)
     && /^[A-Za-z0-9]{6,12}$/.test(guestLookupCode.value)
     && guestPrivacyAccepted.value)))
@@ -318,9 +320,11 @@ onLoad(async (opts) => {
 async function submitOrder() {
   if (submitting.value) return
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '前台购买功能已暂停', icon: 'none' })
-  if (!userStore.isLoggedIn && (!siteStore.guestCheckoutEnabled || !guestPlatformSupported.value)) {
-    userStore.checkLogin()
-    return
+  if (!userStore.isLoggedIn && (!siteStore.guestCheckoutEnabled || !guestPlatformSupported.value || !guestPaymentAvailable.value)) {
+    const message = !guestPlatformSupported.value ? '当前端下单请先登录'
+      : !siteStore.guestCheckoutEnabled ? '游客下单暂未开放，请登录后下单'
+      : '游客在线支付暂未启用，请登录后下单'
+    return uni.showToast({ title: message, icon: 'none' })
   }
   if (!userStore.isLoggedIn) {
     if (!/^1[0-9]{10}$/.test(guestPhone.value)) return uni.showToast({ title: '请输入正确的手机号', icon: 'none' })

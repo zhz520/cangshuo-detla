@@ -64,6 +64,8 @@ onLaunch(() => {
 })
 
 onShow(() => {
+  const userStore = useUserStore()
+  userStore.syncSessionFromStorage()
   const chatStore = useChatStore()
   if (shouldConnectChat()) {
     if (!chatStore.connected) chatStore.connect()

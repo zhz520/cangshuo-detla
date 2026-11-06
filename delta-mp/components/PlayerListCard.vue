@@ -22,9 +22,7 @@
 import { computed } from 'vue'
 import AppImage from '@/components/AppImage.vue'
 import { useSiteStore } from '@/store/site'
-import { useUserStore } from '@/store/user'
 const siteStore = useSiteStore()
-const userStore = useUserStore()
 
 const props = defineProps({
   player: { type: Object, required: true },
@@ -44,10 +42,6 @@ function open() {
 }
 function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
-  if (!userStore.isLoggedIn && !siteStore.guestCheckoutEnabled) {
-    userStore.checkLogin()
-    return
-  }
   if (!online.value) return uni.showToast({ title: '该打手当前离线', icon: 'none' })
   uni.navigateTo({ url: `/pages/product/list?playerId=${props.player.id}` })
 }

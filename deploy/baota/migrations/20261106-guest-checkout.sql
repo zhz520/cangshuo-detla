@@ -33,5 +33,6 @@ CREATE TABLE IF NOT EXISTS guest_user_link (
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 VALUES
 ('order.purchase_enabled','启用前台购买','true','boolean','订单配置','关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理'),
-('order.guest_checkout_enabled','允许游客下单','false','boolean','订单配置','开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计')
+('order.guest_checkout_enabled','允许游客下单','false','boolean','订单配置','开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计'),
+('player.directory.enabled','展示打手页面','true','boolean','打手配置','关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面')
 ON DUPLICATE KEY UPDATE config_name=VALUES(config_name),value_type=VALUES(value_type),config_group=VALUES(config_group),remark=VALUES(remark);

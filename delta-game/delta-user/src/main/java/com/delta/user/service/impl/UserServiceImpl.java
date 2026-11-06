@@ -56,6 +56,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setNickname((nickname != null && !nickname.isEmpty()) ? nickname : generateRandomNickname());
             user.setAvatar(avatar);
             user.setStatus(1);
+            user.setIsGuest(0);
             try {
                 save(user);
                 walletService.initWallet(user.getId());
@@ -79,6 +80,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setAvatar("");
             user.setPhone(phone);
             user.setStatus(1);
+            user.setIsGuest(0);
             try {
                 save(user);
                 walletService.initWallet(user.getId());

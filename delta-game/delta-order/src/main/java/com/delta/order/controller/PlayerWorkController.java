@@ -46,6 +46,7 @@ public class PlayerWorkController {
         } else {
             order.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
             order.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
+            if (crossModuleMapper.selectUserIsGuest(order.getUserId()) == 1) order.setContact(null);
             order.setTeammates(orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,id).eq(OrderPlayer::getRole,"TEAMMATE")));
             order.getTeammates().forEach(op->{op.setNickname(crossModuleMapper.selectPlayerNickname(op.getPlayerId()));op.setAvatar(crossModuleMapper.selectPlayerAvatar(op.getPlayerId()));});
         }
@@ -99,6 +100,7 @@ public class PlayerWorkController {
             if (o.getUserId() != null) {
                 o.setUserNickname(crossModuleMapper.selectUserNickname(o.getUserId()));
                 o.setUserAvatar(crossModuleMapper.selectUserAvatar(o.getUserId()));
+                if (crossModuleMapper.selectUserIsGuest(o.getUserId()) == 1) o.setContact(null);
             }
         }
     }

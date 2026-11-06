@@ -30,7 +30,7 @@ class ComponentUpdateRegressionTest {
 
     @Test void sameReleaseRemainsAvailableWhenOneComponentIsBehind() throws Exception {
         var result = status("1.4.0", "1.3.9", "1.4.0");
-        assertThat(result.path("currentVersion").asText()).isEqualTo("1.4.0");
+        assertThat(result.path("currentVersion").asText()).isEqualTo("1.3.9");
         assertThat(result.path("updates").path("updateAvailable").asBoolean()).isTrue();
         assertThat(result.path("updates").path("releases")).hasSize(1);
         assertThat(result.path("updates").path("releases").get(0).path("items")).hasSize(3);
@@ -46,5 +46,12 @@ class ComponentUpdateRegressionTest {
         var result = status("1.3.9", "1.4.0", "1.4.0");
         assertThat(result.path("updates").path("updateAvailable").asBoolean()).isFalse();
         assertThat(result.path("updates").path("releases")).isEmpty();
+    }
+
+    @Test void anInstalledPlanMarkerCannotHideAComponentThatIsStillBehind() throws Exception {
+        var result = status("1.5.13", "1.5.12", "1.5.13");
+        assertThat(result.path("currentVersion").asText()).isEqualTo("1.5.12");
+        assertThat(result.path("updates").path("updateAvailable").asBoolean()).isTrue();
+        assertThat(result.path("updates").path("releases").get(0).path("version").asText()).isEqualTo("1.5.13");
     }
 }

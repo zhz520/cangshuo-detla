@@ -22,6 +22,8 @@ export const useSiteStore = defineStore('site', () => {
   const orderPurchaseEnabled = ref(false)
   /** 未登录游客下单开关。 */
   const guestCheckoutEnabled = ref(false)
+  /** 用户端打手页面展示开关。 */
+  const playerDirectoryEnabled = ref(true)
   /** 公告是否在浏览器刷新后再次展示 */
   const noticePopupEveryVisit = ref(false)
   const techSupportText = ref('KK云网络提供技术支持')
@@ -75,6 +77,9 @@ export const useSiteStore = defineStore('site', () => {
         if (data.order_guest_checkout_enabled !== undefined) {
           guestCheckoutEnabled.value = data.order_guest_checkout_enabled === 'true'
         }
+        if (data.player_directory_enabled !== undefined) {
+          playerDirectoryEnabled.value = data.player_directory_enabled !== 'false'
+        }
         if (data.notice_popup_every_visit !== undefined) {
           noticePopupEveryVisit.value = data.notice_popup_every_visit === 'true'
         }
@@ -110,5 +115,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

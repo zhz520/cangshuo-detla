@@ -57,11 +57,6 @@
         </view>
       </view>
 
-      <view v-if="!userStore.isLoggedIn" class="guest-order-entry" @click="goGuestLookup">
-        <view><text class="guest-entry-title">游客订单</text><text class="guest-entry-desc">使用手机号和查单码查询已创建的订单</text></view>
-        <text class="guest-entry-arrow">查单 ›</text>
-      </view>
-
       <!-- 商品分类：图标 + 文字 -->
       <view class="category-grid">
         <view
@@ -191,8 +186,6 @@ function noticeRevision(notice) {
   // A new admin revision (content, status or popup toggle) gets a new acknowledgement key.
   return `${notice.id}:${notice.updatedAt || notice.createdAt || ''}`
 }
-
-function goGuestLookup() { uni.navigateTo({ url: '/pages/order/lookup' }) }
 
 function formatTime(t) {
   if (!t) return ''
@@ -507,10 +500,6 @@ async function goCustomerService() {
 }
 
 /* 商品分类：图标 + 文字网格 */
-.guest-order-entry { display: flex; align-items: center; justify-content: space-between; margin: 18rpx 24rpx; padding: 22rpx 24rpx; border: 1rpx solid #e1e4e8; border-radius: 16rpx; background: #fff; }
-.guest-entry-title { display: block; color: #17191c; font-size: 27rpx; font-weight: 700; }
-.guest-entry-desc { display: block; margin-top: 6rpx; color: #7a7f87; font-size: 22rpx; }
-.guest-entry-arrow { color: #34383e; font-size: 25rpx; font-weight: 600; }
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

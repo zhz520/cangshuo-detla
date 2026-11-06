@@ -42,6 +42,8 @@ import PlayerShowcaseCard from '@/components/PlayerShowcaseCard.vue'
 import PlayerListCard from '@/components/PlayerListCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { getPlayerCategories, getPublicPlayerLayout, getPublicPlayers } from '@/api/player'
+import { useSiteStore } from '@/store/site'
+const siteStore = useSiteStore()
 
 const levels = ref([])
 const players = ref([])
@@ -54,6 +56,7 @@ const total = ref(0)
 const layout = ref('grid')
 let generation = 0
 let pageNum = 1
+let closedRedirect = false
 
 const selectedName = computed(() => {
   if (keyword.value.trim()) return '搜索结果'
@@ -61,6 +64,16 @@ const selectedName = computed(() => {
 })
 
 onShow(async () => {
+  await siteStore.fetchSiteConfig()
+  if (!siteStore.playerDirectoryEnabled) {
+    if (!closedRedirect) {
+      closedRedirect = true
+      uni.showToast({ title: '打手页面暂未开放', icon: 'none' })
+      setTimeout(() => uni.switchTab({ url: '/pages/index/index' }), 500)
+    }
+    return
+  }
+  closedRedirect = false
   try {
     const [levelResult, layoutResult] = await Promise.allSettled([getPlayerCategories(), getPublicPlayerLayout()])
     if (levelResult.status === 'fulfilled') levels.value = levelResult.value.data || []

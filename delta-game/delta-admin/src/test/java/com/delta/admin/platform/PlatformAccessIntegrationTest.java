@@ -6,6 +6,8 @@ import com.delta.common.mapper.StatsMapper;
 import com.delta.common.security.filter.JwtAuthenticationFilter;
 import com.delta.common.security.handler.*;
 import com.delta.common.security.service.TokenService;
+import com.delta.common.security.service.StaffPermissions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -17,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes=PlatformAccessIntegrationTest.Config.class, properties={
     "spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:platform-access;MODE=MySQL;DB_CLOSE_DELAY=-1",
@@ -32,7 +36,10 @@ class PlatformAccessIntegrationTest {
     static class Config {}
     @MockBean TokenService tokens;
     @MockBean StatsMapper statistics;
+    @MockBean(name="staffPermissions") StaffPermissions permissions;
     @Autowired MockMvc mvc;
+
+    @BeforeEach void grantSystemManagement() { when(permissions.allowed(anyString())).thenReturn(true); }
 
     @Test void anonymousAndNonAdminCannotReadOrModifyLicenses() throws Exception {
         mvc.perform(get("/admin/platform/features")).andExpect(status().isUnauthorized());
@@ -51,5 +58,11 @@ class PlatformAccessIntegrationTest {
                 .andExpect(jsonPath("$.code").value(403));
         mvc.perform(get("/admin/platform/updates").with(user("admin").roles("ADMIN")))
                 .andExpect(jsonPath("$.data.automaticUpdateAvailable").value(false)).andExpect(jsonPath("$.data.status").value("VERSION_REPORTED"));
+    }
+
+    @Test void administratorWithoutSystemManagementCannotOpenPlatformSettings() throws Exception {
+        when(permissions.allowed("system.manage")).thenReturn(false);
+        mvc.perform(get("/admin/platform/features").with(user("limited").roles("ADMIN")))
+                .andExpect(jsonPath("$.code").value(403));
     }
 }

@@ -10,6 +10,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 import urllib.request
 import uuid
@@ -154,14 +155,14 @@ def compose(files, services):
     for file in files:command+=['-f',file]
     return run(command+['up','-d','--no-deps']+services,timeout=300)
 
-def start_services(files, services):
+def start_services(files, services, expected_versions=None):
     # Start in dependency order and wait ourselves. Compose otherwise enforces the
     # admin -> backend health condition inside one update command and can abort
     # before a slower application startup has finished.
     for service in ('backend','admin','h5'):
         if service not in services:continue
         compose(files,[service])
-        health([service])
+        health([service],expected_versions)
 
 def backup(folder):
     folder.mkdir(mode=0o700,parents=True)
@@ -189,13 +190,33 @@ def prune_history(override):
     prune_directories(ROOT/'update-backups',CONFIG.get('backup_retention',3))
     prune_directories(ROOT/'self-update-releases',CONFIG.get('release_retention',3),active_release_paths(override))
 
-def health(services):
+def service_http_healthy(service, inspected, expected_versions):
+    networks=inspected.get('NetworkSettings',{}).get('Networks',{})
+    address=next((network.get('IPAddress') for network in networks.values() if network.get('IPAddress')),None)
+    if not address:return False
+    path,port=('/system/config/site',8080) if service=='backend' else ('/cangshuo-version.json',80)
+    try:
+        request=urllib.request.Request('http://%s:%s%s'%(address,port,path),headers={'User-Agent':'Cangshuo-HealthCheck'})
+        with urllib.request.urlopen(request,timeout=5) as response:
+            body=response.read(65536)
+            if response.status!=200:return False
+        if service in ('admin','h5') and expected_versions:
+            version=json.loads(body)
+            return version.get('component')==service and version.get('version')==expected_versions.get(service)
+        return True
+    except Exception:return False
+
+def health(services, expected_versions=None):
     for _ in range(90):
+        inspected={}
         healthy=True
         for service in services:
             container=CONFIG['containers'][service]
-            state=json.loads(run(['docker','inspect',container]).stdout)[0]['State']
+            inspected[service]=json.loads(run(['docker','inspect',container]).stdout)[0]
+            state=inspected[service]['State']
             if not state.get('Running') or state.get('Health',{}).get('Status','healthy')!='healthy':healthy=False
+        if healthy and all(service_http_healthy(service,inspected[service],expected_versions) for service in services):
+            return
         if healthy:
             # Verify the new Java app is serving requests, not merely accepting TCP.
             try:
@@ -255,11 +276,15 @@ def process(job):
             source=target/'delta-admin.jar' if component=='backend' else target
             destination='/app/app.jar' if component=='backend' else '/usr/share/nginx/html'
             merged['services'][component]={'volumes':[str(source)+':'+destination+':ro']}
-        write_json(ROOT/'update-journal.json',{'previous':prior.decode() if prior else None,'services':list(destinations),'id':job_id})
+        write_json(ROOT/'update-journal.json',{'previous':prior.decode() if prior else None,'services':list(destinations),'id':job_id,'versionsBefore':versions})
         write_json(override,merged);changed=True
-        start_services(CONFIG['compose_files']+[str(override)],list(destinations))
+        expected_versions={package['component']:package['version'] for package in plan['packages']}
+        start_services(CONFIG['compose_files']+[str(override)],list(destinations),expected_versions)
         processed.parent.mkdir(exist_ok=True);processed.write_text(json.dumps(plan))
-        versions.update({package['component']:package['version'] for package in plan['packages']});versions['release']=plan['targetVersion'];write_json(versions_file,versions)
+        versions.update({package['component']:package['version'] for package in plan['packages']})
+        installed_components=[versions.get(component,plan['fromVersion']) for component in ('backend','admin','h5')]
+        versions['release']=min(installed_components,key=lambda version:tuple(int(number) for number in version.split('.')))
+        write_json(versions_file,versions)
         status('SUCCEEDED',targetVersion=plan['targetVersion'],items=[item['key'] for item in plan['items']],backup=str(backup_dir))
         prune_history(override)
     except Exception as error:
@@ -281,19 +306,31 @@ def process(job):
         remove(job)
         prune_history(override)
 
+def recover_interrupted():
+    journal=ROOT/'update-journal.json'
+    if not journal.exists():return
+    interrupted=json.loads(journal.read_text());override=ROOT/'compose.self-update.json'
+    if interrupted['previous'] is None:remove(override)
+    else:override.write_text(interrupted['previous'])
+    remove(STATE/'installed-plans'/interrupted['id'])
+    versions_before=interrupted.get('versionsBefore')
+    if isinstance(versions_before,dict):write_json(STATE/'component-versions.json',versions_before)
+    start_services(CONFIG['compose_files']+([str(override)] if interrupted['previous'] else []),interrupted['services'])
+    write_json(STATE/'update-result.json',{'id':interrupted['id'],'status':'ROLLED_BACK','message':'上次更新意外中断，已回退原程序'})
+    journal.unlink();remove(STATE/'updating');remove(STATE/'update-job.json')
+
+def heartbeat():
+    while True:
+        (STATE/'installer-ready').touch()
+        time.sleep(10)
+
 def main():
     STATE.mkdir(parents=True,exist_ok=True)
-    journal=ROOT/'update-journal.json'
     shutil.rmtree(ROOT/'update-staging',ignore_errors=True)
     (ROOT/'update-staging').mkdir(exist_ok=True)
     prune_history(ROOT/'compose.self-update.json')
-    if journal.exists():
-        interrupted=json.loads(journal.read_text());override=ROOT/'compose.self-update.json'
-        if interrupted['previous'] is None:remove(override)
-        else:override.write_text(interrupted['previous'])
-        start_services(CONFIG['compose_files']+([str(override)] if interrupted['previous'] else []),interrupted['services'])
-        write_json(STATE/'update-result.json',{'id':interrupted['id'],'status':'ROLLED_BACK','message':'上次更新意外中断，已回退原程序'})
-        journal.unlink();remove(STATE/'updating');remove(STATE/'update-job.json')
+    recover_interrupted()
+    threading.Thread(target=heartbeat,daemon=True).start()
     (STATE/'installer-ready').touch()
     while True:
         pending=STATE/'update-job.json'

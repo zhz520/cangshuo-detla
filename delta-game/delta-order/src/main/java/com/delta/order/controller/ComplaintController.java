@@ -56,7 +56,7 @@ public class ComplaintController {
         // 3. 校验是否已有进行中的投诉
         long existCount = complaintService.count(new LambdaQueryWrapper<Complaint>()
                 .eq(Complaint::getOrderId, complaint.getOrderId())
-                .in(Complaint::getStatus, "PENDING", "PROCESSING"));
+                .in(Complaint::getStatus, "PENDING", "PROCESSING", "APPEALING"));
         if (existCount > 0) return R.fail("该订单已有进行中的投诉");
 
         // 4. 从订单获取打手ID

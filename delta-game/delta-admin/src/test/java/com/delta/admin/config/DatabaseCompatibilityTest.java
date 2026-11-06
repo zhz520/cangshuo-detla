@@ -36,7 +36,7 @@ class DatabaseCompatibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_name='USER' AND column_name='IS_GUEST'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_CHECKOUT_PROFILE'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_USER_LINK'", Integer.class)).isEqualTo(1);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key IN ('order.purchase_enabled','order.guest_checkout_enabled')", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key IN ('order.purchase_enabled','order.guest_checkout_enabled','player.directory.enabled')", Integer.class)).isEqualTo(3);
     }
 
     @Test

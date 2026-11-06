@@ -75,9 +75,7 @@ import { productDescriptionHtml } from '@/utils/product-content'
 import { getProductRichDetail, getProductDetail } from '@/api/product'
 import { openCustomerService } from '@/utils/customer-service'
 import { useSiteStore } from '@/store/site'
-import { useUserStore } from '@/store/user'
 const siteStore = useSiteStore()
-const userStore = useUserStore()
 const designatedPlayerId=ref('')
 const product = ref(null)
 const swiperIdx = ref(0)
@@ -161,10 +159,6 @@ async function goChat() {
 }
 function goBuy() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
-  if (!userStore.isLoggedIn && !siteStore.guestCheckoutEnabled) {
-    userStore.checkLogin()
-    return
-  }
   const price = product.value?.price || 0
   const name = encodeURIComponent(product.value.name)
   uni.navigateTo({ url: `/pages/order/create?productId=${product.value.id}&amount=${price}&productName=${name}${designatedPlayerId.value ? `&playerId=${designatedPlayerId.value}` : ''}` })

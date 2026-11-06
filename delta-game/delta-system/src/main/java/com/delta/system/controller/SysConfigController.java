@@ -89,6 +89,7 @@ public class SysConfigController {
         map.put("player_deposit_amount", sysConfigService.getConfigValue("player.deposit_amount", "100"));
         map.put("order_purchase_enabled", sysConfigService.getConfigValue("order.purchase_enabled", "true"));
         map.put("order_guest_checkout_enabled", sysConfigService.getConfigValue("order.guest_checkout_enabled", "false"));
+        map.put("player_directory_enabled", sysConfigService.getConfigValue("player.directory.enabled", "true"));
         // 微信支付总开关（支付模块运行时动态读取）
         map.put("wx_pay_enabled", sysConfigService.getConfigValue("wx.pay.enabled", "false"));
         map.put("wx_pay_miniapp_enabled", sysConfigService.getConfigValue("wx.pay.miniapp-enabled", "true"));
@@ -146,6 +147,8 @@ public class SysConfigController {
                 "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
         ensureConfig("order.guest_checkout_enabled", "允许游客下单", "false", "boolean", "订单配置",
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
+        ensureConfig("player.directory.enabled", "展示打手页面", "true", "boolean", "打手配置",
+                "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
         ensureConfig("sms.aliyun.template_code.verification","短信验证码模板 Code","","text","短信配置","已审核模板，使用code作为验证码参数名");
         ensureConfig("player.deposit_mode", "打手押金政策",
@@ -303,9 +306,9 @@ public class SysConfigController {
         if("customer_service.home_icon_visible".equals(key)) {
             if(!java.util.Set.of("true","false").contains(value)) throw new com.delta.common.exception.BusinessException(400,"首页客服图标显示设置不正确");
         }
-        if(java.util.Set.of("order.purchase_enabled","order.guest_checkout_enabled").contains(key)
+        if(java.util.Set.of("order.purchase_enabled","order.guest_checkout_enabled","player.directory.enabled").contains(key)
                 && !java.util.Set.of("true","false").contains(value)) {
-            throw new com.delta.common.exception.BusinessException(400,"购买开关设置不正确");
+            throw new com.delta.common.exception.BusinessException(400,"功能开关设置不正确");
         }
         if("customer_service.external_url".equals(key) && !value.isBlank()) {
             try {

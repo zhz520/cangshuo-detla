@@ -115,6 +115,7 @@ class GuestCheckoutIntegrationTest {
         assertThat(guest.get("phone")).isEqualTo("");
         assertThat(((Number) guest.get("is_guest")).intValue()).isEqualTo(1);
         assertThat(String.valueOf(guest.get("openid"))).startsWith("guest:");
+        assertThat(String.valueOf(guest.get("nickname"))).doesNotContain("1234");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wallet", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT LENGTH(phone_hash) FROM guest_checkout_profile", Integer.class)).isEqualTo(64);
         assertThat(jdbc.queryForObject("SELECT phone_mask FROM guest_checkout_profile", String.class)).isEqualTo("139****1234");
@@ -137,8 +138,10 @@ class GuestCheckoutIntegrationTest {
         String guestBody = json.writeValueAsString(Map.of(
                 "phone", phone, "lookupCode", "A1B2C3", "privacyAccepted", true,
                 "order", Map.of("productId", 11, "amount", new BigDecimal("99.00"))));
-        mvc.perform(post("/guest/orders").contentType("application/json").content(guestBody))
-                .andExpect(jsonPath("$.code").value(200));
+        String guestResponse = mvc.perform(post("/guest/orders").contentType("application/json").content(guestBody))
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn().getResponse().getContentAsString();
+        String guestToken = json.readTree(guestResponse).path("data").path("token").asText();
         long guestId = jdbc.queryForObject("SELECT user_id FROM guest_checkout_profile", Long.class);
         jdbc.update("INSERT INTO `order`(user_id,status) VALUES(?, 'PENDING_PAYMENT')", guestId);
         String token = tokens.createToken(registeredId, UserTypeEnum.USER);
@@ -152,11 +155,22 @@ class GuestCheckoutIntegrationTest {
                         .contentType("application/json").content(bind))
                 .andExpect(jsonPath("$.code").value(409));
         jdbc.update("UPDATE `order` SET status='CONFIRMED' WHERE user_id=?", guestId);
+        jdbc.update("INSERT INTO payment(user_id,status) VALUES(?,'PAYING')", guestId);
+        mvc.perform(post("/guest/bind").header("Authorization", "Bearer " + token)
+                        .contentType("application/json").content(bind))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("DELETE FROM payment WHERE user_id=?", guestId);
+        jdbc.update("INSERT INTO complaint(user_id,status) VALUES(?,'APPEALING')", guestId);
+        mvc.perform(post("/guest/bind").header("Authorization", "Bearer " + token)
+                        .contentType("application/json").content(bind))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("DELETE FROM complaint WHERE user_id=?", guestId);
         mvc.perform(post("/guest/bind").header("Authorization", "Bearer " + token)
                         .contentType("application/json").content(bind))
                 .andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT user_id FROM guest_checkout_profile", Long.class)).isEqualTo(guestId);
         assertThat(jdbc.queryForObject("SELECT registered_user_id FROM guest_user_link WHERE guest_user_id=?", Long.class, guestId))
                 .isEqualTo(registeredId);
+        assertThat(tokens.authenticate(guestToken)).isNull();
     }
 }

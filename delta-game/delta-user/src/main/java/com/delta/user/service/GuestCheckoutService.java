@@ -54,16 +54,18 @@ public class GuestCheckoutService {
         String phoneHash = hash("GUEST_PHONE:" + phone);
         String lookupHash = hash("GUEST_LOOKUP:" + lookupCode);
         limits.check("guest-create-ip:" + safeIp(clientIp), 10, 3600);
-        limits.check("guest-phone:" + phoneHash, 5, 3600);
 
         GuestProfile profile = findByPhone(phoneHash);
         if (profile != null && !lookupHash.equals(profile.lookupHash())) {
+            limits.check("guest-create-fail-phone:" + phoneHash, 20, 3600);
             throw new BusinessException(409, "该手机号已有游客订单，请使用原查单码");
         }
         if (profile == null) {
+            limits.check("guest-create-new-phone:" + phoneHash, 3, 86400);
             User guest = new User();
-            guest.setOpenid("guest:" + UUID.randomUUID());
-            guest.setNickname("游客" + phone.substring(7));
+            String guestKey = UUID.randomUUID().toString().replace("-", "");
+            guest.setOpenid("guest:" + guestKey);
+            guest.setNickname("游客" + guestKey.substring(0, 4).toUpperCase(Locale.ROOT));
             guest.setAvatar("");
             guest.setPhone("");
             guest.setStatus(1);
@@ -90,9 +92,11 @@ public class GuestCheckoutService {
         String phone = request.phone().trim();
         String phoneHash = hash("GUEST_PHONE:" + phone);
         limits.check("guest-lookup-ip:" + safeIp(clientIp), 30, 3600);
-        limits.check("guest-lookup-phone:" + phoneHash, 15, 3600);
         GuestProfile profile = findProfile(phoneHash, hash("GUEST_LOOKUP:" + normalizeCode(request.lookupCode())));
-        if (profile == null) throw new BusinessException(404, "手机号或查单码不正确");
+        if (profile == null) {
+            limits.check("guest-lookup-fail-phone:" + phoneHash, 15, 3600);
+            throw new BusinessException(404, "手机号或查单码不正确");
+        }
         requireUsable(profile);
         return session(profile, null);
     }
@@ -112,6 +116,8 @@ public class GuestCheckoutService {
         GuestProfile profile = findProfile(hash("GUEST_PHONE:" + phone),
                 hash("GUEST_LOOKUP:" + normalizeCode(request.lookupCode())));
         if (profile == null) throw new BusinessException(404, "手机号或查单码不正确");
+        jdbc.queryForList("SELECT user_id FROM guest_checkout_profile WHERE user_id=? FOR UPDATE", profile.userId());
+        jdbc.queryForList("SELECT id FROM `user` WHERE id=? FOR UPDATE", profile.userId());
         requireUsable(profile);
         if (profile.userId() == registeredUserId) throw new BusinessException(409, "游客账户与正式账户状态异常");
 
@@ -122,8 +128,20 @@ public class GuestCheckoutService {
         if (incomplete != null && incomplete > 0) {
             throw new BusinessException(409, "请先完成游客订单支付与履约，再绑定正式账号");
         }
+        Integer unsettledPayments = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM payment WHERE user_id=? AND status IN (?,?)",
+                Integer.class, profile.userId(), "PAYING", "REFUNDING");
+        if (unsettledPayments != null && unsettledPayments > 0) {
+            throw new BusinessException(409, "游客订单仍有支付或退款处理中，请稍后再绑定");
+        }
+        Integer openComplaints = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM complaint WHERE user_id=? AND status IN (?,?,?)",
+                Integer.class, profile.userId(), "PENDING", "PROCESSING", "APPEALING");
+        if (openComplaints != null && openComplaints > 0) {
+            throw new BusinessException(409, "游客仍有未结束的售后工单，请处理后再绑定");
+        }
         List<Long> linked = jdbc.queryForList(
-                "SELECT registered_user_id FROM guest_user_link WHERE guest_user_id=?",
+                "SELECT registered_user_id FROM guest_user_link WHERE guest_user_id=? FOR UPDATE",
                 Long.class, profile.userId());
         if (!linked.isEmpty()) {
             if (linked.get(0).equals(registeredUserId)) return;
@@ -131,6 +149,7 @@ public class GuestCheckoutService {
         }
         jdbc.update("INSERT INTO guest_user_link(guest_user_id,registered_user_id) VALUES(?,?)",
                 profile.userId(), registeredUserId);
+        jdbc.update("UPDATE `user` SET auth_version=COALESCE(auth_version,0)+1 WHERE id=?", profile.userId());
     }
 
     private GuestOrderSession session(GuestProfile profile, Long orderId) {

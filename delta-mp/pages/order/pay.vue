@@ -35,7 +35,7 @@ import { getSiteConfig } from '@/api/config'
 import { getOrderDetail } from '@/api/order'
 import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
-import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
+import { showWechatPaymentEnvironmentPrompt, wechatPayChannel, withH5PaymentReturnUrl } from '@/utils/platform'
 import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
@@ -161,6 +161,7 @@ async function handlePay() {
         return uni.showToast({ title: '微信支付未开启，请使用余额支付', icon: 'none' })
       }
       const site = (await getSiteConfig()).data || {}
+      if (site.wx_pay_enabled !== 'true') return uni.showToast({ title: '微信支付已暂停，请选择其他支付方式', icon: 'none' })
       const channel = wechatPayChannel({
         miniappEnabled: site.wx_pay_miniapp_enabled !== 'false',
         h5Enabled: site.wx_pay_h5_enabled === 'true',
@@ -184,7 +185,10 @@ async function handlePay() {
         const res = await createH5Payment(orderId.value)
         const h5Url = res.data?.h5Url
         if (!h5Url) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
-        window.location.href = h5Url
+        const returnUrl = window.location.origin + window.location.pathname + '#/pages/order/detail?id=' + encodeURIComponent(orderId.value)
+        const paymentUrl = withH5PaymentReturnUrl(h5Url, returnUrl)
+        if (!paymentUrl) return uni.showToast({ title: '微信支付地址无效', icon: 'none' })
+        window.location.assign(paymentUrl)
         return
       }
       if (channel !== 'MINIAPP') return uni.showToast({ title: '未启用可用的微信支付方式', icon: 'none' })

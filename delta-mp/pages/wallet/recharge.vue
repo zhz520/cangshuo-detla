@@ -27,7 +27,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getRechargePackages, getSiteConfig } from '@/api/config'
 import { createH5RechargePayment, createOfficialRechargePayment, createRechargePayment } from '@/api/pay'
-import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
+import { showWechatPaymentEnvironmentPrompt, wechatPayChannel, withH5PaymentReturnUrl } from '@/utils/platform'
 import EmptyState from '@/components/EmptyState.vue'
 import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 
@@ -77,7 +77,10 @@ async function pay() {
     if (channel === 'H5') {
       const res = await createH5RechargePayment(selected.value.id)
       if (!res.data?.h5Url) throw new Error('未获取到微信支付地址')
-      window.location.assign(res.data.h5Url)
+      const returnUrl = window.location.origin + window.location.pathname + '#/pages/wallet/index?rechargeReturn=1'
+      const paymentUrl = withH5PaymentReturnUrl(res.data.h5Url, returnUrl)
+      if (!paymentUrl) throw new Error('微信支付地址无效')
+      window.location.assign(paymentUrl)
       return
     }
     if (channel !== 'MINIAPP') throw new Error('未启用可用的微信支付方式')

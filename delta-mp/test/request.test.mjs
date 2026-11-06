@@ -15,10 +15,10 @@ test('fast requests do not flash; overlapping requests keep their own loading ha
   read(); assert.equal(hides, 1)
 })
 
-async function harness() {
+async function harness(pages = [{ route: 'pages-player/mine/index' }]) {
   const requests = [], redirects = [], storage = new Map([['app_role', 'player'], ['player_token', 'player-a'], ['user_token', 'user-a']])
   globalThis.uni = { request: opts => requests.push(opts), showToast() {}, showLoading() {}, hideLoading() {}, reLaunch: opts => redirects.push(opts.url) }
-  globalThis.getCurrentPages = () => [{ route: 'pages-player/mine/index' }]
+  globalThis.getCurrentPages = () => pages
   globalThis.__requestTestStorage = storage
   const source = (await readFile(new URL('../api/request.js', import.meta.url), 'utf8'))
     .replace("import { clientStorage } from '@/utils/client-storage'", "const clientStorage = { get: key => globalThis.__requestTestStorage.get(key), set: (key,v) => globalThis.__requestTestStorage.set(key,v), remove: key => globalThis.__requestTestStorage.delete(key) }")
@@ -51,6 +51,19 @@ test('old token or role responses do not log out a new session', async () => {
   const background = h.get('/player/home', {}, { loading: false }); const rejectedBackground = assert.rejects(background)
   h.storage.set('app_role', 'user'); h.reply(1, 401, { code: 401 }); await rejectedBackground
   assert.equal(h.storage.get('user_token'), 'user-a'); assert.equal(h.redirects.length, 0)
+})
+
+test('user expiry keeps the complete route and query when returning to login', async () => {
+  const h = await harness([{ route: 'pages/order/pay', options: { orderId: '123', amount: '99.00' } }])
+  h.storage.set('app_role', 'user')
+  const request = h.get('/order/my', {}, { loading: false })
+  const rejected = assert.rejects(request)
+  h.reply(0, 401, { code: 401 })
+  await rejected
+  const target = h.redirects[0]
+  assert.match(target, /^\/pages\/login\/index\?expired=1&redirect=/)
+  const redirect = decodeURIComponent(target.split('redirect=')[1])
+  assert.equal(redirect, '/pages/order/pay?orderId=123&amount=99.00')
 })
 
 test('failed requests leave the shared read slot so retry really sends again', async () => {

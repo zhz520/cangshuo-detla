@@ -88,6 +88,18 @@ class RewardGrabIntegrationTest {
     private BigDecimal balance(String table,String column,long id){return jdbc.queryForObject("SELECT balance FROM "+table+" WHERE "+column+"=?",BigDecimal.class,id);}
     private int number(String sql){return jdbc.queryForObject(sql,Integer.class);}
 
+    @Test void playerNeverSeesGuestContactOrPhoneDerivedNickname() throws Exception {
+        jdbc.update("UPDATE `order` SET player_id=1,status='IN_PROGRESS',contact='13900001234' WHERE id=100");
+        jdbc.update("UPDATE `user` SET is_guest=1,nickname='游客ABCD' WHERE id=7");
+        mvc.perform(get("/player/work/100").with(role("PLAYER",1)))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.contact").doesNotExist())
+                .andExpect(jsonPath("$.data.userNickname").value("游客ABCD"));
+        mvc.perform(get("/player/work/my").with(role("PLAYER",1)))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].contact").doesNotExist());
+    }
+
     private void pricedProduct(String amount) {
         var product=new com.delta.product.entity.Product();
         product.setId(11L);product.setName("体验单");product.setStatus(1);product.setPrice(new BigDecimal(amount));

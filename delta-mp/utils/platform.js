@@ -73,3 +73,16 @@ export function showWechatPaymentEnvironmentPrompt(channel) {
   uni.showModal({ title: '微信支付', content, showCancel: false, confirmText: '知道了' })
   return true
 }
+
+/** Append the business return page to a WeChat H5 payment URL. */
+export function withH5PaymentReturnUrl(h5Url, returnUrl) {
+  try {
+    const target = new URL(String(h5Url))
+    const redirect = new URL(String(returnUrl))
+    if (target.protocol !== 'https:' || redirect.protocol !== 'https:') return ''
+    target.searchParams.set('redirect_url', redirect.toString())
+    return target.toString()
+  } catch (_) {
+    return ''
+  }
+}

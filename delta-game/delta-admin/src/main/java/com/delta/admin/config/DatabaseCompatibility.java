@@ -175,6 +175,8 @@ public class DatabaseCompatibility {
                 "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
         insertBooleanConfigIfMissing("order.guest_checkout_enabled", "允许游客下单", "false",
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
+        insertBooleanConfigIfMissing("player.directory.enabled", "展示打手页面", "true",
+                "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
     }
 
     private void insertBooleanConfigIfMissing(String key, String name, String value, String remark) {

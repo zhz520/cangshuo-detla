@@ -173,4 +173,7 @@ public interface CrossModuleMapper {
 
     @Select("SELECT COUNT(*) FROM guest_user_link WHERE registered_user_id=#{registeredUserId} AND guest_user_id=#{guestUserId}")
     int countGuestLink(@Param("registeredUserId") Long registeredUserId, @Param("guestUserId") Long guestUserId);
+
+    @Select("SELECT COALESCE(MAX(is_guest),0) FROM `user` WHERE id=#{userId} AND deleted=0")
+    int selectUserIsGuest(@Param("userId") Long userId);
 }

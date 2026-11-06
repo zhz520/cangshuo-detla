@@ -51,6 +51,16 @@ public class ChatController {
         long other=id1==myEncodedId?id2:id1;
         int entity=ChatParticipantId.getEntityType(other);
         long raw=ChatParticipantId.getRawId(other);
+        if("GUEST".equals(SecurityUtils.getUserType())) {
+            long guestUserId=ChatParticipantId.getRawId(myEncodedId);
+            if(entity==1) return R.fail(403,"游客不能主动创建会员私聊");
+            if(entity==2) {
+                Integer related=jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM `order` WHERE user_id=? AND player_id=? AND status IN ('ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED')",
+                        Integer.class,guestUserId,raw);
+                if(related==null||related==0) return R.fail(403,"只能联系本人订单的接单员");
+            }
+        }
         String table=switch(entity){case 1 -> "`user`";case 2 -> "player";case 3 -> "admin";default -> null;};
         if(table==null || raw<=0 || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM "+table+" WHERE id=? AND deleted=0",Long.class,raw)==0)
             return R.fail(404,"对方账号不存在");

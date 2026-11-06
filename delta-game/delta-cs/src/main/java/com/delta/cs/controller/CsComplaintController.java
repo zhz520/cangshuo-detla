@@ -63,7 +63,7 @@ public class CsComplaintController {
         // 3. 校验是否已有进行中的投诉
         long existCount = complaintService.count(new LambdaQueryWrapper<Complaint>()
                 .eq(Complaint::getOrderId, complaint.getOrderId())
-                .in(Complaint::getStatus, "PENDING", "PROCESSING"));
+                .in(Complaint::getStatus, "PENDING", "PROCESSING", "APPEALING"));
         if (existCount > 0) return R.fail("该订单已有进行中的投诉");
         if(!java.util.Set.of("服务态度","服务质量","代练质量","账号安全","违规操作","其他").contains(complaint.getType()))
             return R.fail(400,"投诉类型不正确");
@@ -134,7 +134,7 @@ public class CsComplaintController {
     public R<Void> process(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
         Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
-        if (!"PENDING".equals(c.getStatus())) return R.fail("只有待处理的投诉可以受理");
+        if (!java.util.Set.of("PENDING","APPEALING").contains(c.getStatus())) return R.fail("只有待处理或申诉中的投诉可以受理");
         c.setStatus("PROCESSING");
         if (c.getCsReadAt() == null) c.setCsReadAt(LocalDateTime.now());
         complaintService.updateById(c);
@@ -162,7 +162,7 @@ public class CsComplaintController {
     public R<Void> resolve(@PathVariable Long id, @RequestBody Complaint complaint) {
         Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
-        if(!java.util.Set.of("PENDING","PROCESSING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
+        if(!java.util.Set.of("PENDING","PROCESSING","APPEALING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
         if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
         if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()))staffPermissions.require("order.refund");
         String resultReason=complaint.getResultReason()==null?"":complaint.getResultReason().trim();

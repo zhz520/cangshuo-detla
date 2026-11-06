@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
                 .requestMatchers(HttpMethod.GET, "/pay/wx/official/callback").permitAll()
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
+                .requestMatchers("/auth/logout").hasAnyRole("ADMIN", "CS", "USER", "GUEST", "PLAYER")
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/file/wxpay/**").denyAll()
                 .requestMatchers("/file/.thumbnails/**").denyAll()

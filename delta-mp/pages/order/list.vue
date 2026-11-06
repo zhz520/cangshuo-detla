@@ -1,7 +1,7 @@
 <template>
   <view class="order-list-page">
     <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
-      <OrderCard v-for="o in orders" :key="o.id" :order="o" />
+      <OrderCard v-for="o in orders" :key="o.id" :order="o" :owner-actions="canUseOwnerActions(o)" />
       <view v-if="loading" class="loading-tip">加载中...</view>
       <EmptyState v-if="!loading && orders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
       <view class="order-list-bottom-space"></view>
@@ -14,6 +14,8 @@ import { onShow } from '@dcloudio/uni-app'
 import OrderCard from '@/components/OrderCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { getOrderList } from '@/api/order'
+import { useUserStore } from '@/store/user'
+const userStore = useUserStore()
 const orders = ref([])
 const pageNum = ref(1)
 const loading = ref(false)
@@ -23,6 +25,9 @@ onShow(() => {
 })
 
 function refresh() { pageNum.value = 1; finished.value = false; loadData() }
+function canUseOwnerActions(order) {
+  return userStore.isLoggedIn && String(order.userId || '') === String(userStore.userInfo?.id || '')
+}
 async function loadData() {
   loading.value = true
   const res = await getOrderList({ pageNum: pageNum.value, pageSize: 10 }, { loading: false })

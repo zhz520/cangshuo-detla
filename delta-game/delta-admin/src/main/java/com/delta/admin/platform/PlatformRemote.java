@@ -44,7 +44,11 @@ public class PlatformRemote {
         result.set("installedItems",installed);
         if(cached!=null) { result.set("updates",currentUpdates(cached.path("updates"),currentVersion));result.set("project",project());result.set("lastSync",cached.path("receivedAt")); }
         try {var file=path("update-result.json");if(Files.exists(file)&&Files.size(file)<65536)result.set("job",json.readTree(Files.readString(file)));} catch(Exception ignored){}
-        result.put("installerAvailable",Files.exists(path("installer-ready")));
+        var installerReady=path("installer-ready");
+        boolean installerAvailable=false;
+        try { installerAvailable=Files.isRegularFile(installerReady)&&Files.getLastModifiedTime(installerReady).toInstant().isAfter(clock.instant().minusSeconds(45)); }
+        catch(Exception ignored) {}
+        result.put("installerAvailable",installerAvailable);
         return result;
     }
     public synchronized Map<String, JsonNode> commercialModules() {
@@ -79,17 +83,15 @@ public class PlatformRemote {
         String version=platform.overview().version();return json.valueToTree(Map.of("backend",version,"admin",version,"h5",version));
     }
     private String effectiveVersion() {
-        var versions=componentVersions();String installed=null;
+        var versions=componentVersions();String minimum=null;
         String release=versions.path("release").asText();
-        if(release.matches("\\d+\\.\\d+\\.\\d+"))installed=release;
-        String planned=latestInstalledRelease(path("installed-plans"),json);
-        if(planned!=null&&(installed==null||compare(planned,installed)>0))installed=planned;
-        if(installed!=null)return installed;
-        // Older installations have no signed plan marker. Their overall version is
-        // the lowest installed component so no pending component is hidden.
-        String minimum=platform.overview().version();
-        for(String component:List.of("backend","admin","h5")){String value=versions.path(component).asText();if(value.matches("\\d+\\.\\d+\\.\\d+")&&compare(value,minimum)<0)minimum=value;}
-        return minimum;
+        for(String component:List.of("backend","admin","h5")){
+            String value=versions.path(component).asText();
+            if(value.matches("\\d+\\.\\d+\\.\\d+")&&(minimum==null||compare(value,minimum)<0))minimum=value;
+        }
+        if(minimum!=null)return minimum;
+        if(release.matches("\\d+\\.\\d+\\.\\d+"))return release;
+        return platform.overview().version();
     }
     static String latestInstalledRelease(Path directory,ObjectMapper json) {
         String latest=null;
@@ -210,6 +212,8 @@ public class PlatformRemote {
     private JsonNode send(String target,JsonNode body)throws Exception {
         if(target==null||target.isBlank())throw new IllegalArgumentException();
         var uri=URI.create(target);if(!Set.of("http","https").contains(uri.getScheme()))throw new IllegalArgumentException();
+        if("http".equalsIgnoreCase(uri.getScheme())&&!Set.of("127.0.0.1","localhost","::1").contains(uri.getHost()))
+            throw new IllegalArgumentException("授权中心必须使用 HTTPS");
         var request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(45)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build();
         var response=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build().send(request,HttpResponse.BodyHandlers.ofString());
         if(response.body().length()>2_000_000)throw new IllegalArgumentException();

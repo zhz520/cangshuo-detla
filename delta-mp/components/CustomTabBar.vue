@@ -43,8 +43,11 @@ let navigationTimer
 
 const baseTabs = computed(() => ROLE_TABS[appStore.role] || ROLE_TABS.user)
 const currentTabs = computed(() => {
-  if (appStore.role === 'user' && siteStore.externalCustomerServiceEnabled) {
-    return baseTabs.value.filter(tab => tab.pagePath !== '/pages/chat/list')
+  if (appStore.role === 'user') {
+    return baseTabs.value.filter(tab =>
+      (!siteStore.externalCustomerServiceEnabled || tab.pagePath !== '/pages/chat/list') &&
+      (siteStore.playerDirectoryEnabled || tab.pagePath !== '/pages/players/index')
+    )
   }
   return baseTabs.value
 })
