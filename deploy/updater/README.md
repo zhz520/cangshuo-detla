@@ -4,6 +4,8 @@
 
 `package_release.py D:\CodexData\outputs\detla-release` 将已验证的后端、后台、H5 产物打为三个 ZIP，并生成包含 Git commit、工作区是否干净和三个 SHA-256 的 `release-manifest.json`。上传至对应版本 GitHub Release；授权中心通过 Releases API 读取 GitHub 提供的 SHA-256 digest。无 digest、预览版、草稿和未配置更新内容的版本不能安装。
 
+打包脚本只允许从干净的 Git 工作区执行，并拒绝打包已经存在的版本标签。正确顺序是先完成测试与构建，从待发布提交打包，再创建正式标签和上传 Release，避免同一版本号对应两份不同程序。
+
 `worker.py /absolute/path/worker.json` 由宿主机 systemd 管理，不监听新端口。配置由运维写入，包括 `root`、`state_dir`、`customer_id`、`product_id`、`repository`、`compose_directory`、`compose_files`、`mysql_container`、`containers`（backend/admin/h5）和 `backup_paths`、`authority_url` 和可选的 `verifier_image`。客户端仅向自己的状态目录提交签名计划，不能提供服务器命令或路径。
 
 微信支付证书与普通上传文件都必须位于持久化目录。当前版本默认把支付证书写入 `FILE_UPLOAD_PATH/private/wxpay`；旧实例仍兼容 `/www/data/private/wxpay`。生产 Compose 应将该目录绑定到宿主机专用目录，并把宿主机目录同时加入 `backup_paths`，否则重建后端容器会导致数据库仍记录证书路径、实际文件却丢失。

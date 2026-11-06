@@ -22,6 +22,8 @@
 
 > 系统包含 Vue 3 管理后台、UniApp 移动端和 Spring Boot 多模块后端。移动端可构建为 H5 与微信小程序，并在一个工程内按身份提供普通用户、客服和接单员工作台。
 
+研发、版本、测试、发布和安全规则请参阅[开发约定](docs/development-conventions.md)，在线版本：[沧烁研发约定](https://cangshuo-development-conventions.knobbycity.chatgpt.site)。
+
 微信支付配置请参阅[微信公众号支付配置教程](docs/1.4.4-微信公众号支付配置教程.md)和[微信支付商户平台配置教程](docs/微信支付商户平台配置教程.md)。公众号支付仅用于微信内置浏览器；小程序支付和微信外 H5 支付使用独立开关。
 
 ## 项目特点

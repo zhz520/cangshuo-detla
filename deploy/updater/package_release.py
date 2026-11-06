@@ -8,12 +8,21 @@ import sys
 import zipfile
 
 root=Path(__file__).resolve().parents[2]
-output=Path(sys.argv[1]).resolve()
-if sys.platform=='win32' and output.drive.lower()!='d:':raise SystemExit('Release output must be on D:')
-output.mkdir(parents=True,exist_ok=True)
 catalog=json.loads((root/'delta-game/delta-admin/src/main/resources/platform/catalog.json').read_text(encoding='utf-8'))
 version=catalog['version']
 if '-' in version:raise SystemExit('Only stable releases can be packaged')
+try:
+    commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.DEVNULL).strip()
+    dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=root,text=True,stderr=subprocess.DEVNULL).strip())
+except (OSError,subprocess.CalledProcessError):
+    raise SystemExit('Release must be packaged from a Git worktree')
+if dirty:raise SystemExit('Release must be packaged from a clean worktree')
+tag=subprocess.run(['git','rev-parse','-q','--verify','refs/tags/v'+version],cwd=root,text=True,
+                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+if tag.returncode==0:raise SystemExit('Version v'+version+' is already tagged; choose the next version before packaging')
+output=Path(sys.argv[1]).resolve()
+if sys.platform=='win32' and output.drive.lower()!='d:':raise SystemExit('Release output must be on D:')
+output.mkdir(parents=True,exist_ok=True)
 sources={'backend':root/'delta-game/delta-admin/target/delta-admin.jar','admin':root/'delta-admin-ui/dist','h5':root/'delta-mp/dist/build/h5'}
 assets=[]
 for component,source in sources.items():
@@ -31,12 +40,6 @@ for component,source in sources.items():
         for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
     assets.append({'component':component,'name':target.name,'size':target.stat().st_size,'sha256':digest.hexdigest()})
 
-try:
-    commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
-    dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=root,text=True).strip())
-except (OSError,subprocess.CalledProcessError):
-    commit=None
-    dirty=None
 manifest={'schemaVersion':1,'version':version,'commit':commit,'dirty':dirty,'createdAt':datetime.now(timezone.utc).isoformat(),'assets':assets}
 (output/'release-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
 print('manifest',version,commit,dirty)
