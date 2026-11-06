@@ -18,6 +18,10 @@ export const useSiteStore = defineStore('site', () => {
   // H5 支付只会在明确启用后使用，不能把“未返回配置”当成 H5 已部署。
   const wxPayH5Enabled = ref(false)
   const wxPayOfficialEnabled = ref(false)
+  /** 前台立即购买/立即点单总开关。 */
+  const orderPurchaseEnabled = ref(false)
+  /** 未登录游客下单开关。 */
+  const guestCheckoutEnabled = ref(false)
   /** 公告是否在浏览器刷新后再次展示 */
   const noticePopupEveryVisit = ref(false)
   const techSupportText = ref('KK云网络提供技术支持')
@@ -65,6 +69,12 @@ export const useSiteStore = defineStore('site', () => {
         if (data.wx_pay_official_enabled !== undefined) {
           wxPayOfficialEnabled.value = data.wx_pay_official_enabled === 'true'
         }
+        if (data.order_purchase_enabled !== undefined) {
+          orderPurchaseEnabled.value = data.order_purchase_enabled === 'true'
+        }
+        if (data.order_guest_checkout_enabled !== undefined) {
+          guestCheckoutEnabled.value = data.order_guest_checkout_enabled === 'true'
+        }
         if (data.notice_popup_every_visit !== undefined) {
           noticePopupEveryVisit.value = data.notice_popup_every_visit === 'true'
         }
@@ -100,5 +110,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

@@ -45,6 +45,10 @@
       "style": { "navigationBarTitleText": "确认订单", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
+      "path": "pages/order/lookup",
+      "style": { "navigationBarTitleText": "游客订单查询", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+    },
+    {
       "path": "pages/order/pay",
       "style": { "navigationBarTitleText": "订单支付", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },

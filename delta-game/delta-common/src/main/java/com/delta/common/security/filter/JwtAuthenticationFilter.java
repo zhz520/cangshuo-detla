@@ -50,6 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             case "ADMIN" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"));
             case "CS" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CS"));
             case "USER" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"));
+            case "GUEST" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_GUEST"));
             case "PLAYER" -> List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_PLAYER"));
             default -> Collections.emptyList();
         };

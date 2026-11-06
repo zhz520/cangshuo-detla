@@ -33,13 +33,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User getByOpenid(String openid) {
-        return getOne(new LambdaQueryWrapper<User>().eq(User::getOpenid, openid));
+        return getOne(new LambdaQueryWrapper<User>().eq(User::getOpenid, openid).eq(User::getIsGuest, 0));
     }
 
     @Override
     public User getByPhone(String phone) {
         var matches=list(new LambdaQueryWrapper<User>()
                 .eq(User::getPhone, phone)
+                .eq(User::getIsGuest, 0)
                 .last("LIMIT 2"));
         if(matches.size()>1) throw new com.delta.common.exception.BusinessException(409,"手机号状态异常，请联系客服");
         return matches.isEmpty()?null:matches.get(0);

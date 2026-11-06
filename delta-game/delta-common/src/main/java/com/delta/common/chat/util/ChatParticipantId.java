@@ -24,7 +24,7 @@ public final class ChatParticipantId {
     public static long encode(String userType, long id) {
         if (userType == null) return encodeUser(id);
         return switch (userType.toUpperCase()) {
-            case "USER" -> encodeUser(id);
+            case "USER", "GUEST" -> encodeUser(id);
             case "PLAYER" -> encodePlayer(id);
             case "CS", "ADMIN" -> encodeCs(id);
             default -> encodeUser(id);

@@ -7,6 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum UserTypeEnum {
     USER("USER", "用户"),
+    GUEST("GUEST", "游客"),
     PLAYER("PLAYER", "打手"),
     ADMIN("ADMIN", "管理员"),
     CS("CS", "客服");

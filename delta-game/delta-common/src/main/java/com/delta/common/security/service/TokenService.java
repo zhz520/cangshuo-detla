@@ -112,12 +112,15 @@ public class TokenService {
 
     private String accountStamp(Long id, String type) {
         if(id==null || type==null) return null;
-        String table=switch(type) {case "USER" -> "`user`";case "PLAYER" -> "player";case "ADMIN","CS" -> "admin";default -> null;};
+        String table=switch(type) {case "USER","GUEST" -> "`user`";case "PLAYER" -> "player";case "ADMIN","CS" -> "admin";default -> null;};
         if(table==null) return null;
         var rows=jdbc.queryForList("SELECT * FROM "+table+" WHERE id=? AND deleted=0",id);
         if(rows.size()!=1) return null;
         var row=rows.get(0);
         if("PLAYER".equals(type) ? !"ACTIVE".equals(row.get("status")) : !"1".equals(String.valueOf(row.get("status")))) return null;
+        boolean guestRow="1".equals(String.valueOf(row.get("is_guest")));
+        if("GUEST".equals(type) && !guestRow) return null;
+        if("USER".equals(type) && guestRow) return null;
         if("ADMIN".equals(type) || "CS".equals(type)) {
             String role;
             try {

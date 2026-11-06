@@ -1,7 +1,6 @@
-import { clientStorage } from '@/utils/client-storage'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getTokenByRole } from '@/utils/auth'
+import { getCurrentRole, getTokenByRole } from '@/utils/auth'
 import { connectWebSocket, closeWebSocket, onWsMessage, onWsConnect, onWsClose, isWsConnected, sendMessage } from '@/utils/websocket'
 import { getUnreadCount } from '@/api/message'
 import { playMessageNotification } from '@/utils/notificationFeedback'
@@ -18,7 +17,7 @@ export const useChatStore = defineStore('chat', () => {
   let _callbacksBound = false
 
   async function fetchMessageUnreadCount() {
-    const role = clientStorage.get('app_role') || 'user'
+    const role = getCurrentRole()
     const token = getTokenByRole(role)
     if (!token) {
       stopPoll()
@@ -56,7 +55,7 @@ export const useChatStore = defineStore('chat', () => {
    * 无需断开/重连。
    */
   function connect(opts = {}) {
-    const role = clientStorage.get('app_role') || 'user'
+    const role = getCurrentRole()
     const token = getTokenByRole(role)
     if (!token) return
 

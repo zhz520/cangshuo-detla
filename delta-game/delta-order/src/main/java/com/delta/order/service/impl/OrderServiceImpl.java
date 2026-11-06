@@ -56,6 +56,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Long userId, CreateOrderRequest req) {
+        if ("false".equalsIgnoreCase(sysConfigService.getConfigValue("order.purchase_enabled", "true"))) {
+            throw new BusinessException(403, "前台购买功能已暂停，请稍后再试");
+        }
         if(userId==null || jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 AND status=1 FOR UPDATE",userId).isEmpty())
             throw new BusinessException(403,"账号不可用，请重新登录");
         if(req.getExtraFields()!=null&&req.getExtraFields().entrySet().stream().anyMatch(entry->entry.getKey()==null||entry.getKey().isBlank()||entry.getKey().length()>64||entry.getValue()==null||entry.getValue().length()>500))

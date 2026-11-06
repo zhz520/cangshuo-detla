@@ -40,12 +40,12 @@ public class ComplaintController {
         if(complaint.getExpectedResult()!=null&&(complaint.getExpectedResult().length()>50||!java.util.Set.of("退款","重新服务","赔偿","道歉").contains(complaint.getExpectedResult())))
             return R.fail(400,"期望结果不正确");
         if(complaint.getContent()==null || complaint.getContent().isBlank() || complaint.getContent().length()>2000) return R.fail(400,"投诉内容长度不符合要求");
-        Long userId = SecurityUtils.getUserId();
-        limits.check("complaint-create:"+userId,10,3600);
+        Long actorId = SecurityUtils.getUserId();
+        limits.check("complaint-create:"+actorId,10,3600);
 
         // 1. 校验订单存在且属于当前用户
         Order order = orderService.getById(complaint.getOrderId());
-        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
+        if (!canAccess(order)) return R.fail(404, "订单不存在");
 
         // 2. 校验订单状态
         String status = order.getStatus();
@@ -60,7 +60,7 @@ public class ComplaintController {
         if (existCount > 0) return R.fail("该订单已有进行中的投诉");
 
         // 4. 从订单获取打手ID
-        complaint.setUserId(userId);
+        complaint.setUserId(order.getUserId());
         complaint.setPlayerId(order.getPlayerId());
         complaint.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));
         complaint.setStatus("PENDING");
@@ -78,7 +78,7 @@ public class ComplaintController {
     public R<ComplaintDetailVO> detail(@PathVariable Long id) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
-        if (!c.getUserId().equals(SecurityUtils.getUserId())) return R.fail("无权查看");
+        if (!canAccess(c.getUserId())) return R.fail("无权查看");
 
         Order order = orderService.getById(c.getOrderId());
         ComplaintDetailVO vo = new ComplaintDetailVO();
@@ -105,8 +105,12 @@ public class ComplaintController {
 
     @GetMapping("/my")
     public R<Page<Complaint>> my(PageQuery query) {
+        java.util.ArrayList<Long> owners=new java.util.ArrayList<>();
+        Long actorId=SecurityUtils.getUserId();
+        owners.add(actorId);
+        if("USER".equals(SecurityUtils.getUserType())) owners.addAll(crossModuleMapper.selectLinkedGuestUserIds(actorId));
         return R.ok(complaintService.page(new Page<>(query.getPageNum(), query.getPageSize()),
-                new LambdaQueryWrapper<Complaint>().eq(Complaint::getUserId, SecurityUtils.getUserId())
+                new LambdaQueryWrapper<Complaint>().in(Complaint::getUserId, owners)
                         .orderByDesc(Complaint::getCreatedAt)));
     }
 
@@ -114,7 +118,7 @@ public class ComplaintController {
     public R<Void> appeal(@PathVariable Long id, @RequestBody Complaint appeal) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
-        if (!c.getUserId().equals(SecurityUtils.getUserId())) return R.fail("无权操作");
+        if (!canAccess(c.getUserId())) return R.fail("无权操作");
         limits.check("complaint-appeal:"+SecurityUtils.getUserId(),10,3600);
         if (!"RESOLVED".equals(c.getStatus())) return R.fail("当前状态不允许申诉");
         String reason = appeal.getAppealReason() == null ? "" : appeal.getAppealReason().trim();
@@ -124,5 +128,20 @@ public class ComplaintController {
         c.setStatus("APPEALING");
         complaintService.updateById(c);
         return R.ok();
+    }
+
+    private boolean canAccess(Order order) {
+        if(order==null) return false;
+        Long actorId=SecurityUtils.getUserId();
+        return actorId.equals(order.getUserId())
+                || ("USER".equals(SecurityUtils.getUserType())
+                    && crossModuleMapper.countGuestLink(actorId,order.getUserId())>0);
+    }
+
+    private boolean canAccess(Long ownerUserId) {
+        Long actorId=SecurityUtils.getUserId();
+        return actorId.equals(ownerUserId)
+                || ("USER".equals(SecurityUtils.getUserType())
+                    && crossModuleMapper.countGuestLink(actorId,ownerUserId)>0);
     }
 }

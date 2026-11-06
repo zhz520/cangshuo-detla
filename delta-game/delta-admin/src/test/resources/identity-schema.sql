@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS staff_role_member;
 DROP TABLE IF EXISTS staff_role;
 DROP TABLE IF EXISTS admin;
 DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user`(id BIGINT PRIMARY KEY,nickname VARCHAR(64),phone VARCHAR(20),status INT DEFAULT 1,deleted INT DEFAULT 0);
+CREATE TABLE `user`(id BIGINT PRIMARY KEY,nickname VARCHAR(64),phone VARCHAR(20),status INT DEFAULT 1,is_guest TINYINT DEFAULT 0,deleted INT DEFAULT 0);
 INSERT INTO `user`(id,nickname,phone,status,deleted) VALUES(7,'测试用户','13900000000',1,0),(8,'另一用户','13800000000',1,0);
 CREATE TABLE staff_role(code VARCHAR(64) PRIMARY KEY,name VARCHAR(100),permissions TEXT,enabled INT DEFAULT 1,builtin INT DEFAULT 0);
 CREATE TABLE staff_role_member(admin_id BIGINT PRIMARY KEY,role_code VARCHAR(64));

@@ -7,7 +7,7 @@ import com.delta.common.chat.domain.entity.ChatSession;
 public final class ChatIdentity {
     private ChatIdentity() {}
     public static String role(String actual, String requested) {
-        String resolved="ADMIN".equals(actual)?"CS":actual;
+        String resolved="ADMIN".equals(actual)?"CS":"GUEST".equals(actual)?"USER":actual;
         String claimed="ADMIN".equals(requested)?"CS":requested;
         if(resolved==null || !java.util.Set.of("USER","PLAYER","CS").contains(resolved)
                 || claimed!=null && !claimed.equals(resolved)) throw new BusinessException(403,"聊天身份不匹配");

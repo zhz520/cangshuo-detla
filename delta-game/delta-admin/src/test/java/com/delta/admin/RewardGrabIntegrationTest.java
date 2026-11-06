@@ -107,8 +107,8 @@ class RewardGrabIntegrationTest {
 
     @Test void quoteUsesLevelOrIndividualRateAndRejectsUnavailableOrAmbiguousChoices() throws Exception {
         pricedProduct("50");
-        mvc.perform(get("/order/quote").param("productId","11")).andExpect(jsonPath("$.code").value(401));
-        mvc.perform(get("/order/quote").param("productId","11").with(role("CS",1))).andExpect(jsonPath("$.code").value(403));
+        mvc.perform(get("/order/quote").param("productId","11")).andExpect(jsonPath("$.code").value(200));
+        mvc.perform(get("/order/quote").param("productId","11").with(role("CS",1))).andExpect(jsonPath("$.code").value(200));
         mvc.perform(get("/order/quote").param("productId","11").with(role("USER",7)))
                 .andExpect(jsonPath("$.data.amount").value(50)).andExpect(header().string("Cache-Control","no-store, private"));
         mvc.perform(get("/order/quote").param("productId","11").param("playerLevelId","2").with(role("USER",7)))

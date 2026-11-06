@@ -57,6 +57,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     public Payment createWxPayment(Long orderId, Long userId, WechatPayScene scene, String wxAppId) {
         Order order = orderService.getById(orderId);
         if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
+        if (scene == WechatPayScene.MINIAPP && isGuestUser(userId))
+            throw new BusinessException(403, "游客订单不能使用小程序支付，请使用网页微信支付");
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
             throw new BusinessException("订单状态不允许支付");
         com.delta.common.utils.Money.positive(order.getAmount());
@@ -201,6 +203,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     public Payment createBalancePayment(Long orderId, Long userId) {
         Order order = orderService.getById(orderId);
         if (order == null || !userId.equals(order.getUserId())) throw new BusinessException(404, "订单不存在");
+        if (isGuestUser(userId))
+            throw new BusinessException(403, "游客订单仅支持在线微信支付");
         if (!OrderStatusEnum.PENDING_PAYMENT.name().equals(order.getStatus()))
             throw new BusinessException("订单状态不允许支付");
         if (order.getPayDeadline() != null && order.getPayDeadline().isBefore(LocalDateTime.now()))
@@ -212,6 +216,13 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                         WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod()))>0)
             throw new BusinessException(409,"订单已发起微信支付，请关闭该笔微信支付后再使用余额");
         return doBalancePay(orderId, userId, order);
+    }
+
+    private boolean isGuestUser(Long userId) {
+        Integer guestCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM `user` WHERE id=? AND deleted=0 AND status=1 AND is_guest=1",
+                Integer.class, userId);
+        return guestCount != null && guestCount > 0;
     }
 
     private Payment doBalancePay(Long orderId, Long userId, Order order) {

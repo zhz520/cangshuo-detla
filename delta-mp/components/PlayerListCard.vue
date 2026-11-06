@@ -12,7 +12,7 @@
       <view v-if="tags.length" class="tags"><text v-for="tag in tags" :key="tag">{{ tag }}</text></view>
       <view class="actions">
         <view class="action secondary" @click.stop="open">查看主页</view>
-        <view class="action primary" :class="{ disabled: !online }" @click.stop="placeOrder">{{ online ? '立即点单' : '离线' }}</view>
+        <view v-if="siteStore.orderPurchaseEnabled" class="action primary" :class="{ disabled: !online }" @click.stop="placeOrder">{{ online ? '立即点单' : '离线' }}</view>
       </view>
     </view>
   </view>
@@ -21,6 +21,10 @@
 <script setup>
 import { computed } from 'vue'
 import AppImage from '@/components/AppImage.vue'
+import { useSiteStore } from '@/store/site'
+import { useUserStore } from '@/store/user'
+const siteStore = useSiteStore()
+const userStore = useUserStore()
 
 const props = defineProps({
   player: { type: Object, required: true },
@@ -39,6 +43,11 @@ function open() {
   uni.navigateTo({ url: `/pages/players/detail?id=${props.player.id}` })
 }
 function placeOrder() {
+  if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
+  if (!userStore.isLoggedIn && !siteStore.guestCheckoutEnabled) {
+    userStore.checkLogin()
+    return
+  }
   if (!online.value) return uni.showToast({ title: '该打手当前离线', icon: 'none' })
   uni.navigateTo({ url: `/pages/product/list?playerId=${props.player.id}` })
 }

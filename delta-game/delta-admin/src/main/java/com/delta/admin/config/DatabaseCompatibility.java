@@ -68,6 +68,8 @@ public class DatabaseCompatibility {
                     "ALTER TABLE `user` ADD COLUMN password VARCHAR(100) DEFAULT NULL"),
             new AdditiveColumn("user", "auth_version",
                     "ALTER TABLE `user` ADD COLUMN auth_version BIGINT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("user", "is_guest",
+                    "ALTER TABLE `user` ADD COLUMN is_guest TINYINT NOT NULL DEFAULT 0"),
             new AdditiveColumn("payment", "wx_app_id",
                     "ALTER TABLE payment ADD COLUMN wx_app_id VARCHAR(64) DEFAULT NULL")
     );
@@ -112,10 +114,21 @@ public class DatabaseCompatibility {
                     "UNIQUE KEY uk_user_reward_request(user_id,request_id), " +
                     "KEY idx_reward_user_date(user_id,created_at), KEY idx_reward_player_date(player_id,created_at), " +
                     "KEY idx_reward_status(status))");
+            ensureTable("guest_checkout_profile", "CREATE TABLE IF NOT EXISTS guest_checkout_profile (" +
+                    "user_id BIGINT PRIMARY KEY, phone_hash CHAR(64) NOT NULL, phone_mask VARCHAR(20) NOT NULL, " +
+                    "lookup_hash CHAR(64) NOT NULL, privacy_version VARCHAR(32) NOT NULL DEFAULT '', " +
+                    "privacy_accepted_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_guest_phone(phone_hash))");
+            ensureTable("guest_user_link", "CREATE TABLE IF NOT EXISTS guest_user_link (" +
+                    "guest_user_id BIGINT PRIMARY KEY, registered_user_id BIGINT NOT NULL, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "KEY idx_guest_link_registered(registered_user_id))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
             ensureRewardGrabConfig();
+            ensureGuestCheckoutConfig();
         } catch (SQLException error) {
             throw new IllegalStateException("数据库结构兼容检查失败", error);
         }
@@ -152,6 +165,24 @@ public class DatabaseCompatibility {
                 "json",
                 "reward-grab",
                 "在打赏与抢单设置页面修改");
+    }
+
+    private void ensureGuestCheckoutConfig() throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            if (findTable(connection, "sys_config") == null) return;
+        }
+        insertBooleanConfigIfMissing("order.purchase_enabled", "启用前台购买", "true",
+                "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
+        insertBooleanConfigIfMissing("order.guest_checkout_enabled", "允许游客下单", "false",
+                "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
+    }
+
+    private void insertBooleanConfigIfMissing(String key, String name, String value, String remark) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key=?", Integer.class, key);
+        if (count != null && count > 0) return;
+        jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) " +
+                        "VALUES(?,?,?,?,?,?)",
+                key, name, value, "boolean", "订单配置", remark);
     }
 
     private String findTable(Connection connection, String expected) throws SQLException {

@@ -1132,6 +1132,7 @@ CREATE TABLE `user` (
   `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '头像URL',
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '手机号',
   `phone_unique` varchar(20) GENERATED ALWAYS AS (NULLIF(`phone`,'')) STORED COMMENT '非空手机号唯一索引',
+  `is_guest` tinyint NOT NULL DEFAULT '0' COMMENT '游客影子账户: 1-是 0-否',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常 0-封禁',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除: 0-未删除 1-已删除',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -1238,6 +1239,37 @@ LOCK TABLES `wallet` WRITE;
 /*!40000 ALTER TABLE `wallet` DISABLE KEYS */;
 /*!40000 ALTER TABLE `wallet` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `guest_checkout_profile`
+--
+
+DROP TABLE IF EXISTS `guest_checkout_profile`;
+CREATE TABLE `guest_checkout_profile` (
+  `user_id` bigint NOT NULL COMMENT '游客影子用户ID',
+  `phone_hash` char(64) NOT NULL COMMENT '手机号HMAC摘要',
+  `phone_mask` varchar(20) NOT NULL COMMENT '脱敏手机号',
+  `lookup_hash` char(64) NOT NULL COMMENT '查单码HMAC摘要',
+  `privacy_version` varchar(32) NOT NULL DEFAULT '' COMMENT '同意的隐私政策版本',
+  `privacy_accepted_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `uk_guest_phone` (`phone_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游客下单凭证';
+
+--
+-- Table structure for table `guest_user_link`
+--
+
+DROP TABLE IF EXISTS `guest_user_link`;
+CREATE TABLE `guest_user_link` (
+  `guest_user_id` bigint NOT NULL COMMENT '游客影子用户ID，不随绑定改写',
+  `registered_user_id` bigint NOT NULL COMMENT '绑定的正式用户ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`guest_user_id`),
+  KEY `idx_guest_link_registered` (`registered_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游客影子账户与正式用户关联';
 
 --
 -- Table structure for table `withdraw`
@@ -1397,6 +1429,12 @@ PREPARE user_auth_stmt FROM @sql; EXECUTE user_auth_stmt; DEALLOCATE PREPARE use
 -- 20261025 打手等级及独立涨价规则（默认不涨价）
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player_level' AND column_name='price_increase_rate')=0, 'ALTER TABLE player_level ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT ''等级涨价百分比''', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'order.purchase_enabled','启用前台购买','true','boolean','订单配置','关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.purchase_enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'order.guest_checkout_enabled','允许游客下单','false','boolean','订单配置','开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.guest_checkout_enabled');
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='price_increase_rate')=0, 'ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1 COMMENT ''-1跟随等级，0不涨价，其他为百分比''', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='base_amount')=0, 'ALTER TABLE `order` ADD COLUMN base_amount DECIMAL(10,2) DEFAULT NULL COMMENT ''商品原价快照''', 'SELECT 1');

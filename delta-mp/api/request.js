@@ -3,7 +3,7 @@ import { clientStorage } from '@/utils/client-storage'
  * 统一请求封装
  * 自动注入token、统一错误处理、loading管理
  */
-import { getTokenByRole } from '@/utils/auth'
+import { getCurrentRole, getTokenByRole, removeGuestSession } from '@/utils/auth'
 import { createLoadingController } from '@/utils/loading'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
@@ -12,13 +12,6 @@ let _handlingUnauthorized = false  // 防止多个401同时触发重复弹出跳
 const pendingReads = new Map()
 let readGeneration = 0
 const loaders = createLoadingController({ show: options => uni.showLoading(options), hide: () => { try { uni.hideLoading() } catch (_) {} } })
-
-/**
- * 获取当前角色（从Storage读取，避免循环依赖store）
- */
-function getCurrentRole() {
-  return clientStorage.get('app_role') || 'user'
-}
 
 /**
  * 核心请求函数
@@ -147,6 +140,13 @@ function handleUnauthorized(role, expectedToken) {
   if (_handlingUnauthorized) return
   _handlingUnauthorized = true
 
+  if (role === 'guest') {
+    removeGuestSession()
+    uni.showToast({ title: '游客会话已过期，请重新查单', icon: 'none' })
+    uni.reLaunch({ url: '/pages/order/lookup' })
+    setTimeout(() => { _handlingUnauthorized = false }, 1500)
+    return
+  }
   if (role === 'cs') {
     clientStorage.remove('cs_token')
   } else if (role === 'player') {

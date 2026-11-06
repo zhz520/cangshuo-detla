@@ -22,6 +22,8 @@ public class User extends BaseEntity {
     private String password;
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Long authVersion;
+    /** 游客影子账户；仅用于无登录下单和历史关联，不是正式会员。 */
+    private Integer isGuest;
     public boolean isPasswordSet() { return password!=null && !password.isBlank(); }
     private Integer status;
     @TableLogic

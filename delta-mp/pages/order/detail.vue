@@ -52,12 +52,12 @@
       <view v-if="['PAID','ASSIGNED'].includes(order.status)" class="btn-warn" @click="doRefund">申请退款</view>
       <view v-if="order.status==='PAID' && !order.playerId" class="btn" @click="showDesignatePicker = true">指定接单员</view>
       <view v-if="order.status==='COMPLETED'" class="btn" @click="doConfirm">确认完成</view>
-      <view v-if="order.status==='CONFIRMED' && !order.reviewed" class="btn" @click="goReview">⭐ 去评价</view>
-      <view v-if="['IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status)" class="btn-ghost" @click="goChat">💬 聊天</view>
+      <view v-if="order.status==='CONFIRMED' && !order.reviewed && !userStore.isGuest && isOrderOwner" class="btn" @click="goReview">⭐ 去评价</view>
+      <view v-if="['IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status) && isOrderOwner" class="btn-ghost" @click="goChat">💬 聊天</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn-warn" @click="showReplaceModal=true">申请换人</view>
       <view v-if="['IN_PROGRESS','COMPLETED'].includes(order.status)" class="btn-warn" @click="goComplaint">投诉</view>
     </view>
-    <RewardAction :order-id="orderId" :refresh-key="rewardRefresh" :auto-open="autoReward" />
+    <RewardAction v-if="!userStore.isGuest && isOrderOwner" :order-id="orderId" :refresh-key="rewardRefresh" :auto-open="autoReward" />
     <!-- 时间信息 -->
     <view class="card time-card">
       <view class="info-row"><text class="label">创建时间</text><text class="value">{{ order.createdAt }}</text></view>
@@ -133,8 +133,16 @@ import PriceText from '@/components/PriceText.vue'
 import { getOrderDetail, getOrderProgress, confirmOrder, cancelOrder, requestReplace, getAvailablePlayers, designatePlayer } from '@/api/order'
 import { ORDER_STATUS_TEXT } from '@/utils/constants'
 import { requestOrderSubscribe } from '@/utils/subscribe'
+import { useUserStore } from '@/store/user'
 
 const order = ref(null)
+const userStore = useUserStore()
+const isOrderOwner = computed(() => {
+  if (!order.value) return false
+  const currentId = userStore.isGuest ? userStore.guestInfo?.guestUserId : userStore.userInfo?.id
+  if (!currentId) return false
+  return String(order.value.userId) === String(currentId)
+})
 const orderId = ref(0)
 const progressList = ref([])
 const parsedExtra = computed(() => {

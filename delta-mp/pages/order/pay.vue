@@ -12,7 +12,7 @@
         <text class="method-name">{{ wechatPayLabel }}</text>
         <view class="radio" :class="{ checked: payType === 'WECHAT' }" />
       </view>
-      <view class="method" :class="{ active: payType === 'BALANCE' }" @click="payType='BALANCE'">
+      <view v-if="!userStore.isGuest" class="method" :class="{ active: payType === 'BALANCE' }" @click="payType='BALANCE'">
         <image class="method-icon" src="/static/icons/理财.svg" mode="aspectFit" />
         <view class="method-info">
           <text class="method-name">余额支付</text>
@@ -21,7 +21,8 @@
         <view class="radio" :class="{ checked: payType === 'BALANCE' }" />
       </view>
     </view>
-    <view class="btn-pay" :class="{ disabled: expired }" @click="handlePay">确认支付</view>
+    <view v-if="userStore.isGuest && !canUseWechatPay" class="guest-pay-tip">当前未启用可用的微信支付方式，请回到订单联系客服处理。</view>
+    <view class="btn-pay" :class="{ disabled: !canPay }" @click="handlePay">确认支付</view>
     <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="订单支付二维码" />
   </view>
 </template>
@@ -36,6 +37,8 @@ import { getWallet } from '@/api/user'
 import { requestOrderSubscribe } from '@/utils/subscribe'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
 import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
+import { useUserStore } from '@/store/user'
+const userStore = useUserStore()
 
 const orderId = ref(0)
 const amount = ref(0)
@@ -54,6 +57,7 @@ const formatCountdown = computed(() => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
 const wechatPayLabel = '微信支付'
+const canPay = computed(() => !expired.value && (!userStore.isGuest || canUseWechatPay.value))
 
 onLoad(async (opts) => {
   orderId.value = opts.orderId
@@ -103,10 +107,12 @@ onLoad(async (opts) => {
   }
 
   // 加载钱包余额
-  try {
-    const w = await getWallet()
-    walletBalance.value = Number(w.data?.balance || 0).toFixed(2)
-  } catch (e) { /* ignore */ }
+  if (!userStore.isGuest) {
+    try {
+      const w = await getWallet()
+      walletBalance.value = Number(w.data?.balance || 0).toFixed(2)
+    } catch (e) { /* ignore */ }
+  }
 })
 
 function startCountdown() {
@@ -142,6 +148,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 async function handlePay() {
   if (expired.value) return uni.showToast({ title: '订单已超时', icon: 'none' })
+  if (userStore.isGuest && !canUseWechatPay.value) return uni.showToast({ title: '当前订单暂无可用在线支付方式', icon: 'none' })
   // 支付前请求订阅授权（用户拒绝不影响支付流程）
   await requestOrderSubscribe()
   try {
@@ -221,5 +228,6 @@ async function handlePay() {
   .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } }
   .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #b9bdc4; border-radius: 50%; &.checked { border-color: #17191c; background: #17191c; } }
 }
+.guest-pay-tip { margin: -30rpx 0 30rpx; padding: 18rpx 22rpx; border-radius: 12rpx; background: #fff8e8; color: #725c2d; font-size: 24rpx; line-height: 1.6; }
 .btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #e6e7e9; color: #73777e; } }
 </style>

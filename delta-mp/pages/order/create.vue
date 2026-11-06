@@ -12,7 +12,7 @@
       </view>
     </view>
     <!-- 使用已保存信息 -->
-    <view class="section saved-section" v-if="savedList.length || formFields.length">
+    <view class="section saved-section" v-if="userStore.isLoggedIn && (savedList.length || formFields.length)">
       <view class="section-title">使用已保存信息</view>
       <view class="saved-tags">
         <view
@@ -44,6 +44,32 @@
         </picker>
       </view>
     </view>
+    <view v-if="!userStore.isLoggedIn" class="section guest-section">
+      <view class="section-title">游客下单凭证</view>
+      <template v-if="siteStore.guestCheckoutEnabled && guestPlatformSupported">
+        <text class="guest-tip">无需注册即可下单。请填写手机号和查单码并妥善保存；后续凭这两项查询订单。</text>
+        <view class="guest-field">
+          <text class="label">手机号<text class="required">*</text></text>
+          <input v-model.trim="guestPhone" type="number" maxlength="11" placeholder="用于联系和查单" />
+        </view>
+        <view class="guest-field">
+          <text class="label">查单码<text class="required">*</text></text>
+          <input v-model.trim="guestLookupCode" maxlength="12" placeholder="自定义 6 至 12 位数字或字母" />
+        </view>
+        <view class="privacy-row" @click="guestPrivacyAccepted = !guestPrivacyAccepted">
+          <view class="privacy-check" :class="{ checked: guestPrivacyAccepted }">{{ guestPrivacyAccepted ? '✓' : '' }}</view>
+          <text>我已阅读并同意</text>
+          <text class="privacy-link" @click.stop="goAgreement('user')">用户协议</text>
+          <text>和</text>
+          <text class="privacy-link" @click.stop="goAgreement('privacy')">隐私政策</text>
+        </view>
+        <view class="guest-actions"><text @click="goLookup">已有游客订单，去查单</text><text @click="goLogin">已有账号，去登录</text></view>
+      </template>
+      <template v-else>
+        <text class="guest-tip">游客下单当前未开放，请登录后继续下单。</text>
+        <view class="guest-login-button" @click="goLogin">去登录</view>
+      </template>
+    </view>
     <view class="section">
       <view class="section-title">接单打手</view>
       <view class="player-options">
@@ -62,7 +88,7 @@
     </view>
     <view class="bottom-bar">
       <view class="total">合计：<PriceText v-if="quoteReady" :value="amount" :size="36" /><text v-else>待确认</text></view>
-      <view class="btn-submit" :class="{disabled:!quoteReady || submitting}" @click="submitOrder">{{ submitting?'提交中…':'提交订单' }}</view>
+      <view class="btn-submit" :class="{disabled:!canSubmit || submitting}" @click="submitOrder">{{ submitting?'提交中…':(siteStore.orderPurchaseEnabled?'提交订单':'购买已暂停') }}</view>
     </view>
     <!-- 接单员选择弹窗（底部滑出） -->
     <view v-if="showPlayerPicker" class="modal-mask" @click="showPlayerPicker = false">
@@ -124,18 +150,34 @@ import { createOrder, getAvailablePlayers, getOrderQuote } from '@/api/order'
 import { getProductDetail, getCategoryFormFields } from '@/api/product'
 import { getSavedInfoByCategory, saveDynamicInfo } from '@/api/user'
 import { useUserStore } from '@/store/user'
+import { useSiteStore } from '@/store/site'
+import { createGuestOrder } from '@/api/guest'
 import { getPublicPlayer, getPlayerCategories } from '@/api/player'
 
 const userStore = useUserStore()
+const siteStore = useSiteStore()
+const guestPlatformSupported = ref(false)
+// Guest shadow checkout is enabled on H5 only; mini-program payment requires a verified openid.
+// #ifdef H5
+guestPlatformSupported.value = true
+// #endif
 const productId = ref(0)
 const specInfo = ref('')
 const amount = ref(0)
 const productName = ref('')
 const quote = ref(null), quoteLoading = ref(false), quoteError = ref(''), submitting = ref(false)
 const selectionMode = ref('auto'), playerLevels = ref([])
+const guestPhone = ref('')
+const guestLookupCode = ref('')
+const guestPrivacyAccepted = ref(false)
 const wantDesignate = computed(() => selectionMode.value === 'designated')
 const playerLevelId = computed(() => selectionMode.value.startsWith('level:') ? Number(selectionMode.value.slice(6)) : undefined)
 const quoteReady = computed(() => !!quote.value && !quoteLoading.value && !quoteError.value && (!wantDesignate.value || !!selectedPlayer.value))
+const canSubmit = computed(() => siteStore.orderPurchaseEnabled && quoteReady.value
+  && (userStore.isLoggedIn || (siteStore.guestCheckoutEnabled && guestPlatformSupported.value
+    && /^1[0-9]{10}$/.test(guestPhone.value)
+    && /^[A-Za-z0-9]{6,12}$/.test(guestLookupCode.value)
+    && guestPrivacyAccepted.value)))
 let quoteVersion = 0
 
 async function refreshQuote() {
@@ -178,7 +220,7 @@ async function loadFormFields(pid) {
     const res = await getCategoryFormFields(categoryId)
     formFields.value = res.data || []
     // 加载已保存的下单信息
-    loadSavedList(categoryId)
+    if (userStore.isLoggedIn) loadSavedList(categoryId)
   } catch (e) {
     formFields.value = []
   }
@@ -274,8 +316,17 @@ onLoad(async (opts) => {
 })
 
 async function submitOrder() {
-  if (!userStore.checkLogin()) return
   if (submitting.value) return
+  if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '前台购买功能已暂停', icon: 'none' })
+  if (!userStore.isLoggedIn && (!siteStore.guestCheckoutEnabled || !guestPlatformSupported.value)) {
+    userStore.checkLogin()
+    return
+  }
+  if (!userStore.isLoggedIn) {
+    if (!/^1[0-9]{10}$/.test(guestPhone.value)) return uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+    if (!/^[A-Za-z0-9]{6,12}$/.test(guestLookupCode.value)) return uni.showToast({ title: '查单码须为6至12位数字或字母', icon: 'none' })
+    if (!guestPrivacyAccepted.value) return uni.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+  }
   if(wantDesignate.value&&!selectedPlayer.value) return uni.showToast({title:'请选择可接单的打手，或关闭指定接单员',icon:'none'})
   if(!quoteReady.value) return uni.showToast({title:'请先确认下单价格',icon:'none'})
   // 校验必填动态字段
@@ -287,14 +338,31 @@ async function submitOrder() {
   submitting.value = true
   try {
     const fieldsToSubmit = { ...extraFields }
-    const res = await createOrder({
+    const orderPayload = {
       productId: productId.value,
       specInfo: specInfo.value,
       amount: amount.value,
       extraFields: fieldsToSubmit,
       designatedPlayerId: wantDesignate.value ? selectedPlayer.value?.id : undefined,
       playerLevelId: playerLevelId.value
-    })
+    }
+    if (!userStore.isLoggedIn) {
+      const res = await createGuestOrder({
+        phone: guestPhone.value,
+        lookupCode: guestLookupCode.value,
+        privacyAccepted: true,
+        order: orderPayload
+      })
+      userStore.setGuestSession(res.data)
+      uni.showModal({
+        title: '游客订单已创建',
+        content: '请妥善保存手机号和查单码，后续可凭这两项查询订单。',
+        showCancel: false,
+        success: () => uni.redirectTo({ url: '/pages/order/pay?orderId=' + res.data.orderId + '&amount=' + amount.value + '&guest=1' })
+      })
+      return
+    }
+    const res = await createOrder(orderPayload)
     // 自动保存本次填写的信息（最多3条，超出覆盖最旧）
     if (currentCategoryId.value && formFields.value.length) {
       const vals = Object.values(fieldsToSubmit).filter(v => v && v.trim())
@@ -311,7 +379,7 @@ async function submitOrder() {
         }
       }
     }
-    uni.redirectTo({ url: `/pages/order/pay?orderId=${res.data.id}&amount=${res.data.amount}` })
+    uni.redirectTo({ url: '/pages/order/pay?orderId=' + res.data.id + '&amount=' + res.data.amount })
   } catch (e) {
     console.error('create order failed', e)
     const msg = e?.msg || e?.message || '下单失败，请稍后重试'
@@ -319,6 +387,10 @@ async function submitOrder() {
     await refreshQuote()
   } finally { submitting.value = false }
 }
+
+function goLogin() { uni.navigateTo({ url: '/pages/login/index' }) }
+function goLookup() { uni.navigateTo({ url: '/pages/order/lookup' }) }
+function goAgreement(type) { uni.navigateTo({ url: type === 'privacy' ? '/pages/agreement/privacy' : '/pages/agreement/user' }) }
 </script>
 
 <style lang="scss" scoped>
@@ -332,6 +404,18 @@ async function submitOrder() {
   input { height: 72rpx; background: #f7f8f9; border: 1rpx solid #e6e7e9; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; color: #17191c; }
   textarea { width: 100%; height: 160rpx; background: #f7f8f9; border: 1rpx solid #e6e7e9; border-radius: 12rpx; padding: 20rpx 24rpx; font-size: 28rpx; color: #17191c; box-sizing: border-box; }
 }
+.guest-section { border: 2rpx solid #dfe3e8; }
+.guest-tip { display: block; color: #73777e; font-size: 25rpx; line-height: 1.7; margin-bottom: 22rpx; }
+.guest-field { margin-bottom: 22rpx;
+  .label { display: block; color: #555b63; font-size: 26rpx; margin-bottom: 10rpx; }
+  input { width: 100%; height: 76rpx; padding: 0 22rpx; box-sizing: border-box; border: 1rpx solid #e2e5e9; border-radius: 12rpx; background: #f7f8f9; font-size: 27rpx; }
+}
+.privacy-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8rpx; color: #666b73; font-size: 24rpx; line-height: 1.7; }
+.privacy-check { width: 32rpx; height: 32rpx; line-height: 32rpx; text-align: center; border: 2rpx solid #b9bdc4; border-radius: 8rpx; color: #fff; font-size: 22rpx; }
+.privacy-check.checked { border-color: #17191c; background: #17191c; }
+.privacy-link { color: #17191c; text-decoration: underline; }
+.guest-actions { display: flex; justify-content: space-between; margin-top: 24rpx; color: #4a5568; font-size: 25rpx; }
+.guest-login-button { height: 76rpx; margin-top: 20rpx; border: 1rpx solid #17191c; border-radius: 999rpx; color: #17191c; font-size: 27rpx; line-height: 76rpx; text-align: center; }
 .picker-value { display: flex; align-items: center; justify-content: space-between; height: 72rpx; background: #f7f8f9; border: 1rpx solid #e6e7e9; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; color: #17191c;
   .placeholder { color: #73777e; }
   .arrow { color: #73777e; font-size: 24rpx; }

@@ -32,7 +32,7 @@
         <view class="page-bottom"/>
       </template>
     </scroll-view>
-    <view v-if="player" class="profile-actions"><view v-if="rewardOrders.length" class="action-button secondary" @click="rewardPlayer">打赏</view><view class="action-button secondary" @click="privateChat">{{ chatting?'连接中...':'私聊' }}</view><view class="action-button primary" :class="{unavailable:!player.canOrder}" @click="placeOrder">点单<text> {{ player.canOrder?'指定TA服务':'暂不可接单' }}</text></view></view>
+    <view v-if="player" class="profile-actions"><view v-if="rewardOrders.length" class="action-button secondary" @click="rewardPlayer">打赏</view><view class="action-button secondary" @click="privateChat">{{ chatting?'连接中...':'私聊' }}</view><view v-if="siteStore.orderPurchaseEnabled" class="action-button primary" :class="{unavailable:!player.canOrder}" @click="placeOrder">点单<text> {{ player.canOrder?'指定TA服务':'暂不可接单' }}</text></view></view>
   </view>
 </template>
 <script setup>
@@ -44,6 +44,8 @@ import VoicePlayer from '@/components/VoicePlayer.vue'
 import { getPublicPlayer, getPublicPlayerReviews, getPlayerReviewableOrders, createPlayerChat } from '@/api/player'
 import { useUserStore } from '@/store/user'
 import { getRewardableOrders } from '@/api/reward'
+import { useSiteStore } from '@/store/site'
+const siteStore = useSiteStore()
 const rewardOrders=ref([])
 async function loadRewardOrders(){rewardOrders.value=[];if(!useUserStore().isLoggedIn)return;try{rewardOrders.value=(await getRewardableOrders(playerId.value)).data||[]}catch(_){}}
 function rewardPlayer(){const open=o=>uni.navigateTo({url:`/pages/order/detail?id=${o.id}&reward=1`});if(rewardOrders.value.length===1)return open(rewardOrders.value[0]);uni.showActionSheet({itemList:rewardOrders.value.slice(0,6).map(o=>`${o.productName} · ${o.orderNo}`),success:r=>open(rewardOrders.value[r.tapIndex])})}
@@ -93,8 +95,13 @@ async function privateChat() {
   finally { chatting.value = false }
 }
 function placeOrder() {
-  if (!useUserStore().checkLogin()) return
+  if (!siteStore.orderPurchaseEnabled) return uni.showToast({title:'购买功能已暂停',icon:'none'})
   if (!player.value.canOrder) return uni.showToast({title:player.value.orderUnavailableReason || '暂不可接单',icon:'none'})
+  const userStore = useUserStore()
+  if (!userStore.isLoggedIn && !siteStore.guestCheckoutEnabled) return userStore.checkLogin()
+  if (!userStore.isLoggedIn && siteStore.guestCheckoutEnabled) {
+    return uni.navigateTo({url:'/pages/product/list?playerId=' + playerId.value})
+  }
   uni.navigateTo({url:`/pages/product/list?playerId=${playerId.value}`})
 }
 function previewAlbum(index) { uni.previewImage({urls:album.value,current:index}) }

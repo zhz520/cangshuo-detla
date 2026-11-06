@@ -118,13 +118,13 @@ let _isNearBottom = true
 const mySenderType = computed(() => (appStore.role === 'player' ? 'PLAYER' : 'USER'))
 const USER_CHAT_OPTS = { chatRole: 'USER' }
 const mySenderId = computed(() =>
-  appStore.role === 'player' ? playerStore.playerInfo?.id : userStore.userInfo?.id
+  appStore.role === 'player' ? playerStore.playerInfo?.id : (userStore.userInfo?.id || userStore.guestInfo?.guestUserId)
 )
 const selfAvatar = computed(() =>
   appStore.role === 'player' ? (playerStore.playerInfo?.avatar || '') : (userStore.avatar || userStore.userInfo?.avatar || '')
 )
 const selfName = computed(() =>
-  appStore.role === 'player' ? (playerStore.playerInfo?.nickname || '接单员') : (userStore.userInfo?.nickname || '我')
+  appStore.role === 'player' ? (playerStore.playerInfo?.nickname || '接单员') : (userStore.userInfo?.nickname || userStore.guestInfo?.nickname || '游客')
 )
 const otherAvatar = ref('')
 const otherName = ref('')

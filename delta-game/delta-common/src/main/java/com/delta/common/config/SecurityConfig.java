@@ -43,7 +43,8 @@ public class SecurityConfig {
                                      .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET,"/user/auth/captcha","/cs/auth/captcha").permitAll()
-                .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/user/auth/reset-code", "/user/auth/reset-password", "/player/auth/login", "/player/auth/register", "/cs/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/user/auth/login", "/user/auth/h5-login", "/user/auth/set-password", "/user/auth/password-login", "/user/auth/sms-code", "/user/auth/reset-code", "/user/auth/reset-password", "/player/auth/login", "/player/auth/register", "/cs/auth/login", "/guest/orders", "/guest/lookup").permitAll()
+                .requestMatchers(HttpMethod.GET, "/order/quote", "/order/available-players").permitAll()
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
                 .requestMatchers(HttpMethod.GET, "/pay/wx/official/callback").permitAll()
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
@@ -51,7 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/file/wxpay/**").denyAll()
                 .requestMatchers("/file/.thumbnails/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/file/**").permitAll()
-                .requestMatchers("/common/file/**").hasAnyRole("ADMIN", "CS", "USER", "PLAYER")
+                .requestMatchers("/common/file/**").hasAnyRole("ADMIN", "CS", "USER", "GUEST", "PLAYER")
                 .requestMatchers(HttpMethod.GET, "/product/list", "/product/recommend", "/product/recommend/categories", "/product/{id}", "/product/category/list", "/product/category/all", "/product/category/tree", "/product/category/*/form-fields").permitAll()
                 // 以上 product 接口供匿名访问（含首页热门推荐、热门分类 Tab）
                 .requestMatchers(HttpMethod.GET, "/app/product/**").permitAll()
@@ -66,13 +67,20 @@ public class SecurityConfig {
                 // 下单选打手：普通用户、打手、客服、管理员均可访问（复用客服指派打手接口）
                 .requestMatchers("/cs/player/assign-list").hasAnyRole("ADMIN", "CS")
                 // 聊天：普通用户、打手、客服、管理员均可访问
-                .requestMatchers("/common/chat/**").hasAnyRole("ADMIN", "CS", "USER", "PLAYER")
+                .requestMatchers("/common/chat/**").hasAnyRole("ADMIN", "CS", "USER", "GUEST", "PLAYER")
+                .requestMatchers("/guest/bind").hasRole("USER")
+                .requestMatchers("/guest/**").hasRole("GUEST")
+                .requestMatchers(HttpMethod.GET, "/order/my", "/order/*", "/order/*/progress").hasAnyRole("USER", "GUEST")
+                .requestMatchers("/order/complaint/**").hasAnyRole("USER", "GUEST")
+                .requestMatchers(HttpMethod.POST, "/order/*/cancel", "/order/*/confirm", "/order/*/replace", "/order/*/designate-player", "/order/complaint").hasAnyRole("USER", "GUEST")
                 .requestMatchers(HttpMethod.GET, "/player/apply/status").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/player/apply").hasRole("USER")
                 .requestMatchers(HttpMethod.GET,"/player/invitations/*").permitAll()
                 .requestMatchers("/player/**").hasRole("PLAYER")
                 .requestMatchers("/pay/player-deposit", "/pay/player-deposit/h5", "/pay/player-deposit/official").hasAnyRole("USER","PLAYER")
-                .requestMatchers("/user/**", "/order/**", "/pay/recharge/**", "/pay/balance/**", "/pay/h5/**", "/pay/wx/**", "/pay/player-deposit").hasRole("USER")
+                .requestMatchers("/user/**", "/order/**", "/pay/recharge/**", "/pay/player-deposit").hasRole("USER")
+                .requestMatchers("/pay/balance/**").hasRole("USER")
+                .requestMatchers("/pay/h5/**", "/pay/wx/**").hasAnyRole("USER", "GUEST")
                 .requestMatchers("/product/**", "/app/product/**").hasRole("ADMIN")
                 // 聊天记录: 管理员和客服均可查看
                 .requestMatchers("/admin/chat/**").hasAnyRole("ADMIN", "CS")
@@ -87,7 +95,8 @@ public class SecurityConfig {
                         "/system/statistics/**").hasRole("ADMIN")
                 // /cs/** (auth已permitAll) 管理员和客服均可访问
                 .requestMatchers("/cs/**").hasAnyRole("ADMIN", "CS")
-                .anyRequest().authenticated()
+                // GUEST is a restricted shadow identity; all other routes require a real account role.
+                .anyRequest().hasAnyRole("ADMIN", "CS", "USER", "PLAYER")
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

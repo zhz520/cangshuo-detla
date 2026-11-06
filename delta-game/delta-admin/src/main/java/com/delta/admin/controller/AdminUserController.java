@@ -49,6 +49,7 @@ public class AdminUserController {
                               @RequestParam(value = "status", required = false) Integer status) {
         if(keyword!=null&&keyword.length()>64) return R.fail(400,"搜索内容过长");
         LambdaQueryWrapper<User> w = new LambdaQueryWrapper<User>()
+                .eq(User::getIsGuest, 0)
                 .and(keyword != null && !keyword.isBlank(), q->q.like(User::getNickname,keyword).or().like(User::getPhone,keyword))
                 .eq(status != null, User::getStatus, status)
                 .orderByDesc(User::getCreatedAt);

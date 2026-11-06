@@ -31,7 +31,7 @@ public class AdminNoticePushController {
         String sql="INSERT INTO system_notification(receiver_type,receiver_id,title,content,biz_type,related_id,is_read,created_at) "
             +"SELECT ?,t.id,?,?, 'NOTICE', ?,0,NOW() FROM %s t WHERE t.deleted=0 AND %s "
             +"AND NOT EXISTS (SELECT 1 FROM system_notification n WHERE n.receiver_type=? AND n.receiver_id=t.id AND n.biz_type='NOTICE' AND n.related_id=?)";
-        int users=jdbc.update(sql.formatted("`user`","t.status=1"),"USER",notice.getTitle(),notice.getContent(),id,"USER",id);
+        int users=jdbc.update(sql.formatted("`user`","t.status=1 AND t.is_guest=0"),"USER",notice.getTitle(),notice.getContent(),id,"USER",id);
         int players=jdbc.update(sql.formatted("player","t.status='ACTIVE'"),"PLAYER",notice.getTitle(),notice.getContent(),id,"PLAYER",id);
         return R.ok(Map.of("users",users,"players",players,"total",users+players));
     }

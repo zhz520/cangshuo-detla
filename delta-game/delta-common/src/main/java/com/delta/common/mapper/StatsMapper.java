@@ -23,7 +23,7 @@ public interface StatsMapper {
     @Select("SELECT COALESCE(SUM(amount),0) FROM `order` WHERE DATE(created_at) = #{date} AND status NOT IN ('CANCELLED','PENDING_PAYMENT')")
     BigDecimal sumOrderAmountByDate(@Param("date") String date);
 
-    @Select("SELECT COUNT(*) FROM user WHERE DATE(created_at) = #{date}")
+    @Select("SELECT COUNT(*) FROM user WHERE is_guest=0 AND DATE(created_at) = #{date}")
     Long countUsersByDate(@Param("date") String date);
 
     @Select("SELECT COUNT(*) FROM player WHERE DATE(created_at) = #{date}")
@@ -57,7 +57,7 @@ public interface StatsMapper {
 
     // ========== 累计统计 ==========
 
-    @Select("SELECT COUNT(*) FROM user")
+    @Select("SELECT COUNT(*) FROM user WHERE is_guest=0")
     Long countTotalUsers();
 
     @Select("SELECT COUNT(*) FROM player")
@@ -94,11 +94,11 @@ public interface StatsMapper {
     @Select("SELECT COUNT(*) FROM `order` WHERE status IN ('COMPLETED','CONFIRMED','REVIEWED')")
     Long countCompletedOrders();
 
-    @Select("SELECT DATE(created_at) AS dt, COUNT(*) AS cnt FROM user " +
-            "WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY dt ORDER BY dt")
+    @Select("SELECT DATE(created_at) AS dt, COUNT(*) AS cnt FROM user WHERE is_guest=0 " +
+            "AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY dt ORDER BY dt")
     List<Map<String, Object>> newUserTrend30Days();
 
-    @Select("SELECT COUNT(DISTINCT user_id) FROM `order` WHERE status NOT IN ('CANCELLED','PENDING_PAYMENT')")
+    @Select("SELECT COUNT(DISTINCT o.user_id) FROM `order` o JOIN user u ON u.id=o.user_id WHERE u.is_guest=0 AND o.status NOT IN ('CANCELLED','PENDING_PAYMENT')")
     Long countPaidUsers();
 
     @Select("SELECT DATE(settle_time) AS statDate, COUNT(*) AS orderCount, " +
@@ -145,7 +145,7 @@ public interface StatsMapper {
     @Select("SELECT u.id, u.nickname, u.avatar, COUNT(o.id) AS order_count, " +
             "COALESCE(SUM(o.amount),0) AS total_amount " +
             "FROM `order` o INNER JOIN user u ON u.id = o.user_id " +
-            "WHERE o.status NOT IN ('CANCELLED','PENDING_PAYMENT') " +
+            "WHERE u.is_guest=0 AND o.status NOT IN ('CANCELLED','PENDING_PAYMENT') " +
             "GROUP BY u.id ORDER BY total_amount DESC LIMIT #{limit}")
     List<Map<String, Object>> userSpendingRank(@Param("limit") int limit);
 

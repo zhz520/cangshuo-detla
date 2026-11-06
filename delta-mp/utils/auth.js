@@ -10,6 +10,8 @@ import { clientStorage } from '@/utils/client-storage'
 const USER_TOKEN_KEY = 'user_token'
 const PLAYER_TOKEN_KEY = 'player_token'
 const CS_TOKEN_KEY = 'cs_token'
+const GUEST_TOKEN_KEY = 'guest_token'
+const GUEST_INFO_KEY = 'guest_info'
 
 // ========== 用户 Token ==========
 export function getUserToken() {
@@ -35,6 +37,32 @@ export function setPlayerToken(token) {
 
 export function removePlayerToken() {
   clientStorage.remove(PLAYER_TOKEN_KEY)
+}
+
+// ========== 游客影子会话 ==========
+export function getGuestToken() {
+  return clientStorage.get(GUEST_TOKEN_KEY) || ''
+}
+
+export function getGuestInfo() {
+  const info = clientStorage.get(GUEST_INFO_KEY)
+  return info && typeof info === 'object' ? info : null
+}
+
+export function setGuestSession(data) {
+  if (!data?.token) throw new Error('游客会话凭据无效')
+  clientStorage.set(GUEST_TOKEN_KEY, data.token)
+  clientStorage.set(GUEST_INFO_KEY, {
+    guestUserId: data.guestUserId,
+    nickname: data.nickname || '游客',
+    maskedPhone: data.maskedPhone || '',
+    orderId: data.orderId || null
+  })
+}
+
+export function removeGuestSession() {
+  clientStorage.remove(GUEST_TOKEN_KEY)
+  clientStorage.remove(GUEST_INFO_KEY)
 }
 
 // ========== 客服Token ==========
@@ -65,7 +93,17 @@ export function removeCsToken() {
 export function getTokenByRole(role) {
   if (role === 'cs') return getCsToken()
   if (role === 'player') return getPlayerToken()
+  if (role === 'guest') return getGuestToken()
   return getUserToken()
+}
+
+export function getCurrentRole() {
+  const requested = clientStorage.get('app_role') || 'user'
+  if (requested === 'player' && getPlayerToken()) return 'player'
+  if (requested === 'cs' && getCsToken()) return 'cs'
+  if (getUserToken()) return 'user'
+  if (getGuestToken()) return 'guest'
+  return requested
 }
 
 // ========== 清除全部token ==========
@@ -73,4 +111,5 @@ export function clearAllTokens() {
   removeUserToken()
   removePlayerToken()
   removeCsToken()
+  removeGuestSession()
 }

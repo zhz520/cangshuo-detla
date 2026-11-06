@@ -21,7 +21,9 @@ class SysConfigPublicSiteTest {
                 .thenReturn(List.of());
         when(service.getConfigValue(anyString(), anyString())).thenAnswer(call -> call.getArgument(1));
         Map<String, String> site = new SysConfigController(service).getSiteConfig().getData();
-        assertThat(site).containsEntry("wx_pay_h5_enabled", "false");
+        assertThat(site).containsEntry("wx_pay_h5_enabled", "false")
+                .containsEntry("order_purchase_enabled", "true")
+                .containsEntry("order_guest_checkout_enabled", "false");
     }
 
     @Test

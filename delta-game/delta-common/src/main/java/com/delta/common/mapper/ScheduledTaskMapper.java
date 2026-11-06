@@ -114,7 +114,7 @@ public interface ScheduledTaskMapper {
             "(SELECT COUNT(*) FROM `order` WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
             "(SELECT COUNT(*) FROM `order` WHERE status = 'COMPLETED' AND DATE(complete_time) = CURDATE() - INTERVAL 1 DAY), " +
             "(SELECT COALESCE(SUM(amount),0) FROM payment WHERE status = 'PAID' AND DATE(paid_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COUNT(*) FROM user WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
+            "(SELECT COUNT(*) FROM user WHERE is_guest=0 AND DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
             "(SELECT COUNT(*) FROM player WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
             "(SELECT COUNT(*) FROM complaint WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
             "NOW() " +

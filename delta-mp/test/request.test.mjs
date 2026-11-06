@@ -22,7 +22,7 @@ async function harness() {
   globalThis.__requestTestStorage = storage
   const source = (await readFile(new URL('../api/request.js', import.meta.url), 'utf8'))
     .replace("import { clientStorage } from '@/utils/client-storage'", "const clientStorage = { get: key => globalThis.__requestTestStorage.get(key), set: (key,v) => globalThis.__requestTestStorage.set(key,v), remove: key => globalThis.__requestTestStorage.delete(key) }")
-    .replace("import { getTokenByRole } from '@/utils/auth'", "const getTokenByRole = role => clientStorage.get(role + '_token') || ''")
+    .replace("import { getCurrentRole, getTokenByRole, removeGuestSession } from '@/utils/auth'", "const getTokenByRole = role => clientStorage.get(role + '_token') || ''; const getCurrentRole = () => { const requested = clientStorage.get('app_role') || 'user'; if (requested === 'player' && getTokenByRole('player')) return 'player'; if (requested === 'cs' && getTokenByRole('cs')) return 'cs'; if (getTokenByRole('user')) return 'user'; if (getTokenByRole('guest')) return 'guest'; return requested }; const removeGuestSession = () => { clientStorage.remove('guest_token'); clientStorage.remove('guest_info') }")
     .replace("import { createLoadingController } from '@/utils/loading'", loadingSource.replace('export function', 'function'))
     .replaceAll('import.meta.env', '({ DEV:false })')
   const module = await import('data:text/javascript;base64,' + Buffer.from(source + '\n// ' + Math.random()).toString('base64'))

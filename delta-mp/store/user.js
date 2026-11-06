@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getUserToken, getPlayerToken, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
+import { getUserToken, getPlayerToken, getGuestToken, getGuestInfo, setGuestSession as saveGuestSession, removeGuestSession as clearGuestStorage, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
 import { userLogin, h5Login, setupUserPassword, userPasswordLogin, revokeSession } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
@@ -8,8 +8,11 @@ import { useChatStore } from '@/store/chat'
 export const useUserStore = defineStore('user', () => {
   const token = ref(getUserToken())
   const userInfo = ref(null)
+  const guestToken = ref(getGuestToken())
+  const guestInfo = ref(getGuestInfo())
 
   const isLoggedIn = computed(() => !!token.value)
+  const isGuest = computed(() => !token.value && !!guestToken.value)
   const nickname = computed(() => userInfo.value?.nickname || '未登录')
   const avatar = computed(() => userInfo.value?.avatar || '')
   const phone = computed(() => userInfo.value?.phone || '')
@@ -53,6 +56,16 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = data
     const chatStore = useChatStore()
     chatStore.fetchMessageUnreadCount()
+  }
+  function setGuestSession(data) {
+    saveGuestSession(data)
+    guestToken.value = data.token
+    guestInfo.value = getGuestInfo()
+  }
+  function clearGuestSession() {
+    clearGuestStorage()
+    guestToken.value = ''
+    guestInfo.value = null
   }
   async function completePasswordSetup(data) {
     const response=await setupUserPassword(data);applyLoginResult(response.data);return response.data
@@ -98,7 +111,10 @@ export const useUserStore = defineStore('user', () => {
   return {
     token,
     userInfo,
+    guestToken,
+    guestInfo,
     isLoggedIn,
+    isGuest,
     nickname,
     avatar,
     phone,
@@ -107,6 +123,8 @@ export const useUserStore = defineStore('user', () => {
     completePasswordSetup,
     loginWithPassword,
     fetchProfile,
+    setGuestSession,
+    clearGuestSession,
     logout,
     checkLogin
   }

@@ -68,7 +68,7 @@ public class UserManagementService {
         User user=id==null?new User():locked(id);Object before=id==null?null:snapshot(user);
         String oldOpenid=user.getOpenid();user.setPhone(body.phone());user.setNickname(body.nickname().trim());user.setAvatar(avatar);user.setStatus(body.status());
         if(passwordChanged) user.setPassword(encoder.encode(body.password()));
-        if(id==null) {user.setOpenid("h5:"+body.phone());user.setAuthVersion(0L);users.save(user);wallets.initWallet(user.getId());}
+        if(id==null) {user.setOpenid("h5:"+body.phone());user.setAuthVersion(0L);user.setIsGuest(0);users.save(user);wallets.initWallet(user.getId());}
         else {
             if(oldOpenid!=null&&oldOpenid.startsWith("h5:")) user.setOpenid("h5:"+body.phone());
             user.setAuthVersion((user.getAuthVersion()==null?0:user.getAuthVersion())+1);users.updateById(user);

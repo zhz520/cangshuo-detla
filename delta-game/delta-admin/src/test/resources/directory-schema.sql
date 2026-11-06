@@ -23,7 +23,7 @@ CREATE TABLE review (
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE product (id BIGINT PRIMARY KEY, avg_rating DECIMAL(3,2) DEFAULT 0, review_count INT DEFAULT 0);
-CREATE TABLE `user` (id BIGINT PRIMARY KEY, nickname VARCHAR(64), avatar VARCHAR(512), password VARCHAR(100), auth_version BIGINT DEFAULT 0, deleted INT DEFAULT 0);
+CREATE TABLE `user` (id BIGINT PRIMARY KEY, nickname VARCHAR(64), avatar VARCHAR(512), password VARCHAR(100), auth_version BIGINT DEFAULT 0, is_guest TINYINT DEFAULT 0, deleted INT DEFAULT 0);
 CREATE TABLE `order` (id BIGINT PRIMARY KEY, order_no VARCHAR(64),user_id BIGINT,player_id BIGINT,
  product_id BIGINT,product_name VARCHAR(128),status VARCHAR(32),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO player(id,nickname,level,status,real_name,phone,openid,introduction,avg_rating) VALUES

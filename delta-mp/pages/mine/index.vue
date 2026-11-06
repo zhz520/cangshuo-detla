@@ -52,6 +52,10 @@
 
       <view class="section-card">
         <text class="section-title">服务与支持</text>
+        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/order/lookup')">
+          <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
+          <text>游客订单查询与绑定</text><text class="arrow">></text>
+        </view>
         <view class="menu-item" @click="go('/pages/complaint/list')">
           <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
           <text>我的投诉工单</text><text class="arrow">></text>

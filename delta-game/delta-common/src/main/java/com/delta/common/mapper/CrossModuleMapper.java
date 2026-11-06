@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 跨模块查询Mapper，避免循环依赖
@@ -166,4 +167,10 @@ public interface CrossModuleMapper {
     int countUserProductOrdersSince(@Param("userId") Long userId,
                                     @Param("productId") Long productId,
                                     @Param("startTime") LocalDateTime startTime);
+
+    @Select("SELECT guest_user_id FROM guest_user_link WHERE registered_user_id=#{registeredUserId}")
+    List<Long> selectLinkedGuestUserIds(@Param("registeredUserId") Long registeredUserId);
+
+    @Select("SELECT COUNT(*) FROM guest_user_link WHERE registered_user_id=#{registeredUserId} AND guest_user_id=#{guestUserId}")
+    int countGuestLink(@Param("registeredUserId") Long registeredUserId, @Param("guestUserId") Long guestUserId);
 }

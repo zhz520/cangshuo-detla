@@ -51,8 +51,13 @@ public class OrderController {
     @GetMapping("/my")
     public R<Page<Order>> myOrders(PageQuery query, @RequestParam(required = false) String status) {
         Long userId = SecurityUtils.getUserId();
+        java.util.ArrayList<Long> owners = new java.util.ArrayList<>();
+        owners.add(userId);
+        if ("USER".equals(SecurityUtils.getUserType())) {
+            owners.addAll(crossModuleMapper.selectLinkedGuestUserIds(userId));
+        }
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<Order>()
-                .eq(Order::getUserId, userId)
+                .in(Order::getUserId, owners)
                 .eq(status != null && !status.isEmpty(), Order::getStatus, status)
                 .orderByDesc(Order::getCreatedAt);
         Page<Order> page = orderService.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
@@ -113,19 +118,27 @@ public class OrderController {
     }
 
     private void requireOwner(Order order) {
-        if(order==null || !SecurityUtils.getUserId().equals(order.getUserId()))
+        if(order==null) throw new com.delta.common.exception.BusinessException(404,"订单不存在");
+        Long actorId=SecurityUtils.getUserId();
+        boolean linked="USER".equals(SecurityUtils.getUserType())
+                && crossModuleMapper.countGuestLink(actorId,order.getUserId())>0;
+        if(!actorId.equals(order.getUserId()) && !linked)
             throw new com.delta.common.exception.BusinessException(404,"订单不存在");
     }
 
     @PostMapping("/{id}/cancel")
     public R<Void> cancel(@PathVariable Long id) {
-        orderService.cancelOrder(id, SecurityUtils.getUserId());
+        Order order=orderService.getById(id);
+        requireOwner(order);
+        orderService.cancelOrder(id, order.getUserId());
         return R.ok();
     }
 
     @PostMapping("/{id}/confirm")
     public R<Void> confirm(@PathVariable Long id) {
-        orderService.confirmOrder(id, SecurityUtils.getUserId());
+        Order order=orderService.getById(id);
+        requireOwner(order);
+        orderService.confirmOrder(id, order.getUserId());
         return R.ok();
     }
 
@@ -135,9 +148,9 @@ public class OrderController {
         if(req==null) return R.fail(400,"请填写换人原因");
         PlayerReplaceRequest supplied=req;req=new PlayerReplaceRequest();req.setReason(supplied.getReason());
         if(req.getReason()==null || req.getReason().isBlank() || req.getReason().length()>1000) return R.fail(400,"换人原因长度不符合要求");
-        Long userId = SecurityUtils.getUserId();
         Order order = orderService.getById(id);
-        if (order == null || !order.getUserId().equals(userId)) return R.fail(404, "订单不存在");
+        requireOwner(order);
+        Long userId = order.getUserId();
         if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail("当前状态不允许申请换人");
         // 防重复
         long pending = replaceRequestService.count(new LambdaQueryWrapper<PlayerReplaceRequest>()

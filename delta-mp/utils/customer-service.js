@@ -22,7 +22,10 @@ export async function openCustomerService(product = null) {
     return
   }
   const userStore = useUserStore()
-  if (!userStore.checkLogin()) return
+  if (!userStore.isLoggedIn && !userStore.isGuest) {
+    userStore.checkLogin()
+    return
+  }
   const { data: session } = await createCsSession()
   if (product) {
     const content = JSON.stringify({

@@ -33,6 +33,58 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PaymentSceneIsolationTest {
     @Test
+    void guestShadowAccountsCannotUseMiniProgramPrepay() {
+        TransactionService transactions = mock(TransactionService.class);
+        OrderService orders = mock(OrderService.class);
+        OrderProgressService progress = mock(OrderProgressService.class);
+        WalletService wallets = mock(WalletService.class);
+        ProductService products = mock(ProductService.class);
+        SysConfigService configs = mock(SysConfigService.class);
+        WxPayConfiguration wx = mock(WxPayConfiguration.class);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        PaymentServiceImpl service = new PaymentServiceImpl(transactions, orders, progress, wallets, products,
+                configs, wx, redis, events, jdbc);
+        Order guestOrder = new Order();
+        guestOrder.setId(100L);
+        guestOrder.setUserId(7L);
+        when(orders.getById(100L)).thenReturn(guestOrder);
+        when(jdbc.queryForObject(contains("is_guest=1"), eq(Integer.class), eq(7L))).thenReturn(1);
+
+        assertThatThrownBy(() -> service.createWxPayment(100L, 7L, WechatPayScene.MINIAPP, "wx-mini"))
+                .hasMessage("游客订单不能使用小程序支付，请使用网页微信支付");
+    }
+
+    @Test
+    void guestShadowAccountsCannotSpendANormalWallet() {
+        TransactionService transactions = mock(TransactionService.class);
+        OrderService orders = mock(OrderService.class);
+        OrderProgressService progress = mock(OrderProgressService.class);
+        WalletService wallets = mock(WalletService.class);
+        ProductService products = mock(ProductService.class);
+        SysConfigService configs = mock(SysConfigService.class);
+        WxPayConfiguration wx = mock(WxPayConfiguration.class);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        PaymentServiceImpl service = new PaymentServiceImpl(transactions, orders, progress, wallets, products,
+                configs, wx, redis, events, jdbc);
+        Order guestOrder = new Order();
+        guestOrder.setId(100L);
+        guestOrder.setUserId(7L);
+        guestOrder.setStatus(OrderStatusEnum.PENDING_PAYMENT.name());
+        guestOrder.setAmount(new BigDecimal("88.00"));
+        guestOrder.setPayDeadline(LocalDateTime.now().plusMinutes(20));
+        when(orders.getById(100L)).thenReturn(guestOrder);
+        when(jdbc.queryForObject(contains("is_guest=1"), eq(Integer.class), eq(7L))).thenReturn(1);
+
+        assertThatThrownBy(() -> service.createBalancePayment(100L, 7L))
+                .hasMessage("游客订单仅支持在线微信支付");
+        verifyNoInteractions(wallets);
+    }
+
+    @Test
     void foreignOrderStatusIsNeverDisclosedToPaymentCallers() {
         TransactionService transactions = mock(TransactionService.class);
         OrderService orders = mock(OrderService.class);
