@@ -2,6 +2,8 @@
   <div class="page-container">
     <el-card>
       <template #header><span>换人申请管理</span></template>
+      <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
+        <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable>
@@ -104,6 +106,8 @@
 </template>
 
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csReplaceList, csReplaceApprove, csReplaceReject, csPlayerList, csOrderAssign } from '@/api/business'
@@ -116,7 +120,9 @@ const statusText = { PENDING: '待处理', APPROVED: '已通过', REJECTED: '已
 const statusTagType = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
 
 const loading = ref(false), list = ref([]), total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, status: '' })
+const route = useRoute()
+const router = useRouter()
+const query = reactive({ pageNum: 1, pageSize: 10, status: '', taskId: '' })
 
 async function fetchData() {
   loading.value = true
@@ -213,7 +219,12 @@ async function handleReject() {
   }
 }
 
-onMounted(fetchData)
+watch(() => route.query.taskId, id => {
+  query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
+  query.pageNum = 1
+  if (query.taskId) query.status = ''
+  fetchData()
+}, { immediate: true })
 </script>
 
 <style scoped>

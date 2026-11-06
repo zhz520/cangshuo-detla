@@ -2,6 +2,8 @@
   <div class="page-container">
     <el-card>
       <template #header><div class="player-header"><span>打手管理</span><el-button v-if="isAdmin" @click="$router.push('/player-level')">管理等级分类</el-button></div></template>
+      <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
+        <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item><el-input v-model="query.keyword" placeholder="搜索打手" clearable @keyup.enter="fetchData" /></el-form-item>
         <el-form-item>
@@ -207,6 +209,8 @@
   </div>
 </template>
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
 import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
@@ -228,7 +232,9 @@ function levelLabel(id){return levelOptions.value.find(l=>l.id===id)?.name || `L
 onMounted(async()=>{if(isAdmin)levelOptions.value=(await playerLevelList()).data||[]})
 async function setOffline(row){await ElMessageBox.confirm('确认让该打手下班？需要打手本人操作才能重新上班。','打手下班');await request.put('/cs/player/'+row.id+'/online-status',{online:false});await fetchData()}
 const loading = ref(false), list = ref([]), total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '' })
+const route = useRoute()
+const router = useRouter()
+const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '', taskId: '' })
 const statusMap = { PENDING: '待审核', ACTIVE: '正常', REJECTED: '已驳回', FROZEN: '已冻结' }
 const statusTagMap = { PENDING: 'warning', ACTIVE: 'success', REJECTED: 'danger', FROZEN: 'info' }
 function statusText(s) { return statusMap[s] || s }
@@ -446,7 +452,12 @@ async function fetchPlayerOrders() {
   } finally { ordersLoading.value = false }
 }
 
-onMounted(fetchData)
+watch(() => route.query.taskId, id => {
+  query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
+  query.pageNum = 1
+  if (query.taskId) query.status = ''
+  fetchData()
+}, { immediate: true })
 </script>
 <style scoped>
 .search-form { margin-bottom: 16px; }</style>

@@ -1,11 +1,11 @@
 <template>
   <el-container class="layout-container">
     <el-aside v-if="!isCompact" :width="isCollapse ? '64px' : '220px'" class="layout-aside">
-      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :title="siteStore.adminTitle" :initial="logoInitial" />
+      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" />
     </el-aside>
 
     <el-drawer v-model="navigationOpen" direction="ltr" size="300px" :with-header="false" title="主导航" append-to-body class="mobile-navigation">
-      <SidebarNavigation :active="activeMenu" :groups="menuGroups" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
+      <SidebarNavigation :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
         <template #action><button class="navigation-close" type="button" aria-label="关闭导航" @click="navigationOpen = false"><el-icon><Close /></el-icon></button></template>
       </SidebarNavigation>
     </el-drawer>
@@ -25,9 +25,17 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <button v-if="can('chat.manage')" class="chat-notify" type="button" @click="goChat" title="客服消息" :aria-label="`客服消息，${chatStore.globalUnread || 0}条未读`">
+          <button class="chat-notify" type="button" title="待办中心" :aria-label="`待办中心，${workbench.summary?.unread || 0}项未读`" @click="openCenter('tasks')">
+            <el-icon :size="20"><List /></el-icon>
+            <span v-if="workbench.summary?.unread" class="notify-badge task-badge">{{ badge(workbench.summary.unread) }}</span>
+          </button>
+          <button class="chat-notify" type="button" title="系统通知" :aria-label="`系统通知，${workbench.summary?.systemUnread || 0}条未读`" @click="openCenter('notices')">
+            <el-icon :size="20"><Bell /></el-icon>
+            <span v-if="workbench.summary?.systemUnread" class="notify-badge">{{ badge(workbench.summary.systemUnread) }}</span>
+          </button>
+          <button v-if="can('chat.manage')" class="chat-notify" type="button" @click="goChat" title="客服消息" :aria-label="`客服消息，${workbench.summary?.chatUnread || 0}条未读`">
             <el-icon :size="20"><ChatDotRound /></el-icon>
-            <span v-if="chatStore.globalUnread > 0" class="notify-badge">{{ chatStore.globalUnread > 99 ? '99+' : chatStore.globalUnread }}</span>
+            <span v-if="workbench.summary?.chatUnread > 0" class="notify-badge chat-badge">{{ badge(workbench.summary?.chatUnread) }}</span>
           </button>
           <el-tag :type="role === 'admin' ? 'danger' : 'warning'" size="small" class="role-tag">
             {{ role === 'admin' ? '管理员' : '客服' }}
@@ -61,6 +69,7 @@
 
     <!-- 编辑资料弹窗 -->
     <ProfileEditDialog v-model="profileDialogVisible" @saved="onProfileSaved" />
+    <WorkbenchCenter v-model="centerOpen" :mode="centerMode" />
     <PasswordChangeDialog v-model="passwordDialogVisible" @changed="onPasswordChanged" />
   </el-container>
 </template>
@@ -73,13 +82,16 @@ import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAll
 import { loadingFeedback } from '@/utils/loading-feedback'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound, Close } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, Close, List, Bell } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
 import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
 import PasswordChangeDialog from '@/components/PasswordChangeDialog.vue'
 import { useChatStore } from '@/stores/chat'
+import { useWorkbenchStore } from '@/stores/workbench'
+import { taskPaths } from '@/utils/workbench-links'
+import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { useSiteStore } from '@/stores/site'
 import {thumbnailUrl} from '@/utils/image'
 
@@ -87,6 +99,22 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const chatStore = useChatStore()
+const workbench = useWorkbenchStore()
+const centerOpen = ref(false)
+const centerMode = ref('tasks')
+function openCenter(mode) { centerMode.value = mode; centerOpen.value = true }
+function badge(count) { return count > 99 ? '99+' : count }
+const menuBadges = computed(() => {
+  const result = {}
+  for (const category of workbench.summary?.categories || []) {
+    if (category.kind === 'CHAT') continue
+    const path = taskPaths[category.kind]
+    if (path && category.unread) result[path] = (result[path] || 0) + category.unread
+  }
+  return result
+})
+watch(() => route.fullPath, () => workbench.changed())
+watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => workbench.changed())
 const siteStore = useSiteStore()
 
 const isCollapse = ref(false)
@@ -148,15 +176,16 @@ function onProfileSaved(data) {
 }
 
 function goChat() {
-  chatStore.clearUnread()
   router.push('/chat/service')
 }
 
 onMounted(() => {
+  workbench.start()
   if (role.value === 'admin' && ['system.manage', 'user.manage', 'finance.read'].some(can)) loadPlatformFeatureVisibility()
   if (can('chat.manage')) chatStore.start()
 })
 onUnmounted(() => {
+  workbench.stop()
   chatStore.stop()
 })
 </script>
@@ -240,6 +269,8 @@ onUnmounted(() => {
         background: #f4f5f6;
         color: #17191c;
       }
+      .notify-badge.task-badge { background: #8c531a; }
+      .notify-badge.chat-badge { background: #315b97; }
       .notify-badge {
         position: absolute;
         top: -4px;
@@ -310,7 +341,7 @@ onUnmounted(() => {
   .header-left :deep(.el-breadcrumb__item) { float: none; display: inline; overflow-wrap: anywhere; }
   .layout-header .header-left .collapse-btn { width: 40px; height: 40px; flex-shrink: 0; }
   .layout-header .header-right { min-width: 0; gap: 6px; }
-  .header-right :deep(.el-dropdown) { min-width: 0; max-width: calc(100% - 104px); }
+  .header-right :deep(.el-dropdown) { min-width: 0; max-width: min(160px, 38vw); }
   .layout-header .header-right .chat-notify { width: 38px; height: 38px; flex-shrink: 0; }
   .layout-header .header-right .role-tag { margin-right: 0; }
   .layout-header .header-right .user-info { min-height: 38px; max-width: 150px; padding: 0 6px; }

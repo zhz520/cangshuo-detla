@@ -3,6 +3,8 @@
     <el-card>
       <template #header><span>接力申请审核</span></template>
       <p class="tip">打手在服务中因故无法继续时可申请接力，审核通过后需指定一名打手接手完成订单。</p>
+      <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
+        <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable>
@@ -91,6 +93,8 @@
   </div>
 </template>
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csRelayList, csRelayApprove, csRelayReject, csPlayerList } from '@/api/business'
@@ -111,7 +115,9 @@ function splitDisplay(row) {
 const loading = ref(false)
 const list = ref([])
 const total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, status: '' })
+const route = useRoute()
+const router = useRouter()
+const query = reactive({ pageNum: 1, pageSize: 10, status: '', taskId: '' })
 
 async function fetchData() {
   loading.value = true
@@ -185,7 +191,12 @@ async function handleReject() {
   }
 }
 
-onMounted(fetchData)
+watch(() => route.query.taskId, id => {
+  query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
+  query.pageNum = 1
+  if (query.taskId) query.status = ''
+  fetchData()
+}, { immediate: true })
 </script>
 <style scoped>
 .tip { color: #666; font-size: 13px; margin: -8px 0 12px 0; }

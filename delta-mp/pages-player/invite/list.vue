@@ -30,7 +30,7 @@
 <script setup>
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
-import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import PageState from '@/components/PageState.vue'
 import { getInviteList, acceptInvite, rejectInvite } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
@@ -39,6 +39,8 @@ const INVITE_STATUS_TEXT = { INVITED: '待处理', ACCEPTED: '已接受', REJECT
 const INVITE_STATUS_COLOR = { INVITED: '#996b30', ACCEPTED: '#347a5b', REJECTED: '#b84b55', CANCELLED: '#73777e' }
 const SPLIT_TYPE_TEXT = { FIFTY_FIFTY: '五五开', FORTY_SIXTY: '四六开', THIRTY_SEVENTY: '三七开', CUSTOM: '自定义' }
 const pendingActions = ref({})
+let highlightedOrder = ''
+onLoad(options => { highlightedOrder = /^\d{1,19}$/.test(options?.orderId || '') ? options.orderId : '' })
 const resolvedActions = new Map()
 let disposed = false
 const { query: tab, items: records, loading, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose } = usePagedList({
@@ -48,7 +50,11 @@ const { query: tab, items: records, loading, error, finished, refresh, loadMore,
     const { data } = await getInviteList({ pageNum, pageSize, type: query }, { loading: false, silent: true })
     // The current endpoint returns the full array. Slice it locally; never append it repeatedly.
     const withResolvedStatus = row => row.status === 'INVITED' && resolvedActions.has(String(row.orderId)) ? { ...row, status: resolvedActions.get(String(row.orderId)) } : row
-    if (Array.isArray(data)) return { records: data.slice((pageNum - 1) * pageSize, pageNum * pageSize).map(withResolvedStatus), total: data.length }
+    if (Array.isArray(data)) {
+      const matching = query === 'received' && highlightedOrder ? data.find(row => String(row.orderId) === highlightedOrder) : null
+      const ordered = matching ? [matching, ...data.filter(row => row !== matching)] : data
+      return { records: ordered.slice((pageNum - 1) * pageSize, pageNum * pageSize).map(withResolvedStatus), total: ordered.length }
+    }
     if (!Array.isArray(data?.records)) throw new Error('邀请数据异常，请重试')
     return { ...data, records: data.records.map(withResolvedStatus) }
   }

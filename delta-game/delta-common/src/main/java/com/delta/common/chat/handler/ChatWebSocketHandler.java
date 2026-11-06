@@ -194,6 +194,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if ("CS".equals(otherType)) pushToMember("ADMIN", String.valueOf(rawOther), senderKey, msgJson);
     }
 
+    /** A payload-free hint; the authorized HTTP endpoint remains the data source. */
+    public void signalWorkbench(String receiverType, long receiverId) {
+        if (receiverId <= 0) return;
+        String role = "ADMIN".equals(receiverType) ? "CS" : receiverType;
+        if (!java.util.Set.of("USER","PLAYER","CS").contains(role)) return;
+        pushToMember(role, Long.toString(receiverId), "", "{\"type\":\"workbench_changed\"}");
+    }
+
     private void pushToMember(String userType, String memberId, String senderKey, String msgJson) {
         String key = userType + ":" + memberId;
         if (key.equals(senderKey)) return; // 不推送给发送者

@@ -26,6 +26,7 @@ function reportError(config, message, code) {
 service.interceptors.request.use(
   (config) => {
     const token = getToken()
+    config._authToken = token
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
@@ -41,7 +42,7 @@ service.interceptors.response.use(
     if (res.code !== 0 && res.code !== 200) {
       reportError(response.config, res.msg || '请求失败', res.code)
       // token 过期或无效
-      if (res.code === 401) {
+      if (res.code === 401 && response.config._authToken === getToken()) {
         removeToken()
         router.push('/login')
       }
@@ -57,6 +58,7 @@ service.interceptors.response.use(
     if (error.response) {
       const { status } = error.response
       if (status === 401) {
+        if (error.config?._authToken !== getToken()) return Promise.reject(error)
         removeToken()
         router.push('/login')
         notify('error', '登录已过期，请重新登录')

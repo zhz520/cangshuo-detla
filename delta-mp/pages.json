@@ -101,6 +101,10 @@
       "style": { "navigationBarTitleText": "聊天", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
+      "path": "pages/workbench/index",
+      "style": { "navigationBarTitleText": "待办中心", "backgroundColor": "#f5f6f7" }
+    },
+    {
       "path": "pages/message/index",
       "style": { "navigationBarTitleText": "系统通知", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },

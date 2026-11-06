@@ -142,8 +142,9 @@ public class CsComplaintController {
     }
 
     @GetMapping("/list")
-    public R<Page<Complaint>> list(PageQuery query, @RequestParam(value = "status", required = false) String status) {
+    public R<Page<Complaint>> list(PageQuery query, @RequestParam(required = false) Long taskId, @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<Complaint> wrapper = new LambdaQueryWrapper<Complaint>()
+                .eq(taskId != null, Complaint::getId, taskId)
                 .orderByDesc(Complaint::getCreatedAt);
         // status 为空字符串时不作为筛选条件
         if (status != null && !status.isEmpty()) {

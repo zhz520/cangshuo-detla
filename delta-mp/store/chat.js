@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { getCurrentRole, getTokenByRole } from '@/utils/auth'
 import { connectWebSocket, closeWebSocket, onWsMessage, onWsConnect, onWsClose, isWsConnected, sendMessage } from '@/utils/websocket'
 import { getUnreadCount } from '@/api/message'
+import { useRemindStore } from '@/store/remind'
 import { playMessageNotification } from '@/utils/notificationFeedback'
 
 let systemUnreadPollTimer = null
@@ -26,6 +27,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const type = role === 'cs' ? 'CS' : role === 'player' ? 'PLAYER' : 'USER'
       const res = await getUnreadCount(type, { loading: false, silent: true })
+      if (role !== getCurrentRole() || token !== getTokenByRole(role)) return
       const newCount = res.data ?? 0
       if (lastSystemUnread !== null && newCount > lastSystemUnread) {
         playMessageNotification()
@@ -73,6 +75,12 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       onWsMessage((data) => {
+        if (data.type === 'workbench_changed') {
+          useRemindStore().changed()
+          return
+        }
+        if (!data.sessionId) return
+        useRemindStore().changed()
         newMessage.value = data
         if (String(data.sessionId) !== String(currentSessionId.value)) {
           unreadCount.value++

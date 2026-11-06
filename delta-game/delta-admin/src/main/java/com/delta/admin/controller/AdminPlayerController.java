@@ -37,11 +37,12 @@ public class AdminPlayerController {
     private final com.delta.system.service.FeatureAuditService featureAudit;
 
     @GetMapping("/list")
-    public R<Page<Player>> list(PageQuery query,
+    public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                 @RequestParam(value = "status", required = false) String status,
                                 @RequestParam(value = "keyword", required = false) String keyword,
                                 @RequestParam(value = "level", required = false) Integer level) {
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
+                .eq(taskId != null, Player::getId, taskId)
                 .eq(status != null && !status.isEmpty(), Player::getStatus, status)
                 .like(keyword != null && !keyword.isBlank(), Player::getNickname, keyword)
                 .eq(level != null, Player::getLevel, level)

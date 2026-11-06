@@ -31,7 +31,7 @@ public class PrivacyController {
     }
     @GetMapping("/admin/privacy/requests")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('user.manage')")
-    public R<List<Map<String,Object>>> list(){return R.ok(jdbc.queryForList("SELECT r.*,u.nickname FROM privacy_request r LEFT JOIN `user` u ON u.id=r.user_id ORDER BY r.created_at DESC LIMIT 300"));}
+    public R<List<Map<String,Object>>> list(@RequestParam(required = false) String taskId){return R.ok(jdbc.queryForList("SELECT r.*,u.nickname FROM privacy_request r LEFT JOIN `user` u ON u.id=r.user_id WHERE (? IS NULL OR r.id=?) ORDER BY r.created_at DESC LIMIT 300",taskId,taskId));}
     public record Decision(boolean approved,@NotBlank @Size(max=500) String note){}
     @PutMapping("/admin/privacy/requests/{id}")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('user.manage')")

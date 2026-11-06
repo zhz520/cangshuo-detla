@@ -2,6 +2,8 @@
   <div class="page-container">
     <el-card>
       <template #header><span>提现管理</span></template>
+      <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
+        <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable>
@@ -99,6 +101,8 @@
   </div>
 </template>
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { adminWithdrawList, adminWithdrawProcess, adminWithdrawReject, csWithdrawList, csWithdrawApprove, csWithdrawReject } from '@/api/business'
@@ -112,7 +116,9 @@ const { isCompact } = useResponsive()
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
 const loading = ref(false), list = ref([]), total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, status: '' })
+const route = useRoute()
+const router = useRouter()
+const query = reactive({ pageNum: 1, pageSize: 10, status: '', taskId: '' })
 async function fetchData() {
   loading.value = true
   try {
@@ -150,6 +156,11 @@ async function handleReject() {
   else await csWithdrawReject(rejectId.value, rejectReason.value)
   ElMessage.success('已拒绝'); rejectVisible.value = false; fetchData()
 }
-onMounted(fetchData)
+watch(() => route.query.taskId, id => {
+  query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
+  query.pageNum = 1
+  if (query.taskId) query.status = ''
+  fetchData()
+}, { immediate: true })
 </script>
 <style scoped>.search-form { margin-bottom: 16px; }</style>

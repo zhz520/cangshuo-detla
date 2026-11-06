@@ -8,6 +8,7 @@ export const useChatStore = defineStore('chat', () => {
   const connected = ref(false)
   /** 最新收到的消息（供页面 watch 使用） */
   const newMessage = shallowRef(null)
+  const badgeSignal = ref(0)
   /** 全局未读消息数 */
   const globalUnread = ref(0)
   /** 当前正在查看的会话 ID（聊天页设置，用于抑制当前会话通知） */
@@ -45,6 +46,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function _handleMessage(data) {
+    if (data.type === 'workbench_changed') { badgeSignal.value++; return }
+    if (!data.sessionId) return
     // 更新最新消息（触发 watch）
     newMessage.value = data
 
@@ -106,6 +109,7 @@ export const useChatStore = defineStore('chat', () => {
   return {
     connected,
     newMessage,
+    badgeSignal,
     globalUnread,
     currentSessionId,
     start,

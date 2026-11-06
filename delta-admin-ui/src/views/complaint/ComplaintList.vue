@@ -2,6 +2,8 @@
   <div class="page-container">
     <el-card>
       <template #header><div class="card-header"><span>投诉处理</span><el-button type="primary" @click="openCreateDialog">创建投诉工单</el-button></div></template>
+      <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
+        <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable style="width: 140px">
@@ -194,6 +196,8 @@
   </div>
 </template>
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csComplaintList, csComplaintProcess, csComplaintResolve, csComplaintCreate, csUserList, csOrderList, csComplaintDetail } from '@/api/business'
@@ -214,7 +218,9 @@ const ORDER_STATUS = {
 }
 
 const loading = ref(false), list = ref([]), total = ref(0), submitting = ref(false)
-const query = reactive({ pageNum: 1, pageSize: 10, status: '' })
+const route = useRoute()
+const router = useRouter()
+const query = reactive({ pageNum: 1, pageSize: 10, status: '', taskId: '' })
 
 async function fetchData() { loading.value = true; try { const res = await csComplaintList(query); list.value = res.data.records; total.value = Number(res.data.total) } finally { loading.value = false } }
 async function handleProcess(row) { await csComplaintProcess(row.id, ''); ElMessage.success('已受理'); fetchData() }
@@ -306,6 +312,11 @@ async function handleCreate() {
   } finally { creating.value = false }
 }
 
-onMounted(fetchData)
+watch(() => route.query.taskId, id => {
+  query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
+  query.pageNum = 1
+  if (query.taskId) query.status = ''
+  fetchData()
+}, { immediate: true })
 </script>
 <style scoped>.search-form { margin-bottom: 16px; } .card-header { display: flex; justify-content: space-between; align-items: center; }</style>

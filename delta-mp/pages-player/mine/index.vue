@@ -4,6 +4,7 @@
       <PageState :loading="loading && !loaded" :error="loadError" @retry="loadDashboard" />
       <template v-if="loaded">
       <PlayerOverview :profile="playerStore.playerInfo" :data="homeData" @navigate="go" />
+      <WorkbenchEntry />
       <!-- 在线状态 -->
       <view class="online-bar">
         <text class="online-label">接单状态</text>
@@ -49,6 +50,7 @@
   </view>
 </template>
 <script setup>
+import WorkbenchEntry from '@/components/WorkbenchEntry.vue'
 import PlayerOverview from '@/components/PlayerOverview.vue'
 import PageState from '@/components/PageState.vue'
 import { ref, computed } from 'vue'

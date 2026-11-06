@@ -48,6 +48,7 @@ public class IdentityVerificationController {
 
     private final JdbcTemplate jdbc;
     private final PlatformService platform;
+    private final org.springframework.context.ApplicationEventPublisher events;
     private final com.delta.common.security.service.RateLimitService limits;
 
     @Value("${identity.hash-pepper}")
@@ -133,11 +134,11 @@ public class IdentityVerificationController {
 
     @GetMapping("/admin/identity/applications")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('user.manage')")
-    public R<List<Map<String, Object>>> list(@RequestParam(required = false) String status, HttpServletRequest request) {
+    public R<List<Map<String, Object>>> list(@RequestParam(required = false) Long taskId, @RequestParam(required = false) String status, HttpServletRequest request) {
         requireAccess(request);
         String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         if (!normalized.isEmpty() && !STATUSES.contains(normalized)) throw new BusinessException(400, "审核状态不正确");
-        return R.ok(jdbc.queryForList("SELECT iv.user_id,iv.real_name,iv.id_number_masked,iv.status,iv.review_note,iv.submitted_at,iv.reviewed_at,u.nickname,u.phone FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id WHERE iv.status<>'DRAFT' AND (?='' OR iv.status=?) ORDER BY CASE WHEN iv.status='PENDING' THEN 0 ELSE 1 END,iv.submitted_at DESC LIMIT 500", normalized, normalized)
+        return R.ok(jdbc.queryForList("SELECT iv.user_id,iv.real_name,iv.id_number_masked,iv.status,iv.review_note,iv.submitted_at,iv.reviewed_at,u.nickname,u.phone FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id WHERE iv.status<>'DRAFT' AND (?='' OR iv.status=?) AND (? IS NULL OR iv.user_id=?) ORDER BY CASE WHEN iv.status='PENDING' THEN 0 ELSE 1 END,iv.submitted_at DESC LIMIT 500", normalized, normalized, taskId, taskId)
                 .stream().map(this::lowerKeys).toList());
     }
 
@@ -167,6 +168,8 @@ public class IdentityVerificationController {
         if (rows.isEmpty() || !"PENDING".equals(value(rows.get(0), "status"))) throw new BusinessException(409, "申请不存在或已处理");
         jdbc.update("UPDATE identity_verification SET status=?,review_note=?,reviewer_id=?,reviewed_at=CURRENT_TIMESTAMP,front_image=NULL,front_mime=NULL,back_image=NULL,back_mime=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
                 body.approved() ? "APPROVED" : "REJECTED", Objects.toString(body.note(), ""), SecurityUtils.getUserId(), userId);
+        events.publishEvent(new com.delta.common.event.BusinessEvent(this, "IDENTITY_REVIEWED", "USER", userId, null,
+                body.approved() ? "实名认证已通过。" : "实名认证未通过，请在实名认证页面查看原因。"));
         return R.ok();
     }
 

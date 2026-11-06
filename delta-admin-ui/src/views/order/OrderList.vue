@@ -113,6 +113,8 @@
   </div>
 </template>
 <script setup>
+import { useRoute } from 'vue-router'
+import { watch } from 'vue'
 import {can} from '@/utils/staff-permissions'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted, computed } from 'vue'
@@ -222,7 +224,12 @@ async function handleRefund(row) {
   ElMessage.success('退款已提交')
   fetchData()
 }
-onMounted(fetchData)
+const route = useRoute()
+watch(() => route.query, queryParams => {
+  query.orderNo = typeof queryParams.orderNo === 'string' ? queryParams.orderNo.slice(0, 32) : ''
+  query.status = queryParams.status === 'PAID' ? 'PAID' : ''
+  searchOrders()
+}, { immediate: true })
 </script>
 <style scoped>
 .search-form { margin-bottom: 16px; }

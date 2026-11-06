@@ -10,11 +10,11 @@
         <template v-for="item in group.items" :key="item.id || item.path">
           <el-menu-item v-if="!item.children" :index="item.path">
             <el-icon><component :is="item.icon" /></el-icon>
-            <template #title>{{ item.title }}</template>
+            <template #title>{{ item.title }} <i v-if="badges[item.path]" class="nav-dot" aria-label="有未读待办" /></template>
           </el-menu-item>
           <el-sub-menu v-else :index="item.id" popper-class="navigation-popup">
-            <template #title><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span></template>
-            <el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">{{ child.title }}</el-menu-item>
+            <template #title><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }} <i v-if="item.children.some(child => badges[child.path])" class="nav-dot" aria-label="有未读待办" /></span></template>
+            <el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">{{ child.title }} <i v-if="badges[child.path]" class="nav-dot" aria-label="有未读待办" /></el-menu-item>
           </el-sub-menu>
         </template>
       </el-menu-item-group>
@@ -31,7 +31,8 @@ const props = defineProps({
   active: String,
   groups: { type: Array, default: () => [] },
   title: String,
-  initial: String
+  initial: String,
+  badges: { type: Object, default: () => ({}) }
 })
 defineEmits(['select'])
 const menu = ref(null)
@@ -46,6 +47,7 @@ watch([() => props.active, () => props.collapsed, () => props.groups], async () 
 </script>
 
 <style lang="scss" scoped>
+.nav-dot { display:inline-block; width:7px; height:7px; margin-left:4px; background:#f16e7a; border-radius:50%; vertical-align:middle; }
 .admin-navigation { display:flex; flex-direction:column; height:100%; min-height:0; background:#17191c; }
 .logo { flex-shrink:0; min-height:68px; padding:14px 16px; display:flex; align-items:center; gap:10px; color:#f7f8f9; border-bottom:1px solid rgba(255,255,255,.08); }
 .logo-mark { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#17191c; font-size:17px; font-weight:800; background:linear-gradient(135deg,#fff,#eceef0); }

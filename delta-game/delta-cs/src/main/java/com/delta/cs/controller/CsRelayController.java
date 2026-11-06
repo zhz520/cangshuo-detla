@@ -34,9 +34,10 @@ public class CsRelayController {
     private final ApplicationEventPublisher eventPublisher;
 
     @GetMapping("/list")
-    public R<Page<OrderRelayRequest>> list(PageQuery query,
+    public R<Page<OrderRelayRequest>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                             @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<OrderRelayRequest> w = new LambdaQueryWrapper<OrderRelayRequest>()
+                .eq(taskId != null, OrderRelayRequest::getId, taskId)
                 .eq(status != null && !status.isEmpty(), OrderRelayRequest::getStatus, status)
                 .orderByDesc(OrderRelayRequest::getCreatedAt);
         Page<OrderRelayRequest> page = relayRequestService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);

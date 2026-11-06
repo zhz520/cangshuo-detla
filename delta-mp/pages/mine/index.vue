@@ -21,6 +21,7 @@
         </view>
       </view>
 
+      <WorkbenchEntry v-if="userStore.isLoggedIn" />
       <view class="quick-panel" :class="{ 'guest-quick-panel': !userStore.isLoggedIn }">
         <view class="quick-item" @click="goOrders">
           <image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" />
@@ -86,11 +87,13 @@
   </view>
 </template>
 <script setup>
+import WorkbenchEntry from '@/components/WorkbenchEntry.vue'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
+import { useRemindStore } from '@/store/remind'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
@@ -107,7 +110,8 @@ const appStore = useAppStore()
 const chatStore = useChatStore()
 const officialWechat = useOfficialWechatStore()
 const longPressCount = ref(0)
-const systemUnread = computed(() => chatStore.messageUnreadCount)
+const remindStore = useRemindStore()
+const systemUnread = computed(() => remindStore.systemUnread)
 const identityAvailable=ref(false),identityStatus=ref('')
 const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJECTED:'未通过',DRAFT:'待提交',NOT_SUBMITTED:'未认证'}[identityStatus.value]||'未认证'))
 

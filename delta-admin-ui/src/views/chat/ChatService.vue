@@ -324,6 +324,11 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+import { useWorkbenchStore } from '@/stores/workbench'
+import request from '@/utils/request'
+const workbench = useWorkbenchStore()
+const route = useRoute()
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { csChatSessionList, chatMessageList, chatMarkRead, adminOrderDetail, adminOrderConfirm, csOrderDetail, csOrderConfirm, csOrderProgress, getActiveQuickReplies, uploadFile, csComplaintCreate, csOrderList } from '@/api/business'
@@ -399,8 +404,8 @@ async function selectSession(s) {
   messages.value = []
   await fetchMessages()
   // 标记消息已读
-  chatMarkRead(s.id).catch(() => {})
-  // 刷新会话列表清除未读数
+  await chatMarkRead(s.id).catch(() => {})
+  workbench.changed()
   fetchSessions()
 }
 
@@ -781,11 +786,14 @@ async function submitComplaint() {
   }
 }
 
-onMounted(() => {
-  fetchSessions()
-  // 进入聊天页时清除全局未读
-  chatStore.clearUnread()
-})
+onMounted(fetchSessions)
+watch(() => route.query.sessionId, async id => {
+  if (typeof id !== 'string' || !/^\d{1,19}$/.test(id)) return
+  try {
+    const { data } = await request.get('/common/chat/session/' + id, { silent: true })
+    if (route.query.sessionId === id && data) await selectSession(data)
+  } catch { /* The inbox remains available if this session is no longer accessible. */ }
+}, { immediate: true })
 onUnmounted(() => {
   // 离开聊天页时清除当前会话标记
   chatStore.currentSessionId = null

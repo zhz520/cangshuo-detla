@@ -32,10 +32,11 @@ public class CsPlayerController {
     private final SysConfigService sysConfigService;
 
     @GetMapping("/list")
-    public R<Page<Player>> list(PageQuery query,
+    public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                 @RequestParam(value = "status", required = false) String status,
                                 @RequestParam(value = "keyword", required = false) String keyword) {
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
+                .eq(taskId != null, Player::getId, taskId)
                 .eq(status != null && !status.isEmpty(), Player::getStatus, status)
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword).or().like(Player::getPhone, keyword))
                 .orderByDesc(Player::getCreatedAt);

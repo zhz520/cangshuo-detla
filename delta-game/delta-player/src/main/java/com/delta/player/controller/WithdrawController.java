@@ -16,6 +16,7 @@ import com.delta.player.entity.Withdraw;
 import com.delta.player.service.PlayerService;
 import com.delta.player.service.PlayerWalletService;
 import com.delta.player.service.WithdrawService;
+import com.delta.player.service.WithdrawDepositPolicy;
 import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -43,10 +44,10 @@ public class WithdrawController {
     private final com.delta.player.service.PlayerAccountService accounts;
     private final PaymentService paymentService;
 
-    public record DepositStatus(String mode,BigDecimal requiredAmount,BigDecimal paidAmount,BigDecimal outstandingAmount,boolean needsPayment) {}
-
     @GetMapping("/deposit-status")
-    public R<DepositStatus> depositStatus(){return R.ok(depositStatus(SecurityUtils.getUserId()));}
+    public R<WithdrawDepositPolicy.Status> depositStatus() {
+        return R.ok(depositStatus(SecurityUtils.getUserId()));
+    }
 
     @GetMapping({"" , "/list"})
     public R<Page<Withdraw>> list(PageQuery query) {
@@ -78,7 +79,7 @@ public class WithdrawController {
         if (player == null || !"ACTIVE".equals(player.getStatus())) {
             throw new BusinessException("账号已被冻结，冻结期间无法提现");
         }
-        DepositStatus deposit=depositStatus(playerId);
+        var deposit=depositStatus(playerId);
         if(deposit.needsPayment())throw new BusinessException(409,"提现前需补缴押金"+deposit.outstandingAmount().stripTrailingZeros().toPlainString()+"元");
 
         // 1. 最低提现金额校验
@@ -102,17 +103,8 @@ public class WithdrawController {
         return R.ok();
     }
 
-    private DepositStatus depositStatus(Long playerId) {
-        String mode=sysConfigService.getConfigValue("player.deposit_mode",
-                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE").trim().toUpperCase();
-        if(!"BEFORE_WITHDRAW".equals(mode))return new DepositStatus(mode,BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO,false);
-        var users=jdbc.queryForList("SELECT u.id AS user_id FROM `user` u JOIN player p ON p.openid=u.openid AND p.deleted=0 WHERE p.id=? AND u.deleted=0 LIMIT 1",playerId);
-        if(users.isEmpty())return new DepositStatus(mode,BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO,false);
-        Long userId=((Number)users.get(0).get("user_id")).longValue();
-        BigDecimal required=paymentService.playerDepositRequiredAmount(userId);
-        BigDecimal paid=paymentService.playerDepositPaidAmount(userId);
-        BigDecimal outstanding=required.subtract(paid).max(BigDecimal.ZERO);
-        return new DepositStatus(mode,required,paid,outstanding,outstanding.signum()>0);
+    private WithdrawDepositPolicy.Status depositStatus(Long playerId) {
+        return WithdrawDepositPolicy.evaluate(playerId, jdbc, sysConfigService, paymentService);
     }
 
     private void doWithdraw(Long playerId, WithdrawRequest req) {

@@ -17,6 +17,7 @@ public class GovernanceSchema implements ApplicationRunner {
     @Override public void run(ApplicationArguments args) throws Exception {
         try(var connection=jdbc.getDataSource().getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
+            ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/workbench.sql"));
         }
         // Inserts only. Existing role and customer settings are never overwritten on startup.
         if(jdbc.queryForObject("SELECT COUNT(*) FROM staff_role WHERE code='ADMIN'",Long.class)==0)

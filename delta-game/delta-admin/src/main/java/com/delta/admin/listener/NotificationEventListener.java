@@ -32,6 +32,7 @@ public class NotificationEventListener {
     private final WxSubscribeMessageService wxSubscribeMessageService;
     private final WxTemplateProperties wxTemplate;
     private final BusinessSmsNotificationService businessSmsNotificationService;
+    private final com.delta.common.chat.handler.ChatWebSocketHandler socket;
 
     /** 需要同时发送微信订阅消息的事件类型 */
     private static final Set<String> WX_NOTIFY_EVENTS = Set.of(
@@ -50,7 +51,8 @@ public class NotificationEventListener {
     public void onBusinessEvent(BusinessEvent event) {
         try {
             systemNotificationService.send(event.getUserType(), event.getUserId(),
-                    event.getEventType(), event.getMessage(), event.getEventType(), event.getOrderId());
+                    noticeTitle(event.getEventType()), event.getMessage(), event.getEventType(), event.getOrderId());
+            if (event.getUserId() != null) socket.signalWorkbench(event.getUserType(), event.getUserId());
             log.debug("发送站内通知: {} -> {}:{}", event.getEventType(), event.getUserType(), event.getUserId());
         } catch (Exception e) {
             log.error("发送站内通知失败: {}", event.getEventType(), e);
@@ -83,6 +85,7 @@ public class NotificationEventListener {
             systemNotificationService.send("PLAYER", order.getPlayerId(),
                     "订单已确认", buildConfirmedMessage(order, operatorType),
                     "ORDER_CONFIRMED", order.getId());
+            socket.signalWorkbench("PLAYER", order.getPlayerId());
 
             // 微信订阅消息（订单状态模板）—— 通知主接打手
             Map<String, String> data = orderStatusData(order, confirmedStatusText(operatorType));
@@ -92,6 +95,23 @@ public class NotificationEventListener {
         } catch (Exception e) {
             log.error("订单确认通知失败", e);
         }
+    }
+
+    private String noticeTitle(String type) {
+        return switch (type) {
+            case "ORDER_PAID" -> "订单已支付";
+            case "ORDER_ASSIGNED" -> "订单已指派";
+            case "ORDER_ACCEPTED" -> "订单已接单";
+            case "ORDER_CANCELLED" -> "订单已取消";
+            case "ORDER_REFUNDED" -> "订单已退款";
+            case "ORDER_COMPLETED" -> "服务已完成";
+            case "TEAMMATE_INVITED" -> "收到组队邀请";
+            case "COMPLAINT_RESOLVED" -> "投诉处理结果";
+            case "MATERIAL_REVIEWED" -> "主页资料审核结果";
+            case "WITHDRAW_COMPLETED", "WITHDRAW_REJECTED" -> "提现审核结果";
+            case "IDENTITY_REVIEWED" -> "实名认证结果";
+            default -> "业务通知";
+        };
     }
 
     /**

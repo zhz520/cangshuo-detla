@@ -1,5 +1,6 @@
 <template><el-card v-loading="busy"><template #header><div class="toolbar"><strong>{{title}}</strong><el-button @click="load">刷新</el-button><el-button v-if="kind==='invitations'" type="primary" @click="inviteVisible=true">新增邀请链接</el-button></div></template>
 <template v-if="kind==='invitations'"><el-alert title="链接绑定创建人作为推荐人。设备限制以浏览器设备标识为依据；清理存储或更换浏览器会改变标识，疑似重复注册仍需人工审核。" :closable="false"/><el-table :data="rows"><el-table-column prop="name" label="链接名称" min-width="160"/><el-table-column prop="referrer_id" label="推荐人ID"/><el-table-column prop="registrations" label="注册数"/><el-table-column label="一机限制"><template #default="{row}">{{row.one_device?'开启':'关闭'}}</template></el-table-column><el-table-column prop="expires_at" label="有效期至" min-width="180"/><el-table-column label="操作" min-width="240"><template #default="{row}"><el-button link @click="copyInvite(row)">获取注册链接</el-button><el-button link @click="toggle(row)">{{row.enabled?'停用':'启用'}}</el-button></template></el-table-column></el-table></template>
+<div v-if="route.query.taskId" style="margin-bottom:10px">已定位待办 <el-button link @click="router.replace({query:{}})">查看全部记录</el-button></div>
 <template v-if="kind==='revisions'"><el-alert title="文本违规规则始终生效。图片/语音可自动检测或直接人工审核；自动服务未配置或不可用时转人工。人工审核通过前，公开资料保持原样。" :closable="false"/><el-table :data="rows"><el-table-column prop="nickname" label="打手" min-width="140"/><el-table-column label="状态" min-width="130"><template #default="{row}">{{status[row.status]||row.status}}</template></el-table-column><el-table-column prop="risk_reason" label="检测/审核状态" min-width="250"/><el-table-column prop="review_note" label="审核备注" min-width="150"/><el-table-column label="操作" min-width="180"><template #default="{row}"><el-button link @click="preview(row)">查看资料</el-button><el-button v-if="row.status==='PENDING_SYSTEM'" link @click="recheck(row)">重新检测</el-button><el-button v-if="row.status==='PENDING_REVIEW'" link type="primary" @click="review(row)">审核</el-button></template></el-table-column></el-table></template>
 <template v-if="kind==='privacy'"><el-table :data="rows"><el-table-column prop="user_id" label="用户ID"/><el-table-column prop="nickname" label="用户"/><el-table-column label="申请类型"><template #default="{row}">{{row.kind==='CLOSE_ACCOUNT'?'注销账号':'删除实名资料'}}</template></el-table-column><el-table-column prop="status" label="状态"/><el-table-column prop="note" label="说明" min-width="200"/><el-table-column label="操作"><template #default="{row}"><el-button v-if="row.status==='PENDING'" link @click="privacyReview(row)">处理申请</el-button></template></el-table-column></el-table></template>
 <template v-if="kind==='shifts'"><el-alert title="客服可以操作自己的上下班，并在打手管理中让打手下班；不能替打手上班。" :closable="false"/><el-table :data="rows"><el-table-column prop="nickname" label="员工"/><el-table-column label="状态"><template #default="{row}">{{row.online?'上班中':'已下班'}}</template></el-table-column><el-table-column label="操作"><template #default="{row}"><el-button v-if="Number(row.id)===Number(me.adminId)||me.role==='admin'" link @click="shift(row)">{{row.online?'下班':'上班'}}</el-button></template></el-table-column></el-table></template>
@@ -8,7 +9,8 @@
 </el-card></template>
 <script setup>
 import {ref,reactive,computed,watch,onMounted} from 'vue'
-import {useRoute} from 'vue-router'
+import {useRoute,useRouter} from 'vue-router'
+const router=useRouter()
 import request from '@/utils/request'
 import {getUserInfo} from '@/utils/auth'
 import {ElMessage,ElMessageBox} from 'element-plus'
@@ -16,7 +18,7 @@ const route=useRoute(),kind=computed(()=>route.meta.governance),title=computed((
 const invite=reactive({name:'',oneDevice:true,expiresAt:null}),decision=reactive({approved:true,note:'',violation:false})
 const status={PENDING_SYSTEM:'待系统检测',PENDING_REVIEW:'待人工审核',APPROVED:'已通过',REJECTED:'已驳回'}
 const images=computed(()=>[payload.value.avatar,payload.value.coverImage,...(payload.value.albumImages||[])].filter(Boolean))
-async function load(){busy.value=true;try{rows.value=(await request.get(kind.value==='privacy'?'/admin/privacy/requests':'/cs/governance/'+kind.value)).data}finally{busy.value=false}}
+async function load(){busy.value=true;try{rows.value=(await request.get(kind.value==='privacy'?'/admin/privacy/requests':'/cs/governance/'+kind.value,{params:{taskId:route.query.taskId}})).data}finally{busy.value=false}}
 async function createInvite(){saving.value=true;try{await request.post('/cs/governance/invitations',invite);inviteVisible.value=false;await load()}finally{saving.value=false}}
 async function copyInvite(row){const {value}=await ElMessageBox.prompt('填写该客户的H5首页地址。','生成注册链接',{inputPlaceholder:'https://客户H5域名/'});let url;try{url=new URL(value);if(!['https:','http:'].includes(url.protocol))throw new Error()}catch{ElMessage.error('请输入正确的H5地址');return}const link=url.origin+url.pathname.replace(/\/$/,'')+'/#/pages-player/apply/index?invite='+row.token;try{await navigator.clipboard.writeText(link);ElMessage.success('注册链接已复制')}catch{await ElMessageBox.prompt('请复制注册链接','注册链接',{inputValue:link})}}
 async function toggle(row){await request.put('/cs/governance/invitations/'+row.token,{enabled:!row.enabled});await load()}
@@ -26,6 +28,6 @@ async function submitReview(){saving.value=true;try{await request.put('/cs/gover
 async function recheck(row){await request.post('/cs/governance/revisions/'+row.id+'/recheck');await load()}
 async function privacyReview(row){const {value}=await ElMessageBox.prompt('填写处理说明。批准注销将清除个人资料并撤销登录；未完成业务或余额会阻止注销。','处理隐私申请',{inputPattern:/.+/,inputErrorMessage:'请填写说明'});let approved=true;try{await ElMessageBox.confirm('批准此申请？','审核决定',{confirmButtonText:'批准',cancelButtonText:'驳回',distinguishCancelAndClose:true})}catch(action){if(action==='close')return;approved=false}await request.put('/admin/privacy/requests/'+row.id,{approved,note:value});await load()}
 async function shift(row){await request.put('/cs/governance/shifts/'+row.id,{online:!row.online});await load()}
-watch(kind,load);onMounted(load)
+watch([kind,()=>route.query.taskId],load,{immediate:true})
 </script>
 <style scoped>.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.toolbar strong{margin-right:auto}.el-alert{margin-bottom:18px}.media-preview{display:flex;gap:12px;flex-wrap:wrap}.media-preview .el-image{width:130px;height:130px}.media-preview audio{max-width:100%}.story{white-space:pre-wrap}.el-date-editor{max-width:100%}</style>

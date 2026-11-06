@@ -27,7 +27,7 @@ export function request(options) {
   const role = options.role || getCurrentRole()
   // Only coalesce simultaneous reads, never cache responses or combine writes.
   if ((options.method || 'GET') !== 'GET') { readGeneration++; return performRequest(options) }
-  const key = JSON.stringify([readGeneration, options.url, options.data || {}, role, options.auth === false ? '' : getTokenByRole(role), options.header || {}, options.loading !== false])
+  const key = JSON.stringify([readGeneration, options.url, options.data || {}, role, options.auth === false ? '' : getTokenByRole(role), options.header || {}, options.loading !== false, options.redirectOnUnauthorized !== false])
   if (pendingReads.has(key)) return pendingReads.get(key)
   const task = performRequest(options).finally(() => { if (pendingReads.get(key) === task) pendingReads.delete(key) })
   pendingReads.set(key, task)
@@ -44,7 +44,8 @@ function performRequest(options) {
     role,
     header = {},
     timeout = 20000,
-    silent = false
+    silent = false,
+    redirectOnUnauthorized = true
   } = options
 
   return new Promise((resolve, reject) => {
@@ -99,7 +100,7 @@ function performRequest(options) {
           } else if (resData?.code === 401) {
             // token失效
             finishLoading()
-            handleUnauthorized(currentRole, requestToken)
+            if (redirectOnUnauthorized) handleUnauthorized(currentRole, requestToken)
             reject(resData)
           } else {
             // 业务错误
@@ -109,7 +110,7 @@ function performRequest(options) {
           }
         } else if (statusCode === 401) {
           finishLoading()
-          handleUnauthorized(currentRole, requestToken)
+          if (redirectOnUnauthorized) handleUnauthorized(currentRole, requestToken)
           reject(resData)
         } else {
           finishLoading()

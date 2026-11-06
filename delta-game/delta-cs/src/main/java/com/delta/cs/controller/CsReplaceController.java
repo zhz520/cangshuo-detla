@@ -39,9 +39,10 @@ public class CsReplaceController {
     private final CrossModuleMapper crossModuleMapper;
 
     @GetMapping("/list")
-    public R<Page<PlayerReplaceRequest>> list(PageQuery query,
+    public R<Page<PlayerReplaceRequest>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                                @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<PlayerReplaceRequest> w = new LambdaQueryWrapper<PlayerReplaceRequest>()
+                .eq(taskId != null, PlayerReplaceRequest::getId, taskId)
                 .eq(status != null && !status.isEmpty(), PlayerReplaceRequest::getStatus, status)
                 .orderByDesc(PlayerReplaceRequest::getCreatedAt);
         Page<PlayerReplaceRequest> page = replaceRequestService.page(

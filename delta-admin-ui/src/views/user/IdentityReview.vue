@@ -3,7 +3,8 @@
     <el-card v-loading="loading">
       <template #header><div class="toolbar"><strong>实名认证审核</strong><div><el-select v-model="status" clearable placeholder="全部状态" style="width:140px" @change="load"><el-option label="待审核" value="PENDING" /><el-option label="已通过" value="APPROVED" /><el-option label="已驳回" value="REJECTED" /></el-select><el-button @click="load">刷新</el-button></div></div></template>
       <el-alert title="证件照片仅供实名审核，审核完成后自动清除；证件号码仅保存不可逆摘要和脱敏号码。" type="info" :closable="false" />
-      <el-table :data="rows" stripe>
+      <div v-if="route.query.taskId" style="margin-bottom:10px">已定位实名待办 <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
+    <el-table :data="rows" stripe>
         <el-table-column prop="user_id" label="用户ID" width="90" />
         <el-table-column prop="nickname" label="用户昵称" min-width="130" />
         <el-table-column prop="real_name" label="姓名" min-width="120" />
@@ -41,6 +42,10 @@
 </template>
 
 <script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { watch } from 'vue'
+const route = useRoute()
+const router = useRouter()
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getIdentityApplication, getIdentityApplications, reviewIdentityApplication } from '@/api/identity'
@@ -50,10 +55,10 @@ const decision=reactive({approved:true,note:''})
 const labels={PENDING:'待审核',APPROVED:'已通过',REJECTED:'已驳回'}
 const tag=value=>value==='APPROVED'?'success':value==='REJECTED'?'danger':'warning'
 
-async function load(){loading.value=true;try{rows.value=(await getIdentityApplications({status:status.value})).data||[]}finally{loading.value=false}}
+async function load(){loading.value=true;try{rows.value=(await getIdentityApplications({status:route.query.taskId ? '' : status.value,taskId:route.query.taskId})).data||[]}finally{loading.value=false}}
 async function open(row){visible.value=true;detail.value=null;requestedUserId.value=Number(row.user_id);detailLoading.value=true;decision.approved=true;decision.note='';try{const loaded=(await getIdentityApplication(row.user_id)).data;if(Number(loaded?.user_id)===requestedUserId.value)detail.value=loaded}finally{detailLoading.value=false}}
 async function submit(){if(detailLoading.value||!detail.value||Number(detail.value.user_id)!==requestedUserId.value)return ElMessage.warning('资料尚未加载完成');if(!decision.approved&&!decision.note.trim())return ElMessage.warning('驳回时必须填写原因');saving.value=true;try{await reviewIdentityApplication(detail.value.user_id,{approved:decision.approved,note:decision.note});visible.value=false;await load();ElMessage.success('审核结果已保存')}finally{saving.value=false}}
-onMounted(load)
+watch(() => route.query.taskId, load, { immediate: true })
 </script>
 
 <style scoped>

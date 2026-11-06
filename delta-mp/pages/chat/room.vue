@@ -86,6 +86,7 @@
   </view>
 </template>
 <script setup>
+import { useRemindStore } from '@/store/remind'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed, watch, nextTick, getCurrentInstance, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
@@ -312,7 +313,7 @@ onLoad(async (opts) => {
   if (appStore.role === 'player' && !playerStore.playerInfo) await playerStore.fetchProfile()
   chatStore.setCurrentSession(sid)
   await loadMessages()
-  markMessageRead(sid, USER_CHAT_OPTS).catch(() => {})
+  markMessageRead(sid, USER_CHAT_OPTS).then(() => useRemindStore().changed()).catch(() => {})
   // 确保 WebSocket 已连接（App.vue 启动时已连，这里是兜底）
   chatStore.connect(USER_CHAT_OPTS)
 })

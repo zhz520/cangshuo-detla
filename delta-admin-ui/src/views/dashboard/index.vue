@@ -2,8 +2,9 @@
   <div class="dashboard" :aria-busy="loading || userLoading || playerLoading">
     <div class="dashboard-heading">
       <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
-      <el-button :loading="loading" @click="fetchDashboard">刷新概览</el-button>
+      <el-button :loading="loading" @click="refreshOverview">刷新概览</el-button>
     </div>
+    <WorkbenchCard />
     <LoadFeedback :loading="loading" :error="dashboardError" label="概览" @retry="fetchDashboard" />
     <!-- ==================== 管理员仪表盘 ==================== -->
     <template v-if="isAdmin">
@@ -54,47 +55,6 @@
             <div class="stat-info">
               <div class="stat-value">{{ stats.todayNewPlayers ?? '-' }}</div>
               <div class="stat-label">今日新增打手</div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 待办事项 -->
-      <div class="section-label">待办事项</div>
-      <el-row :gutter="16">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': stats.pendingComplaints > 0 }">
-            <div class="stat-icon bg-red"><el-icon :size="28"><Warning /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-danger">{{ stats.pendingComplaints ?? '-' }}</div>
-              <div class="stat-label">待处理投诉</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': stats.pendingWithdraws > 0 }">
-            <div class="stat-icon bg-orange"><el-icon :size="28"><Wallet /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-warning">{{ stats.pendingWithdraws ?? '-' }}</div>
-              <div class="stat-label">待审核提现</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-icon bg-yellow"><el-icon :size="28"><Clock /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-warning">{{ stats.pendingAssign ?? '-' }}</div>
-              <div class="stat-label">待指派订单</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-icon bg-blue"><el-icon :size="28"><Loading /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-primary">{{ stats.inProgress ?? '-' }}</div>
-              <div class="stat-label">进行中订单</div>
             </div>
           </el-card>
         </el-col>
@@ -227,47 +187,6 @@
     <!-- ==================== 客服工作台 ==================== -->
     <template v-else>
 
-      <!-- 待办事项 -->
-      <div class="section-label">待办事项</div>
-      <el-row :gutter="16">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': stats.pendingAssign > 0 }">
-            <div class="stat-icon bg-yellow"><el-icon :size="28"><Clock /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-warning">{{ stats.pendingAssign ?? '-' }}</div>
-              <div class="stat-label">待指派订单</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': stats.pendingComplaints > 0 }">
-            <div class="stat-icon bg-red"><el-icon :size="28"><Warning /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-danger">{{ stats.pendingComplaints ?? '-' }}</div>
-              <div class="stat-label">待处理投诉</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-icon bg-orange"><el-icon :size="28"><EditPen /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-warning">{{ stats.processingComplaints ?? '-' }}</div>
-              <div class="stat-label">进行中仲裁</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-icon bg-purple"><el-icon :size="28"><ChatDotRound /></el-icon></div>
-            <div class="stat-info">
-              <div class="stat-value text-primary">{{ stats.pendingChatSessions ?? '-' }}</div>
-              <div class="stat-label">待回复会话</div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
       <!-- 今日统计 -->
       <div class="section-label">今日统计</div>
       <el-row :gutter="16">
@@ -363,6 +282,10 @@
 </template>
 
 <script setup>
+import WorkbenchCard from '@/components/WorkbenchCard.vue'
+import { useWorkbenchStore } from '@/stores/workbench'
+const workbench = useWorkbenchStore()
+function refreshOverview() { workbench.refresh(); fetchDashboard() }
 import { useResponsive } from '@/utils/responsive'
 import { computed, onMounted } from 'vue'
 import { useLoadTask } from '@/composables/useLoadTask'

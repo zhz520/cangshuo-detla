@@ -1,5 +1,6 @@
 <template>
   <view class="replace-list tab-page">
+    <view v-if="taskId" style="padding:12rpx 24rpx" @click="clearTask">正在查看待办 #{{ taskId }} · 查看全部</view>
     <scroll-view scroll-x class="filter-bar">
       <view class="filter-item" :class="{active: !statusFilter}" @click="filterStatus('')">全部</view>
       <view class="filter-item" :class="{active: statusFilter==='PENDING'}" @click="filterStatus('PENDING')">待审核</view>
@@ -127,7 +128,9 @@
 <script setup>
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+const taskId = ref('')
+onLoad(options => { taskId.value = /^\d{1,19}$/.test(options?.taskId || '') ? options.taskId : '' })
 import StatusTag from '@/components/StatusTag.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -158,6 +161,7 @@ const maxConcurrent = ref(5)
 
 const remindStore = useRemindStore()
 
+function clearTask() { taskId.value = ''; refresh() }
 onShow(() => {
   remindStore.fetchCsRemind()
   refresh()
@@ -171,7 +175,7 @@ async function loadData() {
   const params = { pageNum: pageNum.value, pageSize: 20 }
   if (statusFilter.value) params.status = statusFilter.value
   try {
-    const res = await getCsReplaceList(params)
+    const res = await getCsReplaceList({ ...params, taskId: taskId.value })
     const list = res.data?.records || []
     if (list.length < 20) finished.value = true
     replaces.value = pageNum.value === 1 ? list : [...replaces.value, ...list]

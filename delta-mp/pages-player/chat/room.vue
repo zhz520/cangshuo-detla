@@ -54,6 +54,7 @@
   </view>
 </template>
 <script setup>
+import { useRemindStore } from '@/store/remind'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed, watch, nextTick, getCurrentInstance, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
@@ -257,7 +258,7 @@ onLoad(async (opts) => {
   if (!playerStore.playerInfo) await playerStore.fetchProfile()
   chatStore.setCurrentSession(sid)
   await loadMessages()
-  markMessageRead(sid, PLAYER_CHAT_OPTS).catch(() => {})
+  markMessageRead(sid, PLAYER_CHAT_OPTS).then(() => useRemindStore().changed()).catch(() => {})
   chatStore.connect(PLAYER_CHAT_OPTS)
 })
 

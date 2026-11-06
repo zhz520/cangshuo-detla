@@ -1,34 +1,7 @@
 <template>
   <view class="cs-dashboard tab-page">
     <scroll-view scroll-y class="dashboard-scroll tab-page-scroll" :show-scrollbar="false">
-      <!-- 待办提醒 -->
-      <view class="section">
-        <view class="stat-cards">
-          <view class="card alert" @click="go('/pages-cs/order/list')">
-            <text class="num">{{data.pendingAssign||0}}</text>
-            <text class="label">待指派订单</text>
-          </view>
-          <view class="card alert" @click="go('/pages-cs/complaint/list')">
-            <text class="num">{{data.pendingComplaints||0}}</text>
-            <text class="label">待处理投诉</text>
-          </view>
-        </view>
-        <view class="stat-cards">
-          <view class="card">
-            <text class="num">{{data.inProgress||0}}</text>
-            <text class="label">进行中订单</text>
-          </view>
-          <view class="card">
-            <text class="num">{{data.processingComplaints||0}}</text>
-            <text class="label">仲裁处理中</text>
-          </view>
-          <view class="card">
-            <text class="num">{{data.pendingChatSessions||0}}</text>
-            <text class="label">待回复会话</text>
-          </view>
-        </view>
-      </view>
-
+      <WorkbenchEntry title="今日待办" />
       <!-- 今日数据 -->
       <view class="section">
         <text class="section-title">今日数据</text>
@@ -68,25 +41,6 @@
       </view>
 
       <!-- 待指派订单预览 -->
-      <view class="section" v-if="pendingOrders.length > 0">
-        <view class="section-header">
-          <text class="section-title">待指派订单</text>
-          <text class="section-more" @click="go('/pages-cs/order/list')">查看全部 ›</text>
-        </view>
-        <view class="order-list">
-          <view class="order-item" v-for="o in pendingOrders" :key="o.id" @click="go('/pages-cs/order/detail?id=' + o.id)">
-            <view class="order-top">
-              <text class="order-name">{{o.productName}}</text>
-              <text class="order-amount">¥{{o.amount}}</text>
-            </view>
-            <view class="order-bottom">
-              <text class="order-no">{{o.orderNo}}</text>
-              <text class="order-time">{{formatTime(o.createdAt)}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
       <!-- 快捷入口 -->
       <view class="section">
         <text class="section-title">快捷入口</text>
@@ -127,6 +81,7 @@
 </template>
 
 <script setup>
+import WorkbenchEntry from '@/components/WorkbenchEntry.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -135,10 +90,6 @@ import { useRemindStore } from '@/store/remind'
 
 const data = ref({})
 const remindStore = useRemindStore()
-const pendingOrders = computed(() => {
-  const list = data.value.pendingOrders
-  return Array.isArray(list) ? list : []
-})
 
 onShow(async () => {
   try {

@@ -1,6 +1,5 @@
 package com.delta.message.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
@@ -30,21 +29,8 @@ public class MessageController {
     public R<Page<SystemNotification>> list(PageQuery query,
                                             @RequestParam(value = "type", required = false) String type,
                                             @RequestParam(value = "userType", required = false) String userType) {
-        String resolvedType = type != null ? type : userType;
-        String receiverType = resolveReceiverType();
-        Long receiverId = SecurityUtils.getUserId();
-        LambdaQueryWrapper<SystemNotification> w = new LambdaQueryWrapper<SystemNotification>()
-                .eq(SystemNotification::getReceiverType, receiverType)
-                .orderByDesc(SystemNotification::getCreatedAt);
-        if ("CS".equals(receiverType)) {
-            w.and(q -> q.eq(SystemNotification::getReceiverId, 0).or().eq(SystemNotification::getReceiverId, receiverId));
-        } else {
-            w.eq(SystemNotification::getReceiverId, receiverId);
-        }
-        if (resolvedType != null && !resolvedType.isEmpty()) {
-            w.eq(SystemNotification::getBizType, resolvedType);
-        }
-        return R.ok(systemNotificationService.page(new Page<>(query.getPageNum(), query.getPageSize()), w));
+        return R.ok(systemNotificationService.inbox(resolveReceiverType(), SecurityUtils.getUserId(),
+                query.getPageNum(), query.getPageSize(), type != null ? type : userType));
     }
 
     /** 系统通知未读数（原 message/unread-count） */
@@ -78,15 +64,8 @@ public class MessageController {
 
     @PostMapping("/read/{id}")
     public R<Void> markRead(@PathVariable Long id) {
-        SystemNotification existing=systemNotificationService.getById(id);
-        String type=resolveReceiverType();
-        if(existing==null || !type.equals(existing.getReceiverType()) || !SecurityUtils.getUserId().equals(existing.getReceiverId()))
-            return R.fail(404,"通知不存在");
-        SystemNotification n = new SystemNotification();
-        n.setId(id);
-        n.setIsRead(1);
-        systemNotificationService.updateById(n);
-        return R.ok();
+        return systemNotificationService.markRead(resolveReceiverType(), SecurityUtils.getUserId(), id)
+                ? R.ok() : R.fail(404, "通知不存在");
     }
 
     @PostMapping("/read-all")

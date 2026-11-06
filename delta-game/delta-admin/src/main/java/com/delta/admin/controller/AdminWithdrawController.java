@@ -37,9 +37,10 @@ public class AdminWithdrawController {
     private final ApplicationEventPublisher eventPublisher;
 
     @GetMapping("/list")
-    public R<Page<Withdraw>> list(PageQuery query, @RequestParam(value = "status", required = false) String status) {
+    public R<Page<Withdraw>> list(PageQuery query, @RequestParam(required = false) Long taskId, @RequestParam(value = "status", required = false) String status) {
         Page<Withdraw> page = withdrawService.page(new Page<>(query.getPageNum(), query.getPageSize()),
-                new LambdaQueryWrapper<Withdraw>().eq(status != null && !status.isEmpty(), Withdraw::getStatus, status)
+                new LambdaQueryWrapper<Withdraw>()
+                .eq(taskId != null, Withdraw::getId, taskId).eq(status != null && !status.isEmpty(), Withdraw::getStatus, status)
                         .orderByDesc(Withdraw::getCreatedAt));
         // 填充打手信息和收款账户信息
         for (Withdraw w : page.getRecords()) {

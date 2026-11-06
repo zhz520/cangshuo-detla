@@ -1,6 +1,7 @@
 <script setup>
 import { clientStorage } from '@/utils/client-storage'
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+import { watch } from 'vue'
 import { useAppStore } from '@/store/app'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
@@ -11,6 +12,8 @@ import { getTokenByRole } from '@/utils/auth'
 // #ifdef H5
 import { installViewportAdapter } from '@/utils/viewport'
 // #endif
+
+let foreground = true
 
 function shouldConnectChat() {
   const role = clientStorage.get('app_role') || 'user'
@@ -25,11 +28,7 @@ function syncRemindPolling() {
     remindStore.clear()
     return
   }
-  if (appStore.role === 'cs' || appStore.role === 'player') {
-    remindStore.startPolling(appStore.role)
-    return
-  }
-  remindStore.stopPolling()
+  remindStore.startPolling(appStore.role)
 }
 
 onLaunch(() => {
@@ -50,6 +49,7 @@ onLaunch(() => {
 
   siteStore.fetchSiteConfig()
   appStore.restoreRole()
+  watch(() => [appStore.role, userStore.token], () => { if (foreground) syncRemindPolling() })
 
   if (userStore.token) {
     userStore.fetchProfile()
@@ -64,6 +64,7 @@ onLaunch(() => {
 })
 
 onShow(() => {
+  foreground = true
   const userStore = useUserStore()
   userStore.syncSessionFromStorage()
   const chatStore = useChatStore()
@@ -75,7 +76,7 @@ onShow(() => {
   syncRemindPolling()
 })
 
-onHide(() => { useRemindStore().stopPolling(); useChatStore().pausePolling() })
+onHide(() => { foreground = false; useRemindStore().stopPolling(); useChatStore().pausePolling() })
 </script>
 
 <style lang="scss">

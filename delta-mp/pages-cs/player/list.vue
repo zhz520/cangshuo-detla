@@ -1,5 +1,6 @@
 <template>
   <view class="player-list">
+    <view v-if="taskId" style="padding:12rpx 24rpx" @click="clearTask">正在查看待办 #{{ taskId }} · 查看全部</view>
     <view class="search-bar">
       <input v-model="keyword" placeholder="搜索接单员昵称/手机号" class="search-input" @confirm="refresh" />
     </view>
@@ -60,7 +61,9 @@
 <script setup>
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+const taskId = ref('')
+onLoad(options => { taskId.value = /^\d{1,19}$/.test(options?.taskId || '') ? options.taskId : '' })
 import EmptyState from '@/components/EmptyState.vue'
 import { getCsPlayerList, freezeCsPlayer } from '@/pages-cs/api/cs'
 
@@ -82,6 +85,7 @@ const showFreezeModal = ref(false)
 const freezeTarget = ref(null)
 const freezeHours = ref(24)
 
+function clearTask() { taskId.value = ''; refresh() }
 onShow(() => { refresh() })
 
 function filterStatus(s) { statusFilter.value = s; refresh() }
@@ -91,7 +95,7 @@ async function loadData() {
   const params = { pageNum: pageNum.value, pageSize: 20 }
   if (keyword.value) params.keyword = keyword.value
   if (statusFilter.value) params.status = statusFilter.value
-  const res = await getCsPlayerList(params)
+  const res = await getCsPlayerList({ ...params, taskId: taskId.value })
   const list = res.data?.records || []
   if (list.length < 20) finished.value = true
   players.value = pageNum.value === 1 ? list : [...players.value, ...list]

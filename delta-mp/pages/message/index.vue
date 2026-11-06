@@ -24,7 +24,8 @@ import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
 import { getMessageList, markRead, markAllRead } from '@/api/message'
-import { useChatStore } from '@/store/chat'
+import { useRemindStore } from '@/store/remind'
+import { getCurrentRole } from '@/utils/auth'
 
 const messages = ref([])
 const pageNum = ref(1)
@@ -32,26 +33,37 @@ const loading = ref(false)
 const finished = ref(false)
 
 onLoad(() => { loadData() })
-onShow(() => { useChatStore().fetchMessageUnreadCount() })
+onShow(() => { useRemindStore().refresh() })
 async function loadData() {
   loading.value = true
   const params = { pageNum: pageNum.value, pageSize: 20 }
-  const res = await getMessageList(params)
-  const list = res.data?.records || []
-  if (list.length < 20) finished.value = true
-  messages.value = pageNum.value === 1 ? list : [...messages.value, ...list]
-  loading.value = false
+  try {
+    const res = await getMessageList(params)
+    const list = res.data?.records || []
+    if (list.length < 20) finished.value = true
+    messages.value = pageNum.value === 1 ? list : [...messages.value, ...list]
+  } catch {
+    if (pageNum.value > 1) pageNum.value--
+  } finally { loading.value = false }
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 async function onTap(m) {
-  if (!m.isRead) { await markRead(m.id); m.isRead = 1 }
-  // 导航到对应页面
-  if (m.type === 'ORDER' && m.relatedId) {
-    uni.navigateTo({ url: `/pages/order/detail?id=${m.relatedId}` })
+  if (!m.isRead) { await markRead(m.id); m.isRead = 1; useRemindStore().changed() }
+  const role = getCurrentRole()
+  const type = m.bizType
+  const relatedId = encodeURIComponent(m.relatedId || '')
+  let url = ''
+  if (type === 'IDENTITY_REVIEWED' && role === 'user') url = '/pages/mine/identity'
+  if (type === 'MATERIAL_REVIEWED' && role === 'player') url = '/pages-player/profile/introduction'
+  if (['WITHDRAW_COMPLETED', 'WITHDRAW_REJECTED'].includes(type) && role === 'player') url = '/pages-player/withdraw/list'
+  if (type === 'TEAMMATE_INVITED' && role === 'player') url = '/pages-player/invite/list?orderId=' + relatedId
+  if (relatedId && type?.startsWith('ORDER_')) {
+    const prefix = { user: '/pages', player: '/pages-player', cs: '/pages-cs' }[role]
+    if (prefix) url = prefix + '/order/detail?id=' + relatedId
   }
+  if (url) uni.navigateTo({ url })
 }
 
-const chatStore = useChatStore()
 async function markAllReadClick() {
   try {
     const role = clientStorage.get('app_role') || 'user'
@@ -59,7 +71,7 @@ async function markAllReadClick() {
     await markAllRead(userType)
     uni.showToast({ title: '已全部标为已读', icon: 'none' })
     messages.value.forEach(m => { m.isRead = 1 })
-    chatStore.fetchMessageUnreadCount()
+    useRemindStore().changed()
   } catch (e) {
     uni.showToast({ title: '操作失败', icon: 'none' })
   }

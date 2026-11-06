@@ -28,7 +28,7 @@ public class GovernanceController {
     @GetMapping("/player/homepage/revisions") public R<List<Map<String,Object>>> history(){return R.ok(governance.history(SecurityUtils.getUserId()));}
     @GetMapping("/cs/governance/revisions")
     @PreAuthorize("@staffPermissions.allowed('media.review')")
-    public R<List<Map<String,Object>>> revisions(){return R.ok(jdbc.queryForList("SELECT r.*,p.nickname FROM player_homepage_revision r LEFT JOIN player p ON p.id=r.player_id ORDER BY r.created_at DESC LIMIT 300"));}
+    public R<List<Map<String,Object>>> revisions(@RequestParam(required = false) String taskId){return R.ok(jdbc.queryForList("SELECT r.*,p.nickname FROM player_homepage_revision r LEFT JOIN player p ON p.id=r.player_id WHERE (? IS NULL OR r.id=?) ORDER BY r.created_at DESC LIMIT 300",taskId,taskId));}
     public record Review(boolean approved,@Size(max=500) String note,boolean violation){}
     @PutMapping("/cs/governance/revisions/{id}")
     @PreAuthorize("@staffPermissions.allowed('media.review')")

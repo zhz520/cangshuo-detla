@@ -51,6 +51,20 @@ public class PlatformRemote {
         result.put("installerAvailable",installerAvailable);
         return result;
     }
+    /** Read the locally synchronized release catalog without contacting the authority. */
+    public synchronized String pendingReleaseVersion() {
+        if (cached == null) {
+            try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
+            catch(Exception ignored) {}
+        }
+        if (cached == null) return null;
+        String latest = null;
+        for (var item : currentUpdates(cached.path("updates"), effectiveVersion()).path("releases")) {
+            String version = item.path("version").asText();
+            if (latest == null || compare(version, latest) > 0) latest = version;
+        }
+        return latest;
+    }
     public synchronized Map<String, JsonNode> commercialModules() {
         if (cached == null) {
             try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }

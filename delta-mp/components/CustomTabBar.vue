@@ -24,7 +24,6 @@ import AppImage from '@/components/AppImage.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { useAppStore } from '@/store/app'
-import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 import { ROLE_TABS } from '@/utils/role'
@@ -34,7 +33,6 @@ const props = defineProps({
 })
 
 const appStore = useAppStore()
-const chatStore = useChatStore()
 const remindStore = useRemindStore()
 const siteStore = useSiteStore()
 const safeBottom = ref(0)
@@ -59,15 +57,13 @@ const currentIndex = computed(() => {
 /** 我的 tab 是否有系统消息未读（显示小红点） */
 const mineRedDot = computed(() => {
   const role = appStore.role
-  if (role === 'user') return (chatStore.messageUnreadCount || 0) > 0
-  return (remindStore.systemUnread || 0) > 0
+  return remindStore.systemUnread > 0 || (role !== 'cs' && remindStore.workbenchUnread > 0)
 })
 
 function badgeCount(tab) {
   const role = appStore.role
   if (tab.text === '消息') {
-    if (role === 'user') return chatStore.totalUnreadCount
-    if (role === 'cs' || role === 'player') return remindStore.messageUnread
+    return remindStore.messageUnread
   }
   if (role === 'cs' && tab.text === '投诉') return remindStore.complaintUnread
   return 0
@@ -79,7 +75,7 @@ function tabBadgeCount(tab) {
 
 function tabRedDot(tab) {
   if (tab.text === '我的') return mineRedDot.value
-  if (appStore.role === 'cs' && tab.text === '工作台') return (remindStore.relayUnread || 0) > 0
+  if (appStore.role === 'cs' && tab.text === '工作台') return remindStore.workbenchUnread > 0
   return false
 }
 

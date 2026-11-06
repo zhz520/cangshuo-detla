@@ -1,102 +1,88 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { getCsRemind } from '@/api/cs'
-import { getPlayerRemind } from '@/api/player'
+import { computed, ref } from 'vue'
+import { getWorkbench } from '@/api/workbench'
+import { getCurrentRole, getTokenByRole } from '@/utils/auth'
 import { playMessageNotification } from '@/utils/notificationFeedback'
 
-/** 客服/接单员端提醒红点数据（用户端系统通知用 chatStore.messageUnreadCount） */
 export const useRemindStore = defineStore('remind', () => {
-  const complaintUnread = ref(0)
-  const relayUnread = ref(0)
-  const replaceUnread = ref(0)
-  const messageUnread = ref(0)
-  const systemUnread = ref(0)
-  const inviteCount = ref(0)
-  let pollTimer = null
-  let pollingRole = ''
-  let lastRelayUnread = null
+  const summary = ref(null)
+  const categories = computed(() => summary.value?.categories || [])
+  const count = (kind, key = 'unread') => categories.value.find(item => item.kind === kind)?.[key] || 0
+  const complaintUnread = computed(() => count('COMPLAINT'))
+  const relayUnread = computed(() => count('RELAY'))
+  const replaceUnread = computed(() => count('REPLACE'))
+  const inviteCount = computed(() => count('INVITE', 'pending'))
+  const messageUnread = computed(() => summary.value?.chatUnread || 0)
+  const systemUnread = computed(() => summary.value?.systemUnread || 0)
+  const workbenchUnread = computed(() => summary.value?.unread || 0)
+  let timer
+  let refreshTimer
+  let identity = ''
+  let pending
+  let generation = 0
 
-  async function fetchCsRemind(options = {}) {
-    const notifyIncrease = options.notifyIncrease === true
-    try {
-      const res = await getCsRemind({ loading: false, silent: true })
-      const d = res.data || {}
-      const nextRelayUnread = d.relayUnread ?? 0
-      if (notifyIncrease && lastRelayUnread !== null && nextRelayUnread > lastRelayUnread) {
+  function refresh(role = getCurrentRole()) {
+    const token = getTokenByRole(role)
+    if (!token || role !== getCurrentRole()) return Promise.resolve()
+    const key = role + ':' + token
+    if (identity !== key) {
+      generation++
+      identity = key
+      pending = null
+      summary.value = null
+    }
+    if (pending) return pending
+    const current = generation
+    pending = getWorkbench(role).then(res => {
+      if (current !== generation || role !== getCurrentRole() || token !== getTokenByRole(role)) return
+      const previous = count('RELAY', 'pending')
+      const next = res.data?.categories?.find(item => item.kind === 'RELAY')?.pending || 0
+      if (role === 'cs' && summary.value && next > previous) {
         playMessageNotification()
         uni.showToast({ title: '收到新的接力申请', icon: 'none' })
       }
-      complaintUnread.value = d.complaintUnread ?? 0
-      relayUnread.value = nextRelayUnread
-      replaceUnread.value = d.replaceUnread ?? 0
-      messageUnread.value = d.messageUnread ?? 0
-      systemUnread.value = d.systemUnread ?? 0
-      lastRelayUnread = nextRelayUnread
-    } catch (_) {
-      // Retain the last known badges during a transient network failure.
-    }
+      summary.value = res.data
+    }).catch(error => {
+      if (current === generation && error?.code === 401) { summary.value = null; stopPolling() }
+      // Preserve the last confirmed badges during a network interruption.
+    }).finally(() => { if (current === generation) pending = null })
+    return pending
   }
 
-  async function fetchPlayerRemind() {
-    try {
-      const res = await getPlayerRemind({ loading: false, silent: true })
-      const d = res.data || {}
-      inviteCount.value = d.inviteCount ?? 0
-      systemUnread.value = d.systemUnread ?? 0
-      messageUnread.value = d.messageUnread ?? 0
-    } catch (_) {
-      // Retain the last known badges during a transient network failure.
-    }
+  function changed() {
+    clearTimeout(refreshTimer)
+    refreshTimer = setTimeout(async () => {
+      if (pending) await pending
+      refresh()
+    }, 250)
   }
 
   function startPolling(role) {
-    if (pollTimer && pollingRole === role) return
+    const token = getTokenByRole(role)
+    if (!token) return clear()
+    if (timer && identity === role + ':' + token) return
     stopPolling()
-
-    if (role === 'cs') {
-      pollingRole = role
-      fetchCsRemind()
-      pollTimer = setInterval(() => fetchCsRemind({ notifyIncrease: true }), 15000)
-      return
-    }
-
-    if (role === 'player') {
-      pollingRole = role
-      fetchPlayerRemind()
-      pollTimer = setInterval(fetchPlayerRemind, 15000)
-    }
+    refresh(role)
+    timer = setInterval(() => refresh(role), 20000)
   }
 
   function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-    }
-    pollingRole = ''
+    clearInterval(timer)
+    clearTimeout(refreshTimer)
+    timer = refreshTimer = null
   }
 
   function clear() {
     stopPolling()
-    complaintUnread.value = 0
-    relayUnread.value = 0
-    replaceUnread.value = 0
-    messageUnread.value = 0
-    systemUnread.value = 0
-    inviteCount.value = 0
-    lastRelayUnread = null
+    generation++
+    identity = ''
+    pending = null
+    summary.value = null
   }
 
   return {
-    complaintUnread,
-    relayUnread,
-    replaceUnread,
-    messageUnread,
-    systemUnread,
-    inviteCount,
-    fetchCsRemind,
-    fetchPlayerRemind,
-    startPolling,
-    stopPolling,
-    clear
+    summary, count, complaintUnread, relayUnread, replaceUnread, inviteCount, messageUnread, systemUnread, workbenchUnread,
+    refresh, changed, fetchCsRemind: () => refresh('cs'), fetchPlayerRemind: () => refresh('player'),
+    startPolling, stopPolling, clear
   }
 })
