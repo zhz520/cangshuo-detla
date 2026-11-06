@@ -80,6 +80,8 @@ test('formal login and logout clear any previous guest session', async () => {
   const list = await read('pages/order/list.vue')
   assert.match(card, /ownerActions/)
   assert.match(list, /canUseOwnerActions/)
+  const mine = await read('pages/mine/index.vue')
+  assert.match(mine, /if \(userStore\.isLoggedIn\) officialWechat\.load\('user'\)/)
 })
 
 test('the player directory tab and direct pages respect the display switch', async () => {

@@ -114,7 +114,7 @@ const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJE
 // 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
   userStore.syncSessionFromStorage()
-  officialWechat.load('user')
+  if (userStore.isLoggedIn) officialWechat.load('user')
   const savedToken = getUserToken()
   if (savedToken && !userStore.token) {
     userStore.token = savedToken
