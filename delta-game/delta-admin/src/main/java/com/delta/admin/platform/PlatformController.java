@@ -24,6 +24,22 @@ public class PlatformController {
     public record EnableRequest(@NotNull Boolean enabled) {}
     public record UpdateSelectionRequest(List<String> components) {}
     public record CheckoutRequest(String moduleId) {}
+    public record MarketView(PlatformService.Overview overview, List<PlatformService.FeatureView> features,
+                             boolean authorityConfigured, String lastSync) {}
+
+    @GetMapping("/market")
+    public R<MarketView> market() { return R.ok(marketView()); }
+
+    @PostMapping("/market/sync")
+    public R<MarketView> syncMarket() {
+        remote.syncFeatureMarket();
+        return R.ok(marketView());
+    }
+
+    private MarketView marketView() {
+        return new MarketView(platform.overview(), withCommercialMetadata(platform.features()),
+                remote.authorityConfigured(), remote.lastSuccessfulSync());
+    }
 
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
     @GetMapping("/features")

@@ -1,7 +1,7 @@
 <template>
   <div class="platform-page" v-loading="loading">
     <el-card shadow="never">
-      <template #header><div class="section-heading"><div><h2>功能商城</h2><p>授权期限和剩余天数由授权中心同步；是否实际启用由本系统管理员自行控制。</p></div><el-button @click="load">刷新</el-button></div></template>
+      <template #header><div class="section-heading"><div><h2>功能商城</h2><p>授权期限和剩余天数由授权中心同步；是否实际启用由本系统管理员自行控制。</p></div><el-button :loading="syncing" :disabled="loading || !!changing || !!buying" @click="authorityConfigured ? sync() : load()">{{ authorityConfigured ? '同步授权' : '刷新' }}</el-button></div></template>
       <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
       <template v-if="overview">
         <el-descriptions :column="isCompact ? 1 : 2" border>
@@ -10,14 +10,15 @@
           <el-descriptions-item label="实例编号">{{ overview.instanceId }}</el-descriptions-item>
           <el-descriptions-item label="授权状态">{{ licenseLabels[overview.licenseStatus] || overview.licenseStatus }}</el-descriptions-item>
           <el-descriptions-item label="维护期至">{{ overview.expiresAt ? formatTime(overview.expiresAt) : '—' }}</el-descriptions-item>
+          <el-descriptions-item v-if="authorityConfigured" label="上次成功同步"><span data-testid="last-sync">{{ lastSync ? formatTime(lastSync) : '尚未同步' }}</span></el-descriptions-item>
           <el-descriptions-item label="授权域名">{{ (overview.allowedDomains || []).join('、') || '未配置' }}</el-descriptions-item>
         </el-descriptions>
         <div class="license-actions"><el-button type="primary" :disabled="!overview.verifierConfigured || overview.managedByAuthority" @click="licenseVisible = true">导入授权</el-button></div>
         <p v-if="!overview.verifierConfigured" class="muted">授权服务尚未配置，请联系维护人员完成接入后开通付费模块。</p>
-        <p v-else-if="overview.managedByAuthority" class="muted">授权中心已接管功能状态，请等待自动同步，无需手动导入。</p>
+        <p v-else-if="overview.managedByAuthority" class="muted">授权状态由授权中心同步，开通或续费后可点击「同步授权」。</p>
       </template>
     </el-card>
-    <div v-if="!error" class="feature-grid">
+    <div v-if="features.length" class="feature-grid">
       <el-card v-for="feature in features" :key="feature.id" shadow="never" class="feature-card">
         <div class="section-heading"><h3>{{ feature.name }}</h3><div class="feature-tags"><el-tag :type="feature.enabled ? 'success' : 'info'">{{ statusLabels[feature.status] || feature.status }}</el-tag><el-tag v-if="feature.managedByAuthority" type="warning" effect="plain">授权中心同步</el-tag></div></div>
         <p class="description">{{ feature.description }}</p>
@@ -27,9 +28,9 @@
         <p class="muted">最低版本 {{ feature.minVersion }}<span v-if="feature.dependencies.length"> · 依赖基础业务系统</span></p>
         <div class="feature-actions">
           <el-button v-if="feature.enabled" type="primary" @click="$router.push(feature.entryPath)">进入功能</el-button>
-          <el-button v-else-if="!feature.entitled && !isPurchased(feature)" type="primary" :loading="buying===feature.id" @click="buy(feature)">立即购买</el-button>
-          <el-button v-if="canRenew(feature)" plain type="warning" :loading="buying===feature.id" @click="buy(feature)">续费</el-button>
-          <el-switch v-if="feature.paid" :model-value="feature.enabled" :aria-label="`启用${feature.name}`" :disabled="!feature.entitled || !!changing" :loading="changing === feature.id" active-text="启用" @change="value => toggle(feature, value)" />
+          <el-button v-else-if="!feature.entitled && !isPurchased(feature)" type="primary" :disabled="syncing || loading || !!changing || !!buying" :loading="buying===feature.id" @click="buy(feature)">立即购买</el-button>
+          <el-button v-if="canRenew(feature)" plain type="warning" :disabled="syncing || loading || !!changing || !!buying" :loading="buying===feature.id" @click="buy(feature)">续费</el-button>
+          <el-switch v-if="feature.paid" :model-value="feature.enabled" :aria-label="`启用${feature.name}`" :disabled="!feature.entitled || syncing || loading || !!changing || !!buying" :loading="changing === feature.id" active-text="启用" @change="value => toggle(feature, value)" />
         </div>
       </el-card>
     </div>
@@ -88,14 +89,18 @@ export function formatLicenseTime(value) {
 </script>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useResponsive } from '@/utils/responsive'
-import { getPlatformOverview, getPlatformFeatures, importPlatformLicense, setPlatformFeatureEnabled, createPlatformCheckout } from '@/api/platform'
-import {loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
+import { getFeatureMarket, syncFeatureMarket, importPlatformLicense, setPlatformFeatureEnabled, createPlatformCheckout } from '@/api/platform'
+import { applyPlatformFeatureVisibility } from '@/utils/platform-feature-visibility'
+import { getToken } from '@/utils/auth'
 
 const { isCompact } = useResponsive()
 const overview = ref(null), features = ref([]), loading = ref(false), error = ref(''), changing = ref(''), buying = ref('')
+const lastSync = ref(null), authorityConfigured = ref(false), syncing = ref(false)
+let active = true
+const checkoutReturnKey = 'detla:feature-market:checkout-return'
 const licenseVisible = ref(false), importing = ref(false), licenseText = ref('')
 const licenseLabels = { NONE: '尚未导入授权', VALID: '维护有效', INVALID: '授权验证失败', EXPIRED: '维护已到期', NOT_YET_VALID: '授权尚未生效' }
 const statusLabels = { INCLUDED: '已包含', ENABLED: '已启用', DISABLED: '已授权，未启用', EXPIRED: '已到期', REVOKED: '授权已暂停', NOT_PURCHASED: '待开通' }
@@ -104,25 +109,84 @@ const validityText = licensePeriodText
 function purchaseTermsFor(feature) { return purchaseTerms(feature, Date.now(), overview.value?.expiresAt) }
 function isPurchased(feature) { return isPurchasedFeature(feature) }
 function canRenew(feature) { return isPurchased(feature) && feature.status !== 'REVOKED' }
+function applyMarket(data, token) {
+  if (!active || getToken() !== token) return false
+  if (!data?.overview || !Array.isArray(data.features)) throw new Error('功能商城返回的数据不完整')
+  overview.value = data.overview
+  features.value = data.features
+  authorityConfigured.value = data.authorityConfigured
+  lastSync.value = data.lastSync || null
+  applyPlatformFeatureVisibility(data.features, token)
+  return true
+}
 async function load() {
-  loading.value = true; error.value = ''
-  try { const [info, modules] = await Promise.all([getPlatformOverview(), getPlatformFeatures({ silent: true })]); overview.value = info.data; features.value = modules.data }
-  catch { error.value = '功能与授权信息加载失败，请刷新重试。'; overview.value = null; features.value = [] }
+  if (loading.value || syncing.value) return
+  const token = getToken()
+  loading.value = true
+  error.value = ''
+  try { applyMarket((await getFeatureMarket()).data, token) }
+  catch { if (active && getToken() === token) error.value = '功能与授权信息加载失败，请刷新重试。' }
   finally { loading.value = false }
 }
+async function sync({ returning = false } = {}) {
+  if (!authorityConfigured.value || syncing.value || loading.value || changing.value || buying.value) return
+  const token = getToken()
+  syncing.value = true
+  error.value = ''
+  try {
+    if (applyMarket((await syncFeatureMarket()).data, token) && !returning) ElMessage.success('授权已同步')
+  } catch (failure) {
+    if (active && getToken() === token) {
+      const message = failure.response?.data?.msg || (failure.requestHandled && failure.code ? failure.message : '')
+      error.value = message || '同步授权失败，保留上次数据，请稍后重试。'
+    }
+  } finally { syncing.value = false }
+}
+
+function rememberCheckoutReturn() {
+  try {
+    if (overview.value?.instanceId) {
+      sessionStorage.setItem(checkoutReturnKey, JSON.stringify({ instanceId: overview.value.instanceId, time: Date.now() }))
+    }
+  } catch { /* Sync is still available through the button if browser storage is disabled. */ }
+}
+function syncOnCheckoutReturn() {
+  if (!active || !authorityConfigured.value || !overview.value || syncing.value || loading.value || buying.value || changing.value) return
+  let checkout
+  try {
+    checkout = JSON.parse(sessionStorage.getItem(checkoutReturnKey) || 'null')
+    if (checkout) sessionStorage.removeItem(checkoutReturnKey)
+  } catch { return }
+  if (checkout?.instanceId === overview.value.instanceId && Date.now() - checkout.time < 2 * 60 * 60 * 1000) {
+    // Returning from checkout only triggers a read from the authority, never grants a feature.
+    sync({ returning: true })
+  }
+}
+function onPageShow(event) {
+  if (event.persisted) syncOnCheckoutReturn()
+}
 async function toggle(feature, enabled) {
+  if (syncing.value || loading.value || changing.value || buying.value) return
+  const token = getToken()
   changing.value = feature.id
-  try { const response = await setPlatformFeatureEnabled(feature.id, enabled); features.value = response.data; await loadPlatformFeatureVisibility(true); ElMessage.success(enabled ? '功能已启用' : '功能已关闭') }
+  try {
+    const response = await setPlatformFeatureEnabled(feature.id, enabled)
+    if (!active || getToken() !== token) return
+    features.value = response.data
+    applyPlatformFeatureVisibility(response.data, token)
+    ElMessage.success(enabled ? '功能已启用' : '功能已关闭')
+  }
   catch { /* Request interceptor displays the server error. */ }
   finally { changing.value = '' }
 }
 async function buy(feature) {
-  if (buying.value) return
+  if (buying.value || syncing.value || loading.value || changing.value) return
   buying.value = feature.id
   try {
     const response = await createPlatformCheckout(feature.id)
     const checkoutUrl = response.data?.checkoutUrl
     if (!checkoutUrl) throw new Error('授权中心未返回支付地址')
+    rememberCheckoutReturn()
     window.location.assign(checkoutUrl)
   } catch (error) {
     if (error?.message) ElMessage.error(error.message)
@@ -137,7 +201,15 @@ async function importLicense() {
   catch { /* Keep the dialog open for correction. */ }
   finally { importing.value = false }
 }
-onMounted(load)
+onMounted(async () => {
+  window.addEventListener('pageshow', onPageShow)
+  await load()
+  syncOnCheckoutReturn()
+})
+onBeforeUnmount(() => {
+  active = false
+  window.removeEventListener('pageshow', onPageShow)
+})
 </script>
 
 <style scoped>

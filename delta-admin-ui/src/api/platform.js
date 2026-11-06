@@ -1,5 +1,7 @@
 import request from '@/utils/request'
 
+export const getFeatureMarket = () => request.get('/admin/platform/market', { silent: true })
+export const syncFeatureMarket = () => request.post('/admin/platform/market/sync', {}, { timeout: 55000, silent: true })
 export const getPlatformOverview = () => request.get('/admin/platform/overview')
 export const getPlatformFeatures = (config = {}) => request.get('/admin/platform/features', config)
 export const getPlatformUpdates = () => request.get('/admin/platform/updates')

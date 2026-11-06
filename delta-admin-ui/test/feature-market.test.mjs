@@ -44,7 +44,7 @@ test('feature market keeps local switches available when authority marks the ent
   const compiled = compileScript(parsed.descriptor, { id: 'feature-market-ui', inlineTemplate: true })
   assert.match(compiled.content, /managedByAuthority/)
   assert.doesNotMatch(compiled.content, /功能启用状态由授权中心管理/)
-  assert.match(source, /!feature\.entitled \|\| !!changing/)
+  assert.match(source, /!feature\.entitled \|\| syncing \|\| loading \|\| !!changing \|\| !!buying/)
   assert.doesNotMatch(source, /启用状态由授权中心控制/)
   assert.match(source, /是否实际启用由本系统管理员自行控制/)
   assert.match(source, /续费/)

@@ -95,6 +95,7 @@ class PlatformRemoteTest {
         var validProject = new AtomicBoolean(true);
         var includeFeatureMap = new AtomicBoolean(false);
         var projectSequence = new AtomicInteger();
+        var price = new AtomicInteger(6200);
         var server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/report", exchange -> {
             try {
@@ -116,7 +117,7 @@ class PlatformRemoteTest {
                 }
                 var response = serviceJson.createObjectNode(); response.set("project", project);
                 response.set("modules", serviceJson.createArrayNode().add(serviceJson.createObjectNode()
-                        .put("id", "email_notifications").put("priceCents", 6200).put("termDays", 45)
+                        .put("id", "email_notifications").put("priceCents", price.get()).put("termDays", 45)
                         .put("minVersion", "1.4.2")));
                 byte[] body = serviceJson.writeValueAsBytes(response);
                 exchange.sendResponseHeaders(200, body.length); exchange.getResponseBody().write(body);
@@ -126,28 +127,31 @@ class PlatformRemoteTest {
         server.start();
         try {
             properties.setReportUrl("http://127.0.0.1:" + server.getAddress().getPort() + "/report");
-            new PlatformRemote(properties, platform, serviceJson, clock).refresh();
+            var remote = new PlatformRemote(properties, platform, serviceJson, clock);
+            remote.refresh();
+            assertThat(remote.lastSuccessfulSync()).isEqualTo(now.toString());
             assertThat(platform.features().stream().filter(item -> item.id().equals("advanced_income_reports")).findFirst().orElseThrow())
                     .matches(item -> item.managedByAuthority() == false && item.enabled() == true);
 
             includeFeatureMap.set(true);
-            new PlatformRemote(properties, platform, serviceJson, clock).refresh();
+            price.set(6400);
+            var controller = new PlatformController(platform, remote, null);
+            var synced = controller.syncMarket().getData();
+            assertThat(synced.lastSync()).isEqualTo(now.toString());
+            assertThat(projectSequence.get()).isEqualTo(2);
+            assertThatThrownBy(remote::syncFeatureMarket).isInstanceOf(BusinessException.class)
+                    .hasMessage("同步过于频繁，请稍后再试");
             var advanced = platform.features().stream().filter(item -> item.id().equals("advanced_income_reports")).findFirst().orElseThrow();
             assertThat(advanced.managedByAuthority()).isTrue(); assertThat(advanced.enabled()).isFalse();
             assertThat(advanced.startsAt()).isEqualTo(now.minusSeconds(60));
             assertThat(advanced.expiresAt()).isEqualTo(now.plusSeconds(600));
             assertThat(platform.features().stream().filter(PlatformService.FeatureView::paid)).allMatch(PlatformService.FeatureView::managedByAuthority);
-            var controller = new PlatformController(null, new PlatformRemote(properties, platform, serviceJson, clock), null);
-            var pricedFeatures = controller.withCommercialMetadata(platform.features());
+            var pricedFeatures = synced.features();
             var email = pricedFeatures.stream()
                     .filter(item -> item.id().equals("email_notifications")).findFirst().orElseThrow();
-            assertThat(email.priceCents()).isEqualTo(6200); assertThat(email.termDays()).isEqualTo(45);
+            assertThat(email.priceCents()).isEqualTo(6400); assertThat(email.termDays()).isEqualTo(45);
             assertThat(pricedFeatures.stream().filter(item -> item.id().equals("advanced_income_reports")).findFirst().orElseThrow().priceCents())
                     .as("managed modules must not fall back to a stale bundled price").isNull();
-            Files.deleteIfExists(directory.resolve("authority.json"));
-            assertThat(new PlatformRemote(properties, platform, serviceJson, clock).project().path("instanceId").asText())
-                    .isEqualTo(platform.overview().instanceId());
-
             includeFeatureMap.set(false);
             assertThatThrownBy(() -> new PlatformRemote(properties, platform, serviceJson, clock).refresh())
                     .isInstanceOf(BusinessException.class);
@@ -155,9 +159,15 @@ class PlatformRemoteTest {
 
             includeFeatureMap.set(true);
             validProject.set(false);
-            assertThatThrownBy(() -> new PlatformRemote(properties, platform, serviceJson, clock).refresh())
-                    .isInstanceOf(BusinessException.class);
+            var failedRemote = new PlatformRemote(properties, platform, serviceJson, Clock.offset(clock, java.time.Duration.ofSeconds(30)));
+            assertThatThrownBy(failedRemote::syncFeatureMarket).isInstanceOf(BusinessException.class);
+            assertThat(failedRemote.lastSuccessfulSync()).isEqualTo(now.toString());
+            assertThat(failedRemote.commercialModules().get("email_notifications").path("priceCents").asInt()).isEqualTo(6400);
             assertThat(Files.readString(Path.of(properties.getStatePath()))).isEqualTo(stateBeforeInvalidResponse);
+
+            Files.deleteIfExists(directory.resolve("authority.json"));
+            assertThat(new PlatformRemote(properties, platform, serviceJson, clock).project().path("instanceId").asText())
+                    .isEqualTo(platform.overview().instanceId());
         } finally { server.stop(0); }
     }
 

@@ -13,6 +13,8 @@ import java.security.*;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Service @Slf4j
 public class PlatformRemote {
@@ -21,7 +23,9 @@ public class PlatformRemote {
     private final ObjectMapper json;
     private final Clock clock;
     private volatile JsonNode cached;
-    private volatile long lastAttempt;
+    private Long lastAttempt;
+    private Long lastManualAttempt;
+    private CompletableFuture<Void> syncInFlight;
     private final java.util.concurrent.atomic.AtomicBoolean planning = new java.util.concurrent.atomic.AtomicBoolean();
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformRemote(PlatformProperties properties, PlatformService platform, ObjectMapper json) {
@@ -31,11 +35,25 @@ public class PlatformRemote {
         this.properties=properties;this.platform=platform;this.json=json.copy().enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);this.clock=clock;
     }
     private Path path(String name) { return Path.of(properties.getStatePath()).toAbsolutePath().getParent().resolve(name); }
+    private void loadSnapshot() {
+        if (cached != null) return;
+        try {
+            var file = path("authority.json");
+            if (Files.isRegularFile(file) && Files.size(file) < 2_000_000) cached = json.readTree(Files.readString(file));
+        } catch (Exception ignored) { /* No usable cached snapshot. */ }
+    }
+
+    public boolean authorityConfigured() {
+        return properties.getReportUrl() != null && !properties.getReportUrl().isBlank();
+    }
+
+    public synchronized String lastSuccessfulSync() {
+        loadSnapshot();
+        return cached == null ? null : cached.path("receivedAt").asText(null);
+    }
+
     public synchronized JsonNode status() {
-        if(cached==null) {
-            try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
-            catch(Exception ignored) {}
-        }
+        loadSnapshot();
         String currentVersion=effectiveVersion();
         var result=json.createObjectNode();result.put("currentVersion",currentVersion);result.put("backendVersion",platform.overview().version());result.put("connected",cached!=null);
         result.set("componentVersions",componentVersions());
@@ -43,7 +61,8 @@ public class PlatformRemote {
         try(var files=Files.list(path("installed-plans"))) {for(var file:files.limit(500).toList())if(Files.isRegularFile(file)&&Files.size(file)<500000)for(var item:json.readTree(Files.readString(file)).path("items"))installed.add(item.path("key").asText());}catch(Exception ignored){}
         result.set("installedItems",installed);
         if(cached!=null) { result.set("updates",currentUpdates(cached.path("updates"),currentVersion));result.set("project",project());result.set("lastSync",cached.path("receivedAt")); }
-        try {var file=path("update-result.json");if(Files.exists(file)&&Files.size(file)<65536)result.set("job",json.readTree(Files.readString(file)));} catch(Exception ignored){}
+        var job = readUpdateResult();
+        if (!job.isMissingNode()) result.set("job", job);
         var installerReady=path("installer-ready");
         boolean installerAvailable=false;
         try { installerAvailable=Files.isRegularFile(installerReady)&&Files.getLastModifiedTime(installerReady).toInstant().isAfter(clock.instant().minusSeconds(45)); }
@@ -53,10 +72,7 @@ public class PlatformRemote {
     }
     /** Read the locally synchronized release catalog without contacting the authority. */
     public synchronized String pendingReleaseVersion() {
-        if (cached == null) {
-            try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
-            catch(Exception ignored) {}
-        }
+        loadSnapshot();
         if (cached == null) return null;
         String latest = null;
         for (var item : currentUpdates(cached.path("updates"), effectiveVersion()).path("releases")) {
@@ -66,10 +82,7 @@ public class PlatformRemote {
         return latest;
     }
     public synchronized Map<String, JsonNode> commercialModules() {
-        if (cached == null) {
-            try { var file=path("authority.json");if(Files.exists(file)&&Files.size(file)<2_000_000) cached=json.readTree(Files.readString(file)); }
-            catch(Exception ignored) {}
-        }
+        loadSnapshot();
         if (cached == null) return Map.of();
         var result = new LinkedHashMap<String, JsonNode>();
         for (var module : cached.path("modules")) {
@@ -167,13 +180,78 @@ public class PlatformRemote {
         if("PENDING".equals(claims.path("pausePolicy").asText()))return false;
         try{return !"ACTIVE".equals(claims.path("status").asText())||!clock.instant().isBefore(Instant.parse(claims.path("maintenanceUntil").asText()));}catch(Exception error){return true;}
     }
+    private JsonNode readUpdateResult() {
+        try {
+            var file = path("update-result.json");
+            if (Files.isRegularFile(file) && Files.size(file) < 65536) {
+                var value = json.readTree(Files.readString(file));
+                if (value != null) return value;
+            }
+        } catch (Exception ignored) { /* The updater may be replacing the file. */ }
+        return json.missingNode();
+    }
+
     public JsonNode refresh() {
-        synchronized(this) {if(clock.millis()-lastAttempt<10000)return status();lastAttempt=clock.millis();}
-        var payload=platform.reportPayload();if(payload==null)return status();
+        synchronize(false);
+        return status();
+    }
+
+    public void syncFeatureMarket() {
+        synchronize(true);
+    }
+
+    private void synchronize(boolean manual) {
+        var payload = authorityConfigured() ? platform.reportPayload() : null;
+        if (payload == null) {
+            if (manual) throw new BusinessException(409, "当前实例尚未接入授权中心");
+            return;
+        }
+
+        CompletableFuture<Void> operation;
+        boolean start;
+        synchronized (this) {
+            if (syncInFlight != null) {
+                operation = syncInFlight;
+                start = false;
+            } else {
+                long now = clock.millis();
+                if (!manual && lastAttempt != null && now - lastAttempt < 10000) return;
+                if (manual && lastManualAttempt != null && now - lastManualAttempt < 3000)
+                    throw new BusinessException(429, "同步过于频繁，请稍后再试");
+                if (manual) lastManualAttempt = now;
+                lastAttempt = now;
+                operation = syncInFlight = new CompletableFuture<>();
+                start = true;
+            }
+        }
+        if (!start) {
+            try {
+                operation.get();
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                throw new BusinessException(503, "授权中心连接已中断");
+            } catch (ExecutionException error) {
+                if (error.getCause() instanceof BusinessException failure) throw failure;
+                throw new BusinessException(503, "授权中心暂时无法连接，保留上次同步结果");
+            }
+            return;
+        }
+        try {
+            requestSnapshot(payload);
+            operation.complete(null);
+        } catch (RuntimeException | Error error) {
+            operation.completeExceptionally(error);
+            throw error;
+        } finally {
+            synchronized (this) { syncInFlight = null; }
+        }
+    }
+
+    private void requestSnapshot(PlatformService.ReportPayload payload) {
         try {
             var request=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(payload);
             request.put("version",effectiveVersion());
-            request.set("updateResult",status().path("job"));
+            request.set("updateResult",readUpdateResult());
             var response=send(properties.getReportUrl(),request);
             var project=verify(response.path("project"),"cangshuo-project-v1");
             var featureEnabled=remoteFeatureEnabled(project);
@@ -191,7 +269,6 @@ public class PlatformRemote {
             cached=response;
             try{atomic(path("authority.json"),json.writeValueAsBytes(response));}
             catch(Exception cacheError){log.warn("授权中心缓存更新失败：{}",cacheError.getClass().getSimpleName());}
-            return status();
         } catch(InterruptedException error){Thread.currentThread().interrupt();throw new BusinessException(503,"授权中心连接已中断");}
         catch(Exception error){log.warn("授权中心同步失败：{}",error.getClass().getSimpleName());throw new BusinessException(503,"授权中心暂时无法连接，保留上次检查结果");}
     }

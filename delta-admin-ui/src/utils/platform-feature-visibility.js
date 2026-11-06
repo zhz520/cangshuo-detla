@@ -11,6 +11,17 @@ export function platformFeatureAllowed(id) {
   return !id || enabledPlatformFeatures.value?.has(id) === true
 }
 
+export function applyPlatformFeatureVisibility(features, token) {
+  if (!token || token !== getToken() || getUserInfo()?.role !== 'admin') return enabledPlatformFeatures.value
+  pending = null
+  pendingToken = ''
+  cachedToken = token
+  loadedAt = Date.now()
+  platformFeatureError.value = ''
+  enabledPlatformFeatures.value = new Set(features.filter(item => item.enabled && item.entitled !== false && (!item.expiresAt || Date.parse(item.expiresAt) > loadedAt)).map(item => item.id))
+  return enabledPlatformFeatures.value
+}
+
 export async function loadPlatformFeatureVisibility(force = false) {
   const token = getToken() || ''
   if (cachedToken !== token) { enabledPlatformFeatures.value = null; loadedAt = 0; cachedToken = token; platformFeatureError.value = '' }
@@ -19,22 +30,21 @@ export async function loadPlatformFeatureVisibility(force = false) {
   if (!force && loadedAt && Date.now() - loadedAt < 30000) return enabledPlatformFeatures.value
   pendingToken = token
   platformFeatureError.value = ''
-  pending = getPlatformFeatures({ silent: true })
+  const task = getPlatformFeatures({ silent: true })
     .then(response => {
-      if ((getToken() || '') !== token) return loadPlatformFeatureVisibility()
-      enabledPlatformFeatures.value = new Set((response.data || []).filter(item => item.enabled && item.entitled !== false && (!item.expiresAt || Date.parse(item.expiresAt) > Date.now())).map(item => item.id))
-      loadedAt = Date.now()
-      return enabledPlatformFeatures.value
+      if (pending !== task || getToken() !== token) return enabledPlatformFeatures.value
+      return applyPlatformFeatureVisibility(response.data || [], token)
     })
     .catch(() => {
-      if ((getToken() || '') !== token) return enabledPlatformFeatures.value
+      if (pending !== task || getToken() !== token) return enabledPlatformFeatures.value
       platformFeatureError.value = '暂时无法读取已启用的功能'
       enabledPlatformFeatures.value = new Set()
       loadedAt = 0
       return enabledPlatformFeatures.value
     })
-    .finally(() => { if (pendingToken === token) pending = null })
-  return pending
+    .finally(() => { if (pending === task) pending = null })
+  pending = task
+  return task
 }
 
 export async function requirePlatformFeature(feature, permission) {
