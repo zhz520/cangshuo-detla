@@ -614,15 +614,19 @@ async function goCustomerService() {
   }
 
   .popup-body {
-    padding: 32rpx;
+    padding: 32rpx 32rpx 44rpx;
+    min-height: 0;
     max-height: 50vh;
 
     .popup-notice-title { font-size: 30rpx; font-weight: bold; color: #17191c; display: block; margin-bottom: 20rpx; }
   }
 
   .popup-footer {
-    padding: 24rpx 32rpx;
+    flex-shrink: 0;
+    padding: 32rpx 32rpx calc(28rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
     border-top: 1rpx solid #e6e7e9;
+    background: #ffffff;
+    box-shadow: 0 -12rpx 30rpx rgba(23, 25, 28, 0.05);
 
     .popup-nav {
       display: flex;
@@ -645,6 +649,7 @@ async function goCustomerService() {
     }
 
     .popup-btn {
+      margin-top: 4rpx;
       height: 76rpx;
       line-height: 76rpx;
       text-align: center;
