@@ -61,13 +61,5 @@ jobs:
         run: |
           npm test
           npx --no-install uni build -p h5
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: preview-build-${{ github.sha }}
-          retention-days: 7
-          if-no-files-found: error
-          path: |
-            delta-game/delta-admin/target/delta-admin.jar
-            delta-admin-ui/dist/
-            delta-mp/dist/build/h5/
-            delta-game/delta-admin/src/main/resources/platform/catalog.json
+      # Formal release archives are generated and digest-checked separately.
+      # Do not upload preview bundles on every push; they exhaust Actions storage.
