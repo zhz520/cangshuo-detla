@@ -58,6 +58,10 @@
 
     <!-- 底部操作栏 -->
     <view class="bottom-bar">
+      <view class="btn-favorite" :class="{ active: favorite }" @click="toggleFavorite">
+        <text class="favorite-mark">{{ favorite ? '★' : '☆' }}</text>
+        <text>{{ favorite ? '已收藏' : '收藏' }}</text>
+      </view>
       <view class="btn-chat" @click="goChat">
         <image class="btn-icon" src="/static/icons/客服.svg" mode="aspectFit" />
         <text>客服</text>
@@ -69,16 +73,20 @@
 <script setup>
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
-import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
+import { onLoad, onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import PriceText from '@/components/PriceText.vue'
 import { productDescriptionHtml } from '@/utils/product-content'
 import { getProductRichDetail, getProductDetail } from '@/api/product'
 import { openCustomerService } from '@/utils/customer-service'
 import { useSiteStore } from '@/store/site'
+import { useUserStore } from '@/store/user'
+import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/user'
 const siteStore = useSiteStore()
+const userStore = useUserStore()
 const designatedPlayerId=ref('')
 const product = ref(null)
 const swiperIdx = ref(0)
+const favorite = ref(false), favoriteBusy = ref(false)
 
 // 分享给好友
 onShareAppMessage(() => {
@@ -144,11 +152,31 @@ onLoad(async (opts) => {
     const d = res.data
     product.value = d.product || d
     if (d.categoryName) product.value.categoryName = d.categoryName
+    await syncFavoriteStatus()
   } catch (e) {
     const basic = await getProductDetail(opts.id)
     product.value = basic.data
+    await syncFavoriteStatus()
   }
 })
+
+onShow(() => { if (product.value) syncFavoriteStatus() })
+
+async function syncFavoriteStatus() {
+  if (!product.value?.id || !userStore.isLoggedIn) { favorite.value = false; return }
+  try { favorite.value = Boolean((await getFavoriteStatus(product.value.id)).data?.favorited) } catch (_) {}
+}
+
+async function toggleFavorite() {
+  if (!userStore.checkLogin() || favoriteBusy.value || !product.value?.id) return
+  favoriteBusy.value = true
+  try {
+    if (favorite.value) await removeFavorite(product.value.id)
+    else await addFavorite(product.value.id)
+    favorite.value = !favorite.value
+    uni.showToast({ title: favorite.value ? '已收藏' : '已取消收藏', icon: 'none' })
+  } finally { favoriteBusy.value = false }
+}
 
 async function goChat() {
   try {
@@ -375,6 +403,22 @@ function goBuy() {
   border-top: 1rpx solid #e6e7e9;
   gap: 20rpx;
   backdrop-filter: blur(20px);
+}
+.btn-favorite {
+  width: 96rpx;
+  flex: 0 0 auto;
+  height: 84rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rpx;
+  border: 1rpx solid #d9dde3;
+  border-radius: 18rpx;
+  color: #73777e;
+  font-size: 20rpx;
+  &.active { color: #b37717; border-color: #d8b977; background: #fffaf0; }
+  .favorite-mark { font-size: 34rpx; line-height: 1; }
 }
 .btn-chat {
   flex: 1;

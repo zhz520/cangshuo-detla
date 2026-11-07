@@ -65,6 +65,7 @@
           <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
+        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/library')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit"/><text>收藏与关注</text><text class="arrow">></text></view>
         <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
         <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
         <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>

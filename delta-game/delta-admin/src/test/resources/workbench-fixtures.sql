@@ -18,4 +18,4 @@ CREATE TABLE IF NOT EXISTS chat_session (id BIGINT PRIMARY KEY,id1 BIGINT,id2 BI
 CREATE TABLE IF NOT EXISTS chat_message (id BIGINT PRIMARY KEY,session_id BIGINT,created_at DATETIME,sender_type VARCHAR(20),is_read INT,content TEXT);
 CREATE TABLE IF NOT EXISTS system_notification (id BIGINT AUTO_INCREMENT PRIMARY KEY, receiver_type VARCHAR(16), receiver_id BIGINT, title VARCHAR(100), content TEXT, biz_type VARCHAR(40), related_id BIGINT, is_read INT, created_at DATETIME);
 CREATE TABLE IF NOT EXISTS `user` (id BIGINT PRIMARY KEY,openid VARCHAR(64),deleted INT DEFAULT 0);
-CREATE TABLE IF NOT EXISTS player_wallet (player_id BIGINT PRIMARY KEY,balance DECIMAL(12,2));
+CREATE TABLE IF NOT EXISTS player_wallet (player_id BIGINT PRIMARY KEY,balance DECIMAL(12,2),pending_income DECIMAL(12,2) DEFAULT 0,frozen_amount DECIMAL(12,2) DEFAULT 0,total_income DECIMAL(12,2) DEFAULT 0);

@@ -31,3 +31,15 @@ export const deleteSavedInfo = (id) => del(`/user/game-info/${id}`, {}, { role: 
 export const getIdentityStatus = (opts = {}) => get('/user/identity/status', {}, { role: 'user', ...opts })
 export const uploadIdentityImage = (filePath, side) => uploadFile(filePath, `/user/identity/image?side=${encodeURIComponent(side)}`, { role: 'user' })
 export const submitIdentityVerification = data => post('/user/identity/submit', data, { role: 'user' })
+
+/** 商品收藏 */
+export const getFavoriteStatus = productId => get(`/user/favorites/${productId}/status`, {}, { role: 'user', loading: false })
+export const addFavorite = productId => post(`/user/favorites/${productId}`, {}, { role: 'user' })
+export const removeFavorite = productId => del(`/user/favorites/${productId}`, {}, { role: 'user' })
+export const getFavorites = params => get('/user/favorites', params, { role: 'user' })
+
+/** 打手关注 */
+export const getFollowStatus = playerId => get(`/user/follows/${playerId}/status`, {}, { role: 'user', loading: false })
+export const followPlayer = playerId => post(`/user/follows/${playerId}`, {}, { role: 'user' })
+export const unfollowPlayer = playerId => del(`/user/follows/${playerId}`, {}, { role: 'user' })
+export const getFollows = params => get('/user/follows', params, { role: 'user' })

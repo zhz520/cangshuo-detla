@@ -32,6 +32,7 @@
         <text class="time">{{ formatTime(order.createdAt) }}</text>
       </view>
       <view class="right">
+        <view v-if="canReorder" class="btn-repeat" @click.stop="repeatOrder">再次下单</view>
         <view v-if="showChat" class="btn-chat" @click.stop="goChat">💬 聊天</view>
         <view v-if="actionText" class="action-hint" @click.stop="goDetail">{{ actionText }}</view>
       </view>
@@ -82,6 +83,9 @@ const showChat = computed(() => {
   return chatStatuses.includes(props.order.status)
 })
 
+const canReorder = computed(() => !isPlayerView.value && props.ownerActions &&
+  ['CANCELLED', 'REFUNDED', 'CONFIRMED', 'REVIEWED', 'ARBITRATED'].includes(props.order.status))
+
 const actionText = computed(() => {
   if (isPlayerView.value) {
     const playerMap = {
@@ -112,6 +116,9 @@ function goDetail() {
 function goChat() {
   const chatPath = isPlayerView.value ? '/pages-player/chat/room' : '/pages/chat/room'
   uni.navigateTo({ url: `${chatPath}?orderId=${props.order.id}` })
+}
+function repeatOrder() {
+  uni.navigateTo({ url: `/pages/order/create?repeatOrderId=${props.order.id}` })
 }
 </script>
 
@@ -231,6 +238,13 @@ function goChat() {
       color: #347a5b;
       padding: 6rpx 20rpx;
       border: 1rpx solid rgba(7, 193, 96, 0.5);
+      border-radius: 999rpx;
+    }
+    .btn-repeat {
+      font-size: 24rpx;
+      color: #17191c;
+      padding: 6rpx 18rpx;
+      border: 1rpx solid #cfd4db;
       border-radius: 999rpx;
     }
     .action-hint {

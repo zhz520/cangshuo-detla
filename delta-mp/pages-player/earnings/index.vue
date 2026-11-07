@@ -7,6 +7,7 @@
     <view class="summary-card">
       <text class="card-label">累计收益（元）</text>
       <text class="total-amount">¥{{ summary.totalIncome || '0.00' }}</text>
+      <view class="wallet-split"><text>可提现 ¥{{ Number(summary.balance || 0).toFixed(2) }}</text><text>待结算 ¥{{ Number(summary.pendingIncome || 0).toFixed(2) }}</text></view>
       <text v-if="Number(summary.pendingRefundRecovery)>0" class="reward-total">退款待追回 ¥{{Number(summary.pendingRefundRecovery).toFixed(2)}}，后续订单收益优先抵扣</text>
       <text class="reward-total">其中打赏收入 ¥{{ Number(summary.rewardIncome || 0).toFixed(2) }}</text>
       <view class="row">
@@ -91,6 +92,7 @@ function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) 
 .summary-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .card-label { font-size: 26rpx; opacity: 0.85; display: block; }
   .total-amount { font-size: 56rpx; font-weight: bold; display: block; margin: 16rpx 0 32rpx; }
+  .wallet-split { display:flex; justify-content:space-between; gap:16rpx; font-size:23rpx; opacity:.88; margin:-18rpx 0 30rpx; }
   .row { display: flex; align-items: center; }
   .col { flex: 1; text-align: center; .num { font-size: 30rpx; font-weight: bold; display: block; } .desc { font-size: 22rpx; opacity: 0.8; display: block; margin-top: 4rpx; } }
   .divider { width: 1rpx; height: 48rpx; background: rgba(255,255,255,0.3); }

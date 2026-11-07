@@ -14,6 +14,8 @@ public class PlayerWallet extends BaseEntity {
     private Long id;
     private Long playerId;
     private BigDecimal balance;
+    /** 订单已完成但在售后观察期内、尚不可提现的收益 */
+    private BigDecimal pendingIncome;
     private BigDecimal frozenAmount;
     private BigDecimal totalIncome;
 }

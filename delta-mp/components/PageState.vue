@@ -8,6 +8,7 @@
     <button class="state-retry" role="button" aria-label="重新加载" @click="$emit('retry')">重新加载</button>
   </view>
   <EmptyState v-else-if="empty" :text="emptyText" />
+  <slot v-else />
 </template>
 <script setup>
 import EmptyState from './EmptyState.vue'

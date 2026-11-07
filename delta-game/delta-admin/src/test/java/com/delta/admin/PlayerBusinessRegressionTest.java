@@ -70,6 +70,8 @@ class PlayerBusinessRegressionTest {
     @MockBean WxPayConfiguration wxPayConfiguration;
 
     @BeforeEach void withdrawalFixtures() {
+        jdbc.update("UPDATE player SET real_name='测试收款人' WHERE id=1");
+        jdbc.update("UPDATE player SET real_name='另一收款人' WHERE id=2");
         jdbc.execute("CREATE TABLE complaint(id BIGINT PRIMARY KEY,player_id BIGINT,status VARCHAR(20))");
         jdbc.execute("""
                 CREATE TABLE player_account(id BIGINT AUTO_INCREMENT PRIMARY KEY,player_id BIGINT,type VARCHAR(20),

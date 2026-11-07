@@ -18,6 +18,7 @@
     },
     {"path":"pages/mine/privacy-center","style":{"navigationBarTitleText":"隐私与账号"}},
     {"path":"pages/mine/identity","style":{"navigationBarTitleText":"实名认证"}},
+    {"path":"pages/mine/library","style":{"navigationBarTitleText":"收藏与关注"}},
     {"path":"pages/wechat/binding","style":{"navigationBarTitleText":"公众号通知"}},
     {"path":"pages/maintenance/index","style":{"navigationBarTitleText":"服务维护"}},
     {

@@ -36,6 +36,8 @@ public class DatabaseCompatibility {
                     "ALTER TABLE player_level ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT 0"),
             new AdditiveColumn("player_level", "withdraw_deposit_amount",
                     "ALTER TABLE player_level ADD COLUMN withdraw_deposit_amount DECIMAL(10,2) NOT NULL DEFAULT 0"),
+            new AdditiveColumn("player_wallet", "pending_income",
+                    "ALTER TABLE player_wallet ADD COLUMN pending_income DECIMAL(12,2) NOT NULL DEFAULT 0"),
             new AdditiveColumn("player", "level",
                     "ALTER TABLE player ADD COLUMN level INT NOT NULL DEFAULT 1"),
             new AdditiveColumn("player", "introduction",
@@ -124,11 +126,27 @@ public class DatabaseCompatibility {
                     "guest_user_id BIGINT PRIMARY KEY, registered_user_id BIGINT NOT NULL, " +
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "KEY idx_guest_link_registered(registered_user_id))");
+            ensureTable("player_income_settlement", "CREATE TABLE IF NOT EXISTS player_income_settlement (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, order_id BIGINT NOT NULL, player_id BIGINT NOT NULL, " +
+                    "role VARCHAR(20) NOT NULL DEFAULT 'PRIMARY', amount DECIMAL(12,2) NOT NULL, " +
+                    "reversed_amount DECIMAL(12,2) NOT NULL DEFAULT 0, status VARCHAR(20) NOT NULL DEFAULT 'PENDING', " +
+                    "release_at DATETIME NOT NULL, released_at DATETIME NULL, attempts INT NOT NULL DEFAULT 0, " +
+                    "last_error VARCHAR(255) NULL, next_attempt_at DATETIME NOT NULL, remark VARCHAR(255) NOT NULL DEFAULT '', " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_income_settlement_order_player(order_id,player_id), " +
+                    "KEY idx_income_settlement_due(status,next_attempt_at), KEY idx_income_settlement_player(player_id,status))");
+            ensureTable("user_favorite", "CREATE TABLE IF NOT EXISTS user_favorite (" +
+                    "user_id BIGINT NOT NULL, product_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "PRIMARY KEY(user_id,product_id), KEY idx_user_favorite_product(product_id))");
+            ensureTable("player_follow", "CREATE TABLE IF NOT EXISTS player_follow (" +
+                    "user_id BIGINT NOT NULL, player_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
             ensureRewardGrabConfig();
             ensureGuestCheckoutConfig();
+            ensureSettlementConfig();
         } catch (SQLException error) {
             throw new IllegalStateException("数据库结构兼容检查失败", error);
         }
@@ -177,6 +195,22 @@ public class DatabaseCompatibility {
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         insertBooleanConfigIfMissing("player.directory.enabled", "展示打手页面", "true",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
+    }
+
+    private void ensureSettlementConfig() throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            if (findTable(connection, "sys_config") == null) return;
+        }
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='settlement.hold_hours'", Integer.class) == 0) {
+            jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                    "settlement.hold_hours", "订单收益售后观察期", "72", "number", "结算配置",
+                    "订单确认后先进入待结算收益，观察期结束且无投诉、退款时转为可提现余额；单位小时，0至720");
+        }
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='withdraw.require_identity_match'", Integer.class) == 0) {
+            jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                    "withdraw.require_identity_match", "提现校验收款人实名", "true", "boolean", "提现配置",
+                    "开启后收款账户姓名必须与已通过实名或入驻真实姓名一致，避免换绑他人账户收款");
+        }
     }
 
     private void insertBooleanConfigIfMissing(String key, String name, String value, String remark) {

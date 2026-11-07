@@ -55,7 +55,8 @@
       <view v-if="order.status==='CONFIRMED' && !order.reviewed && !userStore.isGuest && isOrderOwner" class="btn" @click="goReview">⭐ 去评价</view>
       <view v-if="['IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status) && isOrderOwner" class="btn-ghost" @click="goChat">💬 聊天</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn-warn" @click="showReplaceModal=true">申请换人</view>
-      <view v-if="['IN_PROGRESS','COMPLETED'].includes(order.status)" class="btn-warn" @click="goComplaint">投诉</view>
+      <view v-if="['IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED'].includes(order.status)" class="btn-warn" @click="goComplaint">售后投诉</view>
+      <view v-if="!userStore.isGuest && ['CANCELLED','REFUNDED','CONFIRMED','REVIEWED','ARBITRATED'].includes(order.status)" class="btn-ghost" @click="repeatOrder">再次下单</view>
     </view>
     <RewardAction v-if="!userStore.isGuest && isOrderOwner" :order-id="orderId" :refresh-key="rewardRefresh" :auto-open="autoReward" />
     <!-- 时间信息 -->
@@ -209,6 +210,7 @@ function goChat() {
   uni.navigateTo({ url: `/pages/chat/room?orderId=${orderId.value}&name=${encodeURIComponent(name)}` })
 }
 function goComplaint() { uni.navigateTo({ url: `/pages/complaint/create?orderId=${orderId.value}` }) }
+function repeatOrder() { uni.navigateTo({ url: `/pages/order/create?repeatOrderId=${orderId.value}` }) }
 const showReplaceModal = ref(false)
 const replaceReason = ref('')
 const showDesignatePicker = ref(false)

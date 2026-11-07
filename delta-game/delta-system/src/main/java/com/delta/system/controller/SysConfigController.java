@@ -121,6 +121,7 @@ public class SysConfigController {
         ensureConfig("email.notifications.recipients","运营收件邮箱","[]","json","邮件通知","最多 20 个邮箱，自动去重");
         ensureConfig("email.notifications.events","邮件通知事件","[]","json","邮件通知","只排队已勾选的事件，由专用页面维护");
         ensureConfig("settlement.cs_rate","客服提成占俱乐部抽成比例","0","text","结算配置","0至1，按下单时快照计算；如0.2表示俱乐部抽成的20%计入客服提成台账");
+        ensureConfig("settlement.hold_hours","订单收益售后观察期","72","number","结算配置","订单确认后先进入待结算收益，观察期结束且无投诉、退款时转为可提现余额；单位小时，0至720");
         ensureConfig("player.invite_required","仅允许邀请入驻","false","boolean","入驻配置","开启后入驻必须使用有效邀请链接");
         ensureConfig("risk.freeze_threshold","违规冻结阈值","3","text","内容风控","系统拦截或人工明确标记的违规累计达到此次数后冻结接单");
         ensureConfig("risk.media.review_mode","图片语音审核方式","AUTO","text","内容风控","AUTO：优先自动检测，未配置或不可用时转人工；MANUAL：不调用自动检测，直接进入人工审核");
@@ -156,6 +157,8 @@ public class SysConfigController {
                 "text", "打手配置", "REQUIRED：入驻必须缴纳；NONE：全部不收；BEFORE_WITHDRAW：入驻免交，提现前按等级补交");
         ensureConfig("player.deposit_amount", "打手入驻押金金额", "100", "number", "打手配置",
                 "开启打手押金时的应支付金额，单位：元");
+        ensureConfig("withdraw.require_identity_match", "提现校验收款人实名", "true", "boolean", "提现配置",
+                "开启后收款账户姓名必须与已通过实名或入驻真实姓名一致，避免换绑他人账户收款");
         ensureConfig("wallet.recharge.packages", "余额充值套餐",
                 "[{\"id\":\"100\",\"name\":\"基础套餐\",\"amount\":100,\"bonus\":10,\"enabled\":true,\"sort\":1},{\"id\":\"300\",\"name\":\"进阶套餐\",\"amount\":300,\"bonus\":40,\"enabled\":true,\"sort\":2},{\"id\":\"500\",\"name\":\"畅玩套餐\",\"amount\":500,\"bonus\":100,\"enabled\":true,\"sort\":3}]",
                 "json", "余额配置", "配置用户充值金额及赠送余额，单位：元");
@@ -278,6 +281,12 @@ public class SysConfigController {
             try {var n=new java.math.BigDecimal(value);if(n.signum()<0 || n.compareTo(java.math.BigDecimal.ONE)>0) throw new IllegalArgumentException();}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"抽佣比例须在0至1之间");}
         }
+        if("settlement.hold_hours".equals(key)) {
+            try {int n=Integer.parseInt(value);if(n<0||n>720)throw new IllegalArgumentException();}
+            catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"售后观察期须为0至720小时");}
+        }
+        if("withdraw.require_identity_match".equals(key)&&!java.util.Set.of("true","false").contains(value))
+            throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
         if(key.startsWith("wechat.official.template.")){
             try{var obj=com.alibaba.fastjson2.JSON.parseObject(value);if(obj==null)throw new IllegalArgumentException();if(!obj.isEmpty()){if(obj.getString("templateId")==null||obj.getString("templateId").isBlank())throw new IllegalArgumentException();var fields=obj.getJSONObject("fields");if(fields==null||fields.isEmpty()||fields.size()>20)throw new IllegalArgumentException();for(String field:fields.keySet())if(!field.matches("[A-Za-z_]+[0-9]*")||!java.util.Set.of("message","status","time","orderNo","amount").contains(fields.getString(field)))throw new IllegalArgumentException();}}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"模板映射须包含templateId和有效fields字段映射");}

@@ -5,6 +5,7 @@
     <view class="balance-card">
       <text class="label">可提现金额（元）</text>
       <text class="amount">¥{{ balance }}</text>
+      <text class="pending">待结算 ¥{{ pendingIncome }}（售后期结束且无售后后转为可提现）</text>
     </view>
     <view v-if="depositStatus?.needsPayment" class="deposit-card">
       <view><text class="deposit-title">提现前需补交押金</text><text class="deposit-tip">当前等级应缴 ¥{{ Number(depositStatus.requiredAmount||0).toFixed(2) }}，已缴 ¥{{ Number(depositStatus.paidAmount||0).toFixed(2) }}，还需补交 ¥{{ Number(depositStatus.outstandingAmount||0).toFixed(2) }}</text></view>
@@ -60,7 +61,7 @@ import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/pl
 import { useSiteStore } from '@/store/site'
 import PaymentQrDialog from '@/components/PaymentQrDialog.vue'
 
-const balance = ref('0.00')
+const balance = ref('0.00'), pendingIncome = ref('0.00')
 const form = reactive({ amount: '', accountId: '', remark: '' })
 const accounts = ref([])
 const selectedAccount = ref(null)
@@ -77,6 +78,7 @@ async function load() {
   try {
     const [summary, accountResult, deposit] = await Promise.all([getEarningsSummary({ loading: false }), getAccountList({ loading: false }), getWithdrawDepositStatus()])
     balance.value = Number(summary.data?.balance || 0).toFixed(2)
+    pendingIncome.value = Number(summary.data?.pendingIncome || 0).toFixed(2)
     accounts.value = accountResult.data || []
     depositStatus.value = deposit.data
     // An account deleted in the account manager must not remain selectable here.
@@ -169,4 +171,5 @@ function goAccounts() { uni.navigateTo({ url: '/pages-player/account/list' }) }
   .picker-title { font-size: 30rpx; font-weight: bold; display: block; margin-bottom: 24rpx; text-align: center; }
 }
 .account-option { padding: 24rpx; border-bottom: 1rpx solid #f4f5f6; font-size: 28rpx; &.active { color: #17191c; background: #f7f7f8; border-radius: 8rpx; } }
+.balance-card .pending { display:block; margin-top:10rpx; font-size:22rpx; font-weight:400; color:rgba(255,255,255,.72); }
 </style>

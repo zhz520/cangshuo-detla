@@ -43,6 +43,7 @@ public class PlayerEarningsController {
         // 钱包
         PlayerWallet wallet = playerWalletService.getByPlayerId(playerId);
         data.put("balance", wallet != null ? wallet.getBalance() : BigDecimal.ZERO);
+        data.put("pendingIncome", wallet != null && wallet.getPendingIncome() != null ? wallet.getPendingIncome() : BigDecimal.ZERO);
         data.put("frozenAmount", wallet != null ? wallet.getFrozenAmount() : BigDecimal.ZERO);
         data.put("totalIncome", wallet != null ? wallet.getTotalIncome() : BigDecimal.ZERO);
         data.put("pendingRefundRecovery",jdbc.queryForObject("SELECT COALESCE(SUM(remaining),0) FROM player_refund_recovery WHERE player_id=?",BigDecimal.class,playerId));
@@ -120,6 +121,16 @@ public class PlayerEarningsController {
         data.put("completionRate", completionRate);
 
         return R.ok(data);
+    }
+
+    /** 售后观察期内尚未转为可提现余额的订单收益。 */
+    @GetMapping("/pending")
+    public R<List<Map<String,Object>>> pending() {
+        Long playerId=SecurityUtils.getUserId();
+        return R.ok(jdbc.queryForList("SELECT s.order_id AS orderId,o.order_no AS orderNo,o.product_name AS productName," +
+                "(s.amount-s.reversed_amount) AS amount,s.release_at AS releaseAt,s.status,s.attempts,s.last_error AS lastError " +
+                "FROM player_income_settlement s JOIN `order` o ON o.id=s.order_id " +
+                "WHERE s.player_id=? AND s.status='PENDING' ORDER BY s.release_at ASC,s.id ASC LIMIT 200",playerId));
     }
 
     /** 收益明细（支持日期范围过滤） */

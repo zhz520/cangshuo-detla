@@ -404,7 +404,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         String status = order.getStatus();
         if (!OrderStatusEnum.IN_PROGRESS.name().equals(status) &&
             !OrderStatusEnum.COMPLETED.name().equals(status) &&
-            !OrderStatusEnum.CONFIRMED.name().equals(status)) {
+            !OrderStatusEnum.CONFIRMED.name().equals(status) &&
+            !OrderStatusEnum.REVIEWED.name().equals(status)) {
             throw new BusinessException("当前状态不允许投诉");
         }
         transition(order, OrderStatusEnum.DISPUTED, "USER", order.getUserId(), "用户发起投诉");

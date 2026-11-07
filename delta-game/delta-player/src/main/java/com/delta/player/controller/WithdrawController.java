@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/player/withdraw")
@@ -111,6 +112,7 @@ public class WithdrawController {
         var account=req.getAccountId()==null?null:accounts.getOne(new LambdaQueryWrapper<com.delta.player.entity.PlayerAccount>()
                 .eq(com.delta.player.entity.PlayerAccount::getId,req.getAccountId()).eq(com.delta.player.entity.PlayerAccount::getPlayerId,playerId).last("FOR UPDATE"));
         if(account==null) throw new BusinessException(404,"收款账户不存在");
+        requireReceiptIdentity(playerId,account.getAccountName());
         // 3. 校验余额
         PlayerWallet wallet = playerWalletService.getByPlayerId(playerId);
         if (wallet == null || wallet.getBalance().compareTo(req.getAmount()) < 0) {
@@ -151,5 +153,23 @@ public class WithdrawController {
         // 7. 通知管理员有新提现待处理
         eventPublisher.publishEvent(new BusinessEvent(this, "WITHDRAW_APPLY",
                 "ADMIN", null, withdraw.getId(), "新提现申请待处理，金额: " + req.getAmount() + "元"));
+    }
+
+    private void requireReceiptIdentity(Long playerId,String receiptName) {
+        if(!Boolean.parseBoolean(sysConfigService.getConfigValue("withdraw.require_identity_match","true")))return;
+        String verified=null;
+        try {
+            List<String> approved=jdbc.queryForList("SELECT iv.real_name FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id " +
+                    "JOIN player p ON p.openid=u.openid WHERE p.id=? AND iv.status='APPROVED' ORDER BY iv.reviewed_at DESC LIMIT 1",String.class,playerId);
+            verified=approved.isEmpty()?null:approved.get(0);
+        } catch (Exception ignored) {}
+        if(verified==null||verified.isBlank()){
+            List<String> onboarding=jdbc.queryForList("SELECT real_name FROM player WHERE id=? AND deleted=0",String.class,playerId);
+            verified=onboarding.isEmpty()?null:onboarding.get(0);
+        }
+        if(verified==null||verified.isBlank())throw new BusinessException(409,"请先完善实名姓名后再提现");
+        String expected=verified.replaceAll("[\\s·•]","").toLowerCase(java.util.Locale.ROOT);
+        String actual=receiptName==null?"":receiptName.replaceAll("[\\s·•]","").toLowerCase(java.util.Locale.ROOT);
+        if(!expected.equals(actual))throw new BusinessException(409,"收款账户姓名必须与实名认证姓名一致");
     }
 }

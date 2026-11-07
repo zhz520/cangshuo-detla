@@ -18,6 +18,9 @@ public class PlayerAccount extends BaseEntity {
     /** 收款码图片URL（支付宝/微信） */
     private String qrcodeUrl;
     private Integer isDefault;
+    /** Non-persisted UI hint: account holder matches verified or onboarding real name. */
+    @TableField(exist = false)
+    private Boolean identityMatched;
     @TableLogic
     private Integer deleted;
 }

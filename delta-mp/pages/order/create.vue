@@ -146,7 +146,7 @@ import AppImage from '@/components/AppImage.vue'
 import { ref, reactive, watch, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import PriceText from '@/components/PriceText.vue'
-import { createOrder, getAvailablePlayers, getOrderQuote } from '@/api/order'
+import { createOrder, getAvailablePlayers, getOrderDetail, getOrderQuote } from '@/api/order'
 import { getProductDetail, getCategoryFormFields } from '@/api/product'
 import { getSavedInfoByCategory, saveDynamicInfo } from '@/api/user'
 import { useUserStore } from '@/store/user'
@@ -213,14 +213,16 @@ function getFieldOptions(field) {
   return field.options.split(',').map(s => s.trim()).filter(Boolean)
 }
 
-async function loadFormFields(pid) {
+async function loadFormFields(pid, initialFields = null) {
   try {
     const prodRes = await getProductDetail(pid)
     const categoryId = prodRes.data?.categoryId
     if (!categoryId) return
     currentCategoryId.value = categoryId
     const res = await getCategoryFormFields(categoryId)
-    formFields.value = res.data || []
+    const fields = res.data || []
+    if (initialFields) Object.entries(initialFields).forEach(([key, value]) => { extraFields[key] = value })
+    formFields.value = fields
     // 加载已保存的下单信息
     if (userStore.isLoggedIn) loadSavedList(categoryId)
   } catch (e) {
@@ -304,12 +306,45 @@ function confirmPickPlayer() {
   showPlayerPicker.value = false
 }
 
+async function loadRepeatOrder(repeatOrderId) {
+  try {
+    const { data: source } = await getOrderDetail(repeatOrderId)
+    if (!source?.productId) throw new Error('原订单商品不存在')
+    productId.value = source.productId
+    productName.value = source.productName || '服务'
+    specInfo.value = source.specInfo || ''
+    let repeatFields = null
+    if (source.extraFields) {
+      try {
+        repeatFields = typeof source.extraFields === 'string' ? JSON.parse(source.extraFields) : source.extraFields
+      } catch (_) {}
+    }
+    await loadFormFields(source.productId, repeatFields)
+    if (source.requestedPlayerLevelId) selectionMode.value = 'level:' + source.requestedPlayerLevelId
+    if (source.designatedPlayerId) {
+      try {
+        const { data: playerData } = await getPublicPlayer(source.designatedPlayerId)
+        if (playerData?.canOrder) { selectionMode.value = 'designated'; selectedPlayer.value = playerData }
+        else uni.showToast({ title: '原指定打手暂不可接单，可重新选择', icon: 'none' })
+      } catch (_) { uni.showToast({ title: '原指定打手暂不可用，可重新选择', icon: 'none' }) }
+    }
+    await refreshQuote()
+  } catch (e) {
+    uni.showModal({ title: '无法再次下单', content: e?.msg || e?.message || '商品已下架或原订单不可用', showCancel: false, success: () => uni.navigateBack() })
+  }
+}
+
 onLoad(async (opts) => {
+  getPlayerCategories().then(({data}) => { playerLevels.value=data||[] }).catch(() => {})
+  if (opts.repeatOrderId) {
+    if (!userStore.isLoggedIn) return uni.showToast({ title: '请登录后再次下单', icon: 'none' })
+    await loadRepeatOrder(opts.repeatOrderId)
+    return
+  }
   productId.value = opts.productId
   specInfo.value = decodeURIComponent(opts.specCombination || opts.specInfo || '')
   productName.value = decodeURIComponent(opts.productName || '服务')
-  loadFormFields(opts.productId)
-  getPlayerCategories().then(({data}) => { playerLevels.value=data||[] }).catch(() => {})
+  await loadFormFields(opts.productId)
   if(opts.playerId){
     selectionMode.value='designated'
     try{const {data}=await getPublicPlayer(opts.playerId);if(!data.canOrder){uni.showToast({title:data.orderUnavailableReason||'打手暂不可接单',icon:'none'});return}selectedPlayer.value=data}

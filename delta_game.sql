@@ -705,6 +705,7 @@ CREATE TABLE `player_wallet` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '钱包ID',
   `player_id` bigint NOT NULL COMMENT '打手ID',
   `balance` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '可用余额',
+  `pending_income` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '待结算收益(售后观察期内)',
   `frozen_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '冻结金额(提现审核中)',
   `total_income` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '累计收入',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -1429,6 +1430,40 @@ PREPARE user_auth_stmt FROM @sql; EXECUTE user_auth_stmt; DEALLOCATE PREPARE use
 -- 20261025 打手等级及独立涨价规则（默认不涨价）
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player_level' AND column_name='price_increase_rate')=0, 'ALTER TABLE player_level ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT ''等级涨价百分比''', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 20261107 settlement safety and member engagement
+SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player_wallet' AND column_name='pending_income')=0,
+ 'ALTER TABLE player_wallet ADD COLUMN pending_income DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT ''待结算收益(售后观察期内)'' AFTER balance', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS player_income_settlement (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ order_id bigint NOT NULL, player_id bigint NOT NULL, role varchar(20) NOT NULL DEFAULT 'PRIMARY',
+ amount decimal(12,2) NOT NULL, reversed_amount decimal(12,2) NOT NULL DEFAULT 0,
+ status varchar(20) NOT NULL DEFAULT 'PENDING', release_at datetime NOT NULL, released_at datetime NULL,
+ attempts int NOT NULL DEFAULT 0, last_error varchar(255) NULL, next_attempt_at datetime NOT NULL,
+ remark varchar(255) NOT NULL DEFAULT '',
+ created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_income_settlement_order_player(order_id,player_id),
+ KEY idx_income_settlement_due(status,next_attempt_at), KEY idx_income_settlement_player(player_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打手待结算收益';
+
+CREATE TABLE IF NOT EXISTS user_favorite (
+ user_id bigint NOT NULL, product_id bigint NOT NULL, created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(user_id,product_id), KEY idx_user_favorite_product(product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户商品收藏';
+
+CREATE TABLE IF NOT EXISTS player_follow (
+ user_id bigint NOT NULL, player_id bigint NOT NULL, created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注打手';
+
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'settlement.hold_hours','订单收益售后观察期','72','number','结算配置','订单确认后先进入待结算收益，观察期结束且无投诉、退款时转为可提现余额；单位小时，0至720'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='settlement.hold_hours');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'withdraw.require_identity_match','提现校验收款人实名','true','boolean','提现配置','开启后收款账户姓名必须与已通过实名或入驻真实姓名一致，避免换绑他人账户收款'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='withdraw.require_identity_match');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'order.purchase_enabled','启用前台购买','true','boolean','订单配置','关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.purchase_enabled');

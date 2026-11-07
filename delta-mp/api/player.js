@@ -51,6 +51,7 @@ export const completeWork = (orderId, data = {}) => post(`/player/work/${orderId
 
 // ========== 收益 ==========
 export const getEarningsSummary = (options = {}) => get('/player/earnings/summary', {}, { role: 'player', ...options })
+export const getPendingIncome = (options = {}) => get('/player/earnings/pending', {}, { role: 'player', loading: false, ...options })
 export const getEarningsDetail = (params) => get('/player/earnings/detail', params, { role: 'player', loading: false })
 
 // ========== 提现 ==========

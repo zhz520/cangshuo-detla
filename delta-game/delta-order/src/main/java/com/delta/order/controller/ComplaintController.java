@@ -29,6 +29,7 @@ public class ComplaintController {
     private final OrderProgressService orderProgressService;
     private final CrossModuleMapper crossModuleMapper;
     private final com.delta.common.security.service.RateLimitService limits;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
@@ -49,7 +50,15 @@ public class ComplaintController {
 
         // 2. 校验订单状态
         String status = order.getStatus();
-        if (!"IN_PROGRESS".equals(status) && !"COMPLETED".equals(status)) {
+        boolean afterSaleWindow = false;
+        try {
+            if ("CONFIRMED".equals(status) || "REVIEWED".equals(status)) {
+                Long pending = jdbc.queryForObject("SELECT COUNT(*) FROM player_income_settlement WHERE order_id=? " +
+                        "AND status='PENDING' AND release_at>CURRENT_TIMESTAMP", Long.class, order.getId());
+                afterSaleWindow = pending != null && pending > 0;
+            }
+        } catch (Exception ignored) {}
+        if (!"IN_PROGRESS".equals(status) && !"COMPLETED".equals(status) && !afterSaleWindow) {
             return R.fail("当前订单状态不允许投诉");
         }
 

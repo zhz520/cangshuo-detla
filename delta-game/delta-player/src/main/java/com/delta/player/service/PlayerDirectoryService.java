@@ -6,6 +6,7 @@ import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.player.dto.PublicPlayerVO;
 import com.delta.player.entity.Player;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,6 +15,7 @@ public class PlayerDirectoryService {
     private final PlayerService players;
     private final PlayerLevelService levels;
     private final CrossModuleMapper crossModuleMapper;
+    private final JdbcTemplate jdbc;
 
     public LambdaQueryWrapper<Player> visibleQuery() {
         return new LambdaQueryWrapper<Player>().eq(Player::getStatus,"ACTIVE")
@@ -42,6 +44,20 @@ public class PlayerDirectoryService {
         boolean full=crossModuleMapper.selectPlayerActiveOrders(id)>=max;
         vo.setCanOrder(online&&!full);
         vo.setOrderUnavailableReason(!online?"打手暂未上线接单":full?"打手当前订单已满，请稍后再来":"");
+        long followers=0;boolean following=false;
+        try {
+            Long count=jdbc.queryForObject("SELECT COUNT(*) FROM player_follow WHERE player_id=?",Long.class,id);
+            followers=count==null?0:count;
+            try {
+                Long userId=com.delta.common.security.utils.SecurityUtils.getUserId();
+                Long mine=jdbc.queryForObject("SELECT COUNT(*) FROM player_follow WHERE user_id=? AND player_id=?",Long.class,userId,id);
+                following=mine!=null&&mine>0;
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Older instances are made compatible by DatabaseCompatibility before traffic is served.
+        }
+        vo.setFollowerCount(followers);
+        vo.setFollowing(following);
         return vo;
     }
 }

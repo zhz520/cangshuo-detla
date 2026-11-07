@@ -6,7 +6,7 @@
       <template v-else>
         <view class="cover"><AppImage class="cover-main" :width="1080" eager :src="player.coverImage || player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/><view class="cover-shade"/><text class="cover-label">{{ player.levelName || `Lv.${player.level||1}` }} · 打手主页</text></view>
         <view class="profile-card">
-          <view class="profile-row"><view class="profile-info"><text class="name">{{ player.nickname || '打手' }}</text><view class="badges"><text class="level">{{ player.levelName || `Lv.${player.level||1}` }}</text><text class="online" :class="{available:player.isOnline===1}">● {{ player.isOnline===1?'在线接单':'暂时离线' }}</text></view></view><AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/></view>
+          <view class="profile-row"><view class="profile-info"><text class="name">{{ player.nickname || '打手' }}</text><view class="badges"><text class="level">{{ player.levelName || `Lv.${player.level||1}` }}</text><text class="online" :class="{available:player.isOnline===1}">● {{ player.isOnline===1?'在线接单':'暂时离线' }}</text><text class="follow-button" :class="{active:player.following}" @click.stop="toggleFollow">{{ player.following ? '已关注' : '+ 关注' }}</text><text v-if="Number(player.followerCount)>0" class="follower-count">{{ player.followerCount }} 人关注</text></view></view><AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill"/></view>
           <view class="voice-wrap"><VoicePlayer :src="player.voiceUrl" :duration="player.voiceDuration || 0"/><text v-if="!player.voiceUrl" class="muted">TA还没有留下语音</text></view>
           <text class="intro-title">个人简介</text><text class="introduction">{{ player.introduction || '这位打手暂未填写个人简介' }}</text>
           <view v-if="player.skillTags || player.gameLevel" class="skills"><text v-if="player.gameLevel">{{ player.gameLevel }}</text><text v-if="player.skillTags">{{ player.skillTags }}</text></view>
@@ -42,6 +42,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import StarRating from '@/components/StarRating.vue'
 import VoicePlayer from '@/components/VoicePlayer.vue'
 import { getPublicPlayer, getPublicPlayerReviews, getPlayerReviewableOrders, createPlayerChat } from '@/api/player'
+import { followPlayer, unfollowPlayer } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { getRewardableOrders } from '@/api/reward'
 import { useSiteStore } from '@/store/site'
@@ -50,6 +51,7 @@ const rewardOrders=ref([])
 async function loadRewardOrders(){rewardOrders.value=[];if(!useUserStore().isLoggedIn)return;try{rewardOrders.value=(await getRewardableOrders(playerId.value)).data||[]}catch(_){}}
 function rewardPlayer(){const open=o=>uni.navigateTo({url:`/pages/order/detail?id=${o.id}&reward=1`});if(rewardOrders.value.length===1)return open(rewardOrders.value[0]);uni.showActionSheet({itemList:rewardOrders.value.slice(0,6).map(o=>`${o.productName} · ${o.orderNo}`),success:r=>open(rewardOrders.value[r.tapIndex])})}
 const activeTab = ref('story'), chatting = ref(false)
+const followBusy = ref(false)
 const album = computed(() => player.value?.albumImages || [])
 const playerId = ref(null), player = ref(null), loading = ref(true), errorMessage = ref('')
 const reviews = ref([]), reviewTotal = ref(0), reviewLoading = ref(false), reviewFinished = ref(false), reviewError = ref(false)
@@ -73,6 +75,16 @@ async function loadPlayer() {
   try { player.value = (await getPublicPlayer(playerId.value)).data; errorMessage.value = '' }
   catch (e) { player.value = null; errorMessage.value = e?.msg || '加载失败' }
   finally { loading.value = false }
+}
+async function toggleFollow() {
+  if (!useUserStore().checkLogin() || followBusy.value || !player.value) return
+  followBusy.value = true
+  try {
+    const response = player.value.following ? await unfollowPlayer(player.value.id) : await followPlayer(player.value.id)
+    player.value.following = Boolean(response.data?.following)
+    if (response.data?.followerCount != null) player.value.followerCount = response.data.followerCount
+    uni.showToast({ title: player.value.following ? '已关注' : '已取消关注', icon: 'none' })
+  } finally { followBusy.value = false }
 }
 async function loadReviews() {
   if (!playerId.value || reviewLoading.value || reviewFinished.value) return
@@ -117,6 +129,9 @@ function previewImages(images,index) { uni.previewImage({ urls: images.split(','
 </script>
 <style lang="scss" scoped>
 .homepage{height:var(--app-page-height, 100vh);background:#f7f8f9}.player-detail{height:100%;box-sizing:border-box}.cover{height:400rpx;position:relative;background:#dfe1e5;.app-image{height:100%;width:100%}.cover-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.12),transparent 40%,rgba(0,0,0,.35))}.cover-label{position:absolute;left:32rpx;top:28rpx;color:#fff;font-size:24rpx;text-shadow:0 1rpx 6rpx rgba(0,0,0,.25)}}.profile-card{position:relative;margin:-68rpx 24rpx 0;padding:28rpx;background:#fff;border-radius:26rpx;border:1rpx solid #eeeff1;box-shadow:0 8rpx 28rpx rgba(23,25,28,.04)}.profile-row{display:flex;align-items:center;gap:24rpx}.profile-info{flex:1;min-width:0}.name{font-size:38rpx;font-weight:800;word-break:break-all;display:block}.avatar{height:140rpx;width:140rpx;border-radius:50%;border:6rpx solid #fff;background:#f4f5f6;margin-top:-64rpx;flex-shrink:0}.badges{display:flex;flex-wrap:wrap;gap:12rpx;align-items:center;margin-top:16rpx}.level{background:#17191c;color:#fff;border-radius:999rpx;font-size:21rpx;padding:6rpx 16rpx}.online{font-size:22rpx;color:#858992;&.available{color:#347a5b}}.voice-wrap{margin:24rpx 0}.intro-title{display:block;font-size:24rpx;font-weight:600;margin-bottom:12rpx}.introduction,.story-text{display:block;white-space:pre-wrap;word-break:break-word;font-size:27rpx;line-height:1.8;color:#555b63}.story-text{margin-top:24rpx}.skills{display:flex;flex-wrap:wrap;gap:12rpx;margin-top:20rpx;text{background:#f4f5f6;padding:8rpx 16rpx;border-radius:8rpx;font-size:22rpx;color:#666b73}}.stats{display:flex;padding-top:24rpx;margin-top:24rpx;border-top:1rpx solid #eeeff1;>view{flex:1;text-align:center;font-size:22rpx;color:#858992}.stat-value{display:block;font-size:32rpx;font-weight:700;color:#17191c;margin-bottom:8rpx}}.profile-tabs{display:flex;gap:12rpx;margin:24rpx;padding:8rpx;border:1rpx solid #eeeff1;background:#fff;border-radius:16rpx;>text{flex:1;text-align:center;padding:20rpx 6rpx;font-size:26rpx;color:#73777e;border-radius:12rpx;&.active{background:#17191c;color:#fff;font-weight:600}}}.section-card{margin:0 24rpx 24rpx;padding:28rpx;background:#fff;border:1rpx solid #eeeff1;border-radius:22rpx}.section-title{font-size:28rpx;font-weight:700;display:block}.section-header{display:flex;align-items:center;justify-content:space-between;gap:16rpx}.muted{color:#969aa1;font-size:22rpx}.empty-content{padding:70rpx 10rpx;text-align:center;font-size:25rpx;color:#969aa1}.album-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12rpx;margin-top:24rpx;.app-image{width:100%;height:200rpx;border-radius:12rpx}}.review-action{background:#17191c;color:#fff;border-radius:999rpx;padding:12rpx 24rpx;font-size:24rpx}.review-tip{font-size:22rpx;color:#858992;display:block;margin-top:16rpx;line-height:1.6}.review-item{padding:28rpx 0;border-bottom:1rpx solid #eeeff1}.review-top{display:flex;align-items:center;gap:12rpx}.review-avatar{height:64rpx;width:64rpx;border-radius:50%}.review-user{flex:1;min-width:0;font-size:25rpx;text{display:block}.time{font-size:20rpx;color:#969aa1;margin-top:6rpx}}.review-content{display:block;margin-top:20rpx;line-height:1.7;font-size:27rpx;white-space:pre-wrap;word-break:break-word}.review-images{display:flex;flex-wrap:wrap;gap:12rpx;margin-top:16rpx;.app-image{height:140rpx;width:140rpx;border-radius:10rpx}}.product-name{display:block;font-size:22rpx;color:#969aa1;margin-top:16rpx}.hint{padding:40rpx 0;color:#969aa1;font-size:24rpx;text-align:center}.page-bottom{height:calc(150rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)))}.profile-actions{position:fixed;bottom:0;left:0;right:0;display:flex;gap:20rpx;padding:20rpx 28rpx calc(20rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));background:rgba(255,255,255,.98);border-top:1rpx solid #eeeff1;z-index:20}.action-button{height:84rpx;display:flex;align-items:center;justify-content:center;border-radius:999rpx;font-size:30rpx;font-weight:600;&.secondary{flex:1;background:#f2f3f5;border:1rpx solid #e6e7e9}&.primary{flex:2;background:#17191c;color:#fff;text{font-size:21rpx;font-weight:400;margin-left:12rpx;opacity:.7}}&.unavailable{background:#71757c}}
+.follow-button { padding: 6rpx 18rpx; border: 1rpx solid #cfd4db; border-radius: 999rpx; color: #555b63; font-size: 21rpx; }
+.follow-button.active { background: #f4f5f6; color: #17191c; }
+.follower-count { font-size: 20rpx; color: #8a919b; }
 </style>
 <style scoped>
 .cover { height:321rpx; overflow:hidden; background:#171a1f; }

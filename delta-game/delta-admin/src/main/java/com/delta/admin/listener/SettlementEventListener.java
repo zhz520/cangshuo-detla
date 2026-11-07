@@ -2,11 +2,11 @@ package com.delta.admin.listener;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.delta.common.event.OrderConfirmedEvent;
+import com.delta.common.exception.BusinessException;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.service.OrderPlayerService;
 import com.delta.order.service.OrderService;
-import com.delta.pay.service.TransactionService;
 import com.delta.player.entity.PlayerWallet;
 import com.delta.player.service.PlayerWalletService;
 import com.delta.system.service.SysConfigService;
@@ -19,64 +19,69 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 订单确认后自动结算 —— 将收益写入打手钱包
+ * Single, idempotent order-income settlement entry.
+ *
+ * <p>Earned income first enters {@code pending_income}. It becomes withdrawable only
+ * after the configured after-sales hold expires and no complaint/refund is active.</p>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SettlementEventListener {
-
     private final OrderService orderService;
-    private final com.delta.admin.service.SettlementRecoveryService recovery;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final OrderPlayerService orderPlayerService;
     private final PlayerWalletService playerWalletService;
-    private final TransactionService transactionService;
     private final SysConfigService sysConfigService;
 
     @EventListener
     @Transactional(rollbackFor = Exception.class)
     public void onOrderConfirmed(OrderConfirmedEvent event) {
-        Long orderId = event.getOrderId();
-        Order order = orderService.getById(orderId);
+        settleOrder(event.getOrderId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void settleOrder(Long orderId) {
+        Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                .eq(Order::getId, orderId).last("FOR UPDATE"));
         if (order == null || order.getPlayerId() == null) {
             log.warn("结算跳过: 订单不存在或无打手, orderId={}", orderId);
             return;
         }
-        // 防止重复结算
-        if (order.getSettled() != null && order.getSettled() == 1) {
-            log.warn("结算跳过: 订单已结算, orderId={}", orderId);
-            return;
-        }
-        if(!java.util.Set.of("CONFIRMED","REVIEWED").contains(order.getStatus())) return;
+        if (Integer.valueOf(1).equals(order.getSettled())) return;
+        if (!java.util.Set.of("CONFIRMED", "REVIEWED").contains(order.getStatus())) return;
 
-        // 优先使用订单下单时快照的抽佣比例，否则从系统配置读取
-        BigDecimal commissionRate;
-        if (order.getCommissionRate() != null) {
-            commissionRate = order.getCommissionRate();
-        } else {
-            String rateStr = sysConfigService.getConfigValue("settlement.commission_rate", "0.2");
-            commissionRate = new BigDecimal(rateStr);
-        }
-
+        BigDecimal commissionRate = order.getCommissionRate();
+        if (commissionRate == null) commissionRate = new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
         BigDecimal orderAmount = order.getAmount();
         com.delta.common.utils.Money.positive(orderAmount);
-        if(commissionRate.signum()<0 || commissionRate.compareTo(BigDecimal.ONE)>0) throw new com.delta.common.exception.BusinessException("抽佣比例无效");
+        if (commissionRate.signum() < 0 || commissionRate.compareTo(BigDecimal.ONE) > 0)
+            throw new BusinessException("抽佣比例无效");
+
         BigDecimal commission = orderAmount.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal playerTotalIncome = orderAmount.subtract(commission);
-        var snapshot=jdbc.queryForList("SELECT cs_rate,cs_id FROM order_finance_snapshot WHERE order_id=?",orderId);
-        Long csId=snapshot.isEmpty()||snapshot.get(0).get("cs_id")==null?null:((Number)snapshot.get(0).get("cs_id")).longValue();
-        BigDecimal csRate=snapshot.isEmpty()?BigDecimal.ZERO:(BigDecimal)snapshot.get(0).get("cs_rate");
-        BigDecimal csIncome=csId==null?BigDecimal.ZERO:commission.multiply(csRate).setScale(2,RoundingMode.HALF_UP);
-        if(csIncome.signum()<0||csIncome.compareTo(commission)>0)throw new com.delta.common.exception.BusinessException("客服提成超出俱乐部抽成");
-        jdbc.update("INSERT INTO order_settlement_ledger(order_id,amount,club_amount,player_amount,cs_amount,cs_id) VALUES (?,?,?,?,?,?)",orderId,orderAmount,commission.subtract(csIncome),playerTotalIncome,csIncome,csId);
+        var snapshot = jdbc.queryForList("SELECT cs_rate,cs_id FROM order_finance_snapshot WHERE order_id=?", orderId);
+        Long csId = snapshot.isEmpty() || snapshot.get(0).get("cs_id") == null
+                ? null : ((Number) snapshot.get(0).get("cs_id")).longValue();
+        BigDecimal csRate = snapshot.isEmpty() || snapshot.get(0).get("cs_rate") == null
+                ? BigDecimal.ZERO : (BigDecimal) snapshot.get(0).get("cs_rate");
+        BigDecimal csIncome = csId == null ? BigDecimal.ZERO
+                : commission.multiply(csRate).setScale(2, RoundingMode.HALF_UP);
+        if (csIncome.signum() < 0 || csIncome.compareTo(commission) > 0)
+            throw new BusinessException("客服提成超出俱乐部抽成");
+
+        Integer ledgerExists = jdbc.queryForObject("SELECT COUNT(*) FROM order_settlement_ledger WHERE order_id=?", Integer.class, orderId);
+        if (ledgerExists == null || ledgerExists == 0) {
+            jdbc.update("INSERT INTO order_settlement_ledger(order_id,amount,club_amount,player_amount,cs_amount,cs_id) VALUES (?,?,?,?,?,?)",
+                    orderId, orderAmount, commission.subtract(csIncome), playerTotalIncome, csIncome, csId);
+        }
 
         Long primaryPlayerId = order.getPlayerId();
-
-        // 查询队友记录（ACCEPTED 状态的 TEAMMATE）
         List<OrderPlayer> teammates = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getRole, "TEAMMATE")
@@ -87,53 +92,45 @@ public class SettlementEventListener {
                 .eq(OrderPlayer::getStatus, "ACCEPTED"));
         int sharingPeople = teammates.size() + relayOuts.size();
 
-        // Lock all participant wallets in ascending ID order to avoid cross-order lock inversion.
-        var participantIds=new java.util.TreeSet<Long>();participantIds.add(primaryPlayerId);teammates.forEach(p->participantIds.add(p.getPlayerId()));
-        relayOuts.forEach(p->participantIds.add(p.getPlayerId()));
-        for(Long participant:participantIds){if(playerWalletService.getByPlayerId(participant)==null){playerWalletService.initWallet(participant);playerWalletService.getByPlayerId(participant);}}
-        BigDecimal primaryIncome = playerTotalIncome; // 默认全归主打手
-        BigDecimal totalShares=java.util.stream.Stream.concat(teammates.stream(),relayOuts.stream())
-                .map(tm -> calcTeammateIncome(playerTotalIncome,tm,sharingPeople))
-                .reduce(BigDecimal.ZERO,BigDecimal::add);
-        if(totalShares.signum()<0 || totalShares.compareTo(playerTotalIncome)>0) throw new com.delta.common.exception.BusinessException("协作分成总额超过可结算收益");
+        var participantIds = new java.util.TreeSet<Long>();
+        participantIds.add(primaryPlayerId);
+        teammates.forEach(player -> participantIds.add(player.getPlayerId()));
+        relayOuts.forEach(player -> participantIds.add(player.getPlayerId()));
+        for (Long participant : participantIds) {
+            if (playerWalletService.getByPlayerId(participant) == null) {
+                playerWalletService.initWallet(participant);
+                playerWalletService.getByPlayerId(participant);
+            }
+        }
 
+        BigDecimal primaryIncome = playerTotalIncome;
+        BigDecimal totalShares = java.util.stream.Stream.concat(teammates.stream(), relayOuts.stream())
+                .map(player -> calcTeammateIncome(playerTotalIncome, player, sharingPeople))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (totalShares.signum() < 0 || totalShares.compareTo(playerTotalIncome) > 0)
+            throw new BusinessException("协作分成总额超过可结算收益");
+
+        LinkedHashMap<Long, SettlementShare> shares = new LinkedHashMap<>();
         for (OrderPlayer relayOut : relayOuts) {
             BigDecimal income = calcTeammateIncome(playerTotalIncome, relayOut, sharingPeople);
             if (income.signum() <= 0) continue;
             primaryIncome = primaryIncome.subtract(income);
-            creditWallet(relayOut.getPlayerId(), income, orderId,
-                    String.format("接力分成: 订单金额¥%s, 分成¥%s", orderAmount.toPlainString(), income.toPlainString()));
+            addShare(shares, relayOut.getPlayerId(), income, "RELAY_OUT");
             relayOut.setSettleAmount(income);
             relayOut.setSettledAt(LocalDateTime.now());
             orderPlayerService.updateById(relayOut);
         }
-
-        // 给每位队友结算
-        for (OrderPlayer tm : teammates) {
-            BigDecimal tmIncome = calcTeammateIncome(playerTotalIncome, tm, sharingPeople);
-            if (tmIncome.compareTo(BigDecimal.ZERO) <= 0) continue;
-            primaryIncome = primaryIncome.subtract(tmIncome);
-            // 更新队友钱包
-            creditWallet(tm.getPlayerId(), tmIncome, orderId,
-                    String.format("队友分成: 订单金额¥%s, 分成¥%s", orderAmount.toPlainString(), tmIncome.toPlainString()));
-            // 更新 OrderPlayer 结算信息
-            tm.setSettleAmount(tmIncome);
-            tm.setSettledAt(LocalDateTime.now());
-            orderPlayerService.updateById(tm);
-            log.info("队友结算: orderId={}, playerId={}, 分成={}", orderId, tm.getPlayerId(), tmIncome);
+        for (OrderPlayer teammate : teammates) {
+            BigDecimal income = calcTeammateIncome(playerTotalIncome, teammate, sharingPeople);
+            if (income.signum() <= 0) continue;
+            primaryIncome = primaryIncome.subtract(income);
+            addShare(shares, teammate.getPlayerId(), income, "TEAMMATE");
+            teammate.setSettleAmount(income);
+            teammate.setSettledAt(LocalDateTime.now());
+            orderPlayerService.updateById(teammate);
         }
+        if (primaryIncome.signum() > 0) addShare(shares, primaryPlayerId, primaryIncome, "PRIMARY");
 
-        // 主打手结算（扣除队友分成后的剩余）
-        if (primaryIncome.compareTo(BigDecimal.ZERO) > 0) {
-            creditWallet(primaryPlayerId, primaryIncome, orderId,
-                    String.format("订单金额:¥%s, 抽成:%s%%, 抽成¥%s, 打手总收入¥%s, 队友分成后实得¥%s",
-                            orderAmount.toPlainString(),
-                            commissionRate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString(),
-                            commission.toPlainString(),
-                            playerTotalIncome.toPlainString(),
-                            primaryIncome.toPlainString()));
-        }
-        // 更新主打手 OrderPlayer 结算信息（防止脏数据导致多条记录，取最新一条）
         List<OrderPlayer> primaryOps = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getPlayerId, primaryPlayerId)
@@ -141,53 +138,67 @@ public class SettlementEventListener {
                 .orderByDesc(OrderPlayer::getId)
                 .last("LIMIT 1"));
         if (!primaryOps.isEmpty()) {
-            OrderPlayer primaryOp = primaryOps.get(0);
-            primaryOp.setSettleAmount(primaryIncome);
-            primaryOp.setSettledAt(LocalDateTime.now());
-            orderPlayerService.updateById(primaryOp);
+            OrderPlayer primary = primaryOps.get(0);
+            primary.setSettleAmount(primaryIncome);
+            primary.setSettledAt(LocalDateTime.now());
+            orderPlayerService.updateById(primary);
         }
 
-        // 标记订单已结算
+        int holdHours = holdHours();
+        LocalDateTime releaseAt = LocalDateTime.now().plusHours(holdHours);
+        for (SettlementShare share : shares.values()) acquirePendingIncome(orderId, share, releaseAt);
+
         order.setSettled(1);
         order.setSettleAmount(playerTotalIncome);
         order.setSettleTime(LocalDateTime.now());
         orderService.updateById(order);
-
-        log.info("订单结算完成: orderId={}, 订单金额={}, 抽成={}, 打手总收入={}, 主打手实得={}, 协作人数={}",
-                orderId, orderAmount, commission, playerTotalIncome, primaryIncome, sharingPeople);
+        log.info("订单收益进入待结算: orderId={}, amount={}, releaseAt={}, participants={}",
+                orderId, playerTotalIncome, releaseAt, shares.size());
     }
 
-    /**
-     * 计算队友分成金额
-     */
-    private BigDecimal calcTeammateIncome(BigDecimal playerTotalIncome, OrderPlayer tm, int teammateCount) {
-        String splitType = tm.getSplitType();
-        if (splitType == null) splitType = "FIFTY_FIFTY";
+    private void acquirePendingIncome(Long orderId, SettlementShare share, LocalDateTime releaseAt) {
+        Integer exists = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM player_income_settlement WHERE order_id=? AND player_id=?",
+                Integer.class, orderId, share.playerId());
+        if (exists != null && exists > 0) return;
+        PlayerWallet wallet = playerWalletService.getByPlayerId(share.playerId());
+        if (wallet == null) {
+            playerWalletService.initWallet(share.playerId());
+            wallet = playerWalletService.getByPlayerId(share.playerId());
+        }
+        BigDecimal pendingBefore = wallet.getPendingIncome() == null ? BigDecimal.ZERO : wallet.getPendingIncome();
+        wallet.setPendingIncome(pendingBefore.add(share.amount()));
+        playerWalletService.updateById(wallet);
+        jdbc.update("INSERT INTO player_income_settlement(order_id,player_id,role,amount,reversed_amount,status,release_at,next_attempt_at,remark) " +
+                        "VALUES (?,?,?,?,0,'PENDING',?,?,?)",
+                orderId, share.playerId(), share.role(), share.amount(), releaseAt, releaseAt,
+                "订单收益待售后观察期结算");
+    }
+
+    private void addShare(Map<Long, SettlementShare> shares, Long playerId, BigDecimal amount, String role) {
+        shares.merge(playerId, new SettlementShare(playerId, amount, role),
+                (old, added) -> new SettlementShare(playerId, old.amount().add(added.amount()),
+                        "PRIMARY".equals(old.role()) ? old.role() : added.role()));
+    }
+
+    private BigDecimal calcTeammateIncome(BigDecimal playerTotalIncome, OrderPlayer teammate, int sharingPeople) {
+        String splitType = teammate.getSplitType() == null ? "FIFTY_FIFTY" : teammate.getSplitType();
         return switch (splitType) {
-            case "CUSTOM" -> tm.getSplitAmount() != null ? tm.getSplitAmount().setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            case "CUSTOM" -> teammate.getSplitAmount() == null ? BigDecimal.ZERO : teammate.getSplitAmount().setScale(2, RoundingMode.HALF_UP);
             case "FORTY_SIXTY" -> playerTotalIncome.multiply(new BigDecimal("0.4")).setScale(2, RoundingMode.HALF_UP);
             case "THIRTY_SEVENTY" -> playerTotalIncome.multiply(new BigDecimal("0.3")).setScale(2, RoundingMode.HALF_UP);
-            // FIFTY_FIFTY 和默认：平分打手总收入
-            default -> playerTotalIncome.divide(BigDecimal.valueOf(teammateCount + 1), 2, RoundingMode.HALF_UP);
+            default -> playerTotalIncome.divide(BigDecimal.valueOf(sharingPeople + 1), 2, RoundingMode.HALF_UP);
         };
     }
 
-    /**
-     * 给指定打手钱包加款 + 创建交易记录
-     */
-    private void creditWallet(Long playerId, BigDecimal income, Long orderId, String remark) {
-        PlayerWallet wallet = playerWalletService.getByPlayerId(playerId);
-        if (wallet == null) {
-            playerWalletService.initWallet(playerId);
-            wallet = playerWalletService.getByPlayerId(playerId);
+    private int holdHours() {
+        try {
+            return Math.max(0, Math.min(720,
+                    Integer.parseInt(sysConfigService.getConfigValue("settlement.hold_hours", "72"))));
+        } catch (Exception ignored) {
+            return 72;
         }
-        BigDecimal balanceBefore = wallet.getBalance();
-        BigDecimal balanceAfter = balanceBefore.add(income);
-        wallet.setBalance(balanceAfter);
-        wallet.setTotalIncome(wallet.getTotalIncome().add(income));
-        playerWalletService.updateById(wallet);
-        transactionService.record("INCOME", "PLAYER", playerId,
-                income, balanceBefore, balanceAfter, orderId, null, null, remark);
-        recovery.recover(playerId,income);
     }
+
+    private record SettlementShare(Long playerId, BigDecimal amount, String role) {}
 }

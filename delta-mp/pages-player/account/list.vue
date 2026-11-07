@@ -11,6 +11,7 @@
       </view>
       <text class="account-no">{{ a.accountNo || '账号未记录' }}</text>
       <text v-if="a.accountName" class="real-name">{{ a.accountName }}</text>
+      <text v-if="a.identityMatched === false" class="identity-warning">收款人姓名与实名不一致，提现前需修改</text>
       <view class="card-actions">
         <button class="action-btn" :disabled="deletingId !== null" @click="goEdit(a)">编辑</button>
         <button class="action-btn danger" :disabled="deletingId !== null" :loading="deletingId === a.id" @click="doDelete(a.id)">删除</button>
@@ -105,6 +106,7 @@ async function doDelete(id) {
   }
   .account-no { font-size: 32rpx; color: #17191c; letter-spacing: 2rpx; display: block; word-break: break-all; }
   .real-name { font-size: 24rpx; color: #73777e; display: block; margin-top: 4rpx; }
+  .identity-warning { font-size: 22rpx; line-height: 1.5; color: #a04b55; display: block; margin-top: 6rpx; }
   .card-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f4f5f6;
     .action-btn { margin: 0; padding: 8rpx 16rpx; background: #f7f8fa; font-size: 26rpx; line-height: 1.6; color: #17191c; border-radius: 12rpx; &::after { border: 0; } &[disabled] { opacity: .5; } &.danger { color: #b84b55; } }
   }

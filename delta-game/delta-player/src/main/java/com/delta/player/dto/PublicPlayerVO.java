@@ -28,6 +28,8 @@ public class PublicPlayerVO {
     private Integer orderCount;
     private BigDecimal completeRate;
     private Integer isOnline;
+    private Long followerCount;
+    private Boolean following;
 
     public static PublicPlayerVO from(Player player) {
         PublicPlayerVO vo = new PublicPlayerVO();
