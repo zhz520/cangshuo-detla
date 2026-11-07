@@ -3,8 +3,11 @@ package com.delta.product.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.annotation.OpLog;
+import com.delta.common.domain.BatchIds;
+import com.delta.common.domain.BatchResult;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
+import com.delta.common.exception.BusinessException;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.product.entity.Category;
 import com.delta.product.entity.Product;
@@ -17,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/product")
@@ -25,6 +29,11 @@ public class ProductController {
     private final ProductService productService;
     private final RecommendCategoryService recommendCategoryService;
     private final CategoryService categoryService;
+
+    public record BatchStatusRequest(List<Long> ids, Integer status) {}
+    public record BatchCategoryRequest(List<Long> ids, Long categoryId) {}
+    public record BatchPriceRequest(List<Long> ids, String mode, BigDecimal value) {}
+    public record BatchIdsRequest(List<Long> ids) {}
 
     @GetMapping("/list")
     public R<Page<Product>> list(PageQuery query,
@@ -121,6 +130,51 @@ public class ProductController {
     @OpLog(module = "product", operation = "删除商品")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { productService.removeById(id); return R.ok(); }
+
+    @OpLog(module = "product", operation = "批量更新商品状态")
+    @PostMapping("/batch/status")
+    public R<BatchResult> batchStatus(@RequestBody BatchStatusRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        if (body.status() == null || (body.status() != 0 && body.status() != 1))
+            throw new BusinessException(400, "商品状态无效");
+        return R.ok(BatchResult.success(productService.updateStatusBatch(ids, body.status())));
+    }
+
+    @OpLog(module = "product", operation = "批量调整商品分类")
+    @PostMapping("/batch/category")
+    public R<BatchResult> batchCategory(@RequestBody BatchCategoryRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        if (body.categoryId() == null) {
+            throw new BusinessException(400, "商品分类不存在");
+        }
+        Category category = categoryService.getById(body.categoryId());
+        if (category == null) throw new BusinessException(400, "商品分类不存在");
+        if (!Integer.valueOf(1).equals(category.getStatus())) {
+            throw new BusinessException(409, "所选分类已停用，请启用后再批量调整");
+        }
+        return R.ok(BatchResult.success(productService.updateCategoryBatch(ids, body.categoryId())));
+    }
+
+    @OpLog(module = "product", operation = "批量调整商品价格")
+    @PostMapping("/batch/price")
+    public R<BatchResult> batchPrice(@RequestBody BatchPriceRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        return R.ok(BatchResult.success(productService.adjustPriceBatch(ids, body.mode(), body.value())));
+    }
+
+    @OpLog(module = "product", operation = "批量复制商品为草稿")
+    @PostMapping("/batch/copy")
+    public R<BatchResult> batchCopy(@RequestBody BatchIdsRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 50);
+        return R.ok(BatchResult.success(productService.copyAsDrafts(ids)));
+    }
+
+    @OpLog(module = "product", operation = "批量删除商品")
+    @PostMapping("/batch/delete")
+    public R<BatchResult> batchDelete(@RequestBody BatchIdsRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        return R.ok(BatchResult.success(productService.deleteBatch(ids)));
+    }
 
     private boolean isPrivilegedRequest() {
         try {

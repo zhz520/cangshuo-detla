@@ -3,6 +3,8 @@ package com.delta.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.annotation.OpLog;
+import com.delta.common.domain.BatchIds;
+import com.delta.common.domain.BatchResult;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -32,6 +36,9 @@ public class AdminUserController {
     private final OrderService orderService;
     private final TransactionService transactionService;
     private final com.delta.admin.service.UserManagementService management;
+
+    public record BatchStatusRequest(List<Long> ids, Integer status) {}
+    public record BatchIdsRequest(List<Long> ids) {}
 
     @OpLog(module = "user", operation = "新增用户")
     @PostMapping
@@ -76,6 +83,52 @@ public class AdminUserController {
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam("status") Integer status) {
         management.setStatus(id,status);
         return R.ok();
+    }
+
+    @OpLog(module = "user", operation = "批量更新用户状态")
+    @PostMapping("/batch/status")
+    public R<BatchResult> batchStatus(@RequestBody BatchStatusRequest body) {
+        if (body.status() == null || (body.status() != 0 && body.status() != 1))
+            throw new BusinessException(400, "用户状态无效");
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                management.setStatus(id, body.status());
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("用户 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("用户 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
+    }
+
+    @OpLog(module = "user", operation = "批量删除用户")
+    @PostMapping("/batch/delete")
+    public R<BatchResult> batchDelete(@RequestBody BatchIdsRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 50);
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                management.delete(id);
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("用户 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("用户 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
     }
 
     @OpLog(module = "user", operation = "调整用户余额")

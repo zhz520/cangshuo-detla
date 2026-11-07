@@ -14,7 +14,14 @@
         </el-form-item>
         <el-form-item><el-button type="primary" @click="fetchData">查询</el-button><el-button @click="query.keyword='';query.status='';fetchData()">重置</el-button></el-form-item>
       </el-form>
-      <el-table :data="list" v-loading="loading" stripe>
+      <BatchActionBar v-if="isAdmin" :count="selectedRows.length" :disabled="batchBusy" hint="批量操作会逐项校验审核、等级和冻结状态" @clear="clearSelection">
+        <el-button link :disabled="batchBusy" @click="batchApprove">批量通过</el-button>
+        <el-button link :disabled="batchBusy" @click="batchRejectVisible = true">批量驳回</el-button>
+        <el-button link :disabled="batchBusy" @click="batchLevelVisible = true">批量调整等级</el-button>
+        <el-button link :disabled="batchBusy" @click="batchUnfreeze">批量解冻</el-button>
+      </BatchActionBar>
+      <el-table ref="tableRef" row-key="id" :data="list" v-loading="loading" stripe @selection-change="onSelectionChange">
+        <el-table-column v-if="isAdmin" type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
@@ -57,6 +64,16 @@
       </el-table>
       <Pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="fetchData" />
     </el-card>
+    <el-dialog v-model="batchRejectVisible" title="批量驳回入驻申请" width="min(460px, 94vw)">
+      <p class="dialog-tip">将批量驳回已选的 {{ selectedRows.length }} 个打手，原因会写入通知。</p>
+      <el-input v-model="batchRejectReason" type="textarea" :rows="4" maxlength="255" show-word-limit placeholder="请输入统一驳回原因" />
+      <template #footer><el-button @click="batchRejectVisible = false">取消</el-button><el-button type="danger" :loading="batchBusy" :disabled="!batchRejectReason.trim() || batchBusy" @click="batchReject">确认驳回</el-button></template>
+    </el-dialog>
+    <el-dialog v-model="batchLevelVisible" title="批量调整打手等级" width="min(440px, 94vw)">
+      <p class="dialog-tip">将已选的 {{ selectedRows.length }} 个打手统一调整到：</p>
+      <el-select v-model="batchLevelId" placeholder="选择打手等级" style="width:100%"><el-option v-for="level in levelOptions.filter(item => item.status !== 0)" :key="level.id" :label="level.name" :value="level.id" /></el-select>
+      <template #footer><el-button @click="batchLevelVisible = false">取消</el-button><el-button type="primary" :loading="batchBusy" :disabled="!batchLevelId || batchBusy" @click="batchLevel">确认调整</el-button></template>
+    </el-dialog>
     <!-- 驳回弹窗 -->
     <el-dialog v-model="rejectDialogVisible" title="驳回原因" width="400px">
       <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请输入驳回原因" />
@@ -214,12 +231,14 @@ import { watch } from 'vue'
 import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
-import { ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerUpdate, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { computed, ref, reactive, onMounted } from 'vue'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
 import Pagination from '@/components/Pagination.vue'
+import BatchActionBar from '@/components/BatchActionBar.vue'
+import { showBatchResult } from '@/utils/batch-result'
 import PlayerHomepageFields from '@/components/PlayerHomepageFields.vue'
 import {playerLevelList} from '@/api/business'
 import {thumbnailUrl} from '@/utils/image'
@@ -232,6 +251,12 @@ function levelLabel(id){return levelOptions.value.find(l=>l.id===id)?.name || `L
 onMounted(async()=>{if(isAdmin)levelOptions.value=(await playerLevelList()).data||[]})
 async function setOffline(row){await ElMessageBox.confirm('确认让该打手下班？需要打手本人操作才能重新上班。','打手下班');await request.put('/cs/player/'+row.id+'/online-status',{online:false});await fetchData()}
 const loading = ref(false), list = ref([]), total = ref(0)
+const tableRef = ref(null), selectedRows = ref([]), batchBusy = ref(false)
+const batchRejectVisible = ref(false), batchRejectReason = ref('')
+const batchLevelVisible = ref(false), batchLevelId = ref(null)
+const selectedIds = computed(() => selectedRows.value.map(row => row.id))
+function onSelectionChange(rows) { selectedRows.value = rows }
+function clearSelection() { tableRef.value?.clearSelection(); selectedRows.value = [] }
 const route = useRoute()
 const router = useRouter()
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '', taskId: '' })
@@ -240,12 +265,43 @@ const statusTagMap = { PENDING: 'warning', ACTIVE: 'success', REJECTED: 'danger'
 function statusText(s) { return statusMap[s] || s }
 function statusTagType(s) { return statusTagMap[s] || '' }
 async function fetchData() {
+  clearSelection()
   loading.value = true
   try {
     const fn = isAdmin ? adminPlayerList : csPlayerList
     const res = await fn(query)
     list.value = res.data.records; total.value = Number(res.data.total)
   } finally { loading.value = false }
+}
+async function runBatch(action, label) {
+  if (!selectedIds.value.length || batchBusy.value) return
+  batchBusy.value = true
+  try {
+    const response = await action(selectedIds.value)
+    showBatchResult(response.data, label)
+    clearSelection()
+    await fetchData()
+  } finally { batchBusy.value = false }
+}
+async function batchApprove() {
+  try { await ElMessageBox.confirm('确认批量通过已选的 '+selectedIds.value.length+' 个入驻申请？系统会逐项校验资料。', '批量通过入驻审核', { type: 'warning', confirmButtonText: '确认通过' }) } catch (_) { return }
+  await runBatch(ids => adminPlayerBatchApprove(ids), '批量通过入驻审核')
+}
+async function batchReject() {
+  const reason = batchRejectReason.value.trim()
+  if (!reason) return ElMessage.warning('请填写驳回原因')
+  batchRejectVisible.value = false
+  await runBatch(ids => adminPlayerBatchReject(ids, reason), '批量驳回入驻审核')
+  batchRejectReason.value = ''
+}
+async function batchLevel() {
+  if (!batchLevelId.value) return ElMessage.warning('请选择打手等级')
+  batchLevelVisible.value = false
+  await runBatch(ids => adminPlayerBatchLevel(ids, batchLevelId.value), '批量调整打手等级')
+}
+async function batchUnfreeze() {
+  try { await ElMessageBox.confirm('确认批量解冻已选的 '+selectedIds.value.length+' 个打手？解冻后打手需要自行重新上班。', '批量解冻打手', { type: 'warning', confirmButtonText: '确认解冻' }) } catch (_) { return }
+  await runBatch(ids => adminPlayerBatchUnfreeze(ids), '批量解冻打手')
 }
 async function handleApprove(id) {
   if (isAdmin) await adminPlayerApprove(id)
@@ -460,7 +516,9 @@ watch(() => route.query.taskId, id => {
 }, { immediate: true })
 </script>
 <style scoped>
-.search-form { margin-bottom: 16px; }</style>
+.search-form { margin-bottom: 16px; }
+.dialog-tip { margin: 0 0 12px; color: #73777e; font-size: 13px; line-height: 1.7; }
+</style>
 
 <style scoped>
 .player-header{display:flex;justify-content:space-between;align-items:center}

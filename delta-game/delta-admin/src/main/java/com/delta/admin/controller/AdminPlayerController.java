@@ -3,9 +3,12 @@ package com.delta.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.annotation.OpLog;
+import com.delta.common.domain.BatchIds;
+import com.delta.common.domain.BatchResult;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.event.BusinessEvent;
+import com.delta.common.exception.BusinessException;
 import com.delta.order.entity.Order;
 import com.delta.order.service.OrderService;
 import com.delta.pay.entity.Transaction;
@@ -22,6 +25,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/player")
@@ -35,6 +40,10 @@ public class AdminPlayerController {
     private final TransactionService transactionService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.system.service.FeatureAuditService featureAudit;
+
+    public record BatchIdsRequest(List<Long> ids) {}
+    public record BatchRejectRequest(List<Long> ids, String reason) {}
+    public record BatchLevelRequest(List<Long> ids, Integer levelId) {}
 
     @GetMapping("/list")
     public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
@@ -98,6 +107,7 @@ public class AdminPlayerController {
     @OpLog(module = "player", operation = "审核驳回")
     @PutMapping("/{id}/reject")
     public R<Void> reject(@PathVariable Long id, @RequestParam("reason") String reason) {
+        requireStatus(id, "PENDING", "仅待审核入驻申请可驳回");
         Player p = new Player();
         p.setId(id);
         p.setStatus("REJECTED");
@@ -125,6 +135,7 @@ public class AdminPlayerController {
     @OpLog(module = "player", operation = "解冻打手")
     @PutMapping("/{id}/unfreeze")
     public R<Void> unfreeze(@PathVariable Long id) {
+        requireStatus(id, "FROZEN", "仅已冻结打手可解冻");
         Player p = new Player();
         p.setId(id);
         p.setStatus("ACTIVE");
@@ -134,6 +145,115 @@ public class AdminPlayerController {
         eventPublisher.publishEvent(new BusinessEvent(this, "PLAYER_UNFROZEN",
                 "PLAYER", id, null, "您的账号已解冻"));
         return R.ok();
+    }
+
+    private Player requireStatus(Long id, String expected, String message) {
+        Player current = playerService.getById(id);
+        if (current == null) throw new BusinessException(404, "打手不存在");
+        if (!expected.equals(current.getStatus())) throw new BusinessException(409, message);
+        return current;
+    }
+
+    @OpLog(module = "player", operation = "批量通过入驻审核")
+    @PostMapping("/batch/approve")
+    public R<BatchResult> batchApprove(@RequestBody BatchIdsRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 100);
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                approve(id);
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
+    }
+
+    @OpLog(module = "player", operation = "批量驳回入驻审核")
+    @PostMapping("/batch/reject")
+    public R<BatchResult> batchReject(@RequestBody BatchRejectRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 100);
+        String reason = body.reason() == null ? "" : body.reason().trim();
+        if (reason.isEmpty()) throw new BusinessException(400, "请填写驳回原因");
+        if (reason.length() > 255) throw new BusinessException(400, "驳回原因不能超过 255 字");
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                reject(id, reason);
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
+    }
+
+    @OpLog(module = "player", operation = "批量调整打手等级")
+    @PostMapping("/batch/level")
+    public R<BatchResult> batchLevel(@RequestBody BatchLevelRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 200);
+        if (body.levelId() == null) throw new BusinessException(400, "等级分类不存在");
+        var level = levelService.getById(body.levelId());
+        if (level == null) throw new BusinessException(400, "等级分类不存在");
+        if (!Integer.valueOf(1).equals(level.getStatus())) {
+            throw new BusinessException(409, "所选等级已停用，请启用后再批量调整");
+        }
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                Player current = playerService.getById(id);
+                if (current == null) throw new BusinessException(404, "打手不存在");
+                Player update = new Player();
+                update.setId(id);
+                update.setLevel(body.levelId());
+                playerService.updateById(update);
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
+    }
+
+    @OpLog(module = "player", operation = "批量解冻打手")
+    @PostMapping("/batch/unfreeze")
+    public R<BatchResult> batchUnfreeze(@RequestBody BatchIdsRequest body) {
+        List<Long> ids = BatchIds.normalize(body.ids(), 100);
+        int success = 0;
+        var failedIds = new ArrayList<Long>();
+        var messages = new ArrayList<String>();
+        for (Long id : ids) {
+            try {
+                unfreeze(id);
+                success++;
+            } catch (BusinessException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：" + error.getMessage());
+            } catch (RuntimeException error) {
+                failedIds.add(id);
+                messages.add("打手 " + id + "：操作失败");
+            }
+        }
+        return R.ok(new BatchResult(success, failedIds.size(), failedIds, messages));
     }
 
     @OpLog(module = "player", operation = "更新打手状态")

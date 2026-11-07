@@ -7,7 +7,13 @@
         <el-form-item><el-select v-model="query.status" placeholder="状态" clearable><el-option label="正常" :value="1" /><el-option label="封禁" :value="0" /></el-select></el-form-item>
         <el-form-item><el-button type="primary" @click="searchUsers">查询</el-button><el-button @click="query.keyword='';query.status='';searchUsers()">重置</el-button></el-form-item>
       </el-form>
-      <el-table :data="list" v-loading="loading" stripe>
+      <BatchActionBar v-if="batchAllowed" :count="selectedRows.length" :disabled="batchBusy" @clear="clearSelection">
+        <el-button link :disabled="batchBusy" @click="batchStatus(1)">批量正常</el-button>
+        <el-button link :disabled="batchBusy" @click="batchStatus(0)">批量封禁</el-button>
+        <el-button link type="danger" :disabled="batchBusy" @click="batchDelete">批量删除</el-button>
+      </BatchActionBar>
+      <el-table ref="tableRef" row-key="id" :data="list" v-loading="loading" stripe @selection-change="onSelectionChange">
+        <el-table-column v-if="batchAllowed" type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="avatar" label="头像" width="70"><template #default="{ row }"><el-avatar :src="thumbnailUrl(row.avatar,160)" :size="36" /></template></el-table-column>
         <el-table-column prop="nickname" label="昵称" width="120" />
@@ -108,13 +114,15 @@
 
 <script setup>
 import { useResponsive } from '@/utils/responsive'
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import { adminUserList, adminUserDetail, adminUserUpdateStatus, adminUserAdjustBalance, adminOrderList, csUserList, csUserDetail, csUserUpdateStatus, csOrderList } from '@/api/business'
-import { adminUserCreate,adminUserUpdate,adminUserDelete } from '@/api/business'
+import { adminUserCreate,adminUserUpdate,adminUserDelete,adminUserBatchStatus,adminUserBatchDelete } from '@/api/business'
 import ImageUpload from '@/components/ImageUpload.vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
+import BatchActionBar from '@/components/BatchActionBar.vue'
+import { showBatchResult } from '@/utils/batch-result'
 import { can } from '@/utils/staff-permissions'
 import {thumbnailUrl} from '@/utils/image'
 
@@ -123,7 +131,12 @@ const { isCompact, isNarrow } = useResponsive()
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
 const loading = ref(false), list = ref([]), total = ref(0)
+const tableRef = ref(null), selectedRows = ref([]), batchBusy = ref(false)
+const batchAllowed = computed(() => isAdmin && can('user.manage'))
+const selectedIds = computed(() => selectedRows.value.map(row => row.id))
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: '' })
+function onSelectionChange(rows) { selectedRows.value = rows }
+function clearSelection() { tableRef.value?.clearSelection(); selectedRows.value = [] }
 const userEditorVisible=ref(false),userSaving=ref(false),userForm=reactive({id:null,phone:'',nickname:'',avatar:'',status:1,password:''})
 function openUserEditor(row){Object.assign(userForm,row?{id:row.id,phone:row.phone||'',nickname:row.nickname||'',avatar:row.avatar||'',status:row.status,password:''}:{id:null,phone:'',nickname:'',avatar:'',status:1,password:''});userEditorVisible.value=true}
 async function saveUser(){
@@ -151,6 +164,7 @@ function orderStatusLabel(status) { return orderStatusMap[status] || status }
 function orderTagType(status) { return orderTagTypeMap[status] || '' }
 
 async function fetchData() {
+  clearSelection()
   loading.value = true
   try {
     const fn = isAdmin ? adminUserList : csUserList
@@ -159,6 +173,29 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
+async function batchStatus(status) {
+  if (!selectedIds.value.length || batchBusy.value) return
+  const action = status === 1 ? '恢复正常' : '封禁'
+  try { await ElMessageBox.confirm('确认将已选的 '+selectedIds.value.length+' 个用户批量'+action+'？', '批量'+action, { type: 'warning', confirmButtonText: '确认处理' }) } catch (_) { return }
+  batchBusy.value = true
+  try {
+    const response = await adminUserBatchStatus(selectedIds.value, status)
+    showBatchResult(response.data, '批量'+action)
+    clearSelection()
+    await fetchData()
+  } finally { batchBusy.value = false }
+}
+async function batchDelete() {
+  if (!selectedIds.value.length || batchBusy.value) return
+  try { await ElMessageBox.confirm('确认删除已选的 '+selectedIds.value.length+' 个用户？有余额、流水或未完成业务时系统会阻止，并将逐项反馈。', '批量删除用户', { type: 'warning', confirmButtonText: '确认删除' }) } catch (_) { return }
+  batchBusy.value = true
+  try {
+    const response = await adminUserBatchDelete(selectedIds.value)
+    showBatchResult(response.data, '批量删除用户')
+    clearSelection()
+    await fetchData()
+  } finally { batchBusy.value = false }
+}
 async function handleToggleStatus(row) {
   const newStatus = row.status === 1 ? 0 : 1
   const fn = isAdmin ? adminUserUpdateStatus : csUserUpdateStatus

@@ -19,6 +19,11 @@ export function deleteProduct(id) {
 export function updateProductStatus(id, status) {
   return request({ url: `/product/${id}/status`, method: 'put', params: { status } })
 }
+export const batchProductStatus = (ids, status) => request.post('/product/batch/status', { ids, status })
+export const batchProductCategory = (ids, categoryId) => request.post('/product/batch/category', { ids, categoryId })
+export const batchProductPrice = (ids, mode, value) => request.post('/product/batch/price', { ids, mode, value })
+export const batchCopyProducts = ids => request.post('/product/batch/copy', { ids })
+export const batchDeleteProducts = ids => request.post('/product/batch/delete', { ids })
 
 // ==================== 分类管理 ====================
 export function getCategoryList() {

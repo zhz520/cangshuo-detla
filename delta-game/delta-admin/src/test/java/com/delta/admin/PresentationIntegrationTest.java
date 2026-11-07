@@ -33,7 +33,9 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(classes=PresentationIntegrationTest.Config.class, properties={
@@ -62,7 +64,7 @@ class PresentationIntegrationTest {
     @BeforeEach void setup() {
         ReflectionTestUtils.setField(thumbnails,"uploadPath",directory.toString());
         jdbc.execute("DROP TABLE IF EXISTS product");
-        jdbc.execute("CREATE TABLE product(id BIGINT PRIMARY KEY, category_id BIGINT, name VARCHAR(80), subtitle VARCHAR(80), description CLOB, cover_image VARCHAR(512), images CLOB, price DECIMAL(10,2),status INT,sort_order INT,sales_count INT,is_recommend INT,recommend_category_id BIGINT,avg_rating DECIMAL(3,2),review_count INT,commission_rate DECIMAL(4,2),per_user_limit_type INT,per_user_limit_enabled INT,per_user_limit_count INT,deleted INT DEFAULT 0,created_at TIMESTAMP,updated_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE product(id BIGINT AUTO_INCREMENT PRIMARY KEY, category_id BIGINT, name VARCHAR(80), subtitle VARCHAR(80), description CLOB, cover_image VARCHAR(512), images CLOB, price DECIMAL(10,2),status INT,sort_order INT,sales_count INT,is_recommend INT,recommend_category_id BIGINT,avg_rating DECIMAL(3,2),review_count INT,commission_rate DECIMAL(4,2),per_user_limit_type INT,per_user_limit_enabled INT,per_user_limit_count INT,deleted INT DEFAULT 0,created_at TIMESTAMP,updated_at TIMESTAMP)");
         jdbc.execute("INSERT INTO product(id,category_id,name,price,status,sort_order,sales_count,is_recommend,recommend_category_id,created_at) VALUES (1,7,'first',50,1,2,20,1,3,'2026-10-01'),(2,7,'second',10,1,1,80,1,3,'2026-10-02'),(3,8,'third',100,1,1,80,1,4,'2026-10-03'),(4,7,'hidden',1,0,0,999,1,3,'2026-10-04')");
         jdbc.execute("DROP TABLE IF EXISTS `order`");
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,user_id BIGINT,product_id BIGINT,status VARCHAR(32),created_at TIMESTAMP)");
@@ -87,6 +89,42 @@ class PresentationIntegrationTest {
             .andExpect(jsonPath("$.data.length()").value(2)).andExpect(jsonPath("$.data[0].id").value(1));
         mvc.perform(get("/app/product/list").param("sort","price_desc"))
             .andExpect(jsonPath("$.data.records[0].id").value(3));
+    }
+    @Test void productBatchUpdatesAreAppliedTogether() throws Exception {
+        var category=new com.delta.product.entity.Category();category.setId(8L);category.setStatus(1);when(categories.getById(8L)).thenReturn(category);
+        mvc.perform(post("/product/batch/status").contentType("application/json").content("{\"ids\":[1,2],\"status\":0}"))
+                .andExpect(jsonPath("$.data.success").value(2)).andExpect(jsonPath("$.data.failed").value(0));
+        assertThat(jdbc.queryForList("SELECT status FROM product WHERE id IN (1,2)",Integer.class)).containsOnly(0);
+        mvc.perform(post("/product/batch/category").contentType("application/json").content("{\"ids\":[1,2],\"categoryId\":8}"))
+                .andExpect(jsonPath("$.data.success").value(2));
+        assertThat(jdbc.queryForList("SELECT category_id FROM product WHERE id IN (1,2)",Long.class)).containsOnly(8L);
+        mvc.perform(post("/product/batch/price").contentType("application/json").content("{\"ids\":[1,2],\"mode\":\"PERCENT\",\"value\":10}"))
+                .andExpect(jsonPath("$.data.success").value(2));
+        assertThat(jdbc.queryForObject("SELECT price FROM product WHERE id=1",java.math.BigDecimal.class)).isEqualByComparingTo("55.00");
+        assertThat(jdbc.queryForObject("SELECT price FROM product WHERE id=2",java.math.BigDecimal.class)).isEqualByComparingTo("11.00");
+    }
+    @Test void productBatchCopyCreatesDraftsAndDeleteIsSoft() throws Exception {
+        mvc.perform(post("/product/batch/copy").contentType("application/json").content("{\"ids\":[1,2]}"))
+                .andExpect(jsonPath("$.data.success").value(2));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM product WHERE deleted=0 AND name LIKE '%（副本）'",Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForList("SELECT status FROM product WHERE deleted=0 AND name LIKE '%（副本）'",Integer.class)).containsOnly(0);
+        mvc.perform(post("/product/batch/delete").contentType("application/json").content("{\"ids\":[1,2]}"))
+                .andExpect(jsonPath("$.data.success").value(2));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM product WHERE deleted=0",Integer.class)).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM product",Integer.class)).isEqualTo(6);
+    }
+    @Test void productBatchRejectsMissingDuplicateEmptyAndDisabledCategoryWithoutPartialWrites() throws Exception {
+        mvc.perform(post("/product/batch/status").contentType("application/json").content("{\"ids\":[1,999],\"status\":0}"))
+                .andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT status FROM product WHERE id=1",Integer.class)).isEqualTo(1);
+        mvc.perform(post("/product/batch/status").contentType("application/json").content("{\"ids\":[1,1],\"status\":0}"))
+                .andExpect(jsonPath("$.code").value(400));
+        mvc.perform(post("/product/batch/status").contentType("application/json").content("{\"ids\":[],\"status\":0}"))
+                .andExpect(jsonPath("$.code").value(400));
+        var disabled=new com.delta.product.entity.Category();disabled.setId(7L);disabled.setStatus(0);when(categories.getById(7L)).thenReturn(disabled);
+        mvc.perform(post("/product/batch/category").contentType("application/json").content("{\"ids\":[1],\"categoryId\":7}"))
+                .andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT category_id FROM product WHERE id=1",Long.class)).isEqualTo(7L);
     }
     private byte[] image(boolean transparent,int width,int height) throws Exception {
         var image=new BufferedImage(width,height,transparent?BufferedImage.TYPE_INT_ARGB:BufferedImage.TYPE_INT_RGB);

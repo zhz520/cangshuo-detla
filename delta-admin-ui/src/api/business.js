@@ -13,6 +13,8 @@ export const adminUserDelete = id => request.delete(`/admin/user/${id}`)
 export function adminUserUpdateStatus(id, status) {
   return request({ url: `/admin/user/${id}/status`, method: 'put', params: { status } })
 }
+export const adminUserBatchStatus = (ids, status) => request.post('/admin/user/batch/status', { ids, status })
+export const adminUserBatchDelete = ids => request.post('/admin/user/batch/delete', { ids })
 export function adminUserAdjustBalance(id, data) {
   return request({ url: `/admin/user/${id}/balance`, method: 'put', data })
 }
@@ -51,6 +53,10 @@ export function adminPlayerFreeze(id, data) {
 export function adminPlayerUnfreeze(id) {
   return request({ url: `/admin/player/${id}/unfreeze`, method: 'put' })
 }
+export const adminPlayerBatchApprove = ids => request.post('/admin/player/batch/approve', { ids })
+export const adminPlayerBatchReject = (ids, reason) => request.post('/admin/player/batch/reject', { ids, reason })
+export const adminPlayerBatchLevel = (ids, levelId) => request.post('/admin/player/batch/level', { ids, levelId })
+export const adminPlayerBatchUnfreeze = ids => request.post('/admin/player/batch/unfreeze', { ids })
 export function adminPlayerUpdate(id, data) {
   return request({ url: `/admin/player/${id}`, method: 'put', data })
 }
