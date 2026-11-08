@@ -30,7 +30,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { onHide, onShow } from '@dcloudio/uni-app'
+import { onHide, onLoad, onShow } from '@dcloudio/uni-app'
 import { getTasks, readTask, acknowledgeTask, readAllTasks } from '@/api/workbench'
 import { useRemindStore } from '@/store/remind'
 import { getCurrentRole, getTokenByRole } from '@/utils/auth'
@@ -43,6 +43,7 @@ const more = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
+const kind = ref('')
 const store = useRemindStore()
 let generation = 0
 let visible = false
@@ -50,11 +51,14 @@ const links = {
   PAY: '/pages/order/detail?id=', CONFIRM: '/pages/order/detail?id=',
   ACCEPT: '/pages-player/order/detail?id=', START: '/pages-player/order/detail?id=',
   COMPLAINT: '/pages-cs/complaint/handle?id=', WITHDRAW: '/pages-cs/withdraw/handle?id=',
-  RELAY: '/pages-cs/relay/list?taskId=', REPLACE: '/pages-cs/replace/list?taskId=',
-  ENROLLMENT: '/pages-cs/player/list?taskId=', CHAT: '/pages-cs/chat/room?sessionId='
+  ENROLLMENT: '/pages-cs/player/audit?id=', CHAT: '/pages-cs/chat/room?sessionId='
 }
 function destination(task) {
   if (task.kind === 'ASSIGN') return '/pages-cs/order/detail?id=' + encodeURIComponent(task.id)
+  if (task.kind === 'REFUND') return '/pages-cs/refund/list' + (task.reference ? '?orderNo=' + encodeURIComponent(task.reference) : '')
+  if (task.kind === 'RELAY' || task.kind === 'REPLACE') {
+    return '/pages-cs/fulfillment/list?type=' + task.kind.toLowerCase() + '&taskId=' + encodeURIComponent(task.id)
+  }
   if (task.kind === 'DEPOSIT') return '/pages-player/withdraw/index'
   if (task.kind === 'INVITE') return '/pages-player/invite/list?orderId=' + encodeURIComponent(task.reference || '')
   return links[task.kind] ? links[task.kind] + encodeURIComponent(task.id) : ''
@@ -65,7 +69,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const { data } = await getTasks({ filter: filter.value, page: page.value })
+    const { data } = await getTasks({ filter: filter.value, page: page.value, kind: kind.value })
     if (id !== generation) return
     items.value = data.tasks || []
     more.value = data.hasMore
@@ -76,6 +80,12 @@ async function load() {
     if (id === generation) loading.value = false
   }
 }
+onLoad(options => {
+  const requested = String(options?.kind || '').toUpperCase()
+  if (['ENROLLMENT', 'MATERIAL', 'IDENTITY', 'PRIVACY', 'RELAY', 'REPLACE', 'REFUND'].includes(requested)) {
+    kind.value = requested
+  }
+})
 function choose(value) { filter.value = value; page.value = 1; items.value = []; more.value = false; load() }
 function reference({ kind, id, version }) { return { kind, id, version } }
 async function mutate(fn) {

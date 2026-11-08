@@ -15,6 +15,8 @@ class DatabaseCompatibilityTest {
         jdbc.execute("CREATE TABLE player_level(id INT PRIMARY KEY)");
         jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY)");
         jdbc.execute("CREATE TABLE `user`(id BIGINT PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE wechat_notice_queue(id VARCHAR(36) PRIMARY KEY,dedupe_key VARCHAR(64) NULL," +
+                "status VARCHAR(32) NOT NULL DEFAULT 'PENDING',next_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE sys_config(id BIGINT AUTO_INCREMENT PRIMARY KEY, config_key VARCHAR(128) UNIQUE, " +
                 "config_name VARCHAR(128), config_value TEXT, value_type VARCHAR(32), config_group VARCHAR(64), remark VARCHAR(255))");
 
@@ -32,6 +34,9 @@ class DatabaseCompatibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='EMAIL_NOTICE_QUEUE'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_name='EMAIL_NOTICE_QUEUE' AND constraint_type='UNIQUE'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='PLAYER_REWARD'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='ANALYTICS_DAILY_VISITOR'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_NOTICE_QUEUE' AND index_name='UK_WECHAT_NOTICE_DEDUPE'", Integer.class)).isGreaterThanOrEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_NOTICE_QUEUE' AND index_name='IDX_WECHAT_NOTICE_DELIVERY'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='features.reward_grab'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_name='USER' AND column_name='IS_GUEST'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_CHECKOUT_PROFILE'", Integer.class)).isEqualTo(1);

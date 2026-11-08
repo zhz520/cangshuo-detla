@@ -19,6 +19,9 @@
         <el-table-column prop="userNickname" label="用户" width="120">
           <template #default="{ row }">{{ row.userNickname || ('ID: ' + row.userId) }}</template>
         </el-table-column>
+        <el-table-column prop="userPhone" label="客户手机号" width="135">
+          <template #default="{ row }">{{ row.userPhone || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="playerName" label="打手" width="120">
           <template #default="{ row }">{{ row.playerName || (row.playerId ? 'ID: ' + row.playerId : '未指派') }}</template>
         </el-table-column>
@@ -49,6 +52,7 @@
         <el-descriptions-item v-if="detail.baseAmount != null" label="商品原价">¥{{ detail.baseAmount }}</el-descriptions-item>
         <el-descriptions-item v-if="Number(detail.priceIncreaseRate)>0" label="打手涨价">{{ Number(detail.priceIncreaseRate) }}%（¥{{ detail.priceIncreaseAmount }}）</el-descriptions-item>
         <el-descriptions-item label="用户">{{ detail.userNickname || ('ID: ' + detail.userId) }}</el-descriptions-item>
+        <el-descriptions-item label="客户手机号">{{ detail.userPhone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="打手">{{ detail.playerName || (detail.playerId ? 'ID: ' + detail.playerId : '未指派') }}</el-descriptions-item>
         <el-descriptions-item label="游戏账号">{{ detail.gameAccount || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ detail.contact || '-' }}</el-descriptions-item>

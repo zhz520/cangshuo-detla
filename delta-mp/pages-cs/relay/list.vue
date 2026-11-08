@@ -195,7 +195,7 @@ async function selectPlayer(p) {
   }
   if (!currentRelay.value) return
   try {
-    await approveCsRelay(currentRelay.value.id, { playerId: p.id })
+        await approveCsRelay(currentRelay.value.id, { newPlayerId: p.id })
     uni.showToast({ title: '审核通过' })
     showApproveModal.value = false
     currentRelay.value = null

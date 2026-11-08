@@ -58,6 +58,9 @@ public class Order {
     /** 用户头像（非DB字段，打手端展示用） */
     @TableField(exist = false)
     private String userAvatar;
+    /** 下单客户完整手机号，仅由 ADMIN/CS 订单接口填充。 */
+    @TableField(exist = false)
+    private String userPhone;
     /** 队友列表（非DB字段，详情展示用） */
     @TableField(exist = false)
     private List<OrderPlayer> teammates;

@@ -7,7 +7,7 @@ const sections = [
     { id: 'service', title: '客服服务', icon: 'ChatDotRound', paths: ['/chat/service', '/chat/quick-reply', '/chat/record'] }
   ] },
   { id: 'business', title: '业务运营', items: [
-    { id: 'orders', title: '订单与售后', icon: 'List', paths: ['/order/list', '/complaint', '/replace', '/relay'] },
+    { id: 'orders', title: '订单与售后', icon: 'List', paths: ['/order/list', '/refund', '/complaint', '/fulfillment-review'] },
     { id: 'products', title: '商品管理', icon: 'Goods', paths: ['/product/list', '/product/category', '/product/recommend-category', '/product/form-fields'] }
   ] },
   { id: 'people', title: '人员管理', items: [

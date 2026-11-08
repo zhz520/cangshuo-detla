@@ -48,7 +48,7 @@
     </el-card>
 
     <!-- 同意换人弹窗：选择处理方式 -->
-    <el-dialog v-model="approveVisible" title="同意换人" width="560px" @closed="resetApproveState">
+    <el-dialog v-model="approveVisible" title="同意换人" :width="isCompact ? '94%' : '560px'" @closed="resetApproveState">
       <el-alert type="warning" :closable="false" style="margin-bottom:16px">
         <template #title>被换打手本单不参与结算，无任何收益</template>
       </el-alert>
@@ -95,7 +95,7 @@
     </el-dialog>
 
     <!-- 拒绝弹窗 -->
-    <el-dialog v-model="rejectVisible" title="拒绝原因" width="400px">
+    <el-dialog v-model="rejectVisible" title="拒绝原因" :width="isCompact ? '94%' : '400px'">
       <el-input v-model="rejectRemark" type="textarea" :rows="3" placeholder="请输入拒绝原因" />
       <template #footer>
         <el-button @click="rejectVisible = false">取消</el-button>

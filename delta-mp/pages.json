@@ -216,6 +216,14 @@
           "style": { "navigationBarTitleText": "客服工作台", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
         },
         {
+          "path": "refund/list",
+          "style": { "navigationBarTitleText": "退款审批", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6" }
+        },
+        {
+          "path": "fulfillment/list",
+          "style": { "navigationBarTitleText": "履约审核", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6" }
+        },
+        {
           "path": "order/list",
           "style": { "navigationBarTitleText": "订单管理", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
         },

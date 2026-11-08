@@ -107,6 +107,47 @@ export function adminOrderConfirm(orderId) {
 export function csOrderRefund(orderId) {
   return request({ url: `/cs/order/${orderId}/refund`, method: 'post' })
 }
+
+// ==================== 两阶段退款 ====================
+export function customerRefundHistory(orderId) {
+  return request({ url: `/order/${orderId}/refunds`, method: 'get' })
+}
+export function customerRefundCreate(orderId, data) {
+  return request({ url: `/order/${orderId}/refunds`, method: 'post', data })
+}
+export function csRefundCreate(orderId, data) {
+  return request({ url: `/cs/refunds/${orderId}`, method: 'post', data })
+}
+export function csRefundList(params) {
+  return request({ url: '/cs/refunds', method: 'get', params })
+}
+export function csRefundDetail(id) {
+  return request({ url: `/cs/refunds/${id}`, method: 'get' })
+}
+export function csRefundAudit(id) {
+  return request({ url: `/cs/refunds/${id}/audit`, method: 'get' })
+}
+export function csRefundStartReview(id) {
+  return request({ url: `/cs/refunds/${id}/review/start`, method: 'post' })
+}
+export function csRefundSubmitReview(id, data) {
+  return request({ url: `/cs/refunds/${id}/review`, method: 'post', data })
+}
+export function adminRefundList(params) {
+  return request({ url: '/admin/refunds', method: 'get', params })
+}
+export function adminRefundDetail(id) {
+  return request({ url: `/admin/refunds/${id}`, method: 'get' })
+}
+export function adminRefundApprove(id, data = {}) {
+  return request({ url: `/admin/refunds/${id}/approve`, method: 'post', data })
+}
+export function adminRefundReject(id, data) {
+  return request({ url: `/admin/refunds/${id}/reject`, method: 'post', data })
+}
+export function adminRefundRetry(id) {
+  return request({ url: `/admin/refunds/${id}/retry`, method: 'post' })
+}
 export function csOrderConfirm(orderId) {
   return request({ url: `/cs/order/${orderId}/confirm`, method: 'post' })
 }

@@ -73,7 +73,9 @@ public class DatabaseCompatibility {
             new AdditiveColumn("user", "is_guest",
                     "ALTER TABLE `user` ADD COLUMN is_guest TINYINT NOT NULL DEFAULT 0"),
             new AdditiveColumn("payment", "wx_app_id",
-                    "ALTER TABLE payment ADD COLUMN wx_app_id VARCHAR(64) DEFAULT NULL")
+                    "ALTER TABLE payment ADD COLUMN wx_app_id VARCHAR(64) DEFAULT NULL"),
+            new AdditiveColumn("wechat_notice_queue", "dedupe_key",
+                    "ALTER TABLE wechat_notice_queue ADD COLUMN dedupe_key VARCHAR(64) NULL")
     );
 
     @PostConstruct
@@ -141,9 +143,55 @@ public class DatabaseCompatibility {
             ensureTable("player_follow", "CREATE TABLE IF NOT EXISTS player_follow (" +
                     "user_id BIGINT NOT NULL, player_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id))");
+            ensureTable("refund_request", "CREATE TABLE IF NOT EXISTS refund_request (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, refund_no VARCHAR(40) NOT NULL, " +
+                    "order_id BIGINT NOT NULL, order_no VARCHAR(64) NOT NULL, user_id BIGINT NOT NULL, " +
+                    "payment_id BIGINT NULL, payment_method VARCHAR(32) NULL, amount DECIMAL(12,2) NOT NULL, " +
+                    "reason VARCHAR(500) NOT NULL, status VARCHAR(32) NOT NULL, order_status_before VARCHAR(32) NOT NULL, " +
+                    "requester_type VARCHAR(16) NOT NULL, requester_id BIGINT NOT NULL, client_request_id VARCHAR(64) NULL, " +
+                    "cs_reviewer_id BIGINT NULL, cs_recommendation VARCHAR(16) NULL, cs_note VARCHAR(500) NULL, " +
+                    "admin_id BIGINT NULL, admin_decision VARCHAR(16) NULL, admin_note VARCHAR(500) NULL, " +
+                    "source_type VARCHAR(32) NULL, source_id BIGINT NULL, channel_refund_no VARCHAR(64) NULL, " +
+                    "last_error VARCHAR(500) NULL, active_order_id BIGINT NULL, " +
+                    "submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, cs_reviewed_at TIMESTAMP NULL, " +
+                    "admin_decided_at TIMESTAMP NULL, processing_at TIMESTAMP NULL, completed_at TIMESTAMP NULL, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_refund_request_no(refund_no), " +
+                    "UNIQUE KEY uk_refund_request_active_order(active_order_id), " +
+                    "UNIQUE KEY uk_refund_request_client(requester_type,requester_id,client_request_id), " +
+                    "KEY idx_refund_request_order(order_id,created_at), " +
+                    "KEY idx_refund_request_status(status,created_at), " +
+                    "KEY idx_refund_request_source(source_type,source_id))");
+            ensureTable("refund_request_audit", "CREATE TABLE IF NOT EXISTS refund_request_audit (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, refund_request_id BIGINT NOT NULL, " +
+                    "action VARCHAR(40) NOT NULL, from_status VARCHAR(32) NULL, to_status VARCHAR(32) NULL, " +
+                    "operator_type VARCHAR(16) NOT NULL, operator_id BIGINT NULL, note VARCHAR(500) NULL, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "KEY idx_refund_request_audit_request(refund_request_id,created_at))");
+            ensureTable("sms_notice_queue", "CREATE TABLE IF NOT EXISTS sms_notice_queue (" +
+                    "id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, event_type VARCHAR(64) NOT NULL, " +
+                    "event_group VARCHAR(32) NOT NULL, user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, " +
+                    "order_id BIGINT NULL, phone VARCHAR(32) NOT NULL, message VARCHAR(1000) NOT NULL, " +
+                    "status VARCHAR(20) NOT NULL DEFAULT 'PENDING', attempts INT NOT NULL DEFAULT 0, " +
+                    "last_error VARCHAR(100) NULL, next_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, sent_at TIMESTAMP NULL, " +
+                    "UNIQUE KEY uk_sms_notice_dedupe(dedupe_key), KEY idx_sms_notice_delivery(status,next_at))");
+            ensureTable("analytics_daily_visitor", "CREATE TABLE IF NOT EXISTS analytics_daily_visitor (" +
+                    "visit_date DATE NOT NULL, visitor_key CHAR(64) NOT NULL, device_hash CHAR(64) NOT NULL, " +
+                    "user_type VARCHAR(16) NULL, user_id BIGINT NULL, " +
+                    "first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, hits BIGINT NOT NULL DEFAULT 1, " +
+                    "PRIMARY KEY(visit_date,visitor_key), " +
+                    "KEY idx_analytics_daily_visitor_user(visit_date,user_type,user_id), " +
+                    "KEY idx_analytics_daily_visitor_last_seen(last_seen_at))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
+            ensureIndex("wechat_notice_queue", "uk_wechat_notice_dedupe",
+                    "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");
+            ensureIndex("wechat_notice_queue", "idx_wechat_notice_delivery",
+                    "CREATE INDEX idx_wechat_notice_delivery ON wechat_notice_queue(status,next_at)");
             ensureRewardGrabConfig();
             ensureGuestCheckoutConfig();
             ensureSettlementConfig();
@@ -163,6 +211,23 @@ public class DatabaseCompatibility {
             String actualTable = findTable(connection, table);
             if (actualTable == null || hasColumn(connection, actualTable, column)) return;
             jdbc.execute(ddl);
+        }
+    }
+
+    private void ensureIndex(String table, String index, String ddl) throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            String actualTable = findTable(connection, table);
+            if (actualTable == null || hasIndex(connection, actualTable, index)) return;
+            try {
+                jdbc.execute(ddl);
+            } catch (RuntimeException error) {
+                // Another application replica may have created the same index concurrently.
+                try (Connection retry = jdbc.getDataSource().getConnection()) {
+                    String retryTable = findTable(retry, table);
+                    if (retryTable != null && hasIndex(retry, retryTable, index)) return;
+                }
+                throw error;
+            }
         }
     }
 
@@ -235,6 +300,17 @@ public class DatabaseCompatibility {
         try (ResultSet columns = connection.getMetaData().getColumns(connection.getCatalog(), null, table, "%")) {
             while (columns.next()) {
                 if (expected.equalsIgnoreCase(columns.getString("COLUMN_NAME"))) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasIndex(Connection connection, String table, String expected) throws SQLException {
+        try (ResultSet indexes = connection.getMetaData().getIndexInfo(
+                connection.getCatalog(), null, table, false, false)) {
+            while (indexes.next()) {
+                String candidate = indexes.getString("INDEX_NAME");
+                if (expected.equalsIgnoreCase(candidate)) return true;
             }
         }
         return false;

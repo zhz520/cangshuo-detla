@@ -9,4 +9,5 @@ public class IdGenerator {
     public static String nextIdStr() { return SNOWFLAKE.nextIdStr(); }
     public static String nextOrderNo() { return "O" + SNOWFLAKE.nextIdStr(); }
     public static String nextPaymentNo() { return "P" + SNOWFLAKE.nextIdStr(); }
+    public static String nextRefundNo() { return "R" + SNOWFLAKE.nextIdStr(); }
 }

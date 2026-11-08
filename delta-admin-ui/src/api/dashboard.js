@@ -8,6 +8,14 @@ export function getCsDashboard(config = {}) {
   return request({ ...config, url: '/cs/dashboard', method: 'get' })
 }
 
+export function getDashboardAnalytics(config = {}) {
+  return request({ ...config, url: '/cs/analytics', method: 'get' })
+}
+
+export function getDashboardPlayers(params, config = {}) {
+  return request({ ...config, url: '/cs/analytics/players', method: 'get', params })
+}
+
 // ==================== 数据统计 ====================
 export function getStatisticsOverview() {
   return request({ url: '/admin/statistics/overview', method: 'get' })

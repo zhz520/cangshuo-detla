@@ -1,13 +1,19 @@
 import { get, post, put, del } from '@/api/request'
 
 const CS = { role: 'cs' }
+const quiet = { role: 'cs', loading: false, silent: true }
+
+// ========== 权限与客服排班 ==========
+export const getCsPermissions = () => get('/cs/permissions', {}, quiet)
+export const getCsShiftStatus = () => get('/cs/shift/status', {}, quiet)
+export const toggleCsShift = (online) => post('/cs/shift/toggle', { online: Boolean(online) }, quiet)
 
 // ========== 客服资料 ==========
 export const getCsProfile = () => get('/cs/profile', {}, CS)
 export const updateCsProfile = (data) => put('/cs/profile', data, CS)
 
 // ========== 仪表盘 ==========
-export const getDashboard = () => get('/cs/dashboard', {}, CS)
+export const getDashboard = () => get('/cs/dashboard', {}, quiet)
 export const getMonitorRealtime = () => get('/cs/monitor/realtime', {}, CS)
 export const getMonitorOverview = () => get('/cs/monitor/overview', {}, CS)
 
@@ -17,6 +23,14 @@ export const getCsOrderDetail = (id) => get(`/cs/order/${id}`, {}, CS)
 export const getCsOrderProgress = (id) => get(`/cs/order/${id}/progress`, {}, CS)
 export const assignOrder = (orderId, playerId) => post(`/cs/order/${orderId}/assign/${playerId}`, {}, CS)
 export const csRefundOrder = (orderId) => post(`/cs/order/${orderId}/refund`, {}, CS)
+export const getRefundList = (params, admin = false) => get(admin ? '/admin/refunds' : '/cs/refunds', params, CS)
+export const getRefundDetail = (id, admin = false) => get(admin ? `/admin/refunds/${id}` : `/cs/refunds/${id}`, {}, CS)
+export const getRefundAudit = (id) => get(`/cs/refunds/${id}/audit`, {}, CS)
+export const startRefundReview = (id) => post(`/cs/refunds/${id}/review/start`, {}, CS)
+export const submitRefundReview = (id, data) => post(`/cs/refunds/${id}/review`, data, CS)
+export const approveRefund = (id, note = '') => post(`/admin/refunds/${id}/approve`, { note }, CS)
+export const rejectRefund = (id, note) => post(`/admin/refunds/${id}/reject`, { note }, CS)
+export const retryRefund = (id) => post(`/admin/refunds/${id}/retry`, {}, CS)
 export const csConfirmOrder = (orderId) => post(`/cs/order/${orderId}/confirm`, {}, CS)
 
 // ========== 投诉管理 ==========
@@ -75,5 +89,9 @@ export const rejectCsRelay = (id, data) => post(`/cs/relay/${id}/reject`, data, 
 
 // ========== 换人审核 ==========
 export const getCsReplaceList = (params) => get('/cs/replace/list', params, CS)
+export const getFulfillmentReviewList = async (params = {}) => {
+  const [relay, replace] = await Promise.all([getCsRelayList(params), getCsReplaceList(params)])
+  return { relay: relay.data || {}, replace: replace.data || {} }
+}
 export const approveCsReplace = (id, data) => put(`/cs/replace/${id}/approve`, data, CS)
 export const rejectCsReplace = (id, data) => put(`/cs/replace/${id}/reject`, data, CS)

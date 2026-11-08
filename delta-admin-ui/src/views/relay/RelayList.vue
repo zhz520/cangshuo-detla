@@ -52,7 +52,7 @@
     </el-card>
 
     <!-- 通过：选择接力打手 -->
-    <el-dialog v-model="approveVisible" title="通过接力 — 指定接力打手" width="620px">
+    <el-dialog v-model="approveVisible" title="通过接力 — 指定接力打手" :width="isCompact ? '94%' : '620px'">
       <p class="dialog-tip">选择一名打手接手该订单，原打手将按申请的分成方式结算已完成部分。</p>
       <el-form :inline="true" class="player-search">
         <el-form-item><el-input v-model="playerKeyword" placeholder="搜索打手昵称/手机号" clearable @keyup.enter="fetchPlayers" /></el-form-item>
@@ -83,7 +83,7 @@
     </el-dialog>
 
     <!-- 拒绝 -->
-    <el-dialog v-model="rejectVisible" title="拒绝接力申请" width="420px">
+    <el-dialog v-model="rejectVisible" title="拒绝接力申请" :width="isCompact ? '94%' : '420px'">
       <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请输入拒绝原因（可选，将通知申请打手）" />
       <template #footer>
         <el-button @click="rejectVisible = false">取消</el-button>

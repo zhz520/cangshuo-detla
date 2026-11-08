@@ -10,8 +10,10 @@
       <el-alert v-if="activeGroup === '微信支付配置'" title="客户端业务支付与功能购买分开" type="warning" :closable="false" show-icon
         description="本页只配置客户自己的订单、充值和押金收款。客户端功能商城的购买款由授权中心统一收取，使用授权中心的微信商户和回调，不读取本页配置。" />
       <el-alert v-if="activeGroup === '公众号通知'" title="四个角色分别使用独立模板" type="info" :closable="false" show-icon
-        description="客户、打手、管理员、客服各填一份 JSON 模板组。每份按 new_order、order_accepted、order_completed、material_reviewed、withdraw_reviewed 分组；不同角色可填写完全不同的模板 ID 和字段映射。旧版通用模板仅作为兼容回退，不再在这里显示。" />
-      <el-form v-loading="loading" label-width="200px" class="config-form">
+        description="客户、打手、管理员、客服各填一份 JSON 模板组。每份按 new_order、order_status、refund_status、complaint_status、staff_review 等事件分组；不同角色可填写完全不同的模板 ID 和字段映射。旧版通用模板仅作为兼容回退，不再在这里显示。" />
+      <el-alert v-if="activeGroup === '短信配置'" title="业务短信也按角色独立模板" type="info" :closable="false" show-icon
+        description="客户、打手、管理员、客服各维护一份 JSON 模板组；事件分组与公众号通知一致。阿里云变量名放左侧，系统数据源放右侧：message、status、time、orderNo、amount、customerName、playerName。"/>
+      <el-form v-loading="loading" :label-position="isCompact ? 'top' : 'right'" :label-width="isCompact ? 'auto' : '200px'" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
           <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>
             <template #append>
@@ -25,16 +27,16 @@
               </el-upload>
             </template>
           </el-input>
-          <el-select v-else-if="item.configKey === 'customer_service.mode'" v-model="item.configValue" style="width:240px">
+          <el-select v-else-if="item.configKey === 'customer_service.mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'240px'}">
             <el-option label="系统内置客服" value="internal" />
             <el-option label="第三方企业微信链接" value="external" />
           </el-select>
-          <el-select v-else-if="item.configKey === 'player.deposit_mode'" v-model="item.configValue" style="width:280px">
+          <el-select v-else-if="item.configKey === 'player.deposit_mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'280px'}">
             <el-option label="必须交押金（原配置）" value="REQUIRED" />
             <el-option label="全部不需要押金" value="NONE" />
             <el-option label="入驻免押金，提现前补交" value="BEFORE_WITHDRAW" />
           </el-select>
-          <el-select v-else-if="item.configKey === 'risk.media.review_mode'" v-model="item.configValue" style="width:280px">
+          <el-select v-else-if="item.configKey === 'risk.media.review_mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'280px'}">
             <el-option label="自动检测，失败时转人工" value="AUTO" />
             <el-option label="直接人工审核" value="MANUAL" />
           </el-select>
@@ -57,6 +59,8 @@ import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 import {editableSystemConfigs,isSystemConfigVisible} from '@/utils/system-config'
+import {useResponsive} from '@/utils/responsive'
+const {isCompact}=useResponsive()
 const loading = ref(false), submitting = ref(false)
 function isSecretKey(key){return ['wx.pay.api-v3-key','wx.pay.official-appsecret','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
 const configList = ref([])

@@ -6,6 +6,7 @@
     </div>
     <WorkbenchCard />
     <LoadFeedback :loading="loading" :error="dashboardError" label="概览" @retry="fetchDashboard" />
+    <AnalyticsPanel v-if="analyticsAllowed" />
     <!-- ==================== 管理员仪表盘 ==================== -->
     <template v-if="isAdmin">
 
@@ -283,6 +284,7 @@
 
 <script setup>
 import WorkbenchCard from '@/components/WorkbenchCard.vue'
+import AnalyticsPanel from './AnalyticsPanel.vue'
 import { useWorkbenchStore } from '@/stores/workbench'
 const workbench = useWorkbenchStore()
 function refreshOverview() { workbench.refresh(); fetchDashboard() }
@@ -302,6 +304,7 @@ const { isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.role === 'admin')
+const analyticsAllowed = computed(() => can('order.read'))
 const statisticsAllowed = computed(() => isAdmin.value && can('finance.read'))
 const { data: stats, loading, error: dashboardError, run: fetchDashboard } = useLoadTask(async () => {
   const fn = isAdmin.value ? getAdminDashboard : getCsDashboard

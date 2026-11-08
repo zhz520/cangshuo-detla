@@ -30,6 +30,7 @@
       <view class="card-header"><view class="title-bar" /><text class="card-title">用户信息</text></view>
       <view class="info-row"><text class="label">用户</text><text class="value">{{ order.userNickname || ('ID: ' + order.userId) }}</text></view>
       <view v-if="order.contact" class="info-row"><text class="label">联系</text><text class="value">{{ order.contact }}</text></view>
+      <view v-if="order.userPhone" class="info-row"><text class="label">客户手机号</text><text class="value">{{ order.userPhone }}</text></view>
     </view>
     <!-- 接单员信息 -->
     <view class="card" v-if="order.playerId">

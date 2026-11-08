@@ -19,6 +19,10 @@ export const confirmOrder = (id) => post(`/order/${id}/confirm`)
 /** 取消订单 */
 export const cancelOrder = (id) => post(`/order/${id}/cancel`)
 
+/** 退款申请与状态 */
+export const createCustomerRefund = (id, data) => post(`/order/${id}/refunds`, data)
+export const getCustomerRefunds = (id) => get(`/order/${id}/refunds`, {}, { loading: false })
+
 /** 申请换人 */
 export const requestReplace = (id, data) => post(`/order/${id}/replace`, data)
 

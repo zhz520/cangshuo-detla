@@ -34,10 +34,17 @@ public class CsPlayerController {
     @GetMapping("/list")
     public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                 @RequestParam(value = "status", required = false) String status,
-                                @RequestParam(value = "keyword", required = false) String keyword) {
+                                @RequestParam(value = "keyword", required = false) String keyword,
+                                @RequestParam(value = "presence", required = false) String presence) {
+        String normalizedPresence=presence==null?"":presence.trim().toUpperCase(java.util.Locale.ROOT);
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
                 .eq(taskId != null, Player::getId, taskId)
                 .eq(status != null && !status.isEmpty(), Player::getStatus, status)
+                .eq("ONLINE".equals(normalizedPresence) || "OFFLINE".equals(normalizedPresence),
+                        Player::getStatus, "ACTIVE")
+                .eq("ONLINE".equals(normalizedPresence), Player::getIsOnline, 1)
+                .eq("OFFLINE".equals(normalizedPresence), Player::getIsOnline, 0)
+                .eq("FROZEN".equals(normalizedPresence), Player::getStatus, "FROZEN")
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword).or().like(Player::getPhone, keyword))
                 .orderByDesc(Player::getCreatedAt);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);

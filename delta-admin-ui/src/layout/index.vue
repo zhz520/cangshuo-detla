@@ -108,7 +108,7 @@ const menuBadges = computed(() => {
   const result = {}
   for (const category of workbench.summary?.categories || []) {
     if (category.kind === 'CHAT') continue
-    const path = taskPaths[category.kind]
+    const path = taskPaths[category.kind]?.split('?')[0]
     if (path && category.unread) result[path] = (result[path] || 0) + category.unread
   }
   return result

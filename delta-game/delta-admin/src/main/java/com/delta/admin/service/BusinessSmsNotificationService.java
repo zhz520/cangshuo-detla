@@ -23,10 +23,8 @@ public class BusinessSmsNotificationService {
     private static final String CFG_ACCESS_KEY_SECRET = "sms.aliyun.access_key_secret";
     private static final String CFG_ENDPOINT = "sms.aliyun.endpoint";
     private static final String CFG_SIGN_NAME = "sms.aliyun.sign_name";
-    private static final String CFG_PLAYER_ASSIGNED_TEMPLATE_CODE = "sms.aliyun.template_code.player_order_assigned";
     private static final String CFG_PLAYER_TEAMMATE_INVITED_TEMPLATE_CODE = "sms.aliyun.template_code.player_teammate_invited";
     private static final String DEFAULT_ENDPOINT = "dysmsapi.aliyuncs.com";
-    private static final String DEFAULT_PLAYER_ASSIGNED_TEMPLATE_CODE = "SMS_504890091";
     private static final String DEFAULT_PLAYER_TEAMMATE_INVITED_TEMPLATE_CODE = "SMS_504775096";
 
     private final SysConfigService sysConfigService;
@@ -79,7 +77,6 @@ public class BusinessSmsNotificationService {
 
     @RequiredArgsConstructor
     private enum SmsScene {
-        PLAYER_ASSIGNED("ORDER_ASSIGNED", CFG_PLAYER_ASSIGNED_TEMPLATE_CODE, DEFAULT_PLAYER_ASSIGNED_TEMPLATE_CODE),
         PLAYER_TEAMMATE_INVITED("TEAMMATE_INVITED",
                 CFG_PLAYER_TEAMMATE_INVITED_TEMPLATE_CODE,
                 DEFAULT_PLAYER_TEAMMATE_INVITED_TEMPLATE_CODE);

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS player_homepage_revision (id VARCHAR(36) PRIMARY KEY,
 CREATE TABLE IF NOT EXISTS player (id BIGINT PRIMARY KEY,openid VARCHAR(64),status VARCHAR(20),deleted INT DEFAULT 0,created_at DATETIME);
 CREATE TABLE IF NOT EXISTS identity_verification (user_id BIGINT PRIMARY KEY,status VARCHAR(20),submitted_at DATETIME,reviewed_at DATETIME);
 CREATE TABLE IF NOT EXISTS privacy_request (id VARCHAR(36) PRIMARY KEY,status VARCHAR(20),created_at DATETIME,reviewed_at DATETIME);
+CREATE TABLE IF NOT EXISTS refund_request (id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32),submitted_at DATETIME,completed_at DATETIME,admin_decided_at DATETIME);
 CREATE TABLE IF NOT EXISTS payment (id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(20),updated_at DATETIME);
 CREATE TABLE IF NOT EXISTS chat_session (id BIGINT PRIMARY KEY,id1 BIGINT,id2 BIGINT,status VARCHAR(20));
 CREATE TABLE IF NOT EXISTS chat_message (id BIGINT PRIMARY KEY,session_id BIGINT,created_at DATETIME,sender_type VARCHAR(20),is_read INT,content TEXT);

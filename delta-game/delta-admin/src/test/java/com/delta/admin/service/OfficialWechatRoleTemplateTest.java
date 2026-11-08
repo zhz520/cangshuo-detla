@@ -2,7 +2,6 @@ package com.delta.admin.service;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.delta.admin.platform.PlatformService;
-import com.delta.common.event.BusinessEvent;
 import com.delta.common.security.service.StaffPermissions;
 import com.delta.system.service.SysConfigService;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,15 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,25 +59,4 @@ class OfficialWechatRoleTemplateTest {
         assertThat(template.getString("templateId")).isEqualTo("legacy-order");
     }
 
-    @Test
-    void paidOrderQueuesDedicatedNotificationsForUserAdminAndCs() {
-        when(platform.featureEnabled(OfficialWechatService.FEATURE_ID)).thenReturn(true);
-        when(jdbc.queryForList(anyString())).thenReturn(List.of(
-                Map.of("id", 1L, "role", "ADMIN"),
-                Map.of("id", 2L, "role", "CS")
-        ));
-        when(permissions.forStaff(anyLong(), anyString())).thenReturn(List.of("order.read"));
-        List<Object[]> queued = new ArrayList<>();
-        doAnswer(invocation -> {
-            Object[] arguments = invocation.getArguments();
-            queued.add(Arrays.copyOfRange(arguments, 1, arguments.length));
-            return 1;
-        }).when(jdbc).update(anyString(), any(Object[].class));
-
-        service.event(new BusinessEvent(this, "ORDER_PAID", "USER", 7L, 100L, "订单支付成功"));
-
-        assertThat(queued).hasSize(3);
-        assertThat(queued).extracting(args -> args[2]).containsExactlyInAnyOrder("USER", "ADMIN", "CS");
-        assertThat(queued).extracting(args -> args[1]).contains("ORDER_PAID", "NEW_ORDER", "NEW_ORDER");
-    }
 }

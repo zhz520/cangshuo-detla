@@ -5,10 +5,10 @@
   "main": "main.js",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "dev:h5": "set UNI_INPUT_DIR=%cd%&& uni -p h5",
-    "build:h5": "set UNI_INPUT_DIR=%cd%&& uni build -p h5",
-    "dev:mp-weixin": "set UNI_INPUT_DIR=%cd%&& uni -p mp-weixin",
-    "build:mp-weixin": "set UNI_INPUT_DIR=%cd%&& uni build -p mp-weixin"
+    "dev:h5": "node scripts/run-uni.mjs dev h5",
+    "build:h5": "node scripts/run-uni.mjs build h5",
+    "dev:mp-weixin": "node scripts/run-uni.mjs dev mp-weixin",
+    "build:mp-weixin": "node scripts/run-uni.mjs build mp-weixin"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5030320261023001",

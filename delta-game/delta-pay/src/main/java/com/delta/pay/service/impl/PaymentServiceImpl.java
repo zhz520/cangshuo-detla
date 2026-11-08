@@ -406,20 +406,32 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void refund(Long paymentId, BigDecimal refundAmount, String reason) {
-        Payment payment=lockPayment(paymentId);
-        if(!"PAID".equals(payment.getStatus())) throw new BusinessException("该支付记录不可退款");
+    public void executeApprovedRefund(Long refundRequestId) {
+        if(refundRequestId==null) throw new BusinessException(400,"退款申请ID不能为空");
+        var requests=jdbc.queryForList("SELECT order_id,payment_id,amount,reason,status,admin_id,admin_decision " +
+                "FROM refund_request WHERE id=? FOR UPDATE",refundRequestId);
+        if(requests.isEmpty()) throw new BusinessException(404,"退款申请不存在");
+        var request=requests.get(0);
+        String requestStatus=String.valueOf(request.get("status"));
+        if(!java.util.Set.of("ADMIN_APPROVED","PROCESSING").contains(requestStatus)
+                || request.get("admin_id")==null || !"APPROVED".equals(String.valueOf(request.get("admin_decision"))))
+            throw new BusinessException(403,"退款申请尚未取得管理员批准");
+        Object paymentId=request.get("payment_id");
+        if(paymentId==null) throw new BusinessException(409,"退款申请没有关联支付记录");
+        BigDecimal refundAmount=(BigDecimal)request.get("amount");
         com.delta.common.utils.Money.positive(refundAmount);
+        Payment payment=lockPayment(((Number)paymentId).longValue());
+        if(payment.getOrderId()==null || !payment.getOrderId().equals(((Number)request.get("order_id")).longValue()))
+            throw new BusinessException(409,"退款申请与支付订单不一致");
+        if("REFUNDED".equals(payment.getStatus())) return;
+        if("REFUNDING".equals(payment.getStatus())) {
+            if(refundAmount.compareTo(payment.getRefundAmount()==null?BigDecimal.ZERO:payment.getRefundAmount())==0
+                    && String.valueOf(request.get("reason")).equals(payment.getRefundReason())) return;
+            throw new BusinessException(409,"支付记录已有其他退款正在处理");
+        }
+        if(!"PAID".equals(payment.getStatus())) throw new BusinessException(409,"该支付记录不可退款");
         if(refundAmount.compareTo(payment.getAmount())>0) throw new BusinessException("退款金额不可超过支付金额");
-        processRefund(payment,refundAmount,reason,true);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void refundByOrderId(Long orderId, String reason) {
-        orderService.getById(orderId);
-        Payment payment=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getOrderId,orderId).eq(Payment::getStatus,"PAID").last("LIMIT 1 FOR UPDATE"));
-        if(payment!=null) processRefund(payment,payment.getAmount(),reason,true);
+        processRefund(payment,refundAmount,String.valueOf(request.get("reason")),true);
     }
 
     private Payment lockPayment(Long id) {
@@ -485,7 +497,10 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         if(status==com.wechat.pay.java.service.refund.model.Status.SUCCESS) {
             payment.setStatus("REFUNDED");payment.setRefundTime(LocalDateTime.now());updateById(payment);updateRefundOrder(payment);
         } else if(status==com.wechat.pay.java.service.refund.model.Status.CLOSED || status==com.wechat.pay.java.service.refund.model.Status.ABNORMAL) {
-            payment.setStatus("REFUND_FAILED");updateById(payment);log.error("微信退款需人工核查: paymentId={}, status={}",payment.getId(),status);
+            payment.setStatus("REFUND_FAILED");updateById(payment);
+            eventPublisher.publishEvent(new BusinessEvent(this,"ORDER_REFUND_FAILED","USER",payment.getUserId(),
+                    payment.getOrderId(),"微信退款失败或关闭，请维护人员核查后重试"));
+            log.error("微信退款需人工核查: paymentId={}, status={}",payment.getId(),status);
         }
     }
 

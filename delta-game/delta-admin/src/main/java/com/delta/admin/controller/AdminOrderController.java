@@ -11,6 +11,9 @@ import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.pay.refund.OrderRefundWorkflowService;
+import com.delta.pay.refund.RefundCreateRequest;
+import com.delta.pay.refund.RefundRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -22,6 +25,7 @@ public class AdminOrderController {
     private final OrderService orderService;
     private final OrderProgressService orderProgressService;
     private final CrossModuleMapper crossModuleMapper;
+    private final OrderRefundWorkflowService refunds;
 
     @GetMapping("/list")
     public R<Page<Order>> list(PageQuery query,
@@ -53,6 +57,7 @@ public class AdminOrderController {
         if (o.getUserId() != null) {
             o.setUserNickname(crossModuleMapper.selectUserNickname(o.getUserId()));
             o.setUserAvatar(crossModuleMapper.selectUserAvatar(o.getUserId()));
+            o.setUserPhone(crossModuleMapper.selectUserPhone(o.getUserId()));
         }
         if (o.getPlayerId() != null) {
             o.setPlayerName(crossModuleMapper.selectPlayerNickname(o.getPlayerId()));
@@ -73,12 +78,13 @@ public class AdminOrderController {
         return R.ok();
     }
 
-    @OpLog(module = "order", operation = "客服退款")
+    @OpLog(module = "order", operation = "创建订单退款申请")
     @org.springframework.security.access.prepost.PreAuthorize("@staffPermissions.allowed('order.refund')")
     @PostMapping("/{id}/refund")
-    public R<Void> refund(@PathVariable Long id) {
-        orderService.csCancelOrder(id, SecurityUtils.getUserId());
-        return R.ok();
+    public R<RefundRequest> refund(@PathVariable Long id) {
+        RefundCreateRequest request = new RefundCreateRequest();
+        request.setReason("管理员发起订单退款申请");
+        return R.ok(refunds.createByStaff(id, SecurityUtils.getUserId(), SecurityUtils.getUserType(), request));
     }
 
     @OpLog(module = "order", operation = "手动结单")

@@ -124,6 +124,7 @@ public class ComplaintController {
     }
 
     @PostMapping("/{id}/appeal")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> appeal(@PathVariable Long id, @RequestBody Complaint appeal) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
@@ -136,6 +137,12 @@ public class ComplaintController {
         c.setAppealImages(ImageListUtils.normalizeLocal(appeal.getAppealImages(), 9));
         c.setStatus("APPEALING");
         complaintService.updateById(c);
+        eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_APPEALED", "USER", c.getUserId(),
+                c.getOrderId(), "投诉申诉已提交，等待客服重新处理"));
+        if (c.getPlayerId() != null) {
+            eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_APPEALED", "PLAYER", c.getPlayerId(),
+                    c.getOrderId(), "客户已提交投诉申诉，等待客服重新处理"));
+        }
         return R.ok();
     }
 

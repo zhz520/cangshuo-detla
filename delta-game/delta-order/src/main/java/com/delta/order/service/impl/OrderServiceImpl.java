@@ -157,17 +157,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             redisTemplate.delete("order:pay_timeout:" + orderId);
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCELLED", "USER", userId, orderId, "订单已取消"));
         } else if (OrderStatusEnum.PAID.name().equals(status) && order.getPlayerId() == null) {
-            // 已支付但未接单，进入退款流程（refundByOrderId会更新状态为REFUNDED）
-            transition(order, OrderStatusEnum.REFUNDING, "USER", userId, "用户申请退款");
+            // 已支付但未接单：只创建退款申请，必须经客服初审和管理员终审后才能退款。
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCEL_REFUND",
-                    "USER", userId, orderId, "订单退款处理中"));
+                    "USER", userId, orderId, "用户申请订单退款，等待客服初审"));
         } else if (OrderStatusEnum.ASSIGNED.name().equals(status)) {
-            // 已指派但未开始，取消指派并进入退款流程
-            order.setPlayerId(null);
-            order.setPlayerName(null);
-            transition(order, OrderStatusEnum.REFUNDING, "USER", userId, "用户申请退款（已指派）");
+            // 终审前保留当前指派关系；管理员驳回时订单仍可继续履约。
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCEL_REFUND",
-                    "USER", userId, orderId, "订单退款处理中"));
+                    "USER", userId, orderId, "用户申请订单退款（已指派），等待客服初审"));
         } else {
             throw new BusinessException("当前状态不允许取消");
         }
@@ -183,11 +179,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 && !OrderStatusEnum.IN_PROGRESS.name().equals(status)) {
             throw new BusinessException("当前状态不允许退款");
         }
-        order.setPlayerId(null);
-        order.setPlayerName(null);
-        transition(order, OrderStatusEnum.REFUNDING, "CS", operatorId, "客服操作退款");
+        // 客服只能提交退款申请；实际支付退款只由管理员终审后的资金流程执行。
         eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCEL_REFUND",
-                "CS", operatorId, orderId, "客服操作退款处理中"));
+                "CS", operatorId, orderId, "客服提交订单退款申请，等待管理员终审"));
     }
 
     @Override
@@ -340,6 +334,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         order.setStartTime(LocalDateTime.now());
         transition(order, OrderStatusEnum.IN_PROGRESS, "PLAYER", playerId, "开始服务");
+        eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_STARTED",
+                "USER", order.getUserId(), orderId, "您的订单已开始服务"));
     }
 
     @Override

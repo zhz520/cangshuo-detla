@@ -532,6 +532,68 @@ LOCK TABLES `order_relay_request` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `refund_request`
+--
+
+DROP TABLE IF EXISTS `refund_request`;
+CREATE TABLE `refund_request` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `refund_no` varchar(40) NOT NULL,
+  `order_id` bigint NOT NULL,
+  `order_no` varchar(64) NOT NULL,
+  `user_id` bigint NOT NULL,
+  `payment_id` bigint DEFAULT NULL,
+  `payment_method` varchar(32) DEFAULT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `reason` varchar(500) NOT NULL,
+  `status` varchar(32) NOT NULL,
+  `order_status_before` varchar(32) NOT NULL,
+  `requester_type` varchar(16) NOT NULL,
+  `requester_id` bigint NOT NULL,
+  `client_request_id` varchar(64) DEFAULT NULL,
+  `cs_reviewer_id` bigint DEFAULT NULL,
+  `cs_recommendation` varchar(16) DEFAULT NULL,
+  `cs_note` varchar(500) DEFAULT NULL,
+  `admin_id` bigint DEFAULT NULL,
+  `admin_decision` varchar(16) DEFAULT NULL,
+  `admin_note` varchar(500) DEFAULT NULL,
+  `source_type` varchar(32) DEFAULT NULL,
+  `source_id` bigint DEFAULT NULL,
+  `channel_refund_no` varchar(64) DEFAULT NULL,
+  `last_error` varchar(500) DEFAULT NULL,
+  `active_order_id` bigint DEFAULT NULL,
+  `submitted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `cs_reviewed_at` timestamp NULL DEFAULT NULL,
+  `admin_decided_at` timestamp NULL DEFAULT NULL,
+  `processing_at` timestamp NULL DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_refund_request_no` (`refund_no`),
+  UNIQUE KEY `uk_refund_request_active_order` (`active_order_id`),
+  UNIQUE KEY `uk_refund_request_client` (`requester_type`,`requester_id`,`client_request_id`),
+  KEY `idx_refund_request_order` (`order_id`,`created_at`),
+  KEY `idx_refund_request_status` (`status`,`created_at`),
+  KEY `idx_refund_request_source` (`source_type`,`source_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='订单退款申请与两阶段审批';
+
+DROP TABLE IF EXISTS `refund_request_audit`;
+CREATE TABLE `refund_request_audit` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `refund_request_id` bigint NOT NULL,
+  `action` varchar(40) NOT NULL,
+  `from_status` varchar(32) DEFAULT NULL,
+  `to_status` varchar(32) DEFAULT NULL,
+  `operator_type` varchar(16) NOT NULL,
+  `operator_id` bigint DEFAULT NULL,
+  `note` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_refund_request_audit_request` (`refund_request_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='退款申请审计轨迹';
+
+--
 -- Table structure for table `payment`
 --
 

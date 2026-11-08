@@ -54,6 +54,7 @@ public class PlayerGovernanceService {
             }
         } else if("true".equals(configs.getConfigValue("player.invite_required","false")))throw new BusinessException(400,"请使用客服提供的邀请链接入驻");
         jdbc.update("INSERT INTO player_enrollment(user_id,player_id,invite_token,referrer_id,device_hash,privacy_version) VALUES (?,?,?,?,?,?)",userId,playerId,invite,referrer,fingerprint,"2026-11-02");
+        events.publishEvent(new BusinessEvent(this,"PLAYER_APPLICATION_SUBMITTED","PLAYER",playerId,null,"新的打手入驻申请待审核"));
     }
     @Transactional(rollbackFor=Exception.class)
     public String submit(Long playerId,PlayerHomepageRequest body) {
@@ -63,6 +64,7 @@ public class PlayerGovernanceService {
         String payload=JSON.toJSONString(body),id=UUID.randomUUID().toString();
         MediaRiskService.Result risk=mediaRisk.check(body);
         jdbc.update("INSERT INTO player_homepage_revision(id,player_id,payload,status,risk_reason) VALUES (?,?,?,?,?)",id,playerId,payload,risk.status(),risk.reason());
+        events.publishEvent(new BusinessEvent(this,"MATERIAL_SUBMITTED","PLAYER",playerId,null,"打手主页素材待审核"));
         if("REJECTED".equals(risk.status())){jdbc.update("UPDATE player_homepage_revision SET violation=1 WHERE id=?",id);violation(playerId);}
         return id;
     }

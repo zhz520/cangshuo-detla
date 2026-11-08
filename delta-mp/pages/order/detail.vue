@@ -49,7 +49,7 @@
     <view class="actions">
       <view v-if="order.status==='PENDING_PAYMENT'" class="btn" @click="goPay">去支付</view>
       <view v-if="order.status==='PENDING_PAYMENT'" class="btn-ghost" @click="doCancel">取消订单</view>
-      <view v-if="['PAID','ASSIGNED'].includes(order.status)" class="btn-warn" @click="doRefund">申请退款</view>
+      <view v-if="canRequestRefund" class="btn-warn" @click="doRefund">申请退款</view>
       <view v-if="order.status==='PAID' && !order.playerId" class="btn" @click="showDesignatePicker = true">指定接单员</view>
       <view v-if="order.status==='COMPLETED'" class="btn" @click="doConfirm">确认完成</view>
       <view v-if="order.status==='CONFIRMED' && !order.reviewed && !userStore.isGuest && isOrderOwner" class="btn" @click="goReview">⭐ 去评价</view>
@@ -60,6 +60,16 @@
     </view>
     <RewardAction v-if="!userStore.isGuest && isOrderOwner" :order-id="orderId" :refresh-key="rewardRefresh" :auto-open="autoReward" />
     <!-- 时间信息 -->
+    <view class="card" v-if="refundRequests.length">
+      <view class="card-header"><view class="title-bar" /><text class="card-title">退款进度</text></view>
+      <view v-for="item in refundRequests" :key="item.id" class="info-row">
+        <text class="label">{{ refundStatusText(item.status) }}</text>
+        <text class="value">¥{{ Number(item.amount || 0).toFixed(2) }} · {{ item.updatedAt || item.createdAt || '-' }}</text>
+      </view>
+      <view v-for="item in refundRequests.filter(row => row.publicNote)" :key="'note-' + item.id" class="refund-note">
+        {{ item.publicNote }}
+      </view>
+    </view>
     <view class="card time-card">
       <view class="info-row"><text class="label">创建时间</text><text class="value">{{ order.createdAt }}</text></view>
       <view v-if="order.paidAt" class="info-row"><text class="label">支付时间</text><text class="value">{{ order.paidAt }}</text></view>
@@ -131,7 +141,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import RewardAction from '@/components/RewardAction.vue'
 const rewardRefresh=ref(0),autoReward=ref(false)
 import PriceText from '@/components/PriceText.vue'
-import { getOrderDetail, getOrderProgress, confirmOrder, cancelOrder, requestReplace, getAvailablePlayers, designatePlayer } from '@/api/order'
+import { getOrderDetail, getOrderProgress, confirmOrder, cancelOrder, requestReplace, getAvailablePlayers, designatePlayer, createCustomerRefund, getCustomerRefunds } from '@/api/order'
 import { ORDER_STATUS_TEXT } from '@/utils/constants'
 import { requestOrderSubscribe } from '@/utils/subscribe'
 import { useUserStore } from '@/store/user'
@@ -146,6 +156,9 @@ const isOrderOwner = computed(() => {
 })
 const orderId = ref(0)
 const progressList = ref([])
+const refundRequests = ref([])
+const hasActiveRefund = computed(() => refundRequests.value.some(item => ['REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED'].includes(item.status)))
+const canRequestRefund = computed(() => ['PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED'].includes(order.value?.status) && !hasActiveRefund.value)
 const parsedExtra = computed(() => {
   const o = order.value
   if (!o) return []
@@ -183,6 +196,8 @@ async function loadDetail() {
     const pRes = await getOrderProgress(orderId.value)
     progressList.value = pRes.data || []
   } catch (e) { progressList.value = [] }
+  try { refundRequests.value = (await getCustomerRefunds(orderId.value)).data || [] }
+  catch (_) { refundRequests.value = [] }
 }
 
 function goPay() { uni.navigateTo({ url: `/pages/order/pay?orderId=${orderId.value}&amount=${order.value.amount}` }) }
@@ -193,8 +208,11 @@ async function doCancel() {
 }
 async function doRefund() {
   uni.showModal({ title: '提示', content: '确定申请退款？订单将被取消并退回支付金额？', success: async (r) => {
-    if (r.confirm) { await cancelOrder(orderId.value); uni.showToast({ title: '退款申请已提交' }); loadDetail() }
+    if (r.confirm) { await createCustomerRefund(orderId.value, { reason: '用户申请退款' }); uni.showToast({ title: '退款申请已提交' }); loadDetail() }
   }})
+}
+function refundStatusText(status) {
+  return ({ REQUESTED: '待客服初审', CS_REVIEWING: '客服核验中', CS_REVIEWED: '待管理员终审', ADMIN_APPROVED: '已批准', PROCESSING: '退款处理中', REFUNDED: '退款成功', FAILED: '退款失败', ADMIN_REJECTED: '管理员已驳回', REJECTED: '已拒绝' })[status] || status
 }
 async function doConfirm() {
   uni.showModal({ title: '提示', content: '确认服务已完成？', success: async (r) => {
@@ -303,6 +321,7 @@ function isFull(p) {
   .label { font-size: 26rpx; color: #73777e; width: 140rpx; flex-shrink: 0; }
   .value { font-size: 26rpx; color: #17191c; flex: 1; }
 }
+.refund-note { margin-top: 8rpx; padding: 14rpx 16rpx; border-radius: 10rpx; background: #f5f6f7; color: #626871; font-size: 24rpx; line-height: 1.55; }
 .timeline { padding-left: 24rpx; }
 .timeline-item { display: flex; position: relative; padding-bottom: 28rpx; }
 .timeline-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #b9bdc4; margin-top: 8rpx; flex-shrink: 0; &.active { background: #17191c; box-shadow: 0 0 0 4rpx rgba(23, 25, 28, 0.04); } }

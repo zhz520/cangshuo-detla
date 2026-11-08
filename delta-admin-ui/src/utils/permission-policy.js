@@ -7,7 +7,8 @@ export function permissionFor(path) {
   if (/^\/user(?:\/|$)/.test(path)) return 'user.read'
   if (/^\/statistics(?:\/|$)/.test(path) || ['/settlements', '/rewards', '/platform/income-analysis'].includes(path)) return 'finance.read'
   if (path === '/withdraw') return 'withdraw.review'
-  if (['/complaint', '/replace', '/relay'].includes(path)) return 'order.manage'
+  if (path === '/refund') return 'order.refund'
+  if (['/complaint', '/fulfillment-review'].includes(path)) return 'order.manage'
   if (/^\/chat(?:\/|$)/.test(path)) return 'chat.manage'
   return null
 }

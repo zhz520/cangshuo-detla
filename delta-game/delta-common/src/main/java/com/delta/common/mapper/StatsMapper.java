@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -162,4 +163,67 @@ public interface StatsMapper {
     /** 客服未读投诉数（待处理且客服未查看） */
     @Select("SELECT COUNT(*) FROM complaint WHERE status IN ('PENDING','PROCESSING') AND cs_read_at IS NULL")
     Long countCsUnreadComplaints();
+
+    // ========== 运营分析 Dashboard ==========
+
+    @Select("SELECT visit_date AS statDate, COUNT(*) AS uniqueVisitors, " +
+            "COUNT(DISTINCT CASE WHEN user_type='USER' THEN user_id END) AS activeUsers " +
+            "FROM analytics_daily_visitor WHERE visit_date >= #{start} AND visit_date < #{end} " +
+            "GROUP BY visit_date ORDER BY visit_date")
+    List<Map<String, Object>> visitorAnalyticsByDate(@Param("start") LocalDate start,
+                                                      @Param("end") LocalDate end);
+
+    @Select("SELECT DATE(created_at) AS statDate, COUNT(*) AS newUsers FROM `user` " +
+            "WHERE is_guest=0 AND deleted=0 AND created_at >= #{start} AND created_at < #{end} " +
+            "GROUP BY DATE(created_at) ORDER BY statDate")
+    List<Map<String, Object>> newUsersAnalyticsByDate(@Param("start") LocalDateTime start,
+                                                       @Param("end") LocalDateTime end);
+
+    @Select("SELECT DATE(created_at) AS statDate, COUNT(*) AS orders, " +
+            "SUM(CASE WHEN status IN ('PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED') THEN 1 ELSE 0 END) AS effectiveOrders, " +
+            "COALESCE(SUM(CASE WHEN status IN ('PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED') THEN amount ELSE 0 END),0) AS revenue, " +
+            "SUM(CASE WHEN status IN ('COMPLETED','CONFIRMED','REVIEWED') THEN 1 ELSE 0 END) AS completedOrders " +
+            "FROM `order` WHERE created_at >= #{start} AND created_at < #{end} " +
+            "GROUP BY DATE(created_at) ORDER BY statDate")
+    List<Map<String, Object>> orderAnalyticsByDate(@Param("start") LocalDateTime start,
+                                                    @Param("end") LocalDateTime end);
+
+    @Select("SELECT DATE(refund_time) AS statDate, COALESCE(SUM(refund_amount),0) AS refunds " +
+            "FROM payment WHERE biz_type='ORDER' AND refund_time >= #{start} AND refund_time < #{end} " +
+            "GROUP BY DATE(refund_time) ORDER BY statDate")
+    List<Map<String, Object>> refundAnalyticsByDate(@Param("start") LocalDateTime start,
+                                                     @Param("end") LocalDateTime end);
+
+    @Select("SELECT COALESCE(SUM(CASE WHEN status='ACTIVE' AND is_online=1 THEN 1 ELSE 0 END),0) AS onlinePlayers, " +
+            "COALESCE(SUM(CASE WHEN status='ACTIVE' AND is_online=0 THEN 1 ELSE 0 END),0) AS offlinePlayers, " +
+            "COALESCE(SUM(CASE WHEN status='FROZEN' THEN 1 ELSE 0 END),0) AS frozenPlayers " +
+            "FROM player WHERE deleted=0")
+    Map<String, Object> playerPresenceCounts();
+
+    @Select("SELECT COUNT(*) FROM admin a JOIN staff_shift s ON s.admin_id=a.id " +
+            "WHERE a.deleted=0 AND a.status=1 AND UPPER(a.role)='CS' AND s.online=1")
+    Long countOnDutyCs();
+
+    @Select("SELECT COUNT(*) FROM player p WHERE p.deleted=0 " +
+            "AND ((#{scope}='ONLINE' AND p.status='ACTIVE' AND p.is_online=1) " +
+            "OR (#{scope}='OFFLINE' AND p.status='ACTIVE' AND p.is_online=0) " +
+            "OR (#{scope}='FROZEN' AND p.status='FROZEN')) " +
+            "AND (#{keyword}='' OR p.nickname LIKE CONCAT('%',#{keyword},'%') OR CAST(p.id AS CHAR) LIKE CONCAT('%',#{keyword},'%'))")
+    Long countPlayersForAnalytics(@Param("scope") String scope, @Param("keyword") String keyword);
+
+    @Select("SELECT p.id, p.nickname, p.avatar, p.level, COALESCE(pl.name, CONCAT('Lv.', p.level)) AS levelName, " +
+            "CASE WHEN p.status='FROZEN' THEN 'FROZEN' WHEN p.is_online=1 THEN 'ONLINE' ELSE 'OFFLINE' END AS onlineStatus, " +
+            "(SELECT COUNT(DISTINCT o.id) FROM `order` o WHERE o.status IN ('PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','DISPUTED') " +
+            "AND (o.player_id=p.id OR EXISTS(SELECT 1 FROM order_player op WHERE op.order_id=o.id AND op.player_id=p.id AND op.status='ACCEPTED'))) AS activeOrderCount, " +
+            "p.last_online_at AS lastOnlineAt FROM player p LEFT JOIN player_level pl ON pl.id=p.level AND pl.deleted=0 " +
+            "WHERE p.deleted=0 " +
+            "AND ((#{scope}='ONLINE' AND p.status='ACTIVE' AND p.is_online=1) " +
+            "OR (#{scope}='OFFLINE' AND p.status='ACTIVE' AND p.is_online=0) " +
+            "OR (#{scope}='FROZEN' AND p.status='FROZEN')) " +
+            "AND (#{keyword}='' OR p.nickname LIKE CONCAT('%',#{keyword},'%') OR CAST(p.id AS CHAR) LIKE CONCAT('%',#{keyword},'%')) " +
+            "ORDER BY p.is_online DESC, activeOrderCount DESC, p.last_online_at DESC, p.id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<Map<String, Object>> playersForAnalytics(@Param("scope") String scope,
+                                                   @Param("keyword") String keyword,
+                                                   @Param("offset") int offset,
+                                                   @Param("limit") int limit);
 }

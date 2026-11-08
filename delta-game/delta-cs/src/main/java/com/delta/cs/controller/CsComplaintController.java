@@ -14,8 +14,8 @@ import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.ComplaintService;
 import com.delta.order.service.OrderService;
-import com.delta.pay.entity.Payment;
-import com.delta.pay.service.PaymentService;
+import com.delta.pay.refund.OrderRefundWorkflowService;
+import com.delta.pay.refund.RefundRequest;
 import com.delta.order.service.OrderProgressService;
 import com.delta.player.entity.Player;
 import com.delta.player.service.PlayerService;
@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -39,7 +40,7 @@ public class CsComplaintController {
     private final ComplaintService complaintService;
     private final OrderService orderService;
     private final OrderProgressService orderProgressService;
-    private final PaymentService paymentService;
+    private final OrderRefundWorkflowService refunds;
     private final com.delta.common.security.service.StaffPermissions staffPermissions;
     private final PlayerService playerService;
     private final PlayerWalletService playerWalletService;
@@ -81,6 +82,8 @@ public class CsComplaintController {
         complaintService.save(created);
         // 5. 更新订单状态为 DISPUTED（如果订单状态允许）
         orderService.disputeOrder(order.getId());
+        eventPublisher.publishEvent(new BusinessEvent(this, "NEW_COMPLAINT", "CS",
+                SecurityUtils.getUserId(), order.getId(), "客服已代客户创建投诉工单，等待受理"));
         return R.ok();
     }
 
@@ -166,6 +169,12 @@ public class CsComplaintController {
         if(!java.util.Set.of("PENDING","PROCESSING","APPEALING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
         if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
         if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()))staffPermissions.require("order.refund");
+        String penalty = complaint.getPlayerPenalty();
+        if (penalty != null && !penalty.isBlank()
+                && !java.util.Set.of("NONE", "WARNING", "FREEZE").contains(penalty)) {
+            return R.fail(400, "打手处罚类型无效");
+        }
+        if ("FREEZE".equals(penalty)) staffPermissions.require("player.manage");
         String resultReason=complaint.getResultReason()==null?"":complaint.getResultReason().trim();
         if(resultReason.length()>500) return R.fail(400,"处理说明不能超过500字");
         if("PARTIAL_REFUND".equals(complaint.getResult())){
@@ -173,18 +182,27 @@ public class CsComplaintController {
             catch(com.delta.common.exception.BusinessException error){return R.fail(error.getCode(),error.getMessage());}
         }
         Long operatorId = SecurityUtils.getUserId();
-        Payment refundPayment=java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult())
-                ? findPaidPayment(c.getOrderId()) : null;
-        if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()) && refundPayment==null)
-            return R.fail(409,"未找到可退款的已支付记录，请先核对支付台账");
+        Order order = orderService.getById(c.getOrderId());
+        if (order == null) return R.fail(404,"订单不存在");
+        RefundRequest refundRequest = null;
+        if (java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult())) {
+            BigDecimal amount = "FULL_REFUND".equals(complaint.getResult())
+                    ? order.getAmount() : complaint.getRefundAmount();
+            try {
+                refundRequest = refunds.createReviewedForComplaint(order.getId(), operatorId, amount,
+                        "投诉仲裁申请退款：" + resultReason, c.getId());
+            } catch (com.delta.common.exception.BusinessException error) {
+                return R.fail(error.getCode(), error.getMessage());
+            }
+        }
 
         c.setResult(complaint.getResult());
         c.setRefundAmount(complaint.getRefundAmount());
         c.setResultReason(resultReason);
         c.setPlayerPenalty(complaint.getPlayerPenalty());
         c.setOperatorId(operatorId);
-        c.setResolvedAt(LocalDateTime.now());
-        c.setStatus("RESOLVED");
+        c.setResolvedAt(refundRequest == null ? LocalDateTime.now() : null);
+        c.setStatus(refundRequest == null ? "RESOLVED" : "PROCESSING");
         complaintService.updateById(c);
 
         // 更新订单仲裁状态
@@ -192,20 +210,14 @@ public class CsComplaintController {
 
         // 根据仲裁结果分支处理
         String result = complaint.getResult();
-        Order order = orderService.getById(c.getOrderId());
         switch (result != null ? result : "") {
             case "FULL_REFUND" -> {
-                // 全额退款
-                paymentService.refund(refundPayment.getId(), order.getAmount(), "仲裁全额退款: " + resultReason);
-                // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
-                notifyBoth(order, c, "投诉已处理，全额退款中", "订单仲裁结果：全额退款");
+                notifyStatus(order, c, "COMPLAINT_REFUND_PENDING",
+                        "全额退款申请已提交管理员终审", "订单仲裁结果：全额退款待管理员终审");
             }
             case "PARTIAL_REFUND" -> {
-                // 部分退款
-                paymentService.refund(refundPayment.getId(), complaint.getRefundAmount(), "仲裁部分退款: " + resultReason);
-                // Settlement reversal runs on confirmed ORDER_REFUNDED, including teammate shares.
-                notifyBoth(order, c, "投诉已处理，部分退款 " + complaint.getRefundAmount() + " 元",
-                        "订单仲裁结果：部分退款 " + complaint.getRefundAmount() + " 元");
+                notifyStatus(order, c, "COMPLAINT_REFUND_PENDING", "部分退款申请已提交管理员终审",
+                        "订单仲裁结果：部分退款 " + complaint.getRefundAmount() + " 元待管理员终审");
             }
             case "REJECT" -> {
                 // 驳回投诉：将订单状态改为CONFIRMED并触发结算
@@ -242,20 +254,17 @@ public class CsComplaintController {
         return R.ok();
     }
 
-    private Payment findPaidPayment(Long orderId) {
-        return paymentService.getOne(new LambdaQueryWrapper<Payment>()
-                .eq(Payment::getOrderId, orderId)
-                .eq(Payment::getStatus, "PAID")
-                .last("LIMIT 1"));
+    private void notifyBoth(Order order, Complaint c, String userMsg, String playerMsg) {
+        notifyStatus(order, c, "COMPLAINT_RESOLVED", userMsg, playerMsg);
     }
 
-    private void notifyBoth(Order order, Complaint c, String userMsg, String playerMsg) {
+    private void notifyStatus(Order order, Complaint c, String eventType, String userMsg, String playerMsg) {
         if (order != null) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_RESOLVED",
-                    "USER", order.getUserId(), c.getId(), userMsg));
+            eventPublisher.publishEvent(new BusinessEvent(this, eventType,
+                    "USER", order.getUserId(), c.getOrderId(), userMsg));
             if (order.getPlayerId() != null) {
-                eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_RESOLVED",
-                        "PLAYER", order.getPlayerId(), c.getId(), playerMsg));
+                eventPublisher.publishEvent(new BusinessEvent(this, eventType,
+                        "PLAYER", order.getPlayerId(), c.getOrderId(), playerMsg));
             }
         }
     }
@@ -277,9 +286,11 @@ public class CsComplaintController {
         Order order = orderService.getById(orderId);
         if (order == null || order.getPlayerId() == null) return;
         if ("FREEZE".equals(penalty)) {
-            Player player = playerService.getById(order.getPlayerId());
+            Player player = playerService.getOne(new LambdaQueryWrapper<Player>()
+                    .eq(Player::getId, order.getPlayerId()).last("FOR UPDATE"));
             if (player != null) {
                 player.setStatus("FROZEN");
+                player.setIsOnline(0);
                 playerService.updateById(player);
                 log.info("打手{}已被冻结，关联订单{}", order.getPlayerId(), orderId);
             }

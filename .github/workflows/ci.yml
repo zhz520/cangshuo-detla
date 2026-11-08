@@ -58,10 +58,9 @@ jobs:
         run: npm ci
       - name: Build H5
         working-directory: delta-mp
-        env:
-          UNI_INPUT_DIR: ${{ github.workspace }}/delta-mp
         run: |
           npm test
-          npx --no-install uni build -p h5
+          npm run build:h5
+          npm run build:mp-weixin
       # Formal release archives are generated and digest-checked separately.
       # Do not upload preview bundles on every push; they exhaust Actions storage.

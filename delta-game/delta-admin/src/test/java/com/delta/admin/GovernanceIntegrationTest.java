@@ -11,6 +11,8 @@ import com.delta.player.controller.PlayerController;
 import com.delta.player.dto.PlayerHomepageRequest;
 import com.delta.player.service.*;
 import com.delta.player.service.impl.PlayerServiceImpl;
+import com.delta.pay.refund.OrderRefundWorkflowService;
+import com.delta.pay.refund.RefundRequest;
 import com.delta.system.service.SysConfigService;
 import org.junit.jupiter.api.*;
 import org.mybatis.spring.annotation.MapperScan;
@@ -42,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GovernanceIntegrationTest {
  @Configuration @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
  @MapperScan({"com.delta.player.mapper","com.delta.common.mapper"})
- @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,StaffRoleController.class,GovernanceController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,RefundProbe.class})
+ @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,RefundController.class,RefundProbe.class})
  static class Config{}
  @RestController static class RefundProbe {
   @PostMapping("/cs/order/{id}/refund") @PreAuthorize("@staffPermissions.allowed('order.refund')") public R<Void> refund(@PathVariable Long id){return R.ok();}
@@ -55,6 +57,7 @@ class GovernanceIntegrationTest {
  @MockBean TokenService tokens;@MockBean SysConfigService configs;
  @MockBean PlayerLevelService levels;@MockBean PlayerWalletService wallets;
  @MockBean com.delta.user.service.UserService users;@MockBean com.delta.pay.service.PaymentService payments;
+ @MockBean OrderRefundWorkflowService refunds;
  @MockBean com.delta.admin.service.UserManagementService userManagement;
  @MockBean com.delta.pay.service.TransactionService transactions;
  @BeforeEach void defaults(){when(configs.getConfigValue(anyString(),anyString())).thenAnswer(a->a.getArgument(1));}
@@ -67,6 +70,24 @@ class GovernanceIntegrationTest {
   mvc.perform(post("/cs/order/100/refund").with(role("CS",2))).andExpect(jsonPath("$.code").value(200));
   jdbc.update("UPDATE staff_role SET permissions='[\"*\"]' WHERE code='CS'");
   mvc.perform(post("/cs/order/100/refund").with(role("CS",2))).andExpect(jsonPath("$.code").value(403));
+ }
+ @Test void customerServiceCanReviewButOnlyAdminCanFinalApproveRefund()throws Exception{
+  jdbc.update("UPDATE staff_role SET permissions='[\"*\",\"order.refund\"]' WHERE code='CS'");
+  when(refunds.approve(anyLong(),anyLong(),anyString(),any())).thenReturn(new RefundRequest());
+  mvc.perform(post("/admin/refunds/10/approve").with(role("CS",2)).contentType("application/json").content("{}"))
+    .andExpect(jsonPath("$.code").value(403));
+  mvc.perform(post("/admin/refunds/10/approve").with(role("ADMIN",1)).contentType("application/json").content("{}"))
+    .andExpect(jsonPath("$.code").value(200));
+  verify(refunds,times(1)).approve(eq(10L),eq(1L),eq("ADMIN"),any());
+ }
+ @Test void guestShadowAccountCanRequestAndReadItsOwnRefund()throws Exception{
+  when(refunds.requestByCustomer(anyLong(),anyLong(),anyString(),any())).thenReturn(new RefundRequest());
+  when(refunds.historyForCustomer(anyLong(),anyLong(),anyString())).thenReturn(List.of());
+  mvc.perform(post("/order/100/refunds").with(role("GUEST",7)).contentType("application/json")
+      .content("{\"amount\":1.00,\"reason\":\"申请退款\"}"))
+    .andExpect(jsonPath("$.code").value(200));
+  mvc.perform(get("/order/100/refunds").with(role("GUEST",7)))
+    .andExpect(jsonPath("$.code").value(200));
  }
  @Test void staffCannotEscalateOrRemoveBuiltInRoles()throws Exception{
   mvc.perform(put("/system/roles").with(role("CS",2)).contentType("application/json").content("{\"code\":\"evil\",\"name\":\"x\",\"enabled\":true,\"permissions\":[\"*\"]}")).andExpect(jsonPath("$.code").value(403));
@@ -134,6 +155,11 @@ class GovernanceIntegrationTest {
  @Test void onlySelfCanChangeCustomerServiceShift()throws Exception{
   mvc.perform(put("/cs/governance/shifts/1").with(role("CS",2)).contentType("application/json").content("{\"online\":true}")).andExpect(jsonPath("$.code").value(403));
   mvc.perform(put("/cs/governance/shifts/2").with(role("CS",2)).contentType("application/json").content("{\"online\":true}")).andExpect(jsonPath("$.code").value(200));
+ }
+ @Test void dedicatedShiftApiLetsCsToggleAndPreventsAdminToggle()throws Exception{
+  mvc.perform(get("/cs/shift/status").with(role("CS",2))).andExpect(jsonPath("$.data.role").value("CS")).andExpect(jsonPath("$.data.online").value(false));
+  mvc.perform(post("/cs/shift/toggle").with(role("CS",2)).contentType("application/json").content("{\"online\":true}")).andExpect(jsonPath("$.data.online").value(true)).andExpect(jsonPath("$.data.onDutyCs").value(1));
+  mvc.perform(post("/cs/shift/toggle").with(role("ADMIN",1)).contentType("application/json").content("{\"online\":true}")).andExpect(jsonPath("$.code").value(403));
  }
  @Test void registrationCannotSkipAgreementOrRequiredAvatar()throws Exception{
   mvc.perform(post("/player/apply").with(role("USER",7)).contentType("application/json").content("{}")).andExpect(jsonPath("$.code").value(400));

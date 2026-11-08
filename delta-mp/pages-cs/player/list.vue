@@ -1,6 +1,7 @@
 <template>
   <view class="player-list">
     <view v-if="taskId" style="padding:12rpx 24rpx" @click="clearTask">正在查看待办 #{{ taskId }} · 查看全部</view>
+    <view v-if="presenceFilter" class="presence-notice" @click="clearPresence">当前仅显示{{ presenceFilter==='ONLINE'?'在线':'离线' }}打手 · 查看全部</view>
     <view class="search-bar">
       <input v-model="keyword" placeholder="搜索接单员昵称/手机号" class="search-input" @confirm="refresh" />
     </view>
@@ -10,6 +11,7 @@
       <view class="filter-item" :class="{active: statusFilter==='ACTIVE'}" @click="filterStatus('ACTIVE')">已激活</view>
       <view class="filter-item" :class="{active: statusFilter==='FROZEN'}" @click="filterStatus('FROZEN')">已冻结</view>
     </scroll-view>
+    <view v-if="error" class="presence-notice" @click="refresh">{{ error }} · 点击重试</view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card">
         <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
@@ -62,8 +64,11 @@
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-const taskId = ref('')
-onLoad(options => { taskId.value = /^\d{1,19}$/.test(options?.taskId || '') ? options.taskId : '' })
+const taskId = ref(''),presenceFilter=ref('')
+onLoad(options => {
+  taskId.value = /^\d{1,19}$/.test(options?.taskId || '') ? options.taskId : ''
+  presenceFilter.value=['ONLINE','OFFLINE'].includes(String(options?.presence||'').toUpperCase())?String(options.presence).toUpperCase():''
+})
 import EmptyState from '@/components/EmptyState.vue'
 import { getCsPlayerList, freezeCsPlayer } from '@/pages-cs/api/cs'
 
@@ -84,22 +89,34 @@ const finished = ref(false)
 const showFreezeModal = ref(false)
 const freezeTarget = ref(null)
 const freezeHours = ref(24)
+const error = ref('')
+let loadVersion = 0
 
 function clearTask() { taskId.value = ''; refresh() }
+function clearPresence(){presenceFilter.value='';refresh()}
 onShow(() => { refresh() })
 
 function filterStatus(s) { statusFilter.value = s; refresh() }
 function refresh() { pageNum.value = 1; players.value = []; finished.value = false; loadData() }
 async function loadData() {
+  const version = ++loadVersion
   loading.value = true
+  error.value = ''
   const params = { pageNum: pageNum.value, pageSize: 20 }
   if (keyword.value) params.keyword = keyword.value
   if (statusFilter.value) params.status = statusFilter.value
-  const res = await getCsPlayerList({ ...params, taskId: taskId.value })
-  const list = res.data?.records || []
-  if (list.length < 20) finished.value = true
-  players.value = pageNum.value === 1 ? list : [...players.value, ...list]
-  loading.value = false
+  if (presenceFilter.value) params.presence = presenceFilter.value
+  try {
+    const res = await getCsPlayerList({ ...params, taskId: taskId.value })
+    if (version !== loadVersion) return
+    const list = res.data?.records || []
+    if (list.length < 20) finished.value = true
+    players.value = pageNum.value === 1 ? list : [...players.value, ...list]
+  } catch (e) {
+    if (version === loadVersion) error.value = e?.msg || e?.message || '接单员列表加载失败'
+  } finally {
+    if (version === loadVersion) loading.value = false
+  }
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 function goAudit(id) { uni.navigateTo({ url: '/pages-cs/player/audit?id=' + id }) }
@@ -130,6 +147,7 @@ function formatTime(t) {
 .player-list { background: #ffffff; min-height: var(--app-page-height, 100vh); overflow: hidden; }
 
 .search-bar { padding: 16rpx 24rpx; }
+.presence-notice{padding:14rpx 24rpx;background:#eef2f7;color:#4f5e72;font-size:24rpx}
 .search-input { background: rgba(0,0,0,0.05); padding: 24rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; color: rgba(0,0,0,0.85); }
 
 .filter-bar { white-space: nowrap; padding: 12rpx 24rpx; border-bottom: 1rpx solid rgba(0,0,0,0.04); }

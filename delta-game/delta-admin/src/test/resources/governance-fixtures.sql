@@ -11,6 +11,7 @@ DELETE FROM order_settlement_ledger;
 DELETE FROM player_refund_recovery;
 DELETE FROM order_settlement_refund;
 DELETE FROM wechat_notice_queue;
+DELETE FROM sms_notice_queue;
 DELETE FROM wechat_official_binding;
 DROP TABLE IF EXISTS admin;
 CREATE TABLE admin(id BIGINT PRIMARY KEY,username VARCHAR(64),nickname VARCHAR(64),role VARCHAR(16),status INT,deleted INT DEFAULT 0);

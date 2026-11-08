@@ -107,6 +107,8 @@ public class NotificationEventListener {
             case "ORDER_COMPLETED" -> "服务已完成";
             case "TEAMMATE_INVITED" -> "收到组队邀请";
             case "COMPLAINT_RESOLVED" -> "投诉处理结果";
+            case "COMPLAINT_APPEALED" -> "投诉申诉待处理";
+            case "COMPLAINT_REFUND_PENDING" -> "投诉退款待终审";
             case "MATERIAL_REVIEWED" -> "主页资料审核结果";
             case "WITHDRAW_COMPLETED", "WITHDRAW_REJECTED" -> "提现审核结果";
             case "IDENTITY_REVIEWED" -> "实名认证结果";

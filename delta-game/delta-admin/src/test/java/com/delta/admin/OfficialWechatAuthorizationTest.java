@@ -24,6 +24,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class OfficialWechatAuthorizationTest {
@@ -45,12 +46,12 @@ class OfficialWechatAuthorizationTest {
 
         controller.start(request);
         controller.complete(Map.of("code", "code", "state", "state"), request);
-        controller.notices(request);
-        controller.retry("notice-1", request);
+        controller.notices();
+        controller.retry("notice-1");
 
         verify(service).startBinding("USER", 7L, "shop.example.com");
         verify(service).finishBinding("USER", 7L, "code", "state", "shop.example.com");
-        verify(platform, times(2)).requireFeature(OfficialWechatService.FEATURE_ID, "shop.example.com");
+        verifyNoInteractions(platform);
     }
 
     @Test void bindingServiceRequiresThePaidFeatureForTheRequestDomain() {

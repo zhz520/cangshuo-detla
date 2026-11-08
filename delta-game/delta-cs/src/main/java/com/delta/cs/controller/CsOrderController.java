@@ -11,6 +11,9 @@ import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.pay.refund.OrderRefundWorkflowService;
+import com.delta.pay.refund.RefundCreateRequest;
+import com.delta.pay.refund.RefundRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -23,6 +26,7 @@ public class CsOrderController {
     private final OrderProgressService orderProgressService;
     private final CrossModuleMapper crossModuleMapper;
     private final StatsMapper statsMapper;
+    private final OrderRefundWorkflowService refunds;
 
     @GetMapping("/list")
     public R<Page<Order>> list(PageQuery query, @RequestParam(value = "status", required = false) String status,
@@ -45,6 +49,7 @@ public class CsOrderController {
                 String nick = crossModuleMapper.selectUserNickname(o.getUserId());
                 o.setUserNickname((nick != null && !nick.isEmpty()) ? nick : "用户" + o.getUserId());
                 o.setUserAvatar(crossModuleMapper.selectUserAvatar(o.getUserId()));
+                o.setUserPhone(crossModuleMapper.selectUserPhone(o.getUserId()));
             }
             if (o.getPlayerId() != null) {
                 String pNick = crossModuleMapper.selectPlayerNickname(o.getPlayerId());
@@ -66,6 +71,7 @@ public class CsOrderController {
             if (order.getUserId() != null) {
                 order.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
                 order.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
+                order.setUserPhone(crossModuleMapper.selectUserPhone(order.getUserId()));
             }
         }
         return R.ok(order);
@@ -84,11 +90,12 @@ public class CsOrderController {
     }
 
     @org.springframework.security.access.prepost.PreAuthorize("@staffPermissions.allowed('order.refund')")
-    @com.delta.common.annotation.OpLog(module="order",operation="按角色权限执行订单退款")
+    @com.delta.common.annotation.OpLog(module="order",operation="创建订单退款申请")
     @PostMapping("/{id}/refund")
-    public R<Void> refund(@PathVariable Long id) {
-        orderService.csCancelOrder(id, SecurityUtils.getUserId());
-        return R.ok();
+    public R<RefundRequest> refund(@PathVariable Long id) {
+        RefundCreateRequest request = new RefundCreateRequest();
+        request.setReason("客服发起订单退款申请");
+        return R.ok(refunds.createByStaff(id, SecurityUtils.getUserId(), SecurityUtils.getUserType(), request));
     }
 
     @PostMapping("/{id}/confirm")

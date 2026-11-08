@@ -160,6 +160,18 @@ const routes = [
       }
     ]
   },
+  {
+    path: '/refund',
+    component: Layout,
+    children: [
+      {
+        path: '',
+        name: 'RefundList',
+        component: () => import('@/views/refund/RefundList.vue'),
+        meta: { title: '退款审批', icon: 'Money', roles: ['admin', 'cs'] }
+      }
+    ]
+  },
   // 换人申请
   {
     path: '/replace',
@@ -169,7 +181,7 @@ const routes = [
         path: '',
         name: 'ReplaceList',
         component: () => import('@/views/replace/ReplaceList.vue'),
-        meta: { title: '换人申请', icon: 'Switch', roles: ['admin', 'cs'] }
+        meta: { title: '换人申请', icon: 'Switch', roles: ['admin', 'cs'], hidden: true }
       }
     ]
   },
@@ -182,7 +194,19 @@ const routes = [
         path: '',
         name: 'RelayList',
         component: () => import('@/views/relay/RelayList.vue'),
-        meta: { title: '接力审核', icon: 'ArrowRight', roles: ['admin', 'cs'] }
+        meta: { title: '接力审核', icon: 'ArrowRight', roles: ['admin', 'cs'], hidden: true }
+      }
+    ]
+  },
+  {
+    path: '/fulfillment-review',
+    component: Layout,
+    children: [
+      {
+        path: '',
+        name: 'FulfillmentReview',
+        component: () => import('@/views/review/FulfillmentReview.vue'),
+        meta: { title: '履约审核', icon: 'CircleCheck', roles: ['admin', 'cs'] }
       }
     ]
   },
@@ -250,7 +274,7 @@ const routes = [
     redirect: '/system/admin',
     meta: { title: '系统管理', icon: 'Setting', roles: ['admin'] },
     children: [
-      {path:'wechat-notices',component:()=>import('@/views/system/WechatNotices.vue'),meta:{title:'公众号通知记录',roles:['admin'],permission:'system.manage',feature:'official_wechat_notifications'}},
+      {path:'wechat-notices',component:()=>import('@/views/system/WechatNotices.vue'),meta:{title:'通知记录',roles:['admin'],permission:'system.manage'}},
       {path:'email-notifications',name:'EmailNotifications',component:()=>import('@/views/system/EmailNotifications.vue'),meta:{title:'邮件通知',roles:['admin'],permission:'system.manage',feature:'email_notifications'}},
       {path:'roles',component:()=>import('@/views/system/StaffRoles.vue'),meta:{title:'角色与权限',roles:['admin'],permission:'system.manage'}},
       {
