@@ -31,7 +31,7 @@ test('mobile workbench keeps the requested roles, metrics and management hierarc
   for (const label of ['访客数', '登录日活', '有效订单', '已收款', '打手在线', '在线', '离线']) {
     assert.match(source, new RegExp(label))
   }
-  for (const label of ['订单管理', '退款审批', '打手管理', '客户管理', '商品管理', '公告管理', '员工与角色', '客户咨询']) {
+  for (const label of ['待确认订单', '提现审核', '打手管理', '客户管理', '商品管理', '公告管理', '员工与角色', '客户咨询']) {
     assert.match(source, new RegExp(`label:\\s*'${label}'`))
   }
   assert.match(source, /入驻、素材与履约统一入口/)
@@ -53,7 +53,7 @@ test('shift controls are CS-only while administrators receive a read-only count'
 test('mobile workbench filters privileged modules and avoids horizontal overflow', async () => {
   const dashboard = await read('pages-cs/dashboard/index.vue')
   const mine = await read('pages-cs/mine/index.vue')
-  assert.match(dashboard, /groups\.filter\(group=>group\.items\.length\)/)
+  assert.match(dashboard, /return groups[\s\S]*?\.filter\(group => group\.items\.length\)/)
   assert.match(dashboard, /item\.allowed !== false/)
   assert.match(mine, /menus\.filter\(item => can\(item\.permission\)\)/)
   assert.match(dashboard, /overflow-x:\s*hidden/)
@@ -88,6 +88,14 @@ test('high-frequency dispatch and order detail paths reduce navigation', async (
   assert.match(detail, /onShow\(\(\)\s*=>\s*\{[\s\S]*loadDetail\(\)/)
   assert.match(detail, /position:fixed/)
   assert.match(detail, /callCustomer/)
+})
+
+test('mobile staff navigation contains no duplicate module destinations', async () => {
+  for (const file of ['pages-cs/dashboard/index.vue', 'pages-cs/mine/index.vue', 'pages/workbench/index.vue']) {
+    const source = await read(file)
+    const routes = [...source.matchAll(/(?:route|pagePath):\s*'([^']+)'/g)].map(match => match[1])
+    assert.equal(new Set(routes).size, routes.length, `${file} contains a repeated destination`)
+  }
 })
 
 test('fulfillment review keeps both task types paginated and passes the relay player id', async () => {

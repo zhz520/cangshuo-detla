@@ -155,7 +155,7 @@
                 <text class="panel-title">我的商品 <text class="title-count">({{ formatMetric(productCount) }})</text></text>
                 <text class="panel-caption">商品与分类快捷入口</text>
               </view>
-              <text class="panel-link" @click="openPath('/pages-cs/product/list')">查看商品 ›</text>
+              <text class="panel-caption">商品内容统一在此维护</text>
             </view>
             <view class="mobile-action-grid three">
               <view
@@ -204,7 +204,7 @@
                 <text class="panel-title">审核中心</text>
                 <text class="panel-caption">入驻、素材与履约统一入口</text>
               </view>
-              <text class="panel-link" @click="openPath('/pages/workbench/index')">全部待办 ›</text>
+              <text class="panel-caption">{{ reviewItems.length }} 类审核集中处理</text>
             </view>
             <view class="review-list">
               <view
@@ -426,14 +426,15 @@ const productActions = computed(() => {
 })
 
 const actionGroups = computed(() => {
-  const data = dashboard.value
+  const claimedRoutes = new Set([
+    ...pendingTasks.value.map(item => item.route),
+    ...reviewItems.value.map(item => item.route)
+  ].filter(Boolean))
   const groups = [
     {
       key:'business', title:'业务办理', caption:'订单、售后与资金', columns:3,
       items:[
-        { key:'orders', label:'订单管理', icon:'/static/icons/订单.svg', route:'/pages-cs/order/list', allowed:can('order.read') },
-        { key:'refunds', label:'退款审批', icon:'/static/icons/钞票.svg', route:'/pages-cs/refund/list', allowed:can('order.refund'), badge:firstNumber(data.pendingRefunds,data.refundApprovals) },
-        { key:'complaints', label:'投诉售后', icon:'/static/icons/警示.svg', route:'/pages-cs/complaint/list', allowed:can('order.manage') },
+        { key:'confirmation', label:'待确认订单', icon:'/static/icons/订单.svg', route:'/pages-cs/order/list?status=COMPLETED', allowed:can('order.read') },
         { key:'withdraws', label:'提现审核', icon:'/static/icons/理财.svg', route:'/pages-cs/withdraw/list', allowed:can('withdraw.review') },
       ].filter(item=>item.allowed)
     },
@@ -457,7 +458,17 @@ const actionGroups = computed(() => {
       ].filter(item=>item.allowed !== false)
     }
   ]
-  return groups.filter(group=>group.items.length)
+  return groups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        if (!item.route) return true
+        if (claimedRoutes.has(item.route)) return false
+        claimedRoutes.add(item.route)
+        return true
+      })
+    }))
+    .filter(group => group.items.length)
 })
 
 const reviewItems = computed(() => {
