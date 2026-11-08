@@ -4,17 +4,11 @@
       <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" />
     </el-aside>
 
-    <el-drawer v-model="navigationOpen" direction="ltr" size="300px" :with-header="false" title="主导航" append-to-body class="mobile-navigation">
-      <SidebarNavigation mobile :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
-        <template #action><button class="navigation-close" type="button" aria-label="关闭导航" @click="navigationOpen = false"><el-icon><Close /></el-icon></button></template>
-      </SidebarNavigation>
-    </el-drawer>
-
     <el-container class="layout-body">
       <el-header class="layout-header">
         <div class="header-left">
-          <button class="collapse-btn" type="button" :aria-label="isCompact ? '打开导航' : (isCollapse ? '展开导航' : '收起导航')" :aria-expanded="isCompact ? navigationOpen : !isCollapse" @click="toggleNavigation">
-            <Fold v-if="!isCompact && !isCollapse" />
+          <button v-if="!isCompact" class="collapse-btn" type="button" :aria-label="isCollapse ? '展开导航' : '收起导航'" :aria-expanded="!isCollapse" @click="toggleNavigation">
+            <Fold v-if="!isCollapse" />
             <Expand v-else />
           </button>
           <span class="mobile-page-title">{{ currentPageTitle }}</span>
@@ -68,11 +62,10 @@
       </el-main>
     </el-container>
 
-    <nav v-if="isCompact" class="mobile-bottom-nav" aria-label="移动端快捷导航">
+    <nav v-if="isCompact" class="mobile-bottom-nav" :class="{ 'two-items': !can('order.read') }" aria-label="移动端快捷导航">
       <button type="button" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')"><el-icon><HomeFilled /></el-icon><span>工作台</span></button>
-      <button type="button" :class="{ active: route.path.startsWith('/order') }" @click="router.push('/order/list')"><el-icon><Tickets /></el-icon><span>订单</span></button>
+      <button v-if="can('order.read')" type="button" :class="{ active: route.path.startsWith('/order') }" @click="router.push('/order/list')"><el-icon><Tickets /></el-icon><span>订单</span></button>
       <button type="button" @click="openCenter('tasks')"><el-icon><Bell /></el-icon><span>待办</span><i v-if="workbench.summary?.unread" class="nav-unread">{{ badge(workbench.summary.unread) }}</i></button>
-      <button type="button" :class="{ active: navigationOpen }" @click="navigationOpen = true"><el-icon><Menu /></el-icon><span>菜单</span></button>
     </nav>
 
     <!-- 编辑资料弹窗 -->
@@ -90,7 +83,7 @@ import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAll
 import { loadingFeedback } from '@/utils/loading-feedback'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound, Close, List, Bell, HomeFilled, Tickets, Menu } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, HomeFilled, Tickets } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
@@ -102,6 +95,7 @@ import { taskPaths } from '@/utils/workbench-links'
 import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { useSiteStore } from '@/stores/site'
 import {thumbnailUrl} from '@/utils/image'
+import { installMobileTableCards } from '@/utils/mobile-table-cards'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,19 +124,16 @@ const main = ref(null)
 const pageVersion = ref(0)
 function reloadPage() { loadingFeedback.readError = null; pageVersion.value++ }
 onErrorCaptured(error => { if (error?.requestHandled) return false })
-const navigationOpen = ref(false)
 const { isCompact } = useResponsive()
+let stopMobileTables = () => {}
 function toggleNavigation() {
-  if (isCompact.value) navigationOpen.value = !navigationOpen.value
-  else isCollapse.value = !isCollapse.value
+  isCollapse.value = !isCollapse.value
 }
-watch(() => route.fullPath, () => { navigationOpen.value = false })
 watch(() => route.path, async () => {
   await nextTick()
   const element = main.value?.$el
   if (element) { element.scrollTop = 0; element.scrollLeft = 0; element.focus({ preventScroll: true }) }
 })
-watch(isCompact, compact => { if (!compact) navigationOpen.value = false })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
 const logoInitial = computed(() => {
@@ -195,8 +186,10 @@ onMounted(() => {
   workbench.start()
   if (role.value === 'admin' && ['system.manage', 'user.manage', 'finance.read'].some(can)) loadPlatformFeatureVisibility()
   if (can('chat.manage')) chatStore.start()
+  nextTick(() => { stopMobileTables = installMobileTableCards(main.value?.$el) })
 })
 onUnmounted(() => {
+  stopMobileTables()
   workbench.stop()
   chatStore.stop()
 })
@@ -372,13 +365,14 @@ onUnmounted(() => {
     height: calc(62px + var(--app-safe-bottom));
     padding: 5px max(8px, var(--app-safe-right)) var(--app-safe-bottom) max(8px, var(--app-safe-left));
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     border-top: 1px solid #e7e9ec;
     background: rgba(255,255,255,.97);
     box-shadow: 0 -8px 28px rgba(23,25,28,.08);
     backdrop-filter: blur(14px);
     box-sizing: border-box;
   }
+  .mobile-bottom-nav.two-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-bottom-nav button {
     position: relative;
     display: flex;

@@ -93,8 +93,10 @@ import LoadFeedback from '@/components/LoadFeedback.vue'
 import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { can } from '@/utils/staff-permissions'
 import { platformFeatureAllowed } from '@/utils/platform-feature-visibility'
+import { buildNavigation } from '@/utils/navigation'
+import { buildMobileNavigationSections } from '@/utils/mobile-navigation'
 import { useWorkbenchStore } from '@/stores/workbench'
-import { Avatar, ChatDotRound, CircleCheck, List, Money, Picture, Setting, User, Wallet, Warning } from '@element-plus/icons-vue'
+import { CircleCheck, List, Picture } from '@element-plus/icons-vue'
 
 const props = defineProps({
   stats: { type: Object, default: () => ({}) },
@@ -170,59 +172,13 @@ const productActions = computed(() => {
   ]
 })
 
-function routeKey(route) {
-  const [path, query = ''] = String(route || '').split('?')
-  const normalized = query.split('&').filter(Boolean).sort().join('&')
-  return normalized ? `${path}?${normalized}` : path
-}
-
 const operationGroups = computed(() => {
-  const claimed = new Set([...statusTiles.value.map(item => item.route), ...productActions.value.map(item => item.route)].filter(Boolean).map(routeKey))
-  function take(items) {
-    return items.filter(item => {
-      if (!item.allowed) return false
-      const key = routeKey(item.route)
-      if (claimed.has(key)) return false
-      claimed.add(key)
-      return true
-    })
-  }
-  const groups = [
-    {
-      key: 'people', title: '员工与客户', caption: '人员、权限与用户资料',
-      items: take([
-        { key: 'players', label: '打手管理', route: '/player', icon: Avatar, allowed: can('player.manage'), hint: presence.value.onlinePlayers == null ? '' : `${presence.value.onlinePlayers} 在线` },
-        { key: 'staff', label: '员工管理', route: '/system/admin', icon: User, allowed: can('system.manage') },
-        { key: 'roles', label: '角色权限', route: '/system/roles', icon: Setting, allowed: can('system.manage') },
-        { key: 'users', label: '客户管理', route: '/user/list', icon: User, allowed: can('user.read') || can('user.manage') }
-      ])
-    },
-    {
-      key: 'service', title: '客户与服务', caption: '沟通、内容与审核',
-      items: take([
-        { key: 'chat', label: '客户咨询', route: '/chat/service', icon: ChatDotRound, allowed: can('chat.manage'), badge: summary.value?.chatUnread || 0 },
-        { key: 'notice', label: '公告管理', route: '/system/notice', icon: Picture, allowed: can('system.manage') },
-        { key: 'material', label: '素材审核', route: '/material-review', icon: Picture, allowed: can('media.review'), badge: firstNumber(category('MATERIAL').pending) },
-        { key: 'identity', label: '实名认证', route: '/user/identity-review', icon: User, allowed: can('user.manage') && platformFeatureAllowed('identity_verification'), badge: firstNumber(category('IDENTITY').pending) },
-        { key: 'privacy', label: '隐私申请', route: '/privacy-requests', icon: Setting, allowed: can('user.manage'), badge: firstNumber(category('PRIVACY').pending) },
-        { key: 'shifts', label: '上下班管理', route: '/staff-shifts', icon: CircleCheck, allowed: can('order.manage') || props.isAdmin }
-      ])
-    },
-    {
-      key: 'tools', title: '快捷工具', caption: '结算、配置与版本',
-      items: take([
-        { key: 'withdraw', label: '提现审核', route: '/withdraw', icon: Wallet, allowed: can('withdraw.review') },
-        { key: 'refund', label: '退款审批', route: '/refund', icon: Money, allowed: can('order.refund') },
-        { key: 'fulfillment', label: '履约审核', route: '/fulfillment-review', icon: List, allowed: can('order.manage') },
-        { key: 'confirm', label: '待确认订单', route: '/order/list?status=COMPLETED', icon: CircleCheck, allowed: can('order.read') },
-        { key: 'income', label: '数据统计', route: '/statistics/income-daily', icon: List, allowed: can('finance.read') },
-        { key: 'config', label: '系统配置', route: '/system/config', icon: Setting, allowed: can('system.manage') },
-        { key: 'market', label: '功能商城', route: '/platform/features', icon: Wallet, allowed: can('system.manage') },
-        { key: 'updates', label: '系统更新', route: '/platform/updates', icon: CircleCheck, allowed: can('system.manage') }
-      ])
-    }
-  ]
-  return groups.filter(group => group.items.length)
+  const role = props.isAdmin ? 'admin' : 'cs'
+  const groups = buildNavigation(router.options.routes, role, can, platformFeatureAllowed)
+  return buildMobileNavigationSections(groups, [
+    ...statusTiles.value.map(item => item.route),
+    ...productActions.value.map(item => item.route)
+  ])
 })
 
 function formatNumber(value) {

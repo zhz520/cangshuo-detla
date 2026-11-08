@@ -1,5 +1,5 @@
 <template>
-  <nav class="admin-navigation" :class="{ mobile }" aria-label="主导航">
+  <nav class="admin-navigation" aria-label="主导航">
     <div class="logo">
       <div class="logo-mark">{{ initial }}</div>
       <h1 v-if="!collapsed" :title="title">{{ title }}</h1>
@@ -28,7 +28,6 @@ import { activeNavigationMenu } from '@/utils/navigation'
 
 const props = defineProps({
   collapsed: Boolean,
-  mobile: Boolean,
   active: String,
   groups: { type: Array, default: () => [] },
   title: String,
@@ -70,25 +69,9 @@ h1 { flex:1; min-width:0; font-size:15px; line-height:1.2; font-weight:700; marg
   &.el-menu--collapse :deep(.el-sub-menu__title), &.el-menu--collapse :deep(.el-menu-item > .el-menu-tooltip__trigger) { padding:0!important; justify-content:center; }
   &.el-menu--collapse :deep(.el-icon) { margin:0; }
 }
-.admin-navigation.mobile { background:#fff; color:#20242a; }
-.admin-navigation.mobile .logo { color:#20242a; border-bottom-color:#edf0f2; }
-.admin-navigation.mobile .logo-mark { color:#fff; background:#17191c; }
-.admin-navigation.mobile h1 { color:#20242a; }
-.admin-navigation.mobile .layout-menu :deep(.el-menu-item-group__title) { padding:17px 12px 6px!important; color:#9aa0a7; font-size:10px; letter-spacing:.08em; }
-.admin-navigation.mobile .layout-menu :deep(.el-menu-item), .admin-navigation.mobile .layout-menu :deep(.el-sub-menu__title) { height:46px; margin:2px 0; border-radius:10px; color:#4f555d; font-size:14px; }
-.admin-navigation.mobile .layout-menu :deep(.el-menu-item:hover), .admin-navigation.mobile .layout-menu :deep(.el-sub-menu__title:hover) { color:#17191c; background:#f5f6f7; }
-.admin-navigation.mobile .layout-menu :deep(.el-sub-menu .el-menu-item) { padding-left:42px!important; background:#fafbfb; }
-.admin-navigation.mobile .layout-menu :deep(.el-menu-item.is-active) { color:#17191c; background:#eef0f2; box-shadow:none; }
 @media(max-width:1024px) {
   .logo { padding-top:calc(14px + var(--app-safe-top,0px)); }
   .layout-menu :deep(.el-menu-item), .layout-menu :deep(.el-sub-menu__title) { min-height:44px; }
-}
-</style>
-<style>
-@media (max-width:1024px) {
-  .mobile-navigation .el-drawer__body { padding:0; }
-  .mobile-navigation .navigation-close { color:#30353b!important; border-color:#dfe3e7!important; }
-  .mobile-navigation .navigation-close svg { color:currentColor!important; }
 }
 </style>
 <style>
