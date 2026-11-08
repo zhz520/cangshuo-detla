@@ -1,7 +1,11 @@
 <template>
   <view class="assign-page">
     <view class="limit-tip">
-      当前配置：接单员最多同时接 <text class="gold">{{maxConcurrent}}</text> 个订单
+      当前置顶在线可派单打手 · 每人最多 <text class="gold">{{maxConcurrent}}</text> 单
+    </view>
+    <view class="quick-filter">
+      <text :class="{active:onlineOnly}" @click="setOnlineOnly(true)">在线可派</text>
+      <text :class="{active:!onlineOnly}" @click="setOnlineOnly(false)">全部打手</text>
     </view>
     <view class="search-bar">
       <input v-model="keyword" placeholder="搜索接单员昵称/手机号" class="search-input" @confirm="searchPlayers" />
@@ -25,8 +29,10 @@
         </view>
         <view class="assign-btn" :class="{ disabled: isDisabled(p) }" @click="doAssign(p)">指派</view>
       </view>
+      <view v-if="error" class="loading-tip error" @click="loadData()">{{ error }} · 点击重试</view>
       <view v-if="loading" class="loading-tip">加载中...</view>
-      <EmptyState v-if="!loading && players.length===0" text="暂无可用接单员" image="/static/icons/暂无项目.svg" />
+      <EmptyState v-if="!loading && players.length===0" :text="onlineOnly?'暂无在线可接单打手':'暂无可用接单员'" image="/static/icons/暂无项目.svg" />
+      <view v-if="!loading && onlineOnly && players.length===0" class="show-all" @click="setOnlineOnly(false)">查看全部打手</view>
     </scroll-view>
   </view>
 </template>
@@ -43,6 +49,9 @@ const keyword = ref('')
 const players = ref([])
 const pageNum = ref(1)
 const loading = ref(false)
+const error = ref('')
+const finished = ref(false)
+const onlineOnly = ref(true)
 const maxConcurrent = ref(5)
 
 onLoad((opts) => { orderId.value = opts.orderId; loadData() })
@@ -58,23 +67,27 @@ function isDisabled(p) {
 }
 
 function searchPlayers() { pageNum.value = 1; players.value = []; loadData() }
+function setOnlineOnly(value){if(onlineOnly.value===value)return;onlineOnly.value=value;searchPlayers()}
 
 async function loadData() {
   loading.value = true
+  error.value=''
   try {
     const params = { pageNum: pageNum.value, pageSize: 20 }
     if (keyword.value) params.keyword = keyword.value
+    params.onlineOnly = onlineOnly.value
     const res = await getCsPlayerAssignList(params)
     const data = res.data || {}
     const page = data.players || {}
     const list = page.records || []
     players.value = pageNum.value === 1 ? list : [...players.value, ...list]
+    finished.value = list.length < 20
     if (data.maxConcurrent != null) maxConcurrent.value = data.maxConcurrent
-  } catch (e) { /* ignore */ }
+  } catch (e) { error.value=e?.msg||e?.message||'打手列表加载失败' }
   finally { loading.value = false }
 }
 
-function loadMore() { if (!loading.value) { pageNum.value++; loadData() } }
+function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 
 function doAssign(p) {
   if (!isPlayerOnline(p)) {
@@ -120,6 +133,7 @@ function doAssign(p) {
   text-align: center;
   .gold { color: #17191c; font-weight: bold; }
 }
+.quick-filter{display:flex;gap:14rpx;padding:14rpx 24rpx 0}.quick-filter text{flex:1;padding:14rpx;text-align:center;border-radius:12rpx;background:#f3f4f5;color:#6f757d;font-size:24rpx}.quick-filter text.active{background:#17191c;color:#fff;font-weight:700}
 
 .search-bar {
   display: flex; gap: 16rpx; padding: 16rpx 24rpx;
@@ -174,4 +188,6 @@ function doAssign(p) {
 }
 
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
+.loading-tip.error { color:#a24750; }
+.show-all{margin:0 24rpx 24rpx;padding:18rpx;text-align:center;border:1rpx solid #e2e5e8;border-radius:999rpx;color:#4c535b;font-size:24rpx}
 </style>

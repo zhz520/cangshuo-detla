@@ -40,49 +40,45 @@
           </view>
         </view>
 
-        <view class="group-title">工作管理</view>
-        <view v-if="workMenus.length" class="menu-list">
+        <view class="group-card">
+          <view class="group-heading"><text>常用管理</text><text>仅显示当前权限</text></view>
+        <view v-if="workMenus.length" class="menu-grid">
           <view
             v-for="item in workMenus"
             :key="item.key"
-            class="menu-item"
+            class="menu-tile"
             role="button"
             @click="openMenu(item)"
           >
             <view class="menu-icon-wrap">
               <image class="menu-icon" :src="item.icon" mode="aspectFit" />
+              <view v-if="menuBadge(item) > 0" class="badge">{{ menuBadge(item) > 99 ? '99+' : menuBadge(item) }}</view>
             </view>
-            <view class="menu-copy">
-              <text class="menu-label">{{ item.label }}</text>
-              <text v-if="item.caption" class="menu-caption">{{ item.caption }}</text>
-            </view>
-            <view v-if="menuBadge(item) > 0" class="badge">{{ menuBadge(item) > 99 ? '99+' : menuBadge(item) }}</view>
-            <text class="arrow">›</text>
+            <text class="menu-label">{{ item.label }}</text>
           </view>
         </view>
         <view v-else class="menu-empty">
           <text>{{ permissionsReady ? '当前账号暂无工作管理权限' : '正在加载权限…' }}</text>
         </view>
+        </view>
 
-        <view class="group-title">账号与服务</view>
-        <view class="menu-list">
+        <view class="group-card">
+          <view class="group-heading"><text>账号与服务</text><text>通知、资料与登录</text></view>
+        <view class="menu-grid service-grid">
           <view
             v-for="item in serviceMenus"
             :key="item.key"
-            class="menu-item"
+            class="menu-tile"
             role="button"
             @click="openMenu(item)"
           >
             <view class="menu-icon-wrap">
               <image class="menu-icon" :src="item.icon" mode="aspectFit" />
+              <view v-if="menuBadge(item) > 0" class="badge">{{ menuBadge(item) > 99 ? '99+' : menuBadge(item) }}</view>
             </view>
-            <view class="menu-copy">
-              <text class="menu-label">{{ item.label }}</text>
-              <text v-if="item.caption" class="menu-caption">{{ item.caption }}</text>
-            </view>
-            <view v-if="menuBadge(item) > 0" class="badge">{{ menuBadge(item) > 99 ? '99+' : menuBadge(item) }}</view>
-            <text class="arrow">›</text>
+            <text class="menu-label">{{ item.label }}</text>
           </view>
+        </view>
         </view>
 
         <view class="logout" role="button" @click="doLogout">退出登录</view>
@@ -273,6 +269,7 @@ async function toggleShift() {
 }
 
 onShow(async () => {
+  uni.setNavigationBarTitle({ title: isAdmin.value ? '运营管理后台' : '客服工作台' })
   remindStore.fetchCsRemind()
   officialWechat.load('cs')
   await Promise.allSettled([loadPermissions(), loadShift()])
@@ -397,8 +394,33 @@ function doLogout() {
 .logout { margin: 34rpx 24rpx 0; height: 86rpx; line-height: 86rpx; text-align: center; background: #fff; color: #b44750; font-size: 27rpx; border: 1rpx solid #eee4e5; border-radius: 22rpx; }
 .logout:active { opacity: .68; background: #fff9f9; }
 
+/* Compact mobile staff settings matching the card-based operations workspace. */
+.cs-mine { background:#f3f4f6; }
+.mine-shell { padding-top:20rpx; }
+.user-header { padding:24rpx; background:#fff; border:1rpx solid #e9ebee; border-radius:24rpx; box-shadow:0 7rpx 22rpx rgba(23,25,28,.025); }
+.user-header .avatar { width:92rpx; height:92rpx; border-radius:22rpx; border:1rpx solid #edf0f2; }
+.name { color:#17191c; font-size:31rpx; }
+.role-badge { background:#f0f2f4; color:#666d75; }
+.desc { color:#969ca3; margin-top:7rpx; }
+.user-header > .arrow { color:#b8bdc3; }
+.shift-card { margin-top:16rpx; border-radius:22rpx; box-shadow:0 7rpx 22rpx rgba(23,25,28,.025); }
+.group-card { margin:18rpx 24rpx 0; padding:22rpx 20rpx 18rpx; background:#fff; border:1rpx solid #e9ebee; border-radius:24rpx; box-shadow:0 7rpx 22rpx rgba(23,25,28,.025); }
+.group-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12rpx; margin:0 4rpx 14rpx; }
+.group-heading text:first-child { color:#1b1e21; font-size:27rpx; font-weight:800; }
+.group-heading text:last-child { color:#a1a6ad; font-size:17rpx; }
+.menu-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6rpx 2rpx; }
+.menu-grid.service-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.menu-tile { min-width:0; min-height:132rpx; padding:10rpx 4rpx 8rpx; border-radius:16rpx; text-align:center; box-sizing:border-box; }
+.menu-tile:active { background:#f6f7f8; opacity:.72; }
+.menu-tile .menu-icon-wrap { position:relative; width:66rpx; height:66rpx; margin:0 auto 9rpx; border-radius:18rpx; background:#f3f4f5; }
+.menu-tile .menu-icon { width:36rpx; height:36rpx; }
+.menu-tile .menu-label { display:block; color:#3d4248; font-size:20rpx; font-weight:600; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.menu-tile .badge { position:absolute; top:-8rpx; right:-10rpx; min-width:28rpx; height:28rpx; line-height:28rpx; padding:0 7rpx; font-size:17rpx; }
+.group-card .menu-empty { margin:0; padding:28rpx 18rpx; }
+.logout { margin-top:20rpx; height:78rpx; line-height:78rpx; border-radius:20rpx; }
+
 @media (max-width: 350px) {
-  .user-header, .shift-card, .menu-list, .menu-empty, .logout { margin-left: 18rpx; margin-right: 18rpx; }
+  .user-header, .shift-card, .group-card, .menu-list, .menu-empty, .logout { margin-left: 18rpx; margin-right: 18rpx; }
   .shift-card { padding-left: 19rpx; padding-right: 19rpx; }
   .shift-switch { padding-right: 10rpx; }
 }

@@ -76,6 +76,7 @@
               :aria-label="task.label + ' ' + formatCount(task.value)"
               @click="openPath(task.route)"
             >
+              <image class="pending-icon" :src="task.icon" mode="aspectFit" />
               <view class="pending-value-row">
               <text class="pending-value">{{ formatMetric(task.value) }}</text>
                 <text v-if="task.alert" class="pending-alert-dot" />
@@ -125,6 +126,7 @@
               >
                 <text class="metric-value" :class="{ amount: item.money }">{{ item.value }}</text>
                 <text class="metric-label">{{ item.label }}</text>
+                <text v-if="item.subLabel" class="metric-sub">{{ item.subLabel }}</text>
               </view>
             </view>
 
@@ -147,28 +149,51 @@
             </view>
           </view>
 
-          <view v-if="quickActions.length" class="panel">
+          <view v-if="productActions.length" class="panel product-panel">
             <view class="panel-heading compact">
               <view>
-                <text class="panel-title">快捷管理</text>
-                <text class="panel-caption">只展示当前账号有权限的内容</text>
+                <text class="panel-title">我的商品 <text class="title-count">({{ formatMetric(productCount) }})</text></text>
+                <text class="panel-caption">商品与分类快捷入口</text>
+              </view>
+              <text class="panel-link" @click="openPath('/pages-cs/product/list')">查看商品 ›</text>
+            </view>
+            <view class="mobile-action-grid three">
+              <view
+                v-for="action in productActions"
+                :key="action.key"
+                class="mobile-action"
+                :class="{ accent: action.accent }"
+                role="button"
+                @click="openQuickAction(action)"
+              >
+                <view class="mobile-action-icon"><image :src="action.icon" mode="aspectFit" /></view>
+                <text>{{ action.label }}</text>
               </view>
             </view>
-            <view class="quick-grid">
+          </view>
+
+          <view v-for="group in actionGroups" :key="group.key" class="panel action-panel">
+            <view class="panel-heading compact">
+              <view>
+                <text class="panel-title">{{ group.title }}</text>
+                <text class="panel-caption">{{ group.caption }}</text>
+              </view>
+            </view>
+            <view class="mobile-action-grid" :class="group.columns === 2 ? 'two' : 'three'">
               <view
-                v-for="action in quickActions"
+                v-for="action in group.items"
                 :key="action.key"
-                class="quick-action"
+                class="mobile-action"
                 role="button"
                 :aria-label="action.label"
                 @click="openQuickAction(action)"
               >
-                <view class="quick-icon-wrap">
-                  <image class="quick-icon" :src="action.icon" mode="aspectFit" />
+                <view class="mobile-action-icon">
+                  <image :src="action.icon" mode="aspectFit" />
                   <text v-if="action.badge > 0" class="quick-badge">{{ formatCount(action.badge) }}</text>
                 </view>
-                <text class="quick-label">{{ action.label }}</text>
-                <text v-if="action.hint" class="quick-hint">{{ action.hint }}</text>
+                <text>{{ action.label }}</text>
+                <text v-if="action.hint" class="mobile-action-hint">{{ action.hint }}</text>
               </view>
             </view>
           </view>
@@ -285,6 +310,7 @@ const pendingTasks = computed(() => {
     {
       key: 'assign',
       label: '待指派',
+      icon: '/static/icons/订单.svg',
       value: firstNumber(data.pendingAssign),
       route: '/pages-cs/order/list?status=PAID',
       allowed: can('order.manage')
@@ -292,6 +318,7 @@ const pendingTasks = computed(() => {
     {
       key: 'service',
       label: '服务中',
+      icon: '/static/icons/提示.svg',
       value: firstNumber(data.inProgress, data.inService, data.todayInProgress),
       route: '/pages-cs/order/list?status=IN_PROGRESS',
       allowed: can('order.read')
@@ -299,6 +326,7 @@ const pendingTasks = computed(() => {
     {
       key: 'audit',
       label: '待审核',
+      icon: '/static/icons/安全认证.svg',
       value: firstNumber(data.pendingAudits, data.auditPending) ?? auditFallback,
       route: '/pages/workbench/index',
       allowed: canAny(['player.manage', 'media.review', 'user.manage'])
@@ -306,6 +334,7 @@ const pendingTasks = computed(() => {
     {
       key: 'refund',
       label: '退款审批',
+      icon: '/static/icons/钞票.svg',
       value: refundValue ?? countByKind('REFUND'),
       route: '/pages-cs/refund/list',
       allowed: can('order.refund')
@@ -313,6 +342,7 @@ const pendingTasks = computed(() => {
     {
       key: 'complaint',
       label: '投诉',
+      icon: '/static/icons/警示.svg',
       value: firstNumber(data.pendingComplaints) ?? remindStore.complaintUnread,
       route: '/pages-cs/complaint/list',
       allowed: can('order.manage')
@@ -330,12 +360,7 @@ const metrics = computed(() => {
       key: 'visitors',
       label: '访客数',
       value: formatMetric(firstNumber(data.todayVisitors, data.visitors, data.visitorCount)),
-      route: ''
-    },
-    {
-      key: 'activeUsers',
-      label: '登录日活',
-      value: formatMetric(firstNumber(data.todayActiveUsers, data.activeUsers, data.dailyActiveUsers)),
+      subLabel: '登录日活 ' + formatMetric(firstNumber(data.todayActiveUsers, data.activeUsers, data.dailyActiveUsers)),
       route: ''
     },
     {
@@ -385,19 +410,54 @@ const adminShiftHint = computed(() => {
   return '管理员不参与客服排班，账号始终保持接收权限'
 })
 
-const quickActions = computed(() => {
-  const data = dashboard.value
-  const actions = [
-    { key: 'orders', label: '订单', icon: '/static/icons/订单.svg', route: '/pages-cs/order/list', allowed: can('order.read') },
-    { key: 'refunds', label: '退款', icon: '/static/icons/钞票.svg', route: '/pages-cs/refund/list', allowed: can('order.refund'), badge: firstNumber(data.pendingRefunds, data.refundApprovals) },
-    { key: 'players', label: '打手', icon: '/static/icons/会员.svg', route: '/pages-cs/player/list', allowed: can('player.manage') },
-    { key: 'customers', label: '客户', icon: '/pages-cs/static/icons/会员.svg', route: '/pages-cs/user/list', allowed: canAny(['user.read', 'user.manage']) },
-    { key: 'products', label: '商品', icon: '/static/icons/商品.svg', route: '/pages-cs/product/list', allowed: can('product.manage') },
-    { key: 'announcements', label: '公告', icon: '/static/icons/公告.svg', allowed: can('system.manage'), hint: '电脑后台' },
-    { key: 'staff', label: '员工', icon: '/static/icons/会员.svg', allowed: can('system.manage'), hint: '电脑后台' },
-    { key: 'inquiries', label: '咨询', icon: '/static/icons/客服.svg', route: '/pages-cs/chat/list', allowed: can('chat.manage') }
+const productCount = computed(() => firstNumber(
+  dashboard.value.productCount,
+  dashboard.value.productTotal,
+  dashboard.value.totalProducts
+) ?? 0)
+
+const productActions = computed(() => {
+  if (!can('product.manage')) return []
+  return [
+    { key:'product-list', label:'商品管理', icon:'/static/icons/购物.svg', route:'/pages-cs/product/list' },
+    { key:'category-list', label:'分类管理', icon:'/static/icons/分类.svg', route:'/pages-cs/category/list' },
+    { key:'product-create', label:'添加商品', icon:'/static/icons/购物.svg', route:'/pages-cs/product/edit', accent:true }
   ]
-  return actions.filter(action => action.allowed)
+})
+
+const actionGroups = computed(() => {
+  const data = dashboard.value
+  const groups = [
+    {
+      key:'business', title:'业务办理', caption:'订单、售后与资金', columns:3,
+      items:[
+        { key:'orders', label:'订单管理', icon:'/static/icons/订单.svg', route:'/pages-cs/order/list', allowed:can('order.read') },
+        { key:'refunds', label:'退款审批', icon:'/static/icons/钞票.svg', route:'/pages-cs/refund/list', allowed:can('order.refund'), badge:firstNumber(data.pendingRefunds,data.refundApprovals) },
+        { key:'complaints', label:'投诉售后', icon:'/static/icons/警示.svg', route:'/pages-cs/complaint/list', allowed:can('order.manage') },
+        { key:'withdraws', label:'提现审核', icon:'/static/icons/理财.svg', route:'/pages-cs/withdraw/list', allowed:can('withdraw.review') },
+      ].filter(item=>item.allowed)
+    },
+    {
+      key:'people', title:'人员与客户', caption:'用户、接单员与运营账号', columns:2,
+      items:[
+        { key:'players', label:'打手管理', icon:'/static/icons/会员.svg', route:'/pages-cs/player/list', allowed:can('player.manage') },
+        { key:'customers', label:'客户管理', icon:'/pages-cs/static/icons/会员.svg', route:'/pages-cs/user/list', allowed:canAny(['user.read','user.manage']) },
+        { key:'staff', label:'员工与角色', icon:'/static/icons/安全认证.svg', allowed:can('system.manage'), hint:'电脑后台' },
+        { key:'announcements', label:'公告管理', icon:'/static/icons/公告.svg', allowed:can('system.manage'), hint:'电脑后台' }
+      ].filter(item=>item.allowed)
+    },
+    {
+      key:'support', title:'消息与服务', caption:'即时沟通与账号服务', columns:2,
+      items:[
+        { key:'inquiries', label:'客户咨询', icon:'/static/icons/客服.svg', route:'/pages-cs/chat/list', allowed:can('chat.manage') },
+        { key:'messages', label:'系统通知', icon:'/static/icons/提示.svg', route:'/pages/message/index', badge:remindStore.systemUnread },
+        { key:'quick-reply', label:'快捷话术', icon:'/static/icons/快捷.svg', route:'/pages-cs/quick-reply/index', allowed:can('chat.manage') },
+        { key:'profile', label:'编辑资料', icon:'/static/icons/编辑.svg', route:'/pages-cs/profile/edit' },
+        { key:'updates', label:'版本更新', icon:'/static/icons/短信.svg', route:'/pages/workbench/index?kind=UPDATE', allowed:can('system.manage') }
+      ].filter(item=>item.allowed !== false)
+    }
+  ]
+  return groups.filter(group=>group.items.length)
 })
 
 const reviewItems = computed(() => {
@@ -642,6 +702,7 @@ function openQuickAction(action) {
 }
 
 onShow(() => {
+  uni.setNavigationBarTitle({ title: isAdmin.value ? '运营管理后台' : '客服工作台' })
   reload(false)
   remindStore.fetchCsRemind()
 })
@@ -871,6 +932,7 @@ onPullDownRefresh(async () => {
 .metric-value { display: block; color: #17191c; font-size: 38rpx; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .metric-value.amount { font-size: 31rpx; }
 .metric-label { display: block; margin-top: 9rpx; color: #878c94; font-size: 20rpx; }
+.metric-sub { display:block; margin-top:5rpx; color:#a2a7ae; font-size:17rpx; }
 
 .player-presence { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 14rpx; padding: 19rpx 20rpx; border-radius: 19rpx; background: #17191c; }
 .presence-main { min-width: 0; }
@@ -908,6 +970,69 @@ onPullDownRefresh(async () => {
 .review-side { flex: 0 0 auto; display: flex; align-items: center; gap: 10rpx; }
 .review-count { color: #17191c; font-size: 27rpx; font-weight: 800; font-variant-numeric: tabular-nums; }
 .review-arrow { color: #b3b7bc; font-size: 30rpx; }
+
+/* Mobile operations dashboard: grouped white cards matching the compact staff reference. */
+.dashboard-scroll { background:#f3f4f6; }
+.workbench-shell { padding:20rpx 22rpx 0; }
+.workbench-hero { padding:24rpx; border:1rpx solid #e9ebee; border-radius:24rpx; background:#fff; box-shadow:0 8rpx 24rpx rgba(23,25,28,.03); }
+.hero-orbit { display:none; }
+.hero-top { align-items:center; }
+.hero-eyebrow { color:#8d939a; font-size:19rpx; letter-spacing:0; }
+.hero-title { margin-top:5rpx; color:#181a1d; font-size:34rpx; font-weight:800; }
+.hero-subtitle { margin-top:5rpx; color:#a0a4aa; font-size:20rpx; }
+.refresh-button { width:58rpx; height:58rpx; min-height:58rpx; line-height:55rpx; border-color:#eceef0; background:#f7f8f9; color:#565c64; font-size:27rpx; }
+.shift-panel { margin-top:20rpx; padding:16rpx 18rpx; border-color:#e7e9ec; background:#f7f8f9; }
+.shift-panel.online { border-color:#dce9e1; background:#f7fbf8; }
+.shift-panel.admin { background:#f7f8f9; }
+.shift-dot { background:#a3a8ae; box-shadow:none; }
+.shift-panel.online .shift-dot { background:#4f9368; box-shadow:0 0 0 4rpx rgba(79,147,104,.09); }
+.shift-title { color:#292d32; font-size:24rpx; }
+.shift-loading,.shift-hint { color:#8e949b; }
+.shift-error { color:#a3444c; }
+.shift-control { background:#fff; color:#697079; border:1rpx solid #e2e5e8; }
+.shift-control.active { background:#edf6f0; color:#3f7654; border-color:#d8e8de; }
+.shift-knob { background:#b9bdc3; }
+.shift-control.active .shift-knob { background:#57936a; }
+.shift-readonly-value { color:#17191c; }
+.shift-readonly-label { color:#969ba2; }
+.pending-heading { margin:22rpx 2rpx 12rpx; }
+.pending-title { color:#1c1f22; font-size:26rpx; }
+.pending-tip { color:#a0a4aa; }
+.pending-grid { gap:10rpx; }
+.pending-item { min-height:100rpx; padding:14rpx 4rpx 11rpx; border:1rpx solid #eceef1; background:#f8f9fa; }
+.pending-item.alert { background:#fff; border-color:#e2e5e8; }
+.pending-item:active { background:#f1f2f4; }
+.pending-value { color:#17191c; }
+.pending-icon { display:block; width:34rpx; height:34rpx; margin:0 auto 6rpx; opacity:.82; }
+.pending-alert-dot { background:#c36a72; }
+.pending-label { color:#777d85; }
+.pending-skeleton-item { border:1rpx solid #eceef1; background:#f8f9fa; }
+.pending-skeleton .skeleton-block { background:linear-gradient(90deg,#eceff2 25%,#f6f7f8 50%,#eceff2 75%); background-size:200% 100%; }
+.today-panel .metric-grid { gap:0; }
+.today-panel .metric-item { padding:18rpx 6rpx; background:transparent; border-right:1rpx solid #eceef1; border-radius:0; }
+.today-panel .metric-item:last-child { border-right:0; }
+.player-presence { margin-top:12rpx; background:#f7f8f9; border:1rpx solid #eceef1; }
+.presence-title { color:#25292d; }
+.presence-caption { color:#969ba2; }
+.presence-value { color:#17191c; }
+.presence-count.online .presence-value { color:#3c8058; }
+.presence-label { color:#92979e; }
+.presence-divider { background:#dfe2e5; }
+.title-count { color:#8a9097; font-size:23rpx; font-weight:500; }
+.product-panel,.action-panel,.review-panel { box-shadow:0 7rpx 22rpx rgba(23,25,28,.025); }
+.mobile-action-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14rpx 8rpx; }
+.mobile-action-grid.two { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.mobile-action { min-width:0; min-height:132rpx; padding:12rpx 4rpx 8rpx; border-radius:16rpx; text-align:center; box-sizing:border-box; }
+.mobile-action:active { background:#f6f7f8; opacity:.72; }
+.mobile-action-icon { position:relative; width:64rpx; height:64rpx; margin:0 auto 10rpx; display:flex; align-items:center; justify-content:center; border-radius:18rpx; background:#f3f4f5; }
+.mobile-action-icon image { width:36rpx; height:36rpx; }
+.mobile-action.accent .mobile-action-icon { background:#eaf3ff; }
+.mobile-action > text { display:block; color:#3e4248; font-size:22rpx; font-weight:600; }
+.mobile-action-hint { margin-top:3rpx; color:#a1a6ad!important; font-size:16rpx!important; font-weight:400!important; }
+.quick-badge { top:-8rpx; right:-12rpx; background:#1d2024; }
+.review-list { border:0; border-radius:0; }
+.review-row { border-color:#f0f1f3; }
+.review-mark.dark { background:#eef0f2; color:#272b30; }
 
 .skeleton-panel { min-height: 230rpx; }
 .skeleton-line, .skeleton-block { background: linear-gradient(90deg, #eceff2 25%, #f5f6f7 50%, #eceff2 75%); background-size: 200% 100%; animation: skeleton-sweep 1.35s ease-in-out infinite; border-radius: 8rpx; }

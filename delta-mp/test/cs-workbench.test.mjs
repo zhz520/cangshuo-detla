@@ -28,11 +28,11 @@ test('mobile workbench keeps the requested roles, metrics and management hierarc
   for (const label of ['待指派', '服务中', '待审核', '退款审批', '投诉']) {
     assert.match(source, new RegExp(label))
   }
-  for (const label of ['访客数', '有效订单', '已收款', '打手在线', '在线', '离线']) {
+  for (const label of ['访客数', '登录日活', '有效订单', '已收款', '打手在线', '在线', '离线']) {
     assert.match(source, new RegExp(label))
   }
-  for (const label of ['订单', '退款', '打手', '客户', '商品', '公告', '员工', '咨询']) {
-    assert.match(source, new RegExp(`label: '${label}'`))
+  for (const label of ['订单管理', '退款审批', '打手管理', '客户管理', '商品管理', '公告管理', '员工与角色', '客户咨询']) {
+    assert.match(source, new RegExp(`label:\\s*'${label}'`))
   }
   assert.match(source, /入驻、素材与履约统一入口/)
 })
@@ -53,11 +53,41 @@ test('shift controls are CS-only while administrators receive a read-only count'
 test('mobile workbench filters privileged modules and avoids horizontal overflow', async () => {
   const dashboard = await read('pages-cs/dashboard/index.vue')
   const mine = await read('pages-cs/mine/index.vue')
-  assert.match(dashboard, /actions\.filter\(action => action\.allowed\)/)
-  assert.match(dashboard, /items\.filter\(item => item\.allowed\)/)
+  assert.match(dashboard, /groups\.filter\(group=>group\.items\.length\)/)
+  assert.match(dashboard, /item\.allowed !== false/)
   assert.match(mine, /menus\.filter\(item => can\(item\.permission\)\)/)
   assert.match(dashboard, /overflow-x:\s*hidden/)
   assert.match(mine, /overflow-x:\s*hidden/)
+})
+
+test('mobile staff dashboard uses compact grouped cards and product shortcuts', async () => {
+  const dashboard = await read('pages-cs/dashboard/index.vue')
+  const mine = await read('pages-cs/mine/index.vue')
+  assert.match(dashboard, /const productActions/)
+  assert.match(dashboard, /productActions\.length/)
+  assert.match(dashboard, /title-count/)
+  assert.match(dashboard, /v-for="group in actionGroups"/)
+  assert.match(dashboard, /mobile-action-grid/)
+  assert.match(dashboard, /background:#fff/)
+  assert.match(dashboard, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/)
+  assert.match(mine, /group-card/)
+  assert.match(mine, /menu-grid/)
+  assert.match(mine, /service-grid/)
+})
+
+test('high-frequency dispatch and order detail paths reduce navigation', async () => {
+  const orderList = await read('pages-cs/order/list.vue')
+  const assign = await read('pages-cs/order/assign.vue')
+  const detail = await read('pages-cs/order/detail.vue')
+  assert.match(orderList, /onLoad\(options/)
+  assert.match(orderList, /待指派订单优先展示/)
+  assert.match(orderList, /callUser\(o\)/)
+  assert.match(assign, /onlineOnly/)
+  assert.match(assign, /在线可派/)
+  assert.match(assign, /查看全部打手/)
+  assert.match(detail, /onShow\(\(\)\s*=>\s*\{[\s\S]*loadDetail\(\)/)
+  assert.match(detail, /position:fixed/)
+  assert.match(detail, /callCustomer/)
 })
 
 test('fulfillment review keeps both task types paginated and passes the relay player id', async () => {
@@ -78,7 +108,7 @@ test('fulfillment review keeps both task types paginated and passes the relay pl
 
 test('mobile workbench exposes daily active users and uses valid review destinations', async () => {
   const dashboard = await read('pages-cs/dashboard/index.vue')
-  assert.match(dashboard, /label: '登录日活'/)
+  assert.match(dashboard, /登录日活/)
   assert.match(dashboard, /todayActiveUsers/)
   assert.match(dashboard, /\/pages\/workbench\/index\?kind=ENROLLMENT/)
   assert.match(dashboard, /\/pages\/workbench\/index\?kind=MATERIAL/)

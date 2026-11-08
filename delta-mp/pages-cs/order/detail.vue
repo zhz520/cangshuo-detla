@@ -8,6 +8,13 @@
         <text class="copy-link" @click="copyOrderNo">复制单号</text>
       </view>
     </view>
+    <view v-if="order.userPhone || order.contact" class="contact-strip">
+      <view class="contact-copy">
+        <text class="contact-name">{{ order.userNickname || ('客户 ' + order.userId) }}</text>
+        <text class="contact-phone">{{ order.userPhone || order.contact }}</text>
+      </view>
+      <view class="contact-action" @click="callCustomer">拨打电话</view>
+    </view>
     <!-- 订单信息 -->
     <view class="card">
       <view class="card-header"><view class="title-bar" /><text class="card-title">订单信息</text></view>
@@ -60,7 +67,10 @@
       <view v-if="canRefund && ['ASSIGNED','IN_PROGRESS'].includes(order.status)" class="btn-warn" @click="doRefund">退款</view>
       <view class="btn-ghost" @click="goChat">联系用户</view>
     </view>
+    <view class="detail-actions-space" />
   </view>
+  <view v-else-if="error" class="page-state" @click="loadDetail">{{ error }} · 点击重试</view>
+  <view v-else class="page-state">正在加载订单…</view>
 </template>
 <script setup>
 import {get} from '@/api/request'
@@ -83,6 +93,9 @@ onShow(async()=>{try{const {data}=await get('/cs/permissions',{}, {role:'cs'});c
 const order = ref(null)
 const progressList = ref([])
 const orderId = ref('')
+const loading=ref(false)
+const error=ref('')
+let loadVersion=0
 const parsedExtra = computed(() => {
   const o = order.value
   if (!o) return []
@@ -101,11 +114,11 @@ const parsedExtra = computed(() => {
 
 onLoad(async (opts) => {
   orderId.value = opts.id
-  await loadDetail()
 })
 
 onShow(() => {
   unlockH5TabbarPageScroll()
+  if(orderId.value)loadDetail()
 })
 
 function unlockH5TabbarPageScroll() {
@@ -117,6 +130,7 @@ function unlockH5TabbarPageScroll() {
 
 function goAssign() { uni.navigateTo({ url: '/pages-cs/order/assign?orderId=' + orderId.value }) }
 function goChat() { uni.navigateTo({ url: '/pages-cs/chat/room?orderId=' + orderId.value }) }
+function callCustomer(){const phone=order.value?.userPhone||order.value?.contact;if(!phone)return;uni.makePhoneCall({phoneNumber:String(phone),fail:()=>copyText(String(phone),'号码已复制')})}
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 function copyText(text, title) {
   if (!text) {
@@ -134,12 +148,18 @@ function copyDetailItem(item) {
   copyText(String(item?.value ?? ''), `${item?.key || '内容'}已复制`)
 }
 async function loadDetail() {
-  const [detailRes, progressRes] = await Promise.all([
-    getCsOrderDetail(orderId.value),
-    getCsOrderProgress(orderId.value)
-  ])
-  order.value = detailRes.data
-  progressList.value = progressRes.data || []
+  const version=++loadVersion
+  loading.value=true;error.value=''
+  try{
+    const [detailRes, progressRes] = await Promise.all([
+      getCsOrderDetail(orderId.value),
+      getCsOrderProgress(orderId.value)
+    ])
+    if(version!==loadVersion)return
+    order.value = detailRes.data
+    progressList.value = progressRes.data || []
+  }catch(e){if(version===loadVersion){if(!order.value)order.value=null;error.value=e?.msg||e?.message||'订单详情加载失败'}}
+  finally{if(version===loadVersion)loading.value=false}
 }
 async function doRefund() {
   uni.showModal({
@@ -185,6 +205,7 @@ async function doConfirm() {
   .status-right { display: flex; align-items: center; gap: 16rpx; }
   .order-no { font-size: 24rpx; color: #73777e; }
 }
+.contact-strip{display:flex;align-items:center;justify-content:space-between;gap:18rpx;margin:16rpx 24rpx 0;padding:20rpx 22rpx;background:#fff;border:1rpx solid #e7eaed;border-radius:20rpx}.contact-copy{display:grid;gap:5rpx;min-width:0}.contact-name{color:#20252a;font-size:25rpx;font-weight:700}.contact-phone{color:#68717a;font-size:23rpx}.contact-action{flex:0 0 auto;padding:13rpx 22rpx;border-radius:999rpx;background:#edf6f0;color:#347454;font-size:23rpx;font-weight:700}
 .card {
   margin: 20rpx 24rpx 0; padding: 28rpx 28rpx 24rpx;
   background: #fff; border-radius: 16rpx;
@@ -229,7 +250,10 @@ async function doConfirm() {
 .progress-images { display: flex; gap: 12rpx; margin-top: 12rpx; flex-wrap: wrap; }
 .progress-img { width: 120rpx; height: 120rpx; border-radius: 12rpx; }
 
-.actions { display: flex; gap: 20rpx; padding: 40rpx 24rpx; justify-content: flex-end; }
+.actions { position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:12rpx;padding:16rpx 24rpx calc(16rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));justify-content:flex-end;background:rgba(255,255,255,.97);border-top:1rpx solid #e7eaed;backdrop-filter:blur(16rpx);box-sizing:border-box; }
+.actions>view{flex:1;text-align:center;padding:15rpx 20rpx;white-space:nowrap}
+.detail-actions-space{height:calc(124rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)))}
+.page-state{padding:120rpx 32rpx;text-align:center;color:#81878f;font-size:24rpx}
 .btn { padding: 16rpx 40rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; }
 .btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(23, 25, 28, 0.4); color: #17191c; font-size: 28rpx; border-radius: 999rpx; }
 .btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(201, 79, 89, 0.4); color: #d44955; font-size: 28rpx; border-radius: 999rpx; }

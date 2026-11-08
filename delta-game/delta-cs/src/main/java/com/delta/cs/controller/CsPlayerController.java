@@ -60,10 +60,13 @@ public class CsPlayerController {
      */
     @GetMapping("/assign-list")
     public R<Map<String, Object>> assignList(PageQuery query,
-                                              @RequestParam(value = "keyword", required = false) String keyword) {
+                                              @RequestParam(value = "keyword", required = false) String keyword,
+                                              @RequestParam(value = "onlineOnly", defaultValue = "true") boolean onlineOnly) {
         LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
                 .eq(Player::getStatus, "ACTIVE")
+                .eq(onlineOnly, Player::getIsOnline, 1)
                 .and(keyword != null && !keyword.isEmpty(), qw -> qw.like(Player::getNickname, keyword).or().like(Player::getPhone, keyword))
+                .orderByDesc(Player::getIsOnline)
                 .orderByDesc(Player::getCreatedAt);
         Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
         for (Player p : page.getRecords()) {

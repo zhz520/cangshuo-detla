@@ -116,6 +116,8 @@ public class CsDashboardController {
             Number pendingPrivacy=jdbc.queryForObject("SELECT COUNT(*) FROM privacy_request WHERE status='PENDING'",Number.class);
             Number pendingFulfillment=jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM order_relay_request WHERE status='PENDING')+(SELECT COUNT(*) FROM player_replace_request WHERE status='PENDING')",Number.class);
             Number onDutyCs=jdbc.queryForObject("SELECT COUNT(*) FROM admin a JOIN staff_shift s ON s.admin_id=a.id WHERE a.deleted=0 AND a.status=1 AND UPPER(a.role)='CS' AND s.online=1",Number.class);
+            Number productCount=jdbc.queryForObject("SELECT COUNT(*) FROM product WHERE deleted=0",Number.class);
+            Number categoryCount=jdbc.queryForObject("SELECT COUNT(*) FROM category WHERE deleted=0",Number.class);
             result.put("todayVisitors",visitors==null?0:visitors.longValue());
             result.put("todayActiveUsers",activeUsers==null?0:activeUsers.longValue());
             result.put("pendingRefunds",pendingRefunds==null?0:pendingRefunds.longValue());
@@ -125,6 +127,8 @@ public class CsDashboardController {
             result.put("pendingPrivacy",pendingPrivacy==null?0:pendingPrivacy.longValue());
             result.put("pendingFulfillment",pendingFulfillment==null?0:pendingFulfillment.longValue());
             result.put("onDutyCs",onDutyCs==null?0:onDutyCs.longValue());
+            result.put("productCount",productCount==null?0:productCount.longValue());
+            result.put("categoryCount",categoryCount==null?0:categoryCount.longValue());
             long pendingAudits=(pendingEnrollments==null?0:pendingEnrollments.longValue())
                     +(pendingMaterials==null?0:pendingMaterials.longValue())
                     +(pendingIdentities==null?0:pendingIdentities.longValue())
@@ -135,6 +139,7 @@ public class CsDashboardController {
             result.putIfAbsent("pendingRefunds",0L);result.putIfAbsent("pendingEnrollments",0L);
             result.putIfAbsent("pendingMaterials",0L);result.putIfAbsent("pendingFulfillment",0L);
             result.putIfAbsent("pendingIdentities",0L);result.putIfAbsent("pendingPrivacy",0L);
+            result.putIfAbsent("productCount",0L);result.putIfAbsent("categoryCount",0L);
             result.putIfAbsent("onDutyCs",0L);result.putIfAbsent("pendingAudits",0L);
         }
 
