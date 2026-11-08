@@ -10,12 +10,13 @@
       <el-alert v-if="activeGroup === '微信支付配置'" title="客户端业务支付与功能购买分开" type="warning" :closable="false" show-icon
         description="本页只配置客户自己的订单、充值和押金收款。客户端功能商城的购买款由授权中心统一收取，使用授权中心的微信商户和回调，不读取本页配置。" />
       <el-alert v-if="activeGroup === '公众号通知'" title="四个角色分别使用独立模板" type="info" :closable="false" show-icon
-        description="客户、打手、管理员、客服各填一份 JSON 模板组。每份按 new_order、order_status、refund_status、complaint_status、staff_review 等事件分组；不同角色可填写完全不同的模板 ID 和字段映射。旧版通用模板仅作为兼容回退，不再在这里显示。" />
+        description="客户、打手、管理员、客服分别按五个事件直接填写模板 ID 和字段，系统自动生成配置。模板变量、系统数据源和字段长度限制均有提示；旧版通用模板仅作为兼容回退。" />
       <el-alert v-if="activeGroup === '短信配置'" title="业务短信也按角色独立模板" type="info" :closable="false" show-icon
-        description="客户、打手、管理员、客服各维护一份 JSON 模板组；事件分组与公众号通知一致。阿里云变量名放左侧，系统数据源放右侧：message、status、time、orderNo、amount、customerName、playerName。"/>
+        description="客户、打手、管理员、客服分别填写阿里云模板 Code 和参数映射；事件分组与公众号通知一致，页面会自动生成底层配置。"/>
       <el-form v-loading="loading" :label-position="isCompact ? 'top' : 'right'" :label-width="isCompact ? 'auto' : '200px'" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
-          <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>
+          <NotificationTemplateEditor v-if="isNotificationTemplateKey(item.configKey)" v-model="item.configValue" :config-key="item.configKey" @validity="value => setNotificationValidity(item.configKey, value)" />
+          <el-input v-else-if="item.valueType === 'file'" v-model="item.configValue" readonly>
             <template #append>
               <el-upload
                 :show-file-list="false"
@@ -45,7 +46,7 @@
           <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />
           <el-input v-else-if="item.valueType === 'textarea' || item.valueType === 'json'" v-model="item.configValue" type="textarea" :rows="item.valueType==='json'?6:3" />
           <ImageUpload v-else-if="item.valueType === 'image'" v-model="item.configValue" />
-          <div class="config-desc" v-if="item.remark">{{ item.remark }}</div>
+          <div class="config-desc" v-if="item.remark && !isNotificationTemplateKey(item.configKey)">{{ item.remark }}</div>
           <NotificationConfigGuide v-if="isNotificationTemplateKey(item.configKey)" :config-key="item.configKey" />
         </el-form-item>
         <el-empty v-if="!loading && filteredList.length === 0" description="暂无配置项" />
@@ -59,6 +60,7 @@ import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
 import NotificationConfigGuide from '@/components/NotificationConfigGuide.vue'
+import NotificationTemplateEditor from '@/components/NotificationTemplateEditor.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 import {editableSystemConfigs,isSystemConfigVisible} from '@/utils/system-config'
 import {useResponsive} from '@/utils/responsive'
@@ -67,6 +69,8 @@ const loading = ref(false), submitting = ref(false)
 function isSecretKey(key){return ['wx.pay.api-v3-key','wx.pay.official-appsecret','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
 const configList = ref([])
 const activeGroup = ref('')
+const notificationValidity = ref({})
+function setNotificationValidity(key, valid) { notificationValidity.value[key] = valid }
 const visibleConfigList = computed(() => configList.value.filter(c => isSystemConfigVisible(c, enabledPlatformFeatures.value)))
 const editableConfigList = computed(() => editableSystemConfigs(configList.value, enabledPlatformFeatures.value))
 const groupNames = computed(() => {
@@ -89,6 +93,10 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 async function handleSave() {
+  if (Object.values(notificationValidity.value).some(valid => valid === false)) {
+    ElMessage.warning('请先修正通知模板中的错误')
+    return
+  }
   submitting.value = true
   try { await batchUpdateSysConfig(editableConfigList.value); ElMessage.success('保存成功') } finally { submitting.value = false }
 }
@@ -110,6 +118,6 @@ onMounted(()=>{loadPlatformFeatureVisibility();fetchData()})
 </script>
 <style scoped>
 .card-header { display: flex; justify-content: space-between; align-items: center; }
-.config-form { max-width: 700px; }
+.config-form { max-width: 980px; }
 .config-desc { color: #999; font-size: 12px; line-height: 1.4; margin-top: 4px; }
 </style>

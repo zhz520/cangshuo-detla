@@ -18,7 +18,7 @@ const ROLE_META = Object.freeze({
 })
 
 const SOURCE_FIELDS = Object.freeze([
-  Object.freeze({source: 'message', label: '完整业务正文', example: '订单支付成功，等待打手接单', note: '系统根据不同角色生成的完整通知文字，适合映射到通栏正文或备注。'}),
+  Object.freeze({source: 'message', label: '业务正文摘要', example: '订单支付成功，等待打手接单', note: '短信可承载完整正文；公众号 thing 字段最多 20 个字符，不建议把长正文直接塞入。'}),
   Object.freeze({source: 'status', label: '业务状态', example: '新订单', note: '系统按事件转换后的短状态，如“退款已初审”“主页素材待审核”。'}),
   Object.freeze({source: 'time', label: '通知生成时间', example: '2026-11-08 20:30:00', note: '公众号通知为系统本地业务时间；短信统一为 yyyy-MM-dd HH:mm:ss。'}),
   Object.freeze({source: 'orderNo', label: '订单号', example: 'DG202611080001', note: '非订单类审核事件通常为“-”，不要设置为必填数字字段。'}),
@@ -27,40 +27,60 @@ const SOURCE_FIELDS = Object.freeze([
   Object.freeze({source: 'playerName', label: '打手昵称', example: '林川', note: '未指派时显示“未指派”，可用于派单和人员协作通知。'})
 ])
 
+const WECHAT_FIELD_TYPES = Object.freeze([
+  Object.freeze({prefix: 'thing', max: 20, label: '事物/名称/短说明', example: 'thing1'}),
+  Object.freeze({prefix: 'character_string', max: 32, label: '编号/订单号/字符串', example: 'character_string2'}),
+  Object.freeze({prefix: 'time', max: 64, label: '日期或时间', example: 'time6'}),
+  Object.freeze({prefix: 'amount', max: 20, label: '金额', example: 'amount3'}),
+  Object.freeze({prefix: 'phone_number', max: 17, label: '电话号码', example: 'phone_number1'}),
+  Object.freeze({prefix: 'car_number', max: 8, label: '车牌号码', example: 'car_number1'}),
+  Object.freeze({prefix: 'const', max: 20, label: '平台审核过的固定枚举值', example: 'const1'})
+])
+
 const EVENTS = Object.freeze([
   Object.freeze({
     key: 'new_order',
     label: '新订单',
     trigger: '订单支付成功或新订单进入处理流程；按指派对象、在线打手广播或后台权限通知相关角色。',
-    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n状态：{{phrase3.DATA}}\n金额：{{amount4.DATA}} 元\n客户：{{thing6.DATA}}\n打手：{{thing7.DATA}}\n时间：{{time5.DATA}}',
+    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n金额：{{amount3.DATA}}\n客户：{{thing4.DATA}}\n打手：{{thing5.DATA}}\n时间：{{time6.DATA}}',
+    wechatFields: { thing1: 'status', character_string2: 'orderNo', amount3: 'amount', thing4: 'customerName', thing5: 'playerName', time6: 'time' },
+    smsFields: { message: 'message', orderNo: 'orderNo', status: 'status', amount: 'amount', customer: 'customerName', player: 'playerName', time: 'time' },
     smsContent: '${message}订单号${orderNo}，客户${customer}，打手${player}，状态${status}，金额${amount}元，时间${time}。'
   }),
   Object.freeze({
     key: 'order_status',
     label: '订单状态',
     trigger: '指派、接单、开始服务、服务完成、客户或后台确认等订单履约变化。',
-    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n状态：{{phrase3.DATA}}\n金额：{{amount4.DATA}} 元\n客户：{{thing6.DATA}}\n打手：{{thing7.DATA}}\n时间：{{time5.DATA}}',
+    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n金额：{{amount3.DATA}}\n客户：{{thing4.DATA}}\n打手：{{thing5.DATA}}\n时间：{{time6.DATA}}',
+    wechatFields: { thing1: 'status', character_string2: 'orderNo', amount3: 'amount', thing4: 'customerName', thing5: 'playerName', time6: 'time' },
+    smsFields: { message: 'message', orderNo: 'orderNo', status: 'status', amount: 'amount', customer: 'customerName', player: 'playerName', time: 'time' },
     smsContent: '${message}订单号${orderNo}，客户${customer}，打手${player}，状态${status}，金额${amount}元，时间${time}。'
   }),
   Object.freeze({
     key: 'refund_status',
     label: '退款与提现',
     trigger: '退款申请、客服初审、管理员终审、退款执行和失败，以及打手提现完成或驳回。',
-    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n状态：{{phrase3.DATA}}\n金额：{{amount4.DATA}} 元\n客户：{{thing6.DATA}}\n打手：{{thing7.DATA}}\n时间：{{time5.DATA}}',
+    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n金额：{{amount3.DATA}}\n客户：{{thing4.DATA}}\n打手：{{thing5.DATA}}\n时间：{{time6.DATA}}',
+    wechatFields: { thing1: 'status', character_string2: 'orderNo', amount3: 'amount', thing4: 'customerName', thing5: 'playerName', time6: 'time' },
+    smsFields: { message: 'message', orderNo: 'orderNo', status: 'status', amount: 'amount', customer: 'customerName', player: 'playerName', time: 'time' },
     smsContent: '${message}订单号${orderNo}，客户${customer}，打手${player}，状态${status}，金额${amount}元，时间${time}。'
   }),
   Object.freeze({
     key: 'complaint_status',
     label: '投诉处理',
     trigger: '新投诉、客户申诉、投诉退款等待终审以及仲裁处理完成。',
-    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n状态：{{phrase3.DATA}}\n金额：{{amount4.DATA}} 元\n客户：{{thing6.DATA}}\n打手：{{thing7.DATA}}\n时间：{{time5.DATA}}',
+    wechatContent: '{{thing1.DATA}}\n订单号：{{character_string2.DATA}}\n金额：{{amount3.DATA}}\n客户：{{thing4.DATA}}\n打手：{{thing5.DATA}}\n时间：{{time6.DATA}}',
+    wechatFields: { thing1: 'status', character_string2: 'orderNo', amount3: 'amount', thing4: 'customerName', thing5: 'playerName', time6: 'time' },
+    smsFields: { message: 'message', orderNo: 'orderNo', status: 'status', amount: 'amount', customer: 'customerName', player: 'playerName', time: 'time' },
     smsContent: '${message}订单号${orderNo}，客户${customer}，打手${player}，状态${status}，金额${amount}元，时间${time}。'
   }),
   Object.freeze({
     key: 'staff_review',
     label: '人员审核',
     trigger: '打手入驻申请、主页素材审核结果、账号冻结和解冻。',
-    wechatContent: '{{thing1.DATA}}\n审核状态：{{phrase2.DATA}}\n时间：{{time3.DATA}}',
+    wechatContent: '{{thing1.DATA}}\n审核时间：{{time2.DATA}}',
+    wechatFields: { thing1: 'status', time2: 'time' },
+    smsFields: { message: 'message', status: 'status', time: 'time' },
     smsContent: '${message}审核状态：${status}，时间${time}。'
   })
 ])
@@ -97,18 +117,16 @@ const ROLE_SAMPLES = Object.freeze({
 })
 
 const ORDER_FIELDS = Object.freeze({
-  thing1: 'message',
+  thing1: 'status',
   character_string2: 'orderNo',
-  phrase3: 'status',
-  amount4: 'amount',
-  time5: 'time',
-  thing6: 'customerName',
-  thing7: 'playerName'
+  amount3: 'amount',
+  thing4: 'customerName',
+  thing5: 'playerName',
+  time6: 'time'
 })
 const REVIEW_FIELDS = Object.freeze({
-  thing1: 'message',
-  phrase2: 'status',
-  time3: 'time'
+  thing1: 'status',
+  time2: 'time'
 })
 
 function wechatExample(roleKey) {
@@ -169,20 +187,23 @@ export function notificationConfigGuide(configKey) {
     roleDescription: role.description,
     provider: channel === 'wechat' ? '微信公众号后台' : '阿里云短信控制台',
     sources: SOURCE_FIELDS.map(item => ({ ...item })),
+    wechatFieldTypes: channel === 'wechat' ? WECHAT_FIELD_TYPES.map(item => ({ ...item })) : [],
     events: EVENTS.map(item => ({
       key: item.key,
       label: item.label,
       trigger: item.trigger,
       content: channel === 'wechat' ? item.wechatContent : item.smsContent,
+      fields: { ...(channel === 'wechat' ? item.wechatFields : item.smsFields) },
       finalExample: ROLE_SAMPLES[parsed.roleKey][item.key]
     })),
     providerSteps: channel === 'wechat'
       ? [
-          '登录当前客户使用的微信公众号后台，选择已完成认证且具备模板消息能力的账号。',
-          '进入“广告与服务 → 模板消息 → 模板库/我的模板”；入口名称以微信后台实际显示为准。',
-          '选好模板并添加到“我的模板”，打开模板详情，复制“模板 ID”作为一个事件的 templateId。',
-          '复制模板正文中的变量名，例如 {{thing1.DATA}} 对应 fields 左侧的 thing1；不要带花括号和 .DATA。',
-          'fields 右侧只能填写系统数据源 message、status、time、orderNo、amount、customerName、playerName。',
+          '仅认证服务号可申请模板消息；进入“功能 → 添加功能插件 → 模板消息”申请权限。',
+          '按服务号行业设置类目后，在“公共模板库/我的模板”选用模板；每个服务号最多可同时使用 25 个模板。',
+          '打开已选用模板详情，复制“模板 ID”填入当前事件的 templateId。',
+          '模板变量必须以 .DATA 结尾。复制字段名前缀作为左侧变量，例如正文 {{thing1.DATA}} 对应 thing1。',
+          '新模板优先使用 thing、character_string、time、amount、phone_number、car_number、const 等官方类型；不要继续使用旧版 phrase 字段。',
+          '右侧只能填写系统数据源 message、status、time、orderNo、amount、customerName、playerName。',
           '保存后让接收人关注公众号，并在对应客户端完成公众号绑定；未关注或未绑定不会投递。'
         ]
       : [
@@ -194,11 +215,22 @@ export function notificationConfigGuide(configKey) {
           '短信模板必须按实际接收人分别配置；手机号为空、模板未审核或变量不匹配时不会正常投递。'
         ],
     linkHelp: channel === 'wechat'
-      ? '跳转链接与 fields 无关：公众号后台模板本身不填写点击地址，正式发送接口通过 url 参数设置。当前版本只发送 templateId 和 fields，不读取 JSON 中的 url；若要点击跳转，需要升级通知发送接口，不能把链接塞进字段。'
-      : '阿里云后台的“模板内容”与这里左侧变量名必须完全对应；左侧不要写 ${}，也不要自行改成同义变量。'
+      ? '点击链接不属于模板字段，应填入每个事件的可选“消息点击链接”；后端会按官方发送接口的 url 参数提交。若同时配置小程序 AppID 和页面路径，微信优先跳转小程序。'
+      : '阿里云后台的“模板内容”与这里左侧变量名必须完全对应；左侧不要写 ${}，也不要自行改成同义变量。',
+    officialDocs: channel === 'wechat'
+      ? [
+          { label: '官方模板消息说明', url: 'https://developers.weixin.qq.com/doc/service/guide/product/template_message/Template_Message_Interface.html' },
+          { label: '官方发送模板消息接口', url: 'https://developers.weixin.qq.com/doc/service/api/notify/template/api_sendtemplatemessage' }
+        ]
+      : [],
+    officialVersion: channel === 'wechat'
+      ? '2026-11-08 核对：模板消息说明最后编辑 2026-03-05；发送模板消息接口最后编辑 2025-11-25。'
+      : ''
   }
 }
 
 export const NOTIFICATION_EVENTS = EVENTS.map(item => item.key)
 export const NOTIFICATION_ROLES = Object.keys(ROLE_META)
 export const NOTIFICATION_SAMPLES = ROLE_SAMPLES
+export const WECHAT_FIELD_LIMITS = WECHAT_FIELD_TYPES
+export const NOTIFICATION_SOURCES = SOURCE_FIELDS.map(item => ({ ...item }))

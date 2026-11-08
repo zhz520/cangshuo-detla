@@ -72,8 +72,9 @@ public class OfficialWechatService {
   String templateId=template.getString("templateId");var fields=template.getJSONObject("fields");if(templateId==null||templateId.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
   var orders=row.get("order_id")==null?List.<Map<String,Object>>of():jdbc.queryForList("SELECT o.order_no,o.amount,u.nickname AS customer_name,p.nickname AS player_name FROM `order` o LEFT JOIN `user` u ON u.id=o.user_id LEFT JOIN player p ON p.id=o.player_id WHERE o.id=?",row.get("order_id"));
   Map<String,String> values=Map.of("message",Objects.toString(row.get("message"),""),"status",statusText(event),"time",LocalDateTime.now().toString().replace('T',' '),"orderNo",orders.isEmpty()?"-":String.valueOf(orders.get(0).get("order_no")),"amount",orders.isEmpty()?"0.00":String.valueOf(orders.get(0).get("amount")),"customerName",orders.isEmpty()||orders.get(0).get("customer_name")==null?"-":String.valueOf(orders.get(0).get("customer_name")),"playerName",orders.isEmpty()||orders.get(0).get("player_name")==null?"未指派":String.valueOf(orders.get(0).get("player_name")));
-  Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String value=values.get(fields.getString(field));if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");int max=field.startsWith("thing")?20:field.startsWith("phrase")?5:field.startsWith("character_string")?32:field.startsWith("time")?19:200;data.put(field,Map.of("value",value.substring(0,Math.min(max,value.length()))));}
-  var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+token(),Map.of("touser",bindings.get(0).get("openid"),"template_id",templateId,"data",data));
+  Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String value=values.get(fields.getString(field));if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");int max=maxFieldLength(field);data.put(field,Map.of("value",value.substring(0,Math.min(max,value.length()))));}
+  Map<String,Object> payload=messagePayload(Objects.toString(bindings.get(0).get("openid"),""),templateId,data,template.getString("url"),template.getJSONObject("miniprogram"),"cangshuo-"+row.get("id"));
+  var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+token(),payload);
   if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))tokenUntil=0;throw new DeliveryError("WECHAT_"+code);}
  }
  private synchronized String token()throws Exception{
@@ -141,6 +142,24 @@ public class OfficialWechatService {
   };
  }
  private static String statusText(String event){return SmsNoticeService.statusText(event);}
+ static int maxFieldLength(String field){if(field.startsWith("thing"))return 20;if(field.startsWith("character_string"))return 32;if(field.startsWith("time"))return 64;if(field.startsWith("amount"))return 20;if(field.startsWith("phone_number"))return 17;if(field.startsWith("car_number"))return 8;if(field.startsWith("const"))return 20;if(field.startsWith("phrase"))return 5;return 200;}
+ static Map<String,Object> messagePayload(String openid,String templateId,Map<String,Object> data,String rawUrl,JSONObject mini,String clientMessageId){
+  if(openid==null||openid.isBlank()||templateId==null||templateId.isBlank()||data==null||data.isEmpty()||clientMessageId==null||clientMessageId.length()>128)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");
+  Map<String,Object> payload=new LinkedHashMap<>();payload.put("touser",openid);payload.put("template_id",templateId);payload.put("data",data);payload.put("client_msg_id",clientMessageId);
+  String templateUrl=templateUrl(rawUrl);if(templateUrl!=null)payload.put("url",templateUrl);
+  if(mini!=null&&(!Objects.toString(mini.getString("appid"),"").isBlank()||!Objects.toString(mini.getString("pagepath"),"").isBlank())){
+   String appid=Objects.toString(mini.getString("appid"),"").trim(),pagepath=Objects.toString(mini.getString("pagepath"),"").trim();
+   if(!appid.matches("[A-Za-z0-9_-]{2,64}")||pagepath.isBlank()||pagepath.length()>200)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");
+   payload.put("miniprogram",Map.of("appid",appid,"pagepath",pagepath));
+  }
+  return payload;
+ }
+ static String templateUrl(String value){
+  if(value==null||value.isBlank())return null;
+  String clean=value.trim();if(clean.length()>2000)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");
+  try{URI uri=URI.create(clean);String scheme=Objects.toString(uri.getScheme(),"").toLowerCase(Locale.ROOT);if(!Set.of("http","https").contains(scheme)||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();return clean;}
+  catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
+ }
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
  private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}
 }

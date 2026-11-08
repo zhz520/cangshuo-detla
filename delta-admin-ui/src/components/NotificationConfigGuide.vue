@@ -9,6 +9,11 @@
       <div class="guide-intro">
         <strong>{{ guide.roleLabel }}通知模板</strong>
         <span>{{ guide.roleDescription }}</span>
+        <span v-if="guide.officialDocs?.length" class="official-links">
+          官方依据：
+          <a v-for="doc in guide.officialDocs" :key="doc.url" :href="doc.url" target="_blank" rel="noopener noreferrer">{{ doc.label }}</a>
+        </span>
+        <span v-if="guide.officialVersion" class="official-version">{{ guide.officialVersion }}</span>
       </div>
 
       <section class="guide-section">
@@ -27,6 +32,10 @@
           </table>
         </div>
         <p class="guide-tip">公众号建议采用结构化的“订单号、状态、金额、时间、客户、打手”字段；短信受审核模板限制，优先使用模板正文明确列出的变量，不必强行放全所有字段。</p>
+        <div v-if="guide.wechatFieldTypes?.length" class="field-type-guide">
+          <strong>微信公众号当前字段类型</strong>
+          <div v-for="type in guide.wechatFieldTypes" :key="type.prefix"><code>{{ type.example }}</code><span>{{ type.label }} · 最多 {{ type.max }} 个字符</span></div>
+        </div>
       </section>
 
       <section class="guide-section">
@@ -146,6 +155,10 @@ async function copy(text, key) {
   line-height: 1.6;
 }
 .guide-intro strong { color: #1f2937; font-size: 14px; }
+.official-links { display:flex; flex-wrap:wrap; gap:6px 12px; color:#627084; }
+.official-links a { color:#315f9b; text-decoration:none; }
+.official-links a:hover { text-decoration:underline; }
+.official-version { color:#8b96a4; font-size:10px; }
 .guide-section { margin-top: 18px; }
 .guide-section h4 { margin: 0 0 10px; color: #263548; font-size: 13px; }
 .field-table-wrap { overflow-x: auto; border: 1px solid #e3e8ef; border-radius: 8px; background: #fff; }
@@ -155,6 +168,10 @@ async function copy(text, key) {
 .guide-table tr:last-child td { border-bottom: 0; }
 .guide-table td:first-child { white-space: nowrap; }
 .guide-tip { margin: 8px 0 0; color: #667085; font-size: 12px; line-height: 1.65; }
+.field-type-guide { display:grid; gap:7px; margin-top:12px; padding:11px 12px; border:1px solid #e4e9ef; border-radius:8px; background:#fff; color:#667085; font-size:11px; }
+.field-type-guide > strong { color:#3e4b5c; font-size:12px; }
+.field-type-guide > div { display:flex; gap:9px; align-items:baseline; }
+.field-type-guide code { flex:0 0 150px; color:#334155; }
 .provider-steps { margin: 0; padding-left: 22px; color: #344054; font-size: 12px; line-height: 1.8; }
 .provider-steps li + li { margin-top: 4px; }
 .key-explain { margin: 12px 0; padding: 10px 12px; border-left: 3px solid #667eea; background: #fff; color: #667085; font-size: 12px; line-height: 1.65; }

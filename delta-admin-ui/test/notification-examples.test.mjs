@@ -23,7 +23,7 @@ test('every WeChat role has an example for every notification event', () => {
       assert.ok(Object.keys(parsed[event].fields).length >= 2)
       for (const source of Object.values(parsed[event].fields)) assert.ok(wechatSources.has(source))
     }
-    assert.deepEqual(parsed.staff_review.fields, {thing1:'message',phrase2:'status',time3:'time'})
+    assert.deepEqual(parsed.staff_review.fields, {thing1:'status',time2:'time'})
   }
 })
 
@@ -56,12 +56,26 @@ test('each role guide explains fields, provider setup and all five event preview
       assert.deepEqual(guide.events.map(item => item.key), NOTIFICATION_EVENTS)
       assert.ok(guide.providerSteps.length >= 6)
       assert.match(guide.linkHelp, channel === 'wechat' ? /url/ : /变量名/)
+      if (channel === 'wechat') {
+        assert.equal(guide.officialDocs.length, 2)
+        assert.ok(guide.wechatFieldTypes.some(item => item.prefix === 'thing' && item.max === 20))
+        assert.ok(guide.providerSteps.some(step => step.includes('认证服务号')))
+      }
       for (const event of guide.events) {
         assert.ok(event.trigger.length > 10)
         assert.equal(event.finalExample, NOTIFICATION_SAMPLES[role][event.key])
         assert.ok(event.finalExample.length > 15)
         assert.match(event.content, channel === 'wechat' ? /\{\{.+?\.DATA\}\}/ : /\$\{[A-Za-z]+\}/)
       }
+    }
+  }
+})
+
+test('public-account examples use current typed fields instead of legacy phrase fields', () => {
+  for (const role of NOTIFICATION_ROLES) {
+    const example = JSON.parse(notificationConfigExample(`wechat.official.templates.${role}`))
+    for (const event of Object.values(example)) {
+      assert.ok(Object.keys(event.fields).every(field => !field.startsWith('phrase')))
     }
   }
 })
@@ -89,4 +103,16 @@ test('every template-content variable has a matching field mapping', () => {
       }
     }
   }
+})
+
+test('notification settings use direct event forms and keep JSON automatic', () => {
+  const config = readFileSync(new URL('../src/views/system/SysConfig.vue', import.meta.url), 'utf8')
+  const editor = readFileSync(new URL('../src/components/NotificationTemplateEditor.vue', import.meta.url), 'utf8')
+  assert.match(config, /<NotificationTemplateEditor v-if="isNotificationTemplateKey\(/)
+  assert.match(editor, /自动生成后台使用的 JSON/)
+  assert.match(editor, /使用推荐字段/)
+  assert.match(editor, /消息点击链接/)
+  assert.match(editor, /小程序 AppID/)
+  assert.match(editor, /当前微信官方支持的字段类型/)
+  assert.match(editor, /emit\('validity'/)
 })

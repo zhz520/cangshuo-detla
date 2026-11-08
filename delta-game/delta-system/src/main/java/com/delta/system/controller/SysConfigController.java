@@ -131,10 +131,10 @@ public class SysConfigController {
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
         ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写客户H5的HTTPS首页地址，不含#、查询参数；在微信后台配置网页授权域名");
-        ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review等事件分组配置templateId和fields");
-        ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review等事件分组配置templateId和fields");
-        ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review等事件分组配置templateId和fields");
-        ensureConfig("wechat.official.templates.cs","客服专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review等事件分组配置templateId和fields");
+        ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
+        ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
+        ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
+        ensureConfig("wechat.official.templates.cs","客服专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields，字段值可选message/status/time/orderNo/amount/customerName/playerName；字段名需与微信模板一致");
         ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
@@ -380,6 +380,21 @@ public class SysConfigController {
             if (!field.matches("[A-Za-z_]+[0-9]*")
                     || !java.util.Set.of("message","status","time","orderNo","amount","customerName","playerName").contains(fields.getString(field))) {
                 throw new IllegalArgumentException();
+            }
+        }
+        String url = obj.getString("url");
+        if (url != null && !url.isBlank()) {
+            if (url.length() > 2000) throw new IllegalArgumentException();
+            var uri = java.net.URI.create(url.trim());
+            String scheme = java.util.Objects.toString(uri.getScheme(),"").toLowerCase(java.util.Locale.ROOT);
+            if (!java.util.Set.of("http","https").contains(scheme) || uri.getHost() == null || uri.getUserInfo() != null || uri.getFragment() != null) throw new IllegalArgumentException();
+        }
+        var mini = obj.getJSONObject("miniprogram");
+        if (mini != null) {
+            String appid = java.util.Objects.toString(mini.getString("appid"),"").trim();
+            String pagepath = java.util.Objects.toString(mini.getString("pagepath"),"").trim();
+            if (!appid.isBlank() || !pagepath.isBlank()) {
+                if (!appid.matches("[A-Za-z0-9_-]{2,64}") || pagepath.isBlank() || pagepath.length() > 200) throw new IllegalArgumentException();
             }
         }
     }
