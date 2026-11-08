@@ -4,6 +4,7 @@ import { permissionFor } from './permission-policy.js'
 const sections = [
   { id: 'workbench', title: '工作台', items: [
     { path: '/dashboard' },
+    { path: '/wechat-binding' },
     { id: 'service', title: '客服服务', icon: 'ChatDotRound', paths: ['/chat/service', '/chat/quick-reply', '/chat/record'] }
   ] },
   { id: 'business', title: '业务运营', items: [
@@ -33,6 +34,7 @@ function join(parent, path) {
 export function visibleNavigationRoutes(routes, role, allowed, featureAllowed = () => true) {
   const leaves = new Map()
   function visit(route, parent = '', parents = []) {
+    if (route.meta?.mobileAlias) return
     const path = join(parent, route.path), lineage = [...parents, route]
     if (route.children?.length) return route.children.forEach(child => visit(child, path, lineage))
     if (!route.meta?.title || lineage.some(node => node.meta?.hidden || node.meta?.roles && !node.meta.roles.includes(role))) return

@@ -71,7 +71,7 @@ public class SysConfigController {
     @GetMapping("/site")
     public R<Map<String, String>> getSiteConfig() {
         List<SysConfig> list = sysConfigService.list(
-                new LambdaQueryWrapper<SysConfig>().in(SysConfig::getConfigKey,java.util.List.of("site_name","site_subtitle","site_logo","site_admin_title")));
+                new LambdaQueryWrapper<SysConfig>().in(SysConfig::getConfigKey,java.util.List.of("site_name","site_subtitle","site_logo","site_admin_title","site.staff_web_url")));
         Map<String, String> map = list.stream()
                 .collect(Collectors.toMap(SysConfig::getConfigKey, SysConfig::getConfigValue, (a, b) -> b));
         // 打手端抽佣比例（百分比）：从结算配置 settlement.commission_rate 转换，0.1 -> 10
@@ -104,6 +104,7 @@ public class SysConfigController {
         map.put("notice_popup_every_visit", sysConfigService.getConfigValue("notice.popup_every_visit", "true"));
         map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
+        map.put("staff_web_url", sysConfigService.getConfigValue("site.staff_web_url", ""));
         map.put("customer_service_mode", sysConfigService.getConfigValue("customer_service.mode", "internal"));
         map.put("customer_service_external_url", sysConfigService.getConfigValue("customer_service.external_url", ""));
         map.put("customer_service_home_icon_visible", sysConfigService.getConfigValue("customer_service.home_icon_visible", "true"));
@@ -131,7 +132,8 @@ public class SysConfigController {
         ensureConfig("wechat.official.enabled","启用公众号模板通知","false","boolean","公众号通知","公众号模板消息与原小程序订阅通知相互独立");
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
-        ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写客户H5的HTTPS首页地址，不含#、查询参数；在微信后台配置网页授权域名");
+        ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写工作人员后台的HTTPS绑定页地址，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置网页授权域名");
+        syncConfigMetadata("wechat.official.redirect_url","公众号绑定回调页面","填写工作人员后台的HTTPS绑定页地址，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置网页授权域名");
         ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
@@ -141,6 +143,8 @@ public class SysConfigController {
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
         ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
                 "可填写 http:// 或 https:// 开头的链接；留空时底部文字不可点击");
+        ensureConfig("site.staff_web_url", "工作人员后台地址", "", "text", "站点配置",
+                "管理员与客服使用的 HTTPS 后台 Origin，例如 https://jgsapi.example.com；客户H5旧工作人员入口会跳转到这里");
         ensureConfig("customer_service.mode", "客服接入方式", "internal", "text", "客服配置",
                 "internal：使用系统内置客服；external：跳转第三方企业微信客服链接");
         ensureConfig("customer_service.external_url", "第三方企业微信客服链接", "", "text", "客服配置",
@@ -321,6 +325,18 @@ public class SysConfigController {
                 }
             }
         }
+        if("site.staff_web_url".equals(key) && !value.isBlank()) {
+            try {
+                java.net.URI uri = java.net.URI.create(value.trim());
+                if(!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null
+                        || uri.getQuery()!=null || uri.getFragment()!=null
+                        || (uri.getPath()!=null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())))
+                    throw new IllegalArgumentException();
+                value = uri.getScheme().toLowerCase(java.util.Locale.ROOT) + "://" + uri.getRawAuthority();
+            } catch(Exception e) {
+                throw new com.delta.common.exception.BusinessException(400,"工作人员后台地址须为不含路径的 HTTPS Origin");
+            }
+        }
         if("customer_service.mode".equals(key)) {
             if(!java.util.Set.of("internal","external").contains(value)) throw new com.delta.common.exception.BusinessException(400,"客服接入方式不正确");
         }
@@ -453,5 +469,15 @@ public class SysConfigController {
         config.setCreatedAt(LocalDateTime.now());
         config.setUpdatedAt(LocalDateTime.now());
         sysConfigService.save(config);
+    }
+
+    private void syncConfigMetadata(String key, String name, String remark) {
+        SysConfig config = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, key));
+        if (config == null || (name.equals(config.getConfigName()) && remark.equals(config.getRemark()))) return;
+        SysConfig update = new SysConfig();
+        update.setId(config.getId());
+        update.setConfigName(name);
+        update.setRemark(remark);
+        sysConfigService.updateById(update);
     }
 }

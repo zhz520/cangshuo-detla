@@ -58,7 +58,7 @@ async function onTap(m) {
   if (['WITHDRAW_COMPLETED', 'WITHDRAW_REJECTED'].includes(type) && role === 'player') url = '/pages-player/withdraw/list'
   if (type === 'TEAMMATE_INVITED' && role === 'player') url = '/pages-player/invite/list?orderId=' + relatedId
   if (relatedId && type?.startsWith('ORDER_')) {
-    const prefix = { user: '/pages', player: '/pages-player', cs: '/pages-cs' }[role]
+    const prefix = { user: '/pages', player: '/pages-player' }[role]
     if (prefix) url = prefix + '/order/detail?id=' + relatedId
   }
   if (url) uni.navigateTo({ url })

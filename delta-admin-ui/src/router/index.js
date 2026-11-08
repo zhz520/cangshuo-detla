@@ -2,13 +2,20 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
+import { adminLoginPath, buildMobileAdminRoutes, canonicalAdminPath, mobileAdminPath, shouldUseMobileRoute } from '@/utils/mobile-route'
 
 const Layout = () => import('@/layout/index.vue')
 
-const routes = [
+const desktopRoutes = [
   {
     path: '/login',
     name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { title: '登录' }
+  },
+  {
+    path: '/mobile/login',
+    name: 'MobileLogin',
     component: () => import('@/views/login/index.vue'),
     meta: { title: '登录' }
   },
@@ -22,6 +29,12 @@ const routes = [
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '仪表盘', icon: 'Odometer', roles: ['admin', 'cs'] }
+      },
+      {
+        path: 'wechat-binding',
+        name: 'WechatBinding',
+        component: () => import('@/views/wechat/Binding.vue'),
+        meta: { title: '公众号通知', icon: 'ChatDotRound', roles: ['admin', 'cs'] }
       }
     ]
   },
@@ -333,27 +346,34 @@ const routes = [
   }
 ]
 
+const routes = [...desktopRoutes, ...buildMobileAdminRoutes(desktopRoutes)]
+
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
 // 路由守卫
-const whiteList = ['/login']
+const whiteList = ['/login', '/mobile/login']
 router.beforeEach(async (to, from, next) => {
   beginNavigation(to)
   const token = getToken()
+  const mobileViewport = window.matchMedia('(max-width: 768px)').matches
 
   if (token) {
-    if (to.path === '/login') {
-      next('/')
+    if (to.path === '/login' || to.path === '/mobile/login') {
+      next(mobileViewport ? '/mobile/dashboard' : '/dashboard')
     } else {
+      if (shouldUseMobileRoute(to.path, mobileViewport)) {
+        next({ path: mobileAdminPath(to.path), query: to.query, hash: to.hash, replace: true })
+        return
+      }
       const user = getUserInfo()
       try { await loadStaffPermissions() } catch (error) {
         if (error.code === 401) { removeToken(); next('/login'); return }
         throw error
       }
-      const permission=to.meta.permission||permissionFor(to.path)
+      const permission=to.meta.permission||permissionFor(canonicalAdminPath(to.path))
       if(permission&&!can(permission)){next('/403');return}
       if (to.matched.some(record => record.meta.roles && !record.meta.roles.includes(user?.role))) { next('/403'); return }
       if (to.meta.feature) {
@@ -371,9 +391,16 @@ router.beforeEach(async (to, from, next) => {
     }
   } else {
     if (whiteList.includes(to.path)) {
-      next()
+      if (mobileViewport && to.path === '/login') {
+        next({ path: '/mobile/login', query: to.query, hash: to.hash, replace: true })
+      } else {
+        next()
+      }
     } else {
-      next({ path: '/login', query: { redirect: to.fullPath } })
+      next({
+        path: adminLoginPath(mobileViewport),
+        query: { redirect: mobileViewport ? mobileAdminPath(to.fullPath) : to.fullPath }
+      })
     }
   }
 })

@@ -8,7 +8,7 @@
       <el-tab-pane label="短信通知" name="sms"/>
     </el-tabs>
     <el-alert
-      :title="active==='wechat' ? '接收人须先关注公众号并在H5完成对应身份绑定；已知失败最多重试5次，投递结果未知的记录需人工确认后再重试。' : '短信按角色和事件独立模板发送；已知失败自动重试，网络中断导致结果未知的记录需人工确认后再重试。'"
+      :title="active==='wechat' ? '接收人须先关注公众号并在对应客户端或工作人员后台完成身份绑定；已知失败最多重试5次，投递结果未知的记录需人工确认后再重试。' : '短信按角色和事件独立模板发送；已知失败自动重试，网络中断导致结果未知的记录需人工确认后再重试。'"
       :closable="false"/>
     <el-alert v-if="platformFeatureError" :title="platformFeatureError" type="warning" :closable="false" />
     <el-table :data="rows">

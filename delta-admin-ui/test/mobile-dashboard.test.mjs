@@ -52,7 +52,7 @@ test('mobile admin shell removes the menu drawer and keeps three direct shortcut
   assert.match(layout, /<button v-if="!isCompact" class="collapse-btn"/)
   assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(layout, /class="mobile-navigation"/)
-  assert.match(layout, /v-if="can\('order\.read'\)"[^>]*@click="router\.push\('\/order\/list'\)"/)
+  assert.match(layout, /v-if="can\('order\.read'\)"[^>]*@click="router\.push\(adminPath\('\/order\/list'\)\)"/)
   assert.match(layout, /mobile-bottom-nav\.two-items/)
 })
 

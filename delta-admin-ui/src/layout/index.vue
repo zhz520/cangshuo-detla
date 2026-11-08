@@ -42,6 +42,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="wechat">公众号通知</el-dropdown-item>
                 <el-dropdown-item command="profile">编辑资料</el-dropdown-item>
                 <el-dropdown-item command="password">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -63,8 +64,8 @@
     </el-container>
 
     <nav v-if="isCompact" class="mobile-bottom-nav" :class="{ 'two-items': !can('order.read') }" aria-label="移动端快捷导航">
-      <button type="button" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')"><el-icon><HomeFilled /></el-icon><span>工作台</span></button>
-      <button v-if="can('order.read')" type="button" :class="{ active: route.path.startsWith('/order') }" @click="router.push('/order/list')"><el-icon><Tickets /></el-icon><span>订单</span></button>
+      <button type="button" :class="{ active: currentAdminPath === '/dashboard' }" @click="router.push(adminPath('/dashboard'))"><el-icon><HomeFilled /></el-icon><span>工作台</span></button>
+      <button v-if="can('order.read')" type="button" :class="{ active: currentAdminPath.startsWith('/order') }" @click="router.push(adminPath('/order/list'))"><el-icon><Tickets /></el-icon><span>订单</span></button>
       <button type="button" @click="openCenter('tasks')"><el-icon><Bell /></el-icon><span>待办</span><i v-if="workbench.summary?.unread" class="nav-unread">{{ badge(workbench.summary.unread) }}</i></button>
     </nav>
 
@@ -96,6 +97,7 @@ import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { useSiteStore } from '@/stores/site'
 import {thumbnailUrl} from '@/utils/image'
 import { installMobileTableCards } from '@/utils/mobile-table-cards'
+import { canonicalAdminPath, isMobileAdminPath, mobileAdminPath } from '@/utils/mobile-route'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,6 +138,10 @@ watch(() => route.path, async () => {
 })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
+const currentAdminPath = computed(() => canonicalAdminPath(route.path))
+function adminPath(path) {
+  return isMobileAdminPath(route.path) ? mobileAdminPath(path) : path
+}
 const logoInitial = computed(() => {
   const title = siteStore.adminTitle || siteStore.siteName || '护'
   return title.trim().slice(0, 1)
@@ -144,7 +150,7 @@ const logoInitial = computed(() => {
 const activeMenu = computed(() => route.meta.activeMenu || route.path)
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
 const currentPageTitle = computed(() => {
-  if (route.path === '/dashboard') return role.value === 'admin' ? '运营管理' : '客服工作台'
+  if (currentAdminPath.value === '/dashboard') return role.value === 'admin' ? '运营管理' : '客服工作台'
   return breadcrumbs.value[breadcrumbs.value.length - 1]?.meta?.title || '工作台'
 })
 
@@ -157,21 +163,23 @@ const profileDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
 
 async function handleCommand(cmd) {
-  if (cmd === 'profile') {
+  if (cmd === 'wechat') {
+    router.push(adminPath('/wechat-binding'))
+  } else if (cmd === 'profile') {
     profileDialogVisible.value = true
   } else if (cmd === 'password') {
     passwordDialogVisible.value = true
   } else if (cmd === 'logout') {
     chatStore.stop()
     await userStore.logout()
-    router.push('/login')
+    router.push(isMobileAdminPath(route.path) ? '/mobile/login' : '/login')
   }
 }
 
 async function onPasswordChanged() {
   chatStore.stop()
     await userStore.logout()
-  router.replace('/login')
+  router.replace(isMobileAdminPath(route.path) ? '/mobile/login' : '/login')
 }
 
 function onProfileSaved(data) {
@@ -179,7 +187,7 @@ function onProfileSaved(data) {
 }
 
 function goChat() {
-  router.push('/chat/service')
+  router.push(adminPath('/chat/service'))
 }
 
 onMounted(() => {

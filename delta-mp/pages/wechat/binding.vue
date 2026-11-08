@@ -7,7 +7,7 @@ import {clientStorage} from '@/utils/client-storage'
 const status=reactive({enabled:false,bound:false}),busy=ref(false),message=ref('')
 let role='user'
 async function load(){Object.assign(status,(await get('/common/wechat/binding',{}, {role})).data)}
-onLoad(async options=>{role=options.role||clientStorage.get('wechat_binding_role')||'user';if(!['user','player','cs'].includes(role))role='user';busy.value=true;try{if(options.code&&options.state){await post('/common/wechat/binding/complete',{code:options.code,state:options.state},{role});message.value='绑定成功'}await load()}catch(_){message.value='请确认已登录对应身份后重试绑定'}finally{busy.value=false}})
+onLoad(async options=>{role=options.role||clientStorage.get('wechat_binding_role')||'user';if(!['user','player'].includes(role))role='user';busy.value=true;try{if(options.code&&options.state){await post('/common/wechat/binding/complete',{code:options.code,state:options.state},{role});message.value='绑定成功'}await load()}catch(_){message.value='请确认已登录对应身份后重试绑定'}finally{busy.value=false}})
 async function start(){
  // #ifdef H5
  if(!/MicroMessenger/i.test(navigator.userAgent))return uni.showToast({title:'请在微信内打开此页面进行绑定',icon:'none'})

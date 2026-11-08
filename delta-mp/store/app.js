@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ROLE } from '@/utils/constants'
 import { navigateToRole } from '@/utils/role'
+import { removeCsToken } from '@/utils/auth'
 
 const ROLE_KEY = 'app_role'
 
@@ -12,6 +13,12 @@ export const useAppStore = defineStore('app', () => {
   /** 从Storage恢复角色 */
   function restoreRole() {
     const saved = clientStorage.get(ROLE_KEY)
+    if (saved === ROLE.CS) {
+      removeCsToken()
+      role.value = ROLE.USER
+      _saveRole()
+      return
+    }
     if (saved && Object.values(ROLE).includes(saved)) {
       role.value = saved
     }
@@ -36,26 +43,15 @@ export const useAppStore = defineStore('app', () => {
     navigateToRole(ROLE.PLAYER)
   }
 
-  /** 切换到客服端 */
-  function switchToCs() {
-    role.value = ROLE.CS
-    _saveRole()
-    navigateToRole(ROLE.CS)
-  }
-
   /** 判断当前角色 */
   const isUser = () => role.value === ROLE.USER
   const isPlayer = () => role.value === ROLE.PLAYER
-  const isCs = () => role.value === ROLE.CS
-
   return {
     role,
     restoreRole,
     switchToUser,
     switchToPlayer,
-    switchToCs,
     isUser,
-    isPlayer,
-    isCs
+    isPlayer
   }
 })

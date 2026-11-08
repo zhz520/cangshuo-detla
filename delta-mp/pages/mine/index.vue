@@ -1,7 +1,7 @@
 <template>
   <view class="mine-page tab-page">
     <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
-      <view class="profile-card" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()" @longtap="onLongPress">
+      <view class="profile-card" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()">
         <view class="profile-main">
           <AppImage :width="160" class="avatar" :src="userStore.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
           <view class="profile-info" v-if="userStore.isLoggedIn">
@@ -110,7 +110,6 @@ const siteStore = useSiteStore()
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const officialWechat = useOfficialWechatStore()
-const longPressCount = ref(0)
 const remindStore = useRemindStore()
 const systemUnread = computed(() => remindStore.systemUnread)
 const identityAvailable=ref(false),identityStatus=ref('')
@@ -182,13 +181,6 @@ async function goCustomerService() {
     await openCustomerService()
   } catch (e) {
     uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
-  }
-}
-function onLongPress() {
-  longPressCount.value++
-  if (longPressCount.value >= 3) {
-    longPressCount.value = 0
-    uni.navigateTo({ url: '/pages-cs/login/index' })
   }
 }
 </script>

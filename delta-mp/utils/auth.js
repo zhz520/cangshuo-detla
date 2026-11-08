@@ -98,9 +98,13 @@ export function getTokenByRole(role) {
 }
 
 export function getCurrentRole() {
-  const requested = clientStorage.get('app_role') || 'user'
+  let requested = clientStorage.get('app_role') || 'user'
+  if (requested === 'cs') {
+    removeCsToken()
+    clientStorage.set('app_role', 'user')
+    requested = 'user'
+  }
   if (requested === 'player' && getPlayerToken()) return 'player'
-  if (requested === 'cs' && getCsToken()) return 'cs'
   if (getUserToken()) return 'user'
   if (getGuestToken()) return 'guest'
   return requested

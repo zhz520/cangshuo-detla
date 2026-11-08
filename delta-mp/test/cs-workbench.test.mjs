@@ -109,7 +109,7 @@ test('fulfillment review keeps both task types paginated and passes the relay pl
   assert.match(fulfillment, /taskId:focusTaskId\.value/)
   assert.match(fulfillment, /page\.value\+=1/)
   assert.match(relay, /\{ newPlayerId: p\.id \}/)
-  assert.match(workbench, /onLoad\(options/)
+  assert.match(workbench, /onLoad\((?:async )?options/)
   assert.match(workbench, /kind: kind\.value/)
   assert.match(workbench, /type=' \+ task\.kind\.toLowerCase\(\) \+ '&taskId='/)
 })

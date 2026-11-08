@@ -34,6 +34,8 @@ import { onHide, onLoad, onShow } from '@dcloudio/uni-app'
 import { getTasks, readTask, acknowledgeTask, readAllTasks } from '@/api/workbench'
 import { useRemindStore } from '@/store/remind'
 import { getCurrentRole, getTokenByRole } from '@/utils/auth'
+import { useSiteStore } from '@/store/site'
+import { staffHomeUrl } from '@/utils/staff-entry'
 
 const filters = [{ label: '全部', value: 'ALL' }, { label: '紧急', value: 'URGENT' }, { label: '未读', value: 'UNREAD' }]
 const filter = ref('ALL')
@@ -45,6 +47,7 @@ const saving = ref(false)
 const error = ref('')
 const kind = ref('')
 const store = useRemindStore()
+const siteStore = useSiteStore()
 let generation = 0
 let visible = false
 const links = {
@@ -80,7 +83,15 @@ async function load() {
     if (id === generation) loading.value = false
   }
 }
-onLoad(options => {
+onLoad(async options => {
+  if (getCurrentRole() === 'cs') {
+    await siteStore.fetchSiteConfig()
+    const target = staffHomeUrl(siteStore.staffWebUrl)
+    // #ifdef H5
+    if (target) window.location.replace(target)
+    // #endif
+    return
+  }
   const requested = String(options?.kind || '').toUpperCase()
   if (['ENROLLMENT', 'MATERIAL', 'IDENTITY', 'PRIVACY', 'RELAY', 'REPLACE', 'REFUND'].includes(requested)) {
     kind.value = requested

@@ -126,7 +126,7 @@ async function submitReset(){
 onMounted(loadCaptcha)
 onLoad(options=>{
   const target=decodeURIComponent(options?.redirect||'')
-  if(/^\/(pages|pages-player|pages-cs)\//.test(target))redirectUrl.value=target
+  if(/^\/(pages|pages-player)\//.test(target))redirectUrl.value=target
   if(options?.expired==='1')uni.showToast({title:'登录已过期，请重新登录',icon:'none'})
 })
 onUnmounted(()=>clearInterval(countdownTimer))

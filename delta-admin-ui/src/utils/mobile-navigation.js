@@ -5,6 +5,7 @@ function normalizeRoute(route) {
 }
 
 const pathIcons = Object.freeze({
+  '/wechat-binding': 'ChatDotRound',
   '/chat/service': 'ChatDotRound',
   '/chat/quick-reply': 'ChatDotRound',
   '/chat/record': 'ChatDotRound',
