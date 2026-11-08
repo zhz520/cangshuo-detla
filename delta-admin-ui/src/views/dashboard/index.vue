@@ -1,5 +1,7 @@
 <template>
   <div class="dashboard" :aria-busy="loading || userLoading || playerLoading">
+    <MobileDashboard v-if="isCompact" :stats="stats" :is-admin="isAdmin" :loading="loading" :error="dashboardError" @refresh="refreshOverview" />
+    <div v-else class="dashboard-desktop">
     <div class="dashboard-heading">
       <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
       <el-button :loading="loading" @click="refreshOverview">刷新概览</el-button>
@@ -279,12 +281,14 @@
         </el-table>
       </el-card>
     </template>
+    </div>
   </div>
 </template>
 
 <script setup>
 import WorkbenchCard from '@/components/WorkbenchCard.vue'
 import AnalyticsPanel from './AnalyticsPanel.vue'
+import MobileDashboard from './MobileDashboard.vue'
 import { useWorkbenchStore } from '@/stores/workbench'
 const workbench = useWorkbenchStore()
 function refreshOverview() { workbench.refresh(); fetchDashboard() }
@@ -300,7 +304,7 @@ import {
   EditPen, ChatDotRound, CircleCheck
 } from '@element-plus/icons-vue'
 
-const { isNarrow } = useResponsive()
+const { isCompact, isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.role === 'admin')

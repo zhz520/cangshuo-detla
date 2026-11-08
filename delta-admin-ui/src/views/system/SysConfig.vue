@@ -46,14 +46,7 @@
           <el-input v-else-if="item.valueType === 'textarea' || item.valueType === 'json'" v-model="item.configValue" type="textarea" :rows="item.valueType==='json'?6:3" />
           <ImageUpload v-else-if="item.valueType === 'image'" v-model="item.configValue" />
           <div class="config-desc" v-if="item.remark">{{ item.remark }}</div>
-          <details v-if="notificationConfigExample(item.configKey)" class="config-example">
-            <summary>查看完整示例：包含五类通知事件</summary>
-            <div class="example-actions">
-              <span>示例中的模板 ID/Code 和左侧变量名必须替换为当前公众号或阿里云审核通过的模板。</span>
-              <el-button link type="primary" @click="copyExample(item)">复制示例</el-button>
-            </div>
-            <pre>{{ notificationConfigExample(item.configKey) }}</pre>
-          </details>
+          <NotificationConfigGuide v-if="isNotificationTemplateKey(item.configKey)" :config-key="item.configKey" />
         </el-form-item>
         <el-empty v-if="!loading && filteredList.length === 0" description="暂无配置项" />
       </el-form>
@@ -65,9 +58,9 @@ import { ref, computed, onMounted } from 'vue'
 import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '@/api/system'
 import { ElMessage } from 'element-plus'
 import ImageUpload from '@/components/ImageUpload.vue'
+import NotificationConfigGuide from '@/components/NotificationConfigGuide.vue'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
 import {editableSystemConfigs,isSystemConfigVisible} from '@/utils/system-config'
-import {notificationConfigExample} from '@/utils/notification-examples'
 import {useResponsive} from '@/utils/responsive'
 const {isCompact}=useResponsive()
 const loading = ref(false), submitting = ref(false)
@@ -110,22 +103,8 @@ async function handleCertificateUpload(item, options) {
     options.onError?.(e)
   }
 }
-async function copyExample(item) {
-  const text = notificationConfigExample(item.configKey)
-  if (!text) return
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch (_) {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    textarea.remove()
-  }
-  ElMessage.success('示例已复制')
+function isNotificationTemplateKey(key) {
+  return /^(wechat\.official\.templates|sms\.notification\.templates)\.(user|player|admin|cs)$/.test(String(key || ''))
 }
 onMounted(()=>{loadPlatformFeatureVisibility();fetchData()})
 </script>
@@ -133,8 +112,4 @@ onMounted(()=>{loadPlatformFeatureVisibility();fetchData()})
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .config-form { max-width: 700px; }
 .config-desc { color: #999; font-size: 12px; line-height: 1.4; margin-top: 4px; }
-.config-example { margin-top: 10px; padding: 10px 12px; border: 1px solid #e4e7ec; border-radius: 8px; background: #f8fafc; }
-.config-example summary { cursor: pointer; color: #475569; font-size: 13px; font-weight: 600; }
-.example-actions { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0 8px; color: #7b8491; font-size: 12px; }
-.config-example pre { max-height: 360px; margin: 0; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #273449; font-size: 12px; line-height: 1.55; }
 </style>

@@ -5,7 +5,7 @@
     </el-aside>
 
     <el-drawer v-model="navigationOpen" direction="ltr" size="300px" :with-header="false" title="主导航" append-to-body class="mobile-navigation">
-      <SidebarNavigation :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
+      <SidebarNavigation mobile :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" @select="navigationOpen = false">
         <template #action><button class="navigation-close" type="button" aria-label="关闭导航" @click="navigationOpen = false"><el-icon><Close /></el-icon></button></template>
       </SidebarNavigation>
     </el-drawer>
@@ -17,6 +17,7 @@
             <Fold v-if="!isCompact && !isCollapse" />
             <Expand v-else />
           </button>
+          <span class="mobile-page-title">{{ currentPageTitle }}</span>
           <!-- 面包屑 -->
           <el-breadcrumb separator="/">
             <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
@@ -67,6 +68,13 @@
       </el-main>
     </el-container>
 
+    <nav v-if="isCompact" class="mobile-bottom-nav" aria-label="移动端快捷导航">
+      <button type="button" :class="{ active: route.path === '/dashboard' }" @click="router.push('/dashboard')"><el-icon><HomeFilled /></el-icon><span>工作台</span></button>
+      <button type="button" :class="{ active: route.path.startsWith('/order') }" @click="router.push('/order/list')"><el-icon><Tickets /></el-icon><span>订单</span></button>
+      <button type="button" @click="openCenter('tasks')"><el-icon><Bell /></el-icon><span>待办</span><i v-if="workbench.summary?.unread" class="nav-unread">{{ badge(workbench.summary.unread) }}</i></button>
+      <button type="button" :class="{ active: navigationOpen }" @click="navigationOpen = true"><el-icon><Menu /></el-icon><span>菜单</span></button>
+    </nav>
+
     <!-- 编辑资料弹窗 -->
     <ProfileEditDialog v-model="profileDialogVisible" @saved="onProfileSaved" />
     <WorkbenchCenter v-model="centerOpen" :mode="centerMode" />
@@ -82,7 +90,7 @@ import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAll
 import { loadingFeedback } from '@/utils/loading-feedback'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound, Close, List, Bell } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, Close, List, Bell, HomeFilled, Tickets, Menu } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
@@ -144,6 +152,10 @@ const logoInitial = computed(() => {
 
 const activeMenu = computed(() => route.meta.activeMenu || route.path)
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
+const currentPageTitle = computed(() => {
+  if (route.path === '/dashboard') return role.value === 'admin' ? '运营管理' : '客服工作台'
+  return breadcrumbs.value[breadcrumbs.value.length - 1]?.meta?.title || '工作台'
+})
 
 const menuGroups = computed(() => {
   void enabledPlatformFeatures.value
@@ -315,6 +327,7 @@ onUnmounted(() => {
     #f5f6f7;
   padding: 22px 24px 28px;
 }
+.mobile-page-title { display: none; }
 .user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .navigation-close {
   display: inline-flex;
@@ -348,19 +361,62 @@ onUnmounted(() => {
   .layout-header .header-right .user-info { min-width: 0; }
   .user-info :deep(.el-avatar), .user-info :deep(.el-icon) { flex-shrink: 0; }
   .layout-main {
-    padding: 12px calc(12px + var(--app-safe-right)) calc(12px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
+    padding: 12px calc(12px + var(--app-safe-right)) calc(82px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
   }
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 80;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(62px + var(--app-safe-bottom));
+    padding: 5px max(8px, var(--app-safe-right)) var(--app-safe-bottom) max(8px, var(--app-safe-left));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-top: 1px solid #e7e9ec;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 -8px 28px rgba(23,25,28,.08);
+    backdrop-filter: blur(14px);
+    box-sizing: border-box;
+  }
+  .mobile-bottom-nav button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #858b93;
+    cursor: pointer;
+  }
+  .mobile-bottom-nav button.active { color: #17191c; background: transparent; }
+  .mobile-bottom-nav .el-icon { font-size: 21px; }
+  .mobile-bottom-nav span { font-size: 10px; font-weight: 650; }
+  .mobile-bottom-nav .nav-unread { position:absolute; top:1px; left:calc(50% + 8px); min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#c94f59; color:#fff; font:10px/16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align:center; box-sizing:border-box; }
 }
 @media (max-width: 480px) {
-  .layout-header { flex-wrap: wrap; }
-  .layout-header .header-left { flex-basis: 100%; }
-  .layout-header .header-right { width: 100%; justify-content: flex-end; }
-  .layout-header .header-right .user-info { max-width: 220px; }
+  .layout-header { flex-wrap: nowrap; }
+  .layout-header .header-left { flex-basis: auto; }
+  .layout-header .header-left :deep(.el-breadcrumb) { display: none; }
+  .layout-header .mobile-page-title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #202327; font-size: 16px; font-weight: 750; }
+  .layout-header .header-right { width: auto; justify-content: flex-end; margin-left: auto; }
+  .layout-header .header-right .role-tag { display: none; }
+  .layout-header .header-right .chat-notify { display: none; }
+  .layout-header .header-right { gap: 0; }
+  .layout-header .header-right .user-info { max-width: 38px; width: 38px; height: 38px; min-height: 38px; padding: 4px; justify-content: center; box-sizing: border-box; }
+  .layout-header .header-right .user-name { display: none; }
+  .layout-header .header-right .user-info > .el-icon { display: none; }
 }
 @media (max-width: 1024px) and (max-height: 500px) {
   .layout-header { flex-wrap: nowrap; min-height: 48px; }
   .layout-header .header-left { flex-basis: auto; }
   .layout-header .header-right { width: auto; }
-  .layout-main { padding-top: 8px; padding-bottom: calc(8px + var(--app-safe-bottom)); }
+  .layout-main { padding-top: 8px; padding-bottom: calc(70px + var(--app-safe-bottom)); }
+  .mobile-bottom-nav { height: calc(52px + var(--app-safe-bottom)); }
+  .mobile-bottom-nav span { display: none; }
 }
 </style>
