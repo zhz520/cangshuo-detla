@@ -25,6 +25,7 @@ import java.util.*;
 public class OfficialWechatService {
  private final JdbcTemplate jdbc;
  private final SysConfigService configs;
+ private final NotificationTemplateDataService templateData;
  private final StaffPermissions permissions;
  private final PlatformService platform;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
@@ -70,9 +71,8 @@ public class OfficialWechatService {
   String event=(String)row.get("event_type");String group=groupForEvent(event);
   JSONObject template=templateFor((String)row.get("user_type"),event,group);
   String templateId=template.getString("templateId");var fields=template.getJSONObject("fields");if(templateId==null||templateId.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
-  var orders=row.get("order_id")==null?List.<Map<String,Object>>of():jdbc.queryForList("SELECT o.order_no,o.amount,u.nickname AS customer_name,p.nickname AS player_name FROM `order` o LEFT JOIN `user` u ON u.id=o.user_id LEFT JOIN player p ON p.id=o.player_id WHERE o.id=?",row.get("order_id"));
-  Map<String,String> values=Map.of("message",Objects.toString(row.get("message"),""),"status",statusText(event),"time",LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),"orderNo",orders.isEmpty()?"-":String.valueOf(orders.get(0).get("order_no")),"amount",amountText(orders.isEmpty()?null:orders.get(0).get("amount")),"customerName",orders.isEmpty()||orders.get(0).get("customer_name")==null?"-":String.valueOf(orders.get(0).get("customer_name")),"playerName",orders.isEmpty()||orders.get(0).get("player_name")==null?"未指派":String.valueOf(orders.get(0).get("player_name")));
-  Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String value=values.get(fields.getString(field));if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");data.put(field,Map.of("value",fieldValue(field,value)));}
+  Map<String,String> values=templateData.resolve(row);
+  Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String source=fields.getString(field),value=values.get(source);if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");data.put(field,Map.of("value",templateFieldValue(field,source,value)));}
   Map<String,Object> payload=messagePayload(Objects.toString(bindings.get(0).get("openid"),""),templateId,data,template.getString("url"),template.getJSONObject("miniprogram"),"cangshuo-"+row.get("id"));
   var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+token(),payload);
   if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))tokenUntil=0;throw new DeliveryError("WECHAT_"+code);}
@@ -127,7 +127,7 @@ public class OfficialWechatService {
  static String groupForEvent(String event){return switch(event){
   case "NEW_ORDER","ORDER_PAID"->"new_order";
   case "ORDER_ASSIGNED","ORDER_ACCEPTED","ORDER_STARTED","ORDER_COMPLETED","ORDER_CONFIRMED","ORDER_CANCELLED","ORDER_REFUNDED"->"order_status";
-  case "REFUND_REQUESTED","REFUND_CS_REVIEWING","REFUND_CS_REVIEWED","REFUND_ADMIN_APPROVED","REFUND_ADMIN_REJECTED","REFUND_PROCESSING","REFUND_SUCCEEDED","REFUND_FAILED","WITHDRAW_COMPLETED","WITHDRAW_REJECTED"->"refund_status";
+  case "REFUND_REQUESTED","REFUND_CS_REVIEWING","REFUND_CS_REVIEWED","REFUND_ADMIN_APPROVED","REFUND_ADMIN_REJECTED","REFUND_PROCESSING","REFUND_SUCCEEDED","REFUND_FAILED","WITHDRAW_APPLY","WITHDRAW_COMPLETED","WITHDRAW_REJECTED"->"refund_status";
   case "NEW_COMPLAINT","COMPLAINT_APPEALED","COMPLAINT_REFUND_PENDING","COMPLAINT_RESOLVED"->"complaint_status";
   case "PLAYER_APPLICATION_SUBMITTED","PLAYER_APPROVED","PLAYER_REJECTED","MATERIAL_SUBMITTED","MATERIAL_REVIEWED","PLAYER_FROZEN","PLAYER_UNFROZEN"->"staff_review";
   default->"order_status";
@@ -137,13 +137,14 @@ public class OfficialWechatService {
   return switch(event){
    case "ORDER_COMPLETED","ORDER_CONFIRMED"->"order_completed";
    case "MATERIAL_SUBMITTED","MATERIAL_REVIEWED","PLAYER_FROZEN","PLAYER_APPLICATION_SUBMITTED","PLAYER_APPROVED","PLAYER_REJECTED","PLAYER_UNFROZEN"->"material_reviewed";
-   case "REFUND_REQUESTED","REFUND_CS_REVIEWING","REFUND_CS_REVIEWED","REFUND_ADMIN_APPROVED","REFUND_ADMIN_REJECTED","REFUND_PROCESSING","REFUND_SUCCEEDED","REFUND_FAILED","ORDER_REFUNDED","WITHDRAW_COMPLETED","WITHDRAW_REJECTED"->"withdraw_reviewed";
+   case "REFUND_REQUESTED","REFUND_CS_REVIEWING","REFUND_CS_REVIEWED","REFUND_ADMIN_APPROVED","REFUND_ADMIN_REJECTED","REFUND_PROCESSING","REFUND_SUCCEEDED","REFUND_FAILED","ORDER_REFUNDED","WITHDRAW_APPLY","WITHDRAW_COMPLETED","WITHDRAW_REJECTED"->"withdraw_reviewed";
    default->"order_accepted";
   };
  }
  private static String statusText(String event){return SmsNoticeService.statusText(event);}
  static int maxFieldLength(String field){if(field.startsWith("thing"))return 20;if(field.startsWith("character_string"))return 32;if(field.startsWith("time"))return 64;if(field.startsWith("amount"))return 20;if(field.startsWith("phone_number"))return 17;if(field.startsWith("car_number"))return 8;if(field.startsWith("const"))return 20;if(field.startsWith("phrase"))return 5;return 200;}
  static String fieldValue(String field,String value){String clean=Objects.toString(value,"").replaceAll("[\\r\\n\\t]+"," ").trim();int max=maxFieldLength(field),length=clean.codePointCount(0,clean.length());return length<=max?clean:clean.substring(0,clean.offsetByCodePoints(0,max));}
+ static String templateFieldValue(String field,String source,String value){String clean=fieldValue(field,value);return field.startsWith("amount")&&NotificationTemplateDataService.moneySource(source)?amountText(clean):clean;}
  static String amountText(Object value){String text=value==null?"0.00":String.valueOf(value).trim();return text.matches("^[¥￥$€£].*")?text:"￥"+text;}
  static Map<String,Object> messagePayload(String openid,String templateId,Map<String,Object> data,String rawUrl,JSONObject mini,String clientMessageId){
   if(openid==null||openid.isBlank()||templateId==null||templateId.isBlank()||data==null||data.isEmpty()||clientMessageId==null||clientMessageId.length()>128)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");

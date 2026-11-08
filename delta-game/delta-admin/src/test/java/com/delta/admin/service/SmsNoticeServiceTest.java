@@ -19,7 +19,7 @@ class SmsNoticeServiceTest {
             when(configs.getConfigValue("sms.notification.templates."+role,"{}"))
                     .thenReturn("{\"order_status\":{\"templateCode\":\"SMS_"+role.toUpperCase()+"\",\"fields\":{\"orderNo\":\"orderNo\"}}}");
         }
-        SmsNoticeService service=new SmsNoticeService(jdbc,configs,sms);
+        SmsNoticeService service=new SmsNoticeService(jdbc,configs,sms,new NotificationTemplateDataService(jdbc));
 
         assertThat(service.templateFor("USER","order_status").getString("templateCode")).isEqualTo("SMS_USER");
         assertThat(service.templateFor("PLAYER","order_status").getString("templateCode")).isEqualTo("SMS_PLAYER");

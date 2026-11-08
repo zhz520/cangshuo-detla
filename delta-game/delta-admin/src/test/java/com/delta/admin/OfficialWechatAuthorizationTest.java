@@ -60,7 +60,7 @@ class OfficialWechatAuthorizationTest {
         var permissions = mock(StaffPermissions.class);
         var platform = mock(PlatformService.class);
         var redis = mock(StringRedisTemplate.class);
-        var service = new OfficialWechatService(jdbc, configs, permissions, platform, redis);
+        var service = new OfficialWechatService(jdbc, configs, new com.delta.admin.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
         doThrow(new BusinessException(403, "domain denied"))
                 .when(platform).requireFeature(OfficialWechatService.FEATURE_ID, "denied.example");
 

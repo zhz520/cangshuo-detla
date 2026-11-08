@@ -45,9 +45,16 @@
           <el-input v-model="field.key" maxlength="64" :placeholder="guide.channel === 'wechat' ? '例如 thing1' : '例如 orderNo'" @input="commit" />
           <small>{{ fieldHint(field.key) }}</small>
         </div>
-        <el-select v-model="field.source" placeholder="选择系统数据" @change="commit">
-          <el-option v-for="source in guide.sources" :key="source.source" :label="`${source.label}（${source.source}）`" :value="source.source" />
-        </el-select>
+        <div class="source-select">
+          <el-select v-model="field.source" filterable clearable placeholder="搜索或选择系统数据" @change="commit">
+            <el-option-group v-for="group in guide.sourceGroups" :key="group.label" :label="group.label">
+              <el-option v-for="source in group.sources" :key="source.source" :label="`${source.label}（${source.source}）`" :value="source.source">
+                <div class="source-option" :title="source.note"><span>{{ source.label }}</span><code>{{ source.source }}</code></div>
+              </el-option>
+            </el-option-group>
+          </el-select>
+          <small v-if="field.source">{{ sourceHint(field.source) }}</small>
+        </div>
         <el-button text type="danger" :disabled="form[event.key].fields.length <= 1" @click="removeField(event.key, index)">删除</el-button>
       </div>
       <el-button plain size="small" @click="addField(event.key)">添加模板参数</el-button>
@@ -197,6 +204,11 @@ function fieldHint(key) {
   return `${type.label}，最多 ${type.max} 个字符`
 }
 
+function sourceHint(code) {
+  const source = guide.value?.sources.find(item => item.source === code)
+  return source ? `${source.example} · ${source.note}` : ''
+}
+
 async function copy(text) {
   try { await navigator.clipboard.writeText(text) }
   catch {
@@ -239,6 +251,10 @@ watch(validationErrors, errors => emit('validity', errors.length === 0), { immed
 .field-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:15px 0 8px; color:#45515f; font-size:12px; font-weight:650; }
 .field-heading small { color:#99a2ad; font-size:10px; font-weight:400; }
 .field-row { display:grid; grid-template-columns:minmax(120px,.9fr) minmax(180px,1.6fr) auto; gap:8px; margin-bottom:8px; }
+.source-select { display:grid; gap:3px; }
+.source-select small { min-height:14px; color:#98a2ad; font-size:9px; line-height:1.45; }
+.source-option { display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%; }
+.source-option code { color:#8a94a3; font-size:10px; }
 .field-name { display:grid; gap:3px; }
 .field-name small { min-height:14px; color:#98a2ad; font-size:9px; line-height:1.35; }
 .validation-list { margin:6px 0 0; padding-left:18px; line-height:1.65; }
@@ -253,7 +269,7 @@ watch(validationErrors, errors => emit('validity', errors.length === 0), { immed
   .template-editor { padding:11px; }
   .primary-fields { grid-template-columns:1fr; }
   .field-row { grid-template-columns:1fr auto; }
-  .field-row .el-input { grid-column:1 / -1; }
+  .field-row .el-input, .field-row .source-select { grid-column:1 / -1; }
   .event-editor { padding:11px; }
 }
 </style>

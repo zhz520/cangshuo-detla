@@ -5,13 +5,14 @@ import {
   NOTIFICATION_EVENTS,
   NOTIFICATION_ROLES,
   NOTIFICATION_SAMPLES,
+  NOTIFICATION_SOURCES,
   notificationConfigExample,
   notificationConfigGuide
 } from '../src/utils/notification-examples.js'
 
 const roles = ['user','player','admin','cs']
 const events = ['new_order','order_status','refund_status','complaint_status','staff_review']
-const wechatSources = new Set(['message','status','time','orderNo','amount','customerName','playerName'])
+const wechatSources = new Set(NOTIFICATION_SOURCES.map(item => item.source))
 const smsSources = wechatSources
 
 test('every WeChat role has an example for every notification event', () => {
@@ -52,7 +53,9 @@ test('each role guide explains fields, provider setup and all five event preview
       const guide = notificationConfigGuide(`${channel === 'wechat' ? 'wechat.official.templates' : 'sms.notification.templates'}.${role}`)
       assert.equal(guide.channel, channel)
       assert.equal(guide.roleLabel, ({user:'客户',player:'打手',admin:'管理员',cs:'客服'})[role])
-      assert.equal(guide.sources.length, 7)
+      assert.equal(guide.sources.length, NOTIFICATION_SOURCES.length)
+      assert.deepEqual(guide.sourceGroups.map(group => group.label), ['通知与事件','客户信息','订单信息','打手信息','退款信息','投诉信息','提现信息','接收人信息'])
+      assert.ok(guide.sourceGroups.reduce((sum, group) => sum + group.sources.length, 0) === guide.sources.length)
       assert.deepEqual(guide.events.map(item => item.key), NOTIFICATION_EVENTS)
       assert.ok(guide.providerSteps.length >= 6)
       assert.match(guide.linkHelp, channel === 'wechat' ? /url/ : /变量名/)
@@ -77,6 +80,19 @@ test('public-account examples use current typed fields instead of legacy phrase 
     for (const event of Object.values(example)) {
       assert.ok(Object.keys(event.fields).every(field => !field.startsWith('phrase')))
     }
+  }
+})
+
+test('business data catalog exposes order, customer, player and aftersales fields requested by administrators', () => {
+  const keys = new Set(NOTIFICATION_SOURCES.map(item => item.source))
+  for (const key of [
+    'customerPhone','orderAmount','productName','grabTime','playerPhone','customerType',
+    'refundNo','refundAmount','refundStatus','complaintContent','complaintResult',
+    'withdrawAmount','withdrawAccountName','recipientPhone'
+  ]) assert.ok(keys.has(key), `missing ${key}`)
+  assert.equal(new Set(NOTIFICATION_SOURCES.map(item => item.source)).size, NOTIFICATION_SOURCES.length)
+  for (const source of NOTIFICATION_SOURCES) {
+    assert.ok(source.label && source.example && source.note && source.category)
   }
 })
 
@@ -114,5 +130,8 @@ test('notification settings use direct event forms and keep JSON automatic', () 
   assert.match(editor, /消息点击链接/)
   assert.match(editor, /小程序 AppID/)
   assert.match(editor, /当前微信官方支持的字段类型/)
+  assert.match(editor, /filterable/)
+  assert.match(editor, /el-option-group/)
+  assert.match(editor, /sourceHint/)
   assert.match(editor, /emit\('validity'/)
 })

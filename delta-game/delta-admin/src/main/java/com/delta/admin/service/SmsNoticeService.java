@@ -10,10 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +26,7 @@ public class SmsNoticeService {
     private final JdbcTemplate jdbc;
     private final SysConfigService configs;
     private final AliyunSmsService sms;
+    private final NotificationTemplateDataService templateData;
 
     public String phoneFor(String userType,Long userId){
         if(userId==null)return "";
@@ -94,20 +92,7 @@ public class SmsNoticeService {
             JSONObject fields=template.getJSONObject("fields");
             if(templateCode==null||templateCode.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("SMS_TEMPLATE_NOT_CONFIGURED");
 
-            String message=String.valueOf(row.getOrDefault("message",""));
-            String event=String.valueOf(row.get("event_type"));
-            Object orderId=row.get("order_id");
-            List<Map<String,Object>> orders=orderId==null?List.of():
-                    jdbc.queryForList("SELECT o.order_no,o.amount,u.nickname AS customer_name,p.nickname AS player_name FROM `order` o LEFT JOIN `user` u ON u.id=o.user_id LEFT JOIN player p ON p.id=o.player_id WHERE o.id=?",orderId);
-            Map<String,String> values=Map.of(
-                    "message",message,
-                    "status",statusText(event),
-                    "time",LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                    "orderNo",orders.isEmpty()?"-":String.valueOf(orders.get(0).get("order_no")),
-                    "amount",amount(orders.isEmpty()?null:orders.get(0).get("amount")),
-                    "customerName",orders.isEmpty()||orders.get(0).get("customer_name")==null?"-":String.valueOf(orders.get(0).get("customer_name")),
-                    "playerName",orders.isEmpty()||orders.get(0).get("player_name")==null?"未指派":String.valueOf(orders.get(0).get("player_name"))
-            );
+            Map<String,String> values=templateData.resolve(row);
             Map<String,String> params=new LinkedHashMap<>();
             for(String field:fields.keySet()){
                 String value=values.get(String.valueOf(fields.get(field)));
@@ -172,6 +157,9 @@ public class SmsNoticeService {
             case "REFUND_PROCESSING"->"退款处理中";
             case "REFUND_SUCCEEDED"->"退款成功";
             case "REFUND_FAILED"->"退款失败";
+            case "WITHDRAW_APPLY"->"提现申请待处理";
+            case "WITHDRAW_COMPLETED"->"提现已完成";
+            case "WITHDRAW_REJECTED"->"提现已驳回";
             case "NEW_COMPLAINT"->"新投诉待处理";
             case "COMPLAINT_APPEALED"->"投诉申诉待处理";
             case "COMPLAINT_REFUND_PENDING"->"投诉退款等待管理员终审";
@@ -185,11 +173,6 @@ public class SmsNoticeService {
             case "PLAYER_UNFROZEN"->"打手已解冻";
             default->"状态更新";
         };
-    }
-
-    private static String amount(Object value){
-        if(value==null)return "0.00";
-        return new BigDecimal(String.valueOf(value)).setScale(2,RoundingMode.HALF_UP).toPlainString();
     }
 
     private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}

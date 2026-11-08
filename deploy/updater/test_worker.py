@@ -65,6 +65,18 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(sorted(path.name for path in backups.iterdir()),['backup-3','backup-4','backup-5'])
         self.assertEqual(sorted(path.name for path in releases.iterdir()),['old-active','release-3','release-4','release-5'])
 
+    def test_history_pruning_preserves_a_release_referenced_by_a_nested_component_mount(self):
+        releases=self.directory/'self-update-releases';releases.mkdir()
+        for index in range(6):
+            path=releases/f'release-{index}';path.mkdir();os.utime(path,(index,index))
+        active=releases/'release-0'/'h5';active.mkdir()
+        os.utime(releases/'release-0',(0,0))
+        override=self.directory/'compose.self-update.json'
+        override.write_text(json.dumps({'services':{'h5':{'volumes':[str(active)+':/usr/share/nginx/html:ro']}}}))
+        self.worker.prune_history(override)
+        self.assertTrue((releases/'release-0').is_dir())
+        self.assertEqual(sorted(path.name for path in releases.iterdir()),['release-0','release-3','release-4','release-5'])
+
     def test_frontend_health_requires_the_installed_version_file(self):
         inspected={'NetworkSettings':{'Networks':{'default':{'IPAddress':'172.20.0.5'}}}}
         class Response:

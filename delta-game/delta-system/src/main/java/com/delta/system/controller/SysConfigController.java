@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.Arrays;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
+import com.delta.common.notification.NotificationTemplateSources;
 import com.delta.system.entity.SysConfig;
 import com.delta.system.dto.RechargePackage;
 import com.delta.system.service.SysConfigService;
@@ -135,7 +136,7 @@ public class SysConfigController {
         ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.cs","客服专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
-        for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields，字段值可选message/status/time/orderNo/amount/customerName/playerName；字段名需与微信模板一致");
+        for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields；系统数据源可在公众号通知配置页按分类查看，字段名需与微信模板一致");
         ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
         ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
@@ -378,7 +379,7 @@ public class SysConfigController {
         if (fields == null || fields.isEmpty() || fields.size() > 20) throw new IllegalArgumentException();
         for (String field : fields.keySet()) {
             if (!field.matches("[A-Za-z_]+[0-9]*")
-                    || !java.util.Set.of("message","status","time","orderNo","amount","customerName","playerName").contains(fields.getString(field))) {
+                    || !NotificationTemplateSources.KEYS.contains(fields.getString(field))) {
                 throw new IllegalArgumentException();
             }
         }
@@ -420,7 +421,7 @@ public class SysConfigController {
             var templates = com.alibaba.fastjson2.JSON.parseObject(value);
             if (templates == null) throw new IllegalArgumentException();
             java.util.Set<String> groups = java.util.Set.of("new_order","order_status","refund_status","complaint_status","staff_review");
-            java.util.Set<String> sources = java.util.Set.of("message","status","time","orderNo","amount","customerName","playerName");
+            java.util.Set<String> sources = NotificationTemplateSources.KEYS;
             for (String group : templates.keySet()) {
                 if (!groups.contains(group)) throw new IllegalArgumentException();
                 Object node = templates.get(group);

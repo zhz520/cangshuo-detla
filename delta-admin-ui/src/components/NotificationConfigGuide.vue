@@ -22,16 +22,19 @@
           <table class="guide-table field-table">
             <thead><tr><th>右侧数据源</th><th>作用</th><th>示例值</th><th>使用注意</th></tr></thead>
             <tbody>
-              <tr v-for="source in guide.sources" :key="source.source">
-                <td data-label="系统数据源"><code>{{ source.source }}</code></td>
-                <td data-label="作用">{{ source.label }}</td>
-                <td data-label="示例值">{{ source.example }}</td>
-                <td data-label="使用注意">{{ source.note }}</td>
-              </tr>
+              <template v-for="group in guide.sourceGroups" :key="group.label">
+                <tr class="source-group-row"><td colspan="4">{{ group.label }} · {{ group.sources.length }} 项</td></tr>
+                <tr v-for="source in group.sources" :key="source.source">
+                  <td data-label="系统数据源"><code>{{ source.source }}</code></td>
+                  <td data-label="作用">{{ source.label }}</td>
+                  <td data-label="示例值">{{ source.example }}</td>
+                  <td data-label="使用注意">{{ source.note }}</td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
-        <p class="guide-tip">公众号建议采用结构化的“订单号、状态、金额、时间、客户、打手”字段；短信受审核模板限制，优先使用模板正文明确列出的变量，不必强行放全所有字段。</p>
+        <p class="guide-tip">共 {{ guide.sources.length }} 个系统数据源，配置下拉框支持按中文名称或字段编码搜索。公众号建议优先使用订单号、商品、金额、客户电话、抢单时间和状态的短字段；短信受审核模板限制，只放模板正文明确列出的变量。</p>
         <div v-if="guide.wechatFieldTypes?.length" class="field-type-guide">
           <strong>微信公众号当前字段类型</strong>
           <div v-for="type in guide.wechatFieldTypes" :key="type.prefix"><code>{{ type.example }}</code><span>{{ type.label }} · 最多 {{ type.max }} 个字符</span></div>
@@ -167,6 +170,7 @@ async function copy(text, key) {
 .guide-table th { background: #f3f6fa; color: #52627a; font-weight: 600; white-space: nowrap; }
 .guide-table tr:last-child td { border-bottom: 0; }
 .guide-table td:first-child { white-space: nowrap; }
+.guide-table .source-group-row td { padding:8px 10px; background:#eef3f9; color:#42536a; font-size:11px; font-weight:700; letter-spacing:.03em; }
 .guide-tip { margin: 8px 0 0; color: #667085; font-size: 12px; line-height: 1.65; }
 .field-type-guide { display:grid; gap:7px; margin-top:12px; padding:11px 12px; border:1px solid #e4e9ef; border-radius:8px; background:#fff; color:#667085; font-size:11px; }
 .field-type-guide > strong { color:#3e4b5c; font-size:12px; }
@@ -202,5 +206,7 @@ async function copy(text, key) {
   .guide-table td { display:grid; grid-template-columns:72px minmax(0,1fr); gap:8px; padding:0; border:0; overflow-wrap:anywhere; }
   .guide-table td::before { content:attr(data-label); color:#98a2b3; font-size:10px; font-weight:600; }
   .guide-table td:first-child { white-space:normal; }
+  .guide-table .source-group-row td { display:block; }
+  .guide-table .source-group-row td::before { display:none; }
 }
 </style>

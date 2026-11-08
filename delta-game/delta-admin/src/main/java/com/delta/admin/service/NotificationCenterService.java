@@ -42,6 +42,8 @@ public class NotificationCenterService {
     private static final Set<String> STAFF_REVIEW_EVENTS=Set.of(
             "PLAYER_APPLICATION_SUBMITTED","PLAYER_APPROVED","PLAYER_REJECTED",
             "MATERIAL_SUBMITTED","MATERIAL_REVIEWED","PLAYER_FROZEN","PLAYER_UNFROZEN");
+    private static final Set<String> WITHDRAW_EVENTS=Set.of(
+            "WITHDRAW_APPLY","WITHDRAW_COMPLETED","WITHDRAW_REJECTED");
     private final JdbcTemplate jdbc;
     private final OfficialWechatService wechat;
     private final SmsNoticeService sms;
@@ -75,7 +77,7 @@ public class NotificationCenterService {
         String group=OfficialWechatService.groupForEvent(eventType);
         if(!isSupported(eventType,group))return;
         Map<String,Recipient> recipients=new LinkedHashMap<>();
-        Map<String,Object> order=orderId==null?null:order(orderId);
+        Map<String,Object> order=orderId==null||WITHDRAW_EVENTS.contains(eventType)?null:order(orderId);
 
         if(sourceId!=null&&sourceType!=null&&!dynamicSubmission(eventType)){
             add(recipients,sourceType,sourceId,null);
@@ -87,7 +89,8 @@ public class NotificationCenterService {
             if(!"ORDER_PAID".equals(eventType)&&!"ORDER_CONFIRMED".equals(eventType))addOrderPlayers(recipients,orderId,order);
         }
         if(ORDER_EVENTS.contains(eventType)&&"ORDER_PAID".equals(eventType))addNewOrderPlayers(recipients,order);
-        if(REFUND_EVENTS.contains(eventType)||COMPLAINT_EVENTS.contains(eventType)||STAFF_REVIEW_EVENTS.contains(eventType)||ORDER_EVENTS.contains(eventType)){
+        if(REFUND_EVENTS.contains(eventType)||COMPLAINT_EVENTS.contains(eventType)||STAFF_REVIEW_EVENTS.contains(eventType)
+                ||WITHDRAW_EVENTS.contains(eventType)||ORDER_EVENTS.contains(eventType)){
             addStaff(recipients,group);
         }
 
@@ -120,7 +123,7 @@ public class NotificationCenterService {
 
     private boolean isSupported(String event,String group){
         return ORDER_EVENTS.contains(event)||REFUND_EVENTS.contains(event)||COMPLAINT_EVENTS.contains(event)
-                ||STAFF_REVIEW_EVENTS.contains(event);
+                ||STAFF_REVIEW_EVENTS.contains(event)||WITHDRAW_EVENTS.contains(event);
     }
 
     private boolean dynamicSubmission(String event){
@@ -176,6 +179,8 @@ public class NotificationCenterService {
     }
 
     private String messageFor(Recipient recipient,String event,String group,String base,String orderText){
+        if(WITHDRAW_EVENTS.contains(event)&&("ADMIN".equals(recipient.type)||"CS".equals(recipient.type)))
+            return "提现流程更新："+base;
         if("PLAYER".equals(recipient.type)&&"ORDER_PAID".equals(event))
             return "新订单待接单："+orderText+(recipient.note==null?"":"；"+recipient.note);
         if("ADMIN".equals(recipient.type)||"CS".equals(recipient.type)){

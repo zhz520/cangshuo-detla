@@ -179,11 +179,19 @@ def active_release_paths(override):
         return set()
     try:merged=json.loads(override.read_text())
     except (json.JSONDecodeError,OSError):return set()
-    paths=set()
+    paths=set();release_root=(ROOT/'self-update-releases').resolve()
     for service in merged.get('services',{}).values():
         for volume in service.get('volumes',[]):
             match=re.fullmatch(r'(.+):(/[^:]+)(?::(?:ro|rw|z))?',str(volume))
-            if match:paths.add(Path(match.group(1)))
+            if match:
+                source=Path(match.group(1)).resolve()
+                # Mounted frontend/backend artifacts live one or more levels below a release.
+                # Preserve that top-level release directory, not only the nested artifact path.
+                try:
+                    relative=source.relative_to(release_root)
+                    if relative.parts:paths.add(release_root/relative.parts[0])
+                except ValueError:
+                    paths.add(source)
     return paths
 
 def prune_history(override):
