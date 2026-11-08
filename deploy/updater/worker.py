@@ -194,6 +194,20 @@ def active_release_paths(override):
                     paths.add(source)
     return paths
 
+def missing_active_release_artifacts(override):
+    if not override.exists():
+        return set()
+    try:merged=json.loads(override.read_text())
+    except (json.JSONDecodeError,OSError):return set()
+    release_root=(ROOT/'self-update-releases').resolve();missing=set()
+    for service in merged.get('services',{}).values():
+        for volume in service.get('volumes',[]):
+            match=re.fullmatch(r'(.+):(/[^:]+)(?::(?:ro|rw|z))?',str(volume))
+            if not match:continue
+            source=Path(match.group(1)).resolve()
+            if inside(source,release_root) and not source.exists():missing.add(source)
+    return missing
+
 def prune_history(override):
     prune_directories(ROOT/'update-backups',CONFIG.get('backup_retention',3))
     prune_directories(ROOT/'self-update-releases',CONFIG.get('release_retention',3),active_release_paths(override))
@@ -238,6 +252,7 @@ def process(job):
     attempt=str(uuid.uuid4());scratch=ROOT/'update-staging'/attempt;scratch.mkdir(parents=True)
     backup_dir=ROOT/'update-backups'/attempt;override=ROOT/'compose.self-update.json'
     prior=override.read_bytes() if override.exists() else None
+    if missing_active_release_artifacts(override):raise ValueError('Active release artifact missing')
     changed=False;job_id=None;retain_gate=False
     try:
         envelope=json.loads(job.read_text());plan=verify(envelope,scratch);job_id=plan['id']

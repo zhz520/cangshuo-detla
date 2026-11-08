@@ -77,6 +77,14 @@ class UpdaterTests(unittest.TestCase):
         self.assertTrue((releases/'release-0').is_dir())
         self.assertEqual(sorted(path.name for path in releases.iterdir()),['release-0','release-3','release-4','release-5'])
 
+    def test_missing_mounted_release_component_is_detected_before_another_update(self):
+        releases=self.directory/'self-update-releases';missing=releases/'broken'/'h5'
+        missing.mkdir(parents=True)
+        override=self.directory/'compose.self-update.json'
+        override.write_text(json.dumps({'services':{'h5':{'volumes':[str(missing)+':/usr/share/nginx/html:ro']}}}))
+        self.assertEqual(self.worker.missing_active_release_artifacts(override),set())
+        missing.rmdir();self.assertEqual(self.worker.missing_active_release_artifacts(override),{missing.resolve()})
+
     def test_frontend_health_requires_the_installed_version_file(self):
         inspected={'NetworkSettings':{'Networks':{'default':{'IPAddress':'172.20.0.5'}}}}
         class Response:
