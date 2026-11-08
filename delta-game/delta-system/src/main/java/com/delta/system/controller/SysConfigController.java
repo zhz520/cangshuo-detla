@@ -131,6 +131,10 @@ public class SysConfigController {
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
         ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写客户H5的HTTPS首页地址，不含#、查询参数；在微信后台配置网页授权域名");
+        ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_accepted/order_completed/material_reviewed/withdraw_reviewed分组配置templateId和fields");
+        ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_accepted/order_completed/material_reviewed/withdraw_reviewed分组配置templateId和fields");
+        ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_accepted/order_completed/material_reviewed/withdraw_reviewed分组配置templateId和fields");
+        ensureConfig("wechat.official.templates.cs","客服专属模板组","{}","json","公众号通知","JSON对象；按new_order/order_accepted/order_completed/material_reviewed/withdraw_reviewed分组配置templateId和fields");
         for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields，字段值可选message/status/time/orderNo/amount；字段名需与微信模板一致");
         ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
@@ -287,10 +291,8 @@ public class SysConfigController {
         }
         if("withdraw.require_identity_match".equals(key)&&!java.util.Set.of("true","false").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
-        if(key.startsWith("wechat.official.template.")){
-            try{var obj=com.alibaba.fastjson2.JSON.parseObject(value);if(obj==null)throw new IllegalArgumentException();if(!obj.isEmpty()){if(obj.getString("templateId")==null||obj.getString("templateId").isBlank())throw new IllegalArgumentException();var fields=obj.getJSONObject("fields");if(fields==null||fields.isEmpty()||fields.size()>20)throw new IllegalArgumentException();for(String field:fields.keySet())if(!field.matches("[A-Za-z_]+[0-9]*")||!java.util.Set.of("message","status","time","orderNo","amount").contains(fields.getString(field)))throw new IllegalArgumentException();}}
-            catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"模板映射须包含templateId和有效fields字段映射");}
-        }
+        if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
+        if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(java.util.Set.of("risk.media.endpoint","wechat.official.redirect_url").contains(key)&&!value.isBlank())try{var uri=java.net.URI.create(value);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"请填写有效HTTPS地址");}
         if("risk.freeze_threshold".equals(key))try{int n=Integer.parseInt(value);if(n<1||n>100)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"违规阈值须为1至100之间整数");}
         if("site.tech_support_text".equals(key)) {
@@ -348,6 +350,45 @@ public class SysConfigController {
             }
         }
         SysConfig update=new SysConfig();update.setId(old.getId());update.setConfigValue(value);sysConfigService.updateById(update);
+    }
+
+    private void validateOfficialTemplate(String value) {
+        try {
+            var obj = com.alibaba.fastjson2.JSON.parseObject(value);
+            validateOfficialTemplateNode(obj);
+        } catch (Exception e) {
+            throw new com.delta.common.exception.BusinessException(400,"模板映射须包含templateId和有效fields字段映射");
+        }
+    }
+
+    private void validateOfficialTemplateNode(com.alibaba.fastjson2.JSONObject obj) {
+        if (obj == null) throw new IllegalArgumentException();
+        if (obj.isEmpty()) return;
+        if (obj.getString("templateId") == null || obj.getString("templateId").isBlank()) throw new IllegalArgumentException();
+        var fields = obj.getJSONObject("fields");
+        if (fields == null || fields.isEmpty() || fields.size() > 20) throw new IllegalArgumentException();
+        for (String field : fields.keySet()) {
+            if (!field.matches("[A-Za-z_]+[0-9]*")
+                    || !java.util.Set.of("message","status","time","orderNo","amount").contains(fields.getString(field))) {
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    private void validateOfficialRoleTemplates(String value) {
+        try {
+            var templates = com.alibaba.fastjson2.JSON.parseObject(value);
+            if (templates == null) throw new IllegalArgumentException();
+            java.util.Set<String> groups = java.util.Set.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed");
+            for (String group : templates.keySet()) {
+                if (!groups.contains(group)) throw new IllegalArgumentException();
+                Object node = templates.get(group);
+                if (!(node instanceof com.alibaba.fastjson2.JSONObject template)) throw new IllegalArgumentException();
+                validateOfficialTemplateNode(template);
+            }
+        } catch (Exception e) {
+            throw new com.delta.common.exception.BusinessException(400,"角色模板组须按事件分组配置templateId和有效fields字段映射");
+        }
     }
 
     private void ensureConfig(String key, String name, String value, String valueType, String group, String remark) {

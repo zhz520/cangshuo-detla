@@ -27,3 +27,13 @@ test('official notification fields follow the paid feature and save only visible
     ['wechat.official.enabled']
   )
 })
+
+test('official notification settings expose one dedicated template group per role', () => {
+  const legacy = config('wechat.official.template.new_order', '旧版通用模板', '公众号通知')
+  const roles = ['user', 'player', 'admin', 'cs'].map(role =>
+    config(`wechat.official.templates.${role}`, `${role}专属模板`, '公众号通知'))
+  const enabled = new Set(['official_wechat_notifications'])
+
+  assert.equal(isSystemConfigVisible(legacy, enabled), false)
+  assert.deepEqual(editableSystemConfigs([legacy, ...roles], enabled).map(item => item.configKey), roles.map(item => item.configKey))
+})

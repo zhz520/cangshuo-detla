@@ -9,6 +9,8 @@
         description="每个支付开关独立生效，支付页面不再根据浏览器类型自动隐藏已启用方式。微信支付公钥和公钥 ID 必须从当前微信支付商户号的“账户中心 > API安全 > 微信支付公钥”成对下载；两者不匹配会产生“WechatPay signature is incorrect”。公众平台仍需配置网页授权域名，商户平台需配置 JSAPI 支付授权目录。" />
       <el-alert v-if="activeGroup === '微信支付配置'" title="客户端业务支付与功能购买分开" type="warning" :closable="false" show-icon
         description="本页只配置客户自己的订单、充值和押金收款。客户端功能商城的购买款由授权中心统一收取，使用授权中心的微信商户和回调，不读取本页配置。" />
+      <el-alert v-if="activeGroup === '公众号通知'" title="四个角色分别使用独立模板" type="info" :closable="false" show-icon
+        description="客户、打手、管理员、客服各填一份 JSON 模板组。每份按 new_order、order_accepted、order_completed、material_reviewed、withdraw_reviewed 分组；不同角色可填写完全不同的模板 ID 和字段映射。旧版通用模板仅作为兼容回退，不再在这里显示。" />
       <el-form v-loading="loading" label-width="200px" class="config-form">
         <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
           <el-input v-if="item.valueType === 'file'" v-model="item.configValue" readonly>

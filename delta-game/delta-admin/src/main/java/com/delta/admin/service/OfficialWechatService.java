@@ -30,15 +30,30 @@ public class OfficialWechatService {
  private volatile String accessToken="";private volatile long tokenUntil=0;
  public static final String FEATURE_ID="official_wechat_notifications";
  private static final Set<String> EVENTS=Set.of("ORDER_PAID","ORDER_ACCEPTED","ORDER_ASSIGNED","ORDER_COMPLETED","MATERIAL_REVIEWED","WITHDRAW_COMPLETED","WITHDRAW_REJECTED","PLAYER_FROZEN");
+ private static final Map<String,String> STAFF_ORDER_GROUPS=Map.of(
+   "ORDER_PAID","new_order",
+   "ORDER_ACCEPTED","order_accepted",
+   "ORDER_COMPLETED","order_completed"
+ );
  @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
  @Transactional(propagation=Propagation.REQUIRES_NEW)
  public void event(BusinessEvent event){
   if(!platform.featureEnabled(FEATURE_ID))return;
   if(!EVENTS.contains(event.getEventType()))return;
   if(event.getUserId()!=null)queue(event.getEventType(),event.getUserType(),event.getUserId(),event.getOrderId(),event.getMessage());
-  if("ORDER_PAID".equals(event.getEventType()))for(var staff:jdbc.queryForList("SELECT a.id,a.role FROM admin a LEFT JOIN staff_shift s ON s.admin_id=a.id WHERE a.status=1 AND a.deleted=0 AND (UPPER(a.role) IN ('ADMIN','BOTH') OR s.online=1)")){
+  if(STAFF_ORDER_GROUPS.containsKey(event.getEventType()))queueStaffOrder(event);
+ }
+ private void queueStaffOrder(BusinessEvent event){
+  String message=switch(event.getEventType()){
+   case "ORDER_PAID"->"新订单已支付，请及时处理";
+   case "ORDER_ACCEPTED"->"打手已接单，订单进入服务流程";
+   case "ORDER_COMPLETED"->"打手已提交订单完成，请关注用户确认";
+   default->Objects.toString(event.getMessage(),"订单状态变更");
+  };
+  String queueType="ORDER_PAID".equals(event.getEventType())?"NEW_ORDER":event.getEventType();
+  for(var staff:jdbc.queryForList("SELECT a.id,a.role FROM admin a LEFT JOIN staff_shift s ON s.admin_id=a.id WHERE a.status=1 AND a.deleted=0 AND (UPPER(a.role) IN ('ADMIN','BOTH') OR s.online=1)")){
    Long id=((Number)staff.get("id")).longValue();String role=com.delta.common.security.utils.AdminRolePolicy.effectiveRole(String.valueOf(staff.get("role")));var grants=permissions.forStaff(id,role);
-   if(grants.contains("order.read")||grants.contains("*"))queue("NEW_ORDER",role,id,event.getOrderId(),"新订单已支付，请及时处理");
+   if(grants.contains("order.read")||grants.contains("*"))queue(queueType,role,id,event.getOrderId(),message);
   }
  }
  private void queue(String event,String type,Long user,Long order,String message){jdbc.update("INSERT INTO wechat_notice_queue(id,event_type,user_type,user_id,order_id,message,status) VALUES (?,?,?,?,?,?,'PENDING')",UUID.randomUUID().toString(),event,type,user,order,Objects.toString(message,"").substring(0,Math.min(1000,Objects.toString(message,"").length())));}
@@ -58,8 +73,8 @@ public class OfficialWechatService {
  private void send(Map<String,Object> row)throws Exception{
   var bindings=jdbc.queryForList("SELECT openid FROM wechat_official_binding WHERE user_type=? AND user_id=?",row.get("user_type"),row.get("user_id"));
   if(bindings.isEmpty())throw new DeliveryError("RECIPIENT_NOT_BOUND");
-  String event=(String)row.get("event_type");String group=switch(event){case "NEW_ORDER","ORDER_PAID"->"new_order";case "ORDER_ACCEPTED","ORDER_ASSIGNED"->"order_accepted";case "ORDER_COMPLETED"->"order_completed";case "MATERIAL_REVIEWED","PLAYER_FROZEN"->"material_reviewed";default->"withdraw_reviewed";};
-  JSONObject template;try{template=JSON.parseObject(configs.getConfigValue("wechat.official.template."+group,"{}"));}catch(Exception e){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
+  String event=(String)row.get("event_type");String group=groupForEvent(event);
+  JSONObject template=templateFor((String)row.get("user_type"),group);
   String templateId=template.getString("templateId");var fields=template.getJSONObject("fields");if(templateId==null||templateId.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
   var orders=row.get("order_id")==null?List.<Map<String,Object>>of():jdbc.queryForList("SELECT order_no,amount FROM `order` WHERE id=?",row.get("order_id"));
   Map<String,String> values=Map.of("message",Objects.toString(row.get("message"),""),"status",switch(event){case "NEW_ORDER","ORDER_PAID"->"新订单";case "ORDER_ACCEPTED"->"已接单";case "ORDER_ASSIGNED"->"已派单";case "ORDER_COMPLETED"->"已完结";case "MATERIAL_REVIEWED"->"审核完成";case "WITHDRAW_COMPLETED"->"提现通过";case "WITHDRAW_REJECTED"->"提现驳回";default->"状态变更";},"time",LocalDateTime.now().toString().replace('T',' '),"orderNo",orders.isEmpty()?"-":String.valueOf(orders.get(0).get("order_no")),"amount",orders.isEmpty()?"0.00":String.valueOf(orders.get(0).get("amount")));
@@ -97,6 +112,22 @@ public class OfficialWechatService {
   jdbc.update("UPDATE wechat_notice_queue SET status='PENDING',attempts=0,next_at=CURRENT_TIMESTAMP WHERE user_type=? AND user_id=? AND status IN ('RETRY','FAILED') AND last_error='RECIPIENT_NOT_BOUND' AND created_at>?",type,id,LocalDateTime.now().minusDays(1));
  }
  private JSONObject post(String url,Object body)throws Exception{var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(JSON.toJSONString(body))).build(),HttpResponse.BodyHandlers.ofString());if(response.statusCode()!=200||response.body().length()>100000)throw new DeliveryError("WECHAT_HTTP_ERROR");return JSON.parseObject(response.body());}
+ JSONObject templateFor(String userType,String group){
+  String role=switch(Objects.toString(userType,"").toUpperCase(java.util.Locale.ROOT)){case "USER","GUEST"->"user";case "PLAYER"->"player";case "ADMIN"->"admin";case "CS"->"cs";default->null;};
+  if(role!=null){
+   try{
+    JSONObject roleTemplates=JSON.parseObject(configs.getConfigValue("wechat.official.templates."+role,"{}"));
+    Object node=roleTemplates.get(group);
+    if(node instanceof JSONObject template&&!template.isEmpty()){
+     if(template.getString("templateId")==null||template.getString("templateId").isBlank()||template.getJSONObject("fields")==null||template.getJSONObject("fields").isEmpty())throw new DeliveryError("TEMPLATE_CONFIG_INVALID");
+     return template;
+    }
+   }catch(DeliveryError error){throw error;}catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
+  }
+  try{return JSON.parseObject(configs.getConfigValue("wechat.official.template."+group,"{}"));}
+  catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
+ }
+ static String groupForEvent(String event){return switch(event){case "NEW_ORDER","ORDER_PAID"->"new_order";case "ORDER_ACCEPTED","ORDER_ASSIGNED"->"order_accepted";case "ORDER_COMPLETED"->"order_completed";case "MATERIAL_REVIEWED","PLAYER_FROZEN"->"material_reviewed";default->"withdraw_reviewed";};}
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
- private static class DeliveryError extends Exception{DeliveryError(String code){super(code);}}
+ private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}
 }

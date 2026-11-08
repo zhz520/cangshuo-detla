@@ -2,7 +2,12 @@ const dedicatedConfigKeys = new Set([
   'wallet.recharge.packages',
   'features.reward_grab',
   'player.directory.layout',
-  'player.deposit_required'
+  'player.deposit_required',
+  'wechat.official.template.new_order',
+  'wechat.official.template.order_accepted',
+  'wechat.official.template.order_completed',
+  'wechat.official.template.material_reviewed',
+  'wechat.official.template.withdraw_reviewed'
 ])
 
 export function isSystemConfigVisible(config, enabledFeatures = new Set()) {
