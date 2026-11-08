@@ -72,6 +72,9 @@ class OfficialWechatRoleTemplateTest {
         assertThat(OfficialWechatService.maxFieldLength("car_number1")).isEqualTo(8);
         assertThat(OfficialWechatService.maxFieldLength("const1")).isEqualTo(20);
         assertThat(OfficialWechatService.maxFieldLength("phrase1")).isEqualTo(5);
+        assertThat(OfficialWechatService.amountText("68.00")).isEqualTo("￥68.00");
+        assertThat(OfficialWechatService.fieldValue("thing1", "第一行\n第二行\t")).isEqualTo("第一行 第二行");
+        assertThat(OfficialWechatService.fieldValue("thing1", "123456789012345678901")).isEqualTo("12345678901234567890");
     }
 
     @Test

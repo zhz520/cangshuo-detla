@@ -22,7 +22,7 @@ const SOURCE_FIELDS = Object.freeze([
   Object.freeze({source: 'status', label: '业务状态', example: '新订单', note: '系统按事件转换后的短状态，如“退款已初审”“主页素材待审核”。'}),
   Object.freeze({source: 'time', label: '通知生成时间', example: '2026-11-08 20:30:00', note: '公众号通知为系统本地业务时间；短信统一为 yyyy-MM-dd HH:mm:ss。'}),
   Object.freeze({source: 'orderNo', label: '订单号', example: 'DG202611080001', note: '非订单类审核事件通常为“-”，不要设置为必填数字字段。'}),
-  Object.freeze({source: 'amount', label: '订单金额', example: '68.00', note: '统一到两位小数；没有关联订单时为 0.00。'}),
+  Object.freeze({source: 'amount', label: '订单金额', example: '￥68.00', note: '公众号金额带币种符号，短信保留数值；没有关联订单时为 ￥0.00。'}),
   Object.freeze({source: 'customerName', label: '客户昵称', example: '阿岚', note: '用于标明是谁下单；没有客户资料时为“-”。'}),
   Object.freeze({source: 'playerName', label: '打手昵称', example: '林川', note: '未指派时显示“未指派”，可用于派单和人员协作通知。'})
 ])
