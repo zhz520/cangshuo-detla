@@ -208,6 +208,10 @@
       "root": "pages-cs",
       "pages": [
         {
+          "path": "login/index",
+          "style": { "navigationBarTitleText": "客服与管理员登录", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6" }
+        },
+        {
           "path": "dashboard/index",
           "style": { "navigationBarTitleText": "客服工作台", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
         },

@@ -1,5 +1,7 @@
 import { get, post } from './request'
 export const getLoginCaptcha = () => get('/user/auth/captcha', {}, { auth: false, loading: false })
+export const getCsLoginCaptcha = () => get('/cs/auth/captcha', {}, { auth: false, loading: false })
+export const csLogin = data => post('/cs/auth/login', data, { auth: false, loading: false })
 export const sendResetCode=data=>post('/user/auth/reset-code',data,{auth:false})
 export const resetPassword=data=>post('/user/auth/reset-password',data,{auth:false})
 export const sendLoginCode = (data) => post('/user/auth/sms-code', data, { auth: false })
