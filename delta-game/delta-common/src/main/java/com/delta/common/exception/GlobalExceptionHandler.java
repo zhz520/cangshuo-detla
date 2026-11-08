@@ -3,6 +3,7 @@ package com.delta.common.exception;
 import com.delta.common.domain.R;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -34,6 +35,12 @@ public class GlobalExceptionHandler {
     public R<?> handleBusiness(BusinessException e, HttpServletRequest req) {
         log.error("业务异常: {} URI: {}", e.getMessage(), req.getRequestURI());
         return R.fail(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public R<?> handleDuplicateKey(DuplicateKeyException e, HttpServletRequest req) {
+        log.warn("数据唯一性冲突 URI: {}", req.getRequestURI());
+        return R.fail(409, "数据已存在或发生冲突，请刷新后重试");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

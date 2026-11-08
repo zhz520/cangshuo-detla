@@ -66,7 +66,7 @@ public class AdminController {
             com.delta.common.security.utils.PasswordPolicy.validate(admin.getPassword());
             update.setPassword(passwordEncoder.encode(admin.getPassword()));
         }
-        adminService.updateById(update);
+        if (!adminService.updateAdmin(update)) throw new BusinessException(404, "管理员不存在");
         return R.ok();
     }
 
