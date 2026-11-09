@@ -63,11 +63,30 @@
       </el-main>
     </el-container>
 
-    <nav v-if="isCompact" class="mobile-bottom-nav" :class="{ 'two-items': !can('order.read') }" aria-label="移动端快捷导航">
-      <button type="button" :class="{ active: currentAdminPath === '/dashboard' }" @click="router.push(adminPath('/dashboard'))"><el-icon><HomeFilled /></el-icon><span>工作台</span></button>
-      <button v-if="can('order.read')" type="button" :class="{ active: currentAdminPath.startsWith('/order') }" @click="router.push(adminPath('/order/list'))"><el-icon><Tickets /></el-icon><span>订单</span></button>
-      <button type="button" @click="openCenter('tasks')"><el-icon><Bell /></el-icon><span>待办</span><i v-if="workbench.summary?.unread" class="nav-unread">{{ badge(workbench.summary.unread) }}</i></button>
+    <nav v-if="isCompact" class="mobile-bottom-nav" :style="{ gridTemplateColumns: `repeat(${mobileBottomItems.length}, minmax(0, 1fr))` }" aria-label="移动端快捷导航">
+      <button v-for="item in mobileBottomItems" :key="item.key" type="button" :class="{ active: mobileTabActive(item.key) }" @click="runMobileTab(item.key)">
+        <el-icon><component :is="item.icon" /></el-icon><span>{{ item.label }}</span>
+        <i v-if="item.badge" class="nav-unread">{{ badge(item.badge) }}</i>
+      </button>
     </nav>
+
+    <el-drawer v-model="mobileAccountOpen" direction="rtl" size="min(86vw, 360px)" :with-header="false" append-to-body>
+      <div class="mobile-account">
+        <div class="mobile-account-head">
+          <el-avatar :size="52" :src="userStore.avatar || undefined">{{ nickname.slice(0, 1) }}</el-avatar>
+          <div><strong>{{ nickname }}</strong><span>{{ role === 'admin' ? '管理员' : '客服' }} · {{ userStore.phone || '未填写手机号' }}</span></div>
+          <button type="button" aria-label="关闭" @click="mobileAccountOpen = false">×</button>
+        </div>
+        <div class="mobile-account-list">
+          <button type="button" @click="accountAction('wechat')"><span>公众号消息通知</span><small>绑定当前账号的微信</small><b>›</b></button>
+          <button type="button" @click="accountAction('notices')"><span>系统通知</span><small>查看审核、订单和售后消息</small><b>›</b></button>
+          <button type="button" @click="accountAction('profile')"><span>编辑资料</span><b>›</b></button>
+          <button type="button" @click="accountAction('password')"><span>修改密码</span><b>›</b></button>
+          <button type="button" class="danger" @click="accountAction('logout')"><span>退出登录</span><b>›</b></button>
+        </div>
+        <p class="mobile-account-foot">工作人员入口统一由后台域名提供</p>
+      </div>
+    </el-drawer>
 
     <!-- 编辑资料弹窗 -->
     <ProfileEditDialog v-model="profileDialogVisible" @saved="onProfileSaved" />
@@ -84,7 +103,7 @@ import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAll
 import { loadingFeedback } from '@/utils/loading-feedback'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, HomeFilled, Tickets } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, HomeFilled, Tickets, UserFilled } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
@@ -106,6 +125,7 @@ const chatStore = useChatStore()
 const workbench = useWorkbenchStore()
 const centerOpen = ref(false)
 const centerMode = ref('tasks')
+const mobileAccountOpen = ref(false)
 function openCenter(mode) { centerMode.value = mode; centerOpen.value = true }
 function badge(count) { return count > 99 ? '99+' : count }
 const menuBadges = computed(() => {
@@ -138,6 +158,29 @@ watch(() => route.path, async () => {
 })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
+const mobileBottomItems = computed(() => {
+  const items = [{ key: 'dashboard', label: '工作台', icon: HomeFilled }]
+  if (can('order.read')) items.push({ key: 'orders', label: '订单', icon: Tickets })
+  items.push({ key: 'tasks', label: '待办', icon: Bell, badge: workbench.summary?.unread || 0 })
+  items.push({ key: 'messages', label: '消息', icon: ChatDotRound, badge: can('chat.manage') ? (workbench.summary?.chatUnread || 0) : (workbench.summary?.systemUnread || 0) })
+  items.push({ key: 'account', label: '我的', icon: UserFilled })
+  return items
+})
+function mobileTabActive(key) {
+  if (key === 'dashboard') return currentAdminPath.value === '/dashboard'
+  if (key === 'orders') return currentAdminPath.value.startsWith('/order')
+  if (key === 'messages') return currentAdminPath.value.startsWith('/chat') || (centerOpen.value && centerMode.value === 'notices')
+  if (key === 'tasks') return centerOpen.value && centerMode.value === 'tasks'
+  if (key === 'account') return mobileAccountOpen.value
+  return false
+}
+function runMobileTab(key) {
+  if (key === 'dashboard') router.push(adminPath('/dashboard'))
+  else if (key === 'orders') router.push(adminPath('/order/list'))
+  else if (key === 'tasks') openCenter('tasks')
+  else if (key === 'messages') can('chat.manage') ? router.push(adminPath('/chat/service')) : openCenter('notices')
+  else if (key === 'account') mobileAccountOpen.value = true
+}
 const currentAdminPath = computed(() => canonicalAdminPath(route.path))
 function adminPath(path) {
   return isMobileAdminPath(route.path) ? mobileAdminPath(path) : path
@@ -174,6 +217,16 @@ async function handleCommand(cmd) {
     await userStore.logout()
     router.push(isMobileAdminPath(route.path) ? '/mobile/login' : '/login')
   }
+}
+
+async function accountAction(cmd) {
+  if (cmd === 'notices') {
+    mobileAccountOpen.value = false
+    openCenter('notices')
+    return
+  }
+  mobileAccountOpen.value = false
+  await handleCommand(cmd)
 }
 
 async function onPasswordChanged() {
@@ -380,7 +433,6 @@ onUnmounted(() => {
     backdrop-filter: blur(14px);
     box-sizing: border-box;
   }
-  .mobile-bottom-nav.two-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-bottom-nav button {
     position: relative;
     display: flex;
@@ -400,6 +452,19 @@ onUnmounted(() => {
   .mobile-bottom-nav span { font-size: 10px; font-weight: 650; }
   .mobile-bottom-nav .nav-unread { position:absolute; top:1px; left:calc(50% + 8px); min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#c94f59; color:#fff; font:10px/16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align:center; box-sizing:border-box; }
 }
+.mobile-account { min-height:100%; padding:22px 18px; box-sizing:border-box; background:#f7f8f9; }
+.mobile-account-head { display:flex; align-items:center; gap:12px; padding:18px; border:1px solid #e8eaee; border-radius:16px; background:#fff; }
+.mobile-account-head > div { display:grid; flex:1; min-width:0; gap:5px; }
+.mobile-account-head strong { color:#20242a; font-size:17px; }
+.mobile-account-head span { color:#8b929b; font-size:11px; }
+.mobile-account-head button { width:32px; height:32px; border:0; border-radius:50%; background:#f1f3f5; color:#737b85; font-size:20px; }
+.mobile-account-list { display:grid; gap:9px; margin-top:14px; }
+.mobile-account-list button { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; padding:14px 15px; border:1px solid #e8eaee; border-radius:13px; background:#fff; color:#242931; text-align:left; }
+.mobile-account-list span { font-size:13px; font-weight:650; }
+.mobile-account-list small { grid-row:2; color:#949aa2; font-size:10px; }
+.mobile-account-list b { grid-column:2; grid-row:1 / span 2; color:#a0a6ae; font-size:20px; font-weight:400; }
+.mobile-account-list button.danger span { color:#b84851; }
+.mobile-account-foot { margin:22px 0 0; color:#a3a9b1; font-size:10px; text-align:center; }
 @media (max-width: 480px) {
   .layout-header { flex-wrap: nowrap; }
   .layout-header .header-left { flex-basis: auto; }

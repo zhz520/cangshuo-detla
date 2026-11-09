@@ -22,7 +22,6 @@ test('compact admin and CS screens use the dedicated mobile operations dashboard
   assert.match(mobile, /class="status-grid"/)
   assert.match(mobile, /class="today-grid"/)
   assert.match(mobile, /class="icon-grid"|class="icon-grid product-grid"/)
-  assert.doesNotMatch(mobile, /class="mobile-hero"/)
 })
 
 test('mobile dashboard prioritizes order data and uses live analytics and player drilldown APIs', async () => {
@@ -38,13 +37,16 @@ test('mobile dashboard prioritizes order data and uses live analytics and player
   assert.match(mobile, /openTasks\(item\.kind\)/)
   assert.match(mobile, /buildMobileNavigationSections\(groups,/)
   assert.match(mobile, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/)
+  assert.match(mobile, /class="mobile-hero"/)
+  assert.match(mobile, /getShiftStatus/)
+  assert.match(mobile, /changeShift/)
 })
 
 test('mobile admin shell removes the menu drawer and keeps three direct shortcuts', async () => {
   const layout = await read('src/layout/index.vue')
   assert.match(layout, /class="mobile-page-title"/)
   assert.match(layout, /class="mobile-bottom-nav"/)
-  for (const label of ['工作台', '订单', '待办']) {
+  for (const label of ['工作台', '订单', '待办', '消息', '我的']) {
     assert.match(layout, new RegExp(label))
   }
   assert.match(layout, /flex-wrap: nowrap/)
@@ -52,8 +54,9 @@ test('mobile admin shell removes the menu drawer and keeps three direct shortcut
   assert.match(layout, /<button v-if="!isCompact" class="collapse-btn"/)
   assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(layout, /class="mobile-navigation"/)
-  assert.match(layout, /v-if="can\('order\.read'\)"[^>]*@click="router\.push\(adminPath\('\/order\/list'\)\)"/)
-  assert.match(layout, /mobile-bottom-nav\.two-items/)
+  assert.match(layout, /if \(can\('order\.read'\)\) items\.push\(\{ key: 'orders'/)
+  assert.match(layout, /mobileBottomItems/)
+  assert.match(layout, /gridTemplateColumns/)
 })
 
 test('list pages inherit the automatic mobile table-to-card adapter', async () => {

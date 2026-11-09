@@ -1,8 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   buildMobileAdminRoutes,
   adminLoginPath,
+  MOBILE_ADMIN_MAX_WIDTH,
   canonicalAdminPath,
   isMobileAdminPath,
   mobileAdminPath,
@@ -29,6 +31,7 @@ test('mobile devices are redirected once while login and error pages stay reacha
   assert.equal(shouldUseMobileRoute('/403', true), false)
   assert.equal(adminLoginPath(true), '/mobile/login')
   assert.equal(adminLoginPath(false), '/login')
+  assert.equal(MOBILE_ADMIN_MAX_WIDTH, 1024)
 })
 
 test('mobile route aliases reuse admin screens with unique names and catch unknown paths', () => {
@@ -44,4 +47,11 @@ test('mobile route aliases reuse admin screens with unique names and catch unkno
   assert.ok(routes.some(route => route.children?.some(child => child.name === 'MobileOrderList')))
   assert.ok(routes.some(route => route.name === 'MobileNotFound'))
   assert.equal(routes.some(route => route.path === '/mobile/login'), false)
+})
+
+test('viewport changes switch the current URL in both directions', () => {
+  const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
+  assert.match(app, /addEventListener\('change', switchAdminViewport\)/)
+  assert.match(app, /router\.replace\(\{ path: target/)
+  assert.match(app, /MOBILE_ADMIN_MAX_WIDTH/)
 })

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
-import { adminLoginPath, buildMobileAdminRoutes, canonicalAdminPath, mobileAdminPath, shouldUseMobileRoute } from '@/utils/mobile-route'
+import { adminLoginPath, buildMobileAdminRoutes, canonicalAdminPath, mobileAdminPath, shouldUseMobileRoute, useMobileAdminViewport } from '@/utils/mobile-route'
 
 const Layout = () => import('@/layout/index.vue')
 
@@ -358,7 +358,7 @@ const whiteList = ['/login', '/mobile/login']
 router.beforeEach(async (to, from, next) => {
   beginNavigation(to)
   const token = getToken()
-  const mobileViewport = window.matchMedia('(max-width: 768px)').matches
+  const mobileViewport = useMobileAdminViewport()
 
   if (token) {
     if (to.path === '/login' || to.path === '/mobile/login') {

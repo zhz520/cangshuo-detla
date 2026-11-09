@@ -1,6 +1,11 @@
 const MOBILE_PREFIX = '/mobile'
+export const MOBILE_ADMIN_MAX_WIDTH = 1024
 
 export const MOBILE_ADMIN_PREFIX = MOBILE_PREFIX
+
+export function useMobileAdminViewport() {
+  return typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_ADMIN_MAX_WIDTH}px)`).matches
+}
 
 export function isMobileAdminPath(path = '') {
   return path === MOBILE_PREFIX || path.startsWith(`${MOBILE_PREFIX}/`)

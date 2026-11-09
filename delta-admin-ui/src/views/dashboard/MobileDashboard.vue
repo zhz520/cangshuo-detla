@@ -2,6 +2,31 @@
   <section class="mobile-dashboard" :aria-busy="loading || analyticsLoading">
     <LoadFeedback :loading="loading" :error="error" label="概览" @retry="refreshAll" />
 
+    <section class="mobile-hero">
+      <div class="hero-top">
+        <div class="hero-person">
+          <el-avatar :size="46" :src="userStore.avatar || undefined">{{ displayName.slice(0, 1) }}</el-avatar>
+          <div>
+            <span>{{ roleLabel }} · {{ greeting }}</span>
+            <strong>{{ displayName }}</strong>
+            <small>今天也把每一单稳稳接住</small>
+          </div>
+        </div>
+        <button type="button" class="hero-refresh" :class="{ spinning: loading || analyticsLoading || shiftLoading }" :disabled="loading || analyticsLoading || shiftLoading" aria-label="刷新工作台" @click="refreshAll">↻</button>
+      </div>
+      <div class="hero-shift" :class="{ online: shift.online }">
+        <div class="hero-shift-copy">
+          <div><i /><strong>{{ shiftTitle }}</strong><small v-if="shiftLoading">同步中</small></div>
+          <p v-if="shiftError" @click="loadShift">{{ shiftError }} · 点击重试</p>
+          <p v-else>{{ shiftHint }}</p>
+        </div>
+        <button v-if="!isAdmin" type="button" class="shift-toggle" :class="{ active: shift.online }" :disabled="!shiftReady || shiftLoading" @click="changeShift">
+          <i /><span>{{ shift.online ? '上班中' : '已下班' }}</span>
+        </button>
+        <div v-else class="on-duty-readonly"><strong>{{ shift.onDutyCs || 0 }}</strong><span>当班客服</span></div>
+      </div>
+    </section>
+
     <section class="mobile-card status-card">
       <div class="card-heading">
         <div><h2>今日待办</h2><p>{{ summary?.urgent || 0 }} 项紧急 · {{ summary?.unread || 0 }} 项未读</p></div>
@@ -96,6 +121,8 @@ import { platformFeatureAllowed } from '@/utils/platform-feature-visibility'
 import { buildNavigation } from '@/utils/navigation'
 import { buildMobileNavigationSections } from '@/utils/mobile-navigation'
 import { useWorkbenchStore } from '@/stores/workbench'
+import { useUserStore } from '@/stores/user'
+import { getShiftStatus, toggleShift } from '@/api/shift'
 import { CircleCheck, List, Picture } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -107,9 +134,62 @@ const props = defineProps({
 const emit = defineEmits(['refresh'])
 const router = useRouter()
 const workbench = useWorkbenchStore()
+const userStore = useUserStore()
 const summary = computed(() => workbench.summary)
 const centerOpen = ref(false)
 const centerKind = ref('')
+const displayName = computed(() => userStore.nickname || (props.isAdmin ? '平台管理员' : '客服'))
+const roleLabel = computed(() => props.isAdmin ? '管理员' : '客服')
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '夜深了'
+  if (hour < 11) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
+const shift = ref({ online: false, onDutyCs: 0, changedAt: null })
+const shiftReady = ref(false)
+const shiftLoading = ref(false)
+const shiftError = ref('')
+const shiftTitle = computed(() => {
+  if (props.isAdmin) return '客服排班'
+  if (!shiftReady.value) return '排班状态同步中'
+  return shift.value.online ? '当前正在当班' : '当前已下班'
+})
+const shiftHint = computed(() => {
+  if (props.isAdmin) return '管理员不参与客服排班，始终接收管理通知'
+  return shift.value.online ? '当班期间接收订单、审核、投诉和退款通知' : '下班后暂停人工业务通知'
+})
+
+async function loadShift() {
+  shiftLoading.value = true
+  shiftError.value = ''
+  try {
+    const { data } = await getShiftStatus()
+    shift.value = { ...shift.value, ...(data || {}) }
+    shiftReady.value = true
+  } catch (loadError) {
+    shiftError.value = loadError?.message || '排班状态暂不可用'
+  } finally {
+    shiftLoading.value = false
+  }
+}
+
+async function changeShift() {
+  if (props.isAdmin || shiftLoading.value || !shiftReady.value) return
+  shiftLoading.value = true
+  shiftError.value = ''
+  try {
+    const { data } = await toggleShift(!shift.value.online)
+    shift.value = { ...shift.value, ...(data || {}) }
+    emit('refresh')
+  } catch (loadError) {
+    shiftError.value = loadError?.message || '无法切换上班状态'
+  } finally {
+    shiftLoading.value = false
+  }
+}
 
 function firstNumber(...values) {
   for (const value of values) {
@@ -204,6 +284,7 @@ function refreshAll() {
   emit('refresh')
   workbench.refresh()
   loadAnalytics()
+  loadShift()
 }
 
 const playersOpen = ref(false)
@@ -252,11 +333,38 @@ function changePlayerPage(page) {
   loadPlayers()
 }
 
-onMounted(loadAnalytics)
+onMounted(() => { loadAnalytics(); loadShift() })
 </script>
 
 <style lang="scss" scoped>
 .mobile-dashboard { display:grid; gap:10px; min-width:0; }
+.mobile-hero { min-width:0; overflow:hidden; padding:19px; border-radius:18px; color:#fff; background:radial-gradient(circle at 88% 4%,rgba(111,137,171,.28),transparent 34%),linear-gradient(145deg,#171a1f 0%,#242a32 100%); box-shadow:0 12px 30px rgba(22,27,34,.14); }
+.hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.hero-person { display:flex; align-items:center; gap:12px; min-width:0; }
+.hero-person > div { display:grid; min-width:0; gap:3px; }
+.hero-person span { color:#9ea9b9; font-size:9px; font-weight:700; letter-spacing:.08em; }
+.hero-person strong { overflow:hidden; color:#fff; font-size:21px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+.hero-person small { color:#aab3bf; font-size:10px; }
+.hero-refresh { width:34px; height:34px; flex:none; border:1px solid rgba(255,255,255,.16); border-radius:50%; background:rgba(255,255,255,.06); color:#fff; font-size:19px; cursor:pointer; }
+.hero-refresh.spinning { animation:hero-spin .9s linear infinite; }
+@keyframes hero-spin { to { transform:rotate(360deg); } }
+.hero-shift { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:17px; padding-top:14px; border-top:1px solid rgba(255,255,255,.1); }
+.hero-shift-copy { min-width:0; }
+.hero-shift-copy > div { display:flex; align-items:center; gap:7px; }
+.hero-shift-copy i { width:7px; height:7px; flex:none; border-radius:50%; background:#b3bbc6; }
+.hero-shift.online .hero-shift-copy i { background:#73c895; box-shadow:0 0 0 4px rgba(115,200,149,.12); }
+.hero-shift-copy strong { color:#edf1f5; font-size:12px; }
+.hero-shift-copy small { color:#8290a1; font-size:9px; }
+.hero-shift-copy p { margin:5px 0 0; color:#a5aeba; font-size:10px; line-height:1.5; }
+.shift-toggle { display:flex; align-items:center; gap:7px; flex:none; min-height:34px; padding:5px 10px 5px 6px; border:1px solid rgba(255,255,255,.14); border-radius:999px; background:rgba(255,255,255,.06); color:#c5cbd3; cursor:pointer; }
+.shift-toggle i { width:24px; height:24px; border-radius:50%; background:#59616c; transition:.2s; }
+.shift-toggle.active { color:#d9f2e2; background:rgba(63,142,96,.2); }
+.shift-toggle.active i { background:#66bb89; }
+.shift-toggle span { font-size:10px; white-space:nowrap; }
+.on-duty-readonly { flex:none; text-align:right; }
+.on-duty-readonly strong,.on-duty-readonly span { display:block; }
+.on-duty-readonly strong { color:#fff; font-size:22px; }
+.on-duty-readonly span { margin-top:2px; color:#9ca7b5; font-size:9px; }
 .mobile-card { min-width:0; padding:18px; border:1px solid #eceef1; border-radius:16px; background:#fff; box-shadow:0 6px 20px rgba(24,28,34,.025); }
 .card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:16px; }
 .card-heading h2 { margin:0; color:#181b1f; font-size:19px; line-height:1.25; font-weight:800; }
