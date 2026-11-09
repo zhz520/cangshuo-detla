@@ -4,7 +4,6 @@ import { permissionFor } from './permission-policy.js'
 const sections = [
   { id: 'workbench', title: '工作台', items: [
     { path: '/dashboard' },
-    { path: '/wechat-binding' },
     { id: 'service', title: '客服服务', icon: 'ChatDotRound', paths: ['/chat/service', '/chat/quick-reply', '/chat/record'] }
   ] },
   { id: 'business', title: '业务运营', items: [

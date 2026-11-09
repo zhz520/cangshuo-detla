@@ -49,6 +49,7 @@ class OfficialWechatRoleTemplateTest {
         assertThat(service.templateFor("PLAYER", "new_order").getString("templateId")).isEqualTo("player-order");
         assertThat(service.templateFor("ADMIN", "new_order").getString("templateId")).isEqualTo("admin-order");
         assertThat(service.templateFor("CS", "new_order").getString("templateId")).isEqualTo("cs-order");
+        assertThat(service.templateFor("BOTH", "new_order").getString("templateId")).isEqualTo("admin-order");
     }
 
     @Test

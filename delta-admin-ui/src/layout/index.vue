@@ -42,7 +42,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="wechat">公众号通知</el-dropdown-item>
+                <el-dropdown-item v-if="!isCompact" command="wechat">公众号消息通知</el-dropdown-item>
                 <el-dropdown-item command="profile">编辑资料</el-dropdown-item>
                 <el-dropdown-item command="password">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>

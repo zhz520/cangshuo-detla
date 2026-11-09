@@ -35,6 +35,7 @@ class DatabaseCompatibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_name='EMAIL_NOTICE_QUEUE' AND constraint_type='UNIQUE'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='PLAYER_REWARD'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='ANALYTICS_DAILY_VISITOR'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_OFFICIAL_BINDING' AND index_name='UK_WECHAT_OFFICIAL_OPENID'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_NOTICE_QUEUE' AND index_name='UK_WECHAT_NOTICE_DEDUPE'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_NOTICE_QUEUE' AND index_name='IDX_WECHAT_NOTICE_DELIVERY'", Integer.class)).isGreaterThanOrEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='features.reward_grab'", Integer.class)).isEqualTo(1);
@@ -56,5 +57,23 @@ class DatabaseCompatibilityTest {
 
         assertThat(jdbc.queryForObject("SELECT withdraw_deposit_amount FROM player_level WHERE id=1", java.math.BigDecimal.class))
                 .isEqualByComparingTo("25");
+    }
+
+    @Test
+    void backsUpConflictingWechatBindingsBeforeSkippingTheGlobalUniqueIndex() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:compatibility_wechat_conflict;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE wechat_official_binding(user_type VARCHAR(16) NOT NULL,user_id BIGINT NOT NULL," +
+                "openid VARCHAR(128) NOT NULL,PRIMARY KEY(user_type,user_id),UNIQUE(openid,user_type))");
+        jdbc.update("INSERT INTO wechat_official_binding(user_type,user_id,openid) VALUES('USER',7,'same-openid-123')");
+        jdbc.update("INSERT INTO wechat_official_binding(user_type,user_id,openid) VALUES('ADMIN',8,'same-openid-123')");
+
+        new DatabaseCompatibility(jdbc).ensure();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wechat_official_binding_conflict_backup", Integer.class))
+                .isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_OFFICIAL_BINDING' AND index_name='UK_WECHAT_OFFICIAL_OPENID'", Integer.class))
+                .isZero();
     }
 }

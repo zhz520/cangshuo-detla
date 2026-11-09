@@ -70,4 +70,32 @@ class OfficialWechatAuthorizationTest {
                 .isInstanceOf(BusinessException.class);
         verify(platform, times(2)).requireFeature(OfficialWechatService.FEATURE_ID, "denied.example");
     }
+
+    @Test void adminAndCsBindingEndpointsKeepTheAuthenticatedRole() throws Exception {
+        var service = mock(OfficialWechatService.class);
+        var jdbc = mock(JdbcTemplate.class);
+        var platform = mock(PlatformService.class);
+        var controller = new OfficialWechatController(service, jdbc, platform);
+        var request = new MockHttpServletRequest();
+        request.setServerName("staff.example.com");
+
+        authenticate("ADMIN", 11L, "ROLE_ADMIN");
+        controller.binding();
+        controller.complete(Map.of("code", "admin-code", "state", "admin-state"), request);
+
+        authenticate("CS", 22L, "ROLE_CS");
+        controller.binding();
+        controller.complete(Map.of("code", "cs-code", "state", "cs-state"), request);
+
+        verify(service).binding("ADMIN", 11L);
+        verify(service).finishBinding("ADMIN", 11L, "admin-code", "admin-state", "staff.example.com");
+        verify(service).binding("CS", 22L);
+        verify(service).finishBinding("CS", 22L, "cs-code", "cs-state", "staff.example.com");
+    }
+
+    private static void authenticate(String type, Long id, String authority) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                Map.of("userType", type, "userId", id), null,
+                List.of(new SimpleGrantedAuthority(authority))));
+    }
 }

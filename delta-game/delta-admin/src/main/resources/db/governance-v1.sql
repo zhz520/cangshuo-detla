@@ -38,7 +38,12 @@ CREATE TABLE IF NOT EXISTS order_settlement_ledger (
 );
 CREATE TABLE IF NOT EXISTS wechat_official_binding (
  user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL,
- PRIMARY KEY(user_type,user_id), UNIQUE(openid,user_type)
+ PRIMARY KEY(user_type,user_id), UNIQUE KEY uk_wechat_official_openid(openid)
+);
+CREATE TABLE IF NOT EXISTS wechat_official_binding_conflict_backup (
+  user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL,
+  archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(user_type,user_id)
 );
 CREATE TABLE IF NOT EXISTS identity_verification (
   user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL,

@@ -2,6 +2,7 @@ package com.delta.admin.config;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +10,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Additive schema upgrades required by the running backend.
@@ -19,6 +21,7 @@ import java.util.List;
  * 500 responses for a missing column.</p>
  */
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class DatabaseCompatibility {
     private final JdbcTemplate jdbc;
@@ -169,6 +172,12 @@ public class DatabaseCompatibility {
                     "operator_type VARCHAR(16) NOT NULL, operator_id BIGINT NULL, note VARCHAR(500) NULL, " +
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "KEY idx_refund_request_audit_request(refund_request_id,created_at))");
+            ensureTable("wechat_official_binding", "CREATE TABLE IF NOT EXISTS wechat_official_binding (" +
+                    "user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL, " +
+                    "PRIMARY KEY(user_type,user_id), UNIQUE KEY uk_wechat_official_openid(openid))");
+            ensureTable("wechat_official_binding_conflict_backup", "CREATE TABLE IF NOT EXISTS wechat_official_binding_conflict_backup (" +
+                    "user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL, " +
+                    "archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_type,user_id))");
             ensureTable("sms_notice_queue", "CREATE TABLE IF NOT EXISTS sms_notice_queue (" +
                     "id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, event_type VARCHAR(64) NOT NULL, " +
                     "event_group VARCHAR(32) NOT NULL, user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, " +
@@ -188,6 +197,7 @@ public class DatabaseCompatibility {
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
+            ensureOfficialWechatBindingUniqueness();
             ensureIndex("wechat_notice_queue", "uk_wechat_notice_dedupe",
                     "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");
             ensureIndex("wechat_notice_queue", "idx_wechat_notice_delivery",
@@ -229,6 +239,34 @@ public class DatabaseCompatibility {
                 throw error;
             }
         }
+    }
+
+    private void ensureOfficialWechatBindingUniqueness() throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            String actualTable = findTable(connection, "wechat_official_binding");
+            if (actualTable == null || hasIndex(connection, actualTable, "uk_wechat_official_openid")) return;
+        }
+        Integer conflicts = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM (SELECT openid FROM wechat_official_binding GROUP BY openid HAVING COUNT(*)>1) duplicate_openid",
+                Integer.class);
+        if (conflicts != null && conflicts > 0) {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                    "SELECT b.user_type,b.user_id,b.openid FROM wechat_official_binding b " +
+                            "JOIN (SELECT openid FROM wechat_official_binding GROUP BY openid HAVING COUNT(*)>1) d " +
+                            "ON d.openid=b.openid");
+            for (Map<String, Object> row : rows) {
+                if (jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM wechat_official_binding_conflict_backup WHERE user_type=? AND user_id=?",
+                        Integer.class, row.get("user_type"), row.get("user_id")) == 0) {
+                    jdbc.update("INSERT INTO wechat_official_binding_conflict_backup(user_type,user_id,openid) VALUES (?,?,?)",
+                            row.get("user_type"), row.get("user_id"), row.get("openid"));
+                }
+            }
+            log.error("公众号绑定存在 {} 个重复 OpenID；冲突数据已备份，唯一索引暂未创建，请人工确认保留账号", conflicts);
+            return;
+        }
+        ensureIndex("wechat_official_binding", "uk_wechat_official_openid",
+                "CREATE UNIQUE INDEX uk_wechat_official_openid ON wechat_official_binding(openid)");
     }
 
     private void ensureRewardGrabConfig() throws SQLException {

@@ -34,7 +34,7 @@ const desktopRoutes = [
         path: 'wechat-binding',
         name: 'WechatBinding',
         component: () => import('@/views/wechat/Binding.vue'),
-        meta: { title: '公众号通知', icon: 'ChatDotRound', roles: ['admin', 'cs'] }
+        meta: { title: '公众号消息通知', icon: 'ChatDotRound', roles: ['admin', 'cs'], hidden: true }
       }
     ]
   },
