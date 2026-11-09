@@ -27,6 +27,11 @@ sources={'backend':root/'delta-game/delta-admin/target/delta-admin.jar','admin':
 assets=[]
 for component,source in sources.items():
     if not source.exists():raise SystemExit('Build artifact missing: '+str(source))
+    if component=='backend':
+        with zipfile.ZipFile(source) as jar:
+            catalog_inside=json.loads(jar.read('BOOT-INF/classes/platform/catalog.json'))
+        if catalog_inside.get('version')!=version or catalog_inside.get('schemaVersion')!=1:
+            raise SystemExit(f'Backend build version mismatch: expected {version}, got {catalog_inside.get("version")}')
     target=output/('cangshuo-'+component+'.zip')
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as archive:
         if component=='backend':archive.write(source,'delta-admin.jar')
