@@ -5,7 +5,7 @@
     <section class="mobile-hero">
       <div class="hero-top">
         <div class="hero-person">
-          <el-avatar :size="46" :src="userStore.avatar || undefined">{{ displayName.slice(0, 1) }}</el-avatar>
+          <StaffAvatar :size="46" :thumbnail-width="120" />
           <div>
             <span>{{ roleLabel }} · {{ greeting }}</span>
             <strong>{{ displayName }}</strong>
@@ -116,6 +116,7 @@ import { useRouter } from 'vue-router'
 import { getDashboardAnalytics, getDashboardPlayers } from '@/api/dashboard'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
+import StaffAvatar from '@/components/StaffAvatar.vue'
 import { can } from '@/utils/staff-permissions'
 import { platformFeatureAllowed } from '@/utils/platform-feature-visibility'
 import { buildNavigation } from '@/utils/navigation'

@@ -9,7 +9,7 @@
         <h1>{{ currentPageTitle }}</h1>
       </div>
       <button type="button" class="h5-account" aria-label="打开账号菜单" @click="mobileAccountOpen = true">
-        <el-avatar :size="34" :src="userStore.avatar ? thumbnailUrl(userStore.avatar, 120) : undefined">{{ nickname.slice(0, 1) }}</el-avatar>
+        <StaffAvatar :size="34" :thumbnail-width="120" />
         <i v-if="workbench.summary?.unread" class="h5-account-badge">{{ badge(workbench.summary.unread) }}</i>
       </button>
     </header>
@@ -36,7 +36,7 @@
     <el-drawer v-model="mobileAccountOpen" direction="rtl" size="min(86vw, 360px)" :with-header="false" append-to-body>
       <div class="mobile-account">
         <div class="mobile-account-head">
-          <el-avatar :size="52" :src="userStore.avatar || undefined">{{ nickname.slice(0, 1) }}</el-avatar>
+          <StaffAvatar :size="52" :thumbnail-width="160" />
           <div><strong>{{ nickname }}</strong><span>{{ roleLabel }} · {{ userStore.phone || '未填写手机号' }}</span></div>
           <button type="button" aria-label="关闭" @click="mobileAccountOpen = false">×</button>
         </div>
@@ -67,7 +67,6 @@ import { loadPlatformFeatureVisibility, platformFeatureError } from '@/utils/pla
 import { loadingFeedback } from '@/utils/loading-feedback'
 import { installMobileTableCards } from '@/utils/mobile-table-cards'
 import { canonicalAdminPath, h5Path } from '@/utils/h5-route'
-import { thumbnailUrl } from '@/utils/image'
 import { useUserStore } from '@/stores/user'
 import { useChatStore } from '@/stores/chat'
 import { useWorkbenchStore } from '@/stores/workbench'
@@ -76,6 +75,7 @@ import LoadFeedback from '@/components/LoadFeedback.vue'
 import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
 import PasswordChangeDialog from '@/components/PasswordChangeDialog.vue'
 import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
+import StaffAvatar from '@/components/StaffAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()

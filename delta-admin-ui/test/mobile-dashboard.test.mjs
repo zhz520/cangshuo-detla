@@ -4,11 +4,11 @@ import { readFile } from 'node:fs/promises'
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('compact admin and CS screens use the dedicated mobile operations dashboard', async () => {
+test('H5 uses the dedicated mobile dashboard while PC compact keeps the desktop dashboard', async () => {
   const dashboard = await read('src/views/dashboard/index.vue')
   const mobile = await read('src/views/dashboard/MobileDashboard.vue')
 
-  assert.match(dashboard, /<MobileDashboard v-if="isCompact \|\| h5Shell"/)
+  assert.match(dashboard, /<MobileDashboard v-if="h5Shell"/)
   assert.match(dashboard, /<div v-else class="dashboard-desktop">/)
   assert.match(mobile, /运营管理后台/)
   assert.match(mobile, /客服工作台/)
@@ -42,21 +42,23 @@ test('mobile dashboard prioritizes order data and uses live analytics and player
   assert.match(mobile, /changeShift/)
 })
 
-test('mobile admin shell removes the menu drawer and keeps three direct shortcuts', async () => {
+test('PC compact uses a navigation drawer and H5 owns the bottom navigation', async () => {
   const layout = await read('src/layout/index.vue')
+  const h5 = await read('src/layout/H5Layout.vue')
   assert.match(layout, /class="mobile-page-title"/)
-  assert.match(layout, /class="mobile-bottom-nav"/)
-  for (const label of ['工作台', '订单', '待办', '消息', '我的']) {
-    assert.match(layout, new RegExp(label))
-  }
+  assert.match(layout, /compact-menu-btn/)
+  assert.match(layout, /class="compact-navigation-drawer"/)
+  assert.match(layout, /<SidebarNavigation/)
+  assert.doesNotMatch(layout, /class="mobile-bottom-nav"/)
   assert.match(layout, /flex-wrap: nowrap/)
-  assert.match(layout, /calc\(82px\s*\+\s*var\(--app-safe-bottom\)\)/)
+  assert.match(layout, /calc\(20px\s*\+\s*var\(--app-safe-bottom\)\)/)
   assert.match(layout, /<button v-if="!isCompact" class="collapse-btn"/)
-  assert.match(layout, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(layout, /class="mobile-navigation"/)
-  assert.match(layout, /if \(can\('order\.read'\)\) items\.push\(\{ key: 'orders'/)
-  assert.match(layout, /mobileBottomItems/)
-  assert.match(layout, /gridTemplateColumns/)
+  assert.match(h5, /class="h5-bottom-nav"/)
+  for (const label of ['工作台', '订单', '待办', '消息', '我的']) {
+    assert.match(h5, new RegExp(label))
+  }
+  assert.match(h5, /gridTemplateColumns/)
 })
 
 test('list pages inherit the automatic mobile table-to-card adapter', async () => {

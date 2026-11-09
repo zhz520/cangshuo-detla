@@ -186,8 +186,12 @@ async function buy(feature) {
     const response = await createPlatformCheckout(feature.id)
     const checkoutUrl = response.data?.checkoutUrl
     if (!checkoutUrl) throw new Error('授权中心未返回支付地址')
+    const checkout = new URL(checkoutUrl)
+    if (checkout.protocol !== 'https:' && !(checkout.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(checkout.hostname))) {
+      throw new Error('授权中心支付地址无效')
+    }
     rememberCheckoutReturn()
-    window.location.assign(checkoutUrl)
+    window.location.assign(checkout.href)
   } catch (error) {
     if (error?.message) ElMessage.error(error.message)
   } finally { buying.value = '' }

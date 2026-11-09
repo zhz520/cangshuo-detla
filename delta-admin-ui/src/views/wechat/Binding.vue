@@ -13,7 +13,7 @@
 
     <div class="status-card">
       <div class="identity">
-        <el-avatar :size="48" :src="userStore.avatar || undefined">{{ roleInitial }}</el-avatar>
+        <StaffAvatar :size="48" :thumbnail-width="160" />
         <div>
           <strong>{{ userStore.nickname || '工作人员' }}</strong>
           <span>{{ roleLabel }} · {{ status.bound ? '微信通知已启用' : '等待绑定微信' }}</span>
@@ -63,6 +63,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import StaffAvatar from '@/components/StaffAvatar.vue'
 import { completeOfficialWechatBinding, getOfficialWechatBinding, removeOfficialWechatBinding, startOfficialWechatBinding } from '@/api/official-wechat'
 
 const route = useRoute()
@@ -74,7 +75,6 @@ const error = ref('')
 const status = reactive({ licensed: false, enabled: false, bound: false, templateReady: true, missingTemplateGroups: [] })
 const wechatEnvironment = /MicroMessenger/i.test(navigator.userAgent)
 const roleLabel = computed(() => userStore.role === 'admin' ? '管理员' : '客服')
-const roleInitial = computed(() => roleLabel.value.slice(0, 1))
 
 async function load() {
   loading.value = true

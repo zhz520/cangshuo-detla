@@ -20,6 +20,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 /* Preserve real table scrolling and make it discoverable on touch screens. */
 @media (max-width: 1024px) {
+  .layout-main .el-row { margin-left: 0 !important; margin-right: 0 !important; }
   html[data-keyboard-open] .layout-header { flex-wrap: nowrap; min-height: 48px; }
   html[data-keyboard-open] .layout-header .header-left { flex-basis: auto; }
   html[data-keyboard-open] .layout-header .header-right { width: auto; flex-shrink: 0; }
@@ -100,8 +101,6 @@ html { -webkit-text-size-adjust: 100%; }
 }
 
 @media (max-width: 768px) {
-  /* Element Plus rows use negative gutter margins that overflow narrow columns. */
-  .layout-main .el-row { margin-left: 0 !important; margin-right: 0 !important; }
   .layout-main .el-tabs__nav-wrap {
     overflow: visible;
   }

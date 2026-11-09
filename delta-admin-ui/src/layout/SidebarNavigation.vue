@@ -1,7 +1,7 @@
 <template>
   <nav class="admin-navigation" aria-label="主导航">
     <div class="logo">
-      <div class="logo-mark">{{ initial }}</div>
+      <div class="logo-mark"><img v-if="logo" :src="logo" alt="" /><template v-else>{{ initial }}</template></div>
       <h1 v-if="!collapsed" :title="title">{{ title }}</h1>
       <slot name="action" />
     </div>
@@ -32,6 +32,7 @@ const props = defineProps({
   groups: { type: Array, default: () => [] },
   title: String,
   initial: String,
+  logo: String,
   badges: { type: Object, default: () => ({}) }
 })
 defineEmits(['select'])
@@ -51,6 +52,7 @@ watch([() => props.active, () => props.collapsed, () => props.groups], async () 
 .admin-navigation { display:flex; flex-direction:column; height:100%; min-height:0; background:#17191c; }
 .logo { flex-shrink:0; min-height:68px; padding:14px 16px; display:flex; align-items:center; gap:10px; color:#f7f8f9; border-bottom:1px solid rgba(255,255,255,.08); }
 .logo-mark { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#17191c; font-size:17px; font-weight:800; background:linear-gradient(135deg,#fff,#eceef0); }
+.logo-mark img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 h1 { flex:1; min-width:0; font-size:15px; line-height:1.2; font-weight:700; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .layout-menu {
   flex:1; min-height:0; width:100%; border-right:none; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;

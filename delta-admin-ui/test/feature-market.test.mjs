@@ -49,5 +49,6 @@ test('feature market keeps local switches available when authority marks the ent
   assert.match(source, /是否实际启用由本系统管理员自行控制/)
   assert.match(source, /续费/)
   assert.match(source, /createPlatformCheckout/)
-  assert.match(source, /window\.location\.assign\(checkoutUrl\)/)
+  assert.match(source, /checkout\.protocol !== 'https:'/)
+  assert.match(source, /window\.location\.assign\(checkout\.href\)/)
 })

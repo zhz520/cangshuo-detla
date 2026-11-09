@@ -5,6 +5,7 @@ import router from '@/router'
 import { createRequestClient } from './request-client'
 import { loadingFeedback } from './loading-feedback'
 import { paidRequestAccess } from './feature-access-policy'
+import { isH5Path } from './h5-route'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -20,6 +21,14 @@ function reportError(config, message, code) {
     return
   }
   ElMessage.error({ message, grouping: true })
+}
+
+function loginTarget() {
+  const current = router.currentRoute.value
+  return {
+    path: isH5Path(current.path) ? '/h5/login' : '/login',
+    query: current.path === '/login' || current.path === '/h5/login' ? {} : { redirect: current.fullPath }
+  }
 }
 
 // 请求拦截器 - 注入 token
@@ -44,7 +53,7 @@ service.interceptors.response.use(
       // token 过期或无效
       if (res.code === 401 && response.config._authToken === getToken()) {
         removeToken()
-        router.push('/login')
+        router.push(loginTarget())
       }
       return Promise.reject(Object.assign(new Error(res.msg || '请求失败'), { code: res.code, requestHandled: true }))
     }
@@ -60,11 +69,13 @@ service.interceptors.response.use(
       if (status === 401) {
         if (error.config?._authToken !== getToken()) return Promise.reject(error)
         removeToken()
-        router.push('/login')
+        router.push(loginTarget())
         notify('error', '登录已过期，请重新登录')
       } else if (status === 503 && error.response.data?.maintenance) {
         notify('warning', error.response.data.msg)
-        if (!router.currentRoute.value.path.startsWith('/platform/')) router.push('/platform/updates')
+        const current = router.currentRoute.value.path
+        const target = isH5Path(current) ? '/h5/platform/updates' : '/platform/updates'
+        if (!current.startsWith('/platform/') && !current.startsWith('/h5/platform/')) router.push(target)
       } else if (status === 403) {
         notify('error', '没有权限执行此操作')
       } else {

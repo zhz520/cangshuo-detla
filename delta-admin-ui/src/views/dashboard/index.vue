@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard" :aria-busy="loading || userLoading || playerLoading">
-    <MobileDashboard v-if="isCompact || h5Shell" :stats="stats" :is-admin="isAdmin" :loading="loading" :error="dashboardError" @refresh="refreshOverview" />
+    <MobileDashboard v-if="h5Shell" :stats="stats" :is-admin="isAdmin" :loading="loading" :error="dashboardError" @refresh="refreshOverview" />
     <div v-else class="dashboard-desktop">
     <div class="dashboard-heading">
       <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
@@ -306,7 +306,7 @@ import {
   EditPen, ChatDotRound, CircleCheck
 } from '@element-plus/icons-vue'
 
-const { isCompact, isNarrow } = useResponsive()
+const { isNarrow } = useResponsive()
 const route = useRoute()
 const h5Shell = computed(() => isH5Path(route.path))
 

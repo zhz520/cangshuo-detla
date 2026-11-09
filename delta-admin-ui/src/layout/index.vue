@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container">
     <el-aside v-if="!isCompact" :width="isCollapse ? '64px' : '220px'" class="layout-aside">
-      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" />
+      <SidebarNavigation :collapsed="isCollapse" :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" :logo="siteStore.logo" />
     </el-aside>
 
     <el-container class="layout-body">
@@ -10,6 +10,9 @@
           <button v-if="!isCompact" class="collapse-btn" type="button" :aria-label="isCollapse ? '展开导航' : '收起导航'" :aria-expanded="!isCollapse" @click="toggleNavigation">
             <Fold v-if="!isCollapse" />
             <Expand v-else />
+          </button>
+          <button v-else class="collapse-btn compact-menu-btn" type="button" aria-label="打开导航" @click="compactMenuOpen = true">
+            <Menu />
           </button>
           <span class="mobile-page-title">{{ currentPageTitle }}</span>
           <!-- 面包屑 -->
@@ -37,12 +40,16 @@
           </el-tag>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
-              <el-avatar v-if="userStore.avatar" :src="thumbnailUrl(userStore.avatar,160)" :size="28" style="margin-right:8px" />
+              <StaffAvatar :size="28" :thumbnail-width="160" style="margin-right:8px" />
               <span class="user-name" :title="nickname">{{ nickname }}</span> <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-if="!isCompact" command="wechat">公众号消息通知</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact" command="h5">切换到手机版</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact" command="tasks">待办中心</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact" command="notices">系统通知</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact && can('chat.manage')" command="chat">客服消息</el-dropdown-item>
+                <el-dropdown-item command="wechat">公众号消息通知</el-dropdown-item>
                 <el-dropdown-item command="profile">编辑资料</el-dropdown-item>
                 <el-dropdown-item command="password">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -65,29 +72,9 @@
       </el-main>
     </el-container>
 
-    <nav v-if="isCompact" class="mobile-bottom-nav" :style="{ gridTemplateColumns: `repeat(${mobileBottomItems.length}, minmax(0, 1fr))` }" aria-label="移动端快捷导航">
-      <button v-for="item in mobileBottomItems" :key="item.key" type="button" :class="{ active: mobileTabActive(item.key) }" @click="runMobileTab(item.key)">
-        <el-icon><component :is="item.icon" /></el-icon><span>{{ item.label }}</span>
-        <i v-if="item.badge" class="nav-unread">{{ badge(item.badge) }}</i>
-      </button>
-    </nav>
-
-    <el-drawer v-model="mobileAccountOpen" direction="rtl" size="min(86vw, 360px)" :with-header="false" append-to-body>
-      <div class="mobile-account">
-        <div class="mobile-account-head">
-          <el-avatar :size="52" :src="userStore.avatar || undefined">{{ nickname.slice(0, 1) }}</el-avatar>
-          <div><strong>{{ nickname }}</strong><span>{{ role === 'admin' ? '管理员' : '客服' }} · {{ userStore.phone || '未填写手机号' }}</span></div>
-          <button type="button" aria-label="关闭" @click="mobileAccountOpen = false">×</button>
-        </div>
-        <div class="mobile-account-list">
-          <button type="button" @click="accountAction('wechat')"><span>公众号消息通知</span><small>绑定当前账号的微信</small><b>›</b></button>
-          <button type="button" @click="accountAction('notices')"><span>系统通知</span><small>查看审核、订单和售后消息</small><b>›</b></button>
-          <button v-if="h5Mode" type="button" @click="openPc"><span>电脑版</span><small>返回 PC 后台</small><b>›</b></button>
-          <button type="button" @click="accountAction('profile')"><span>编辑资料</span><b>›</b></button>
-          <button type="button" @click="accountAction('password')"><span>修改密码</span><b>›</b></button>
-          <button type="button" class="danger" @click="accountAction('logout')"><span>退出登录</span><b>›</b></button>
-        </div>
-        <p class="mobile-account-foot">工作人员入口统一由后台域名提供</p>
+    <el-drawer v-model="compactMenuOpen" class="compact-navigation-drawer" direction="ltr" size="min(86vw, 330px)" :with-header="false" append-to-body>
+      <div class="compact-menu-shell">
+        <SidebarNavigation :collapsed="false" :active="activeMenu" :groups="menuGroups" :badges="menuBadges" :title="siteStore.adminTitle" :initial="logoInitial" :logo="siteStore.logo" @select="compactMenuOpen = false" />
       </div>
     </el-drawer>
 
@@ -106,7 +93,7 @@ import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAll
 import { loadingFeedback } from '@/utils/loading-feedback'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, HomeFilled, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, Menu } from '@element-plus/icons-vue'
 import SidebarNavigation from './SidebarNavigation.vue'
 import { useResponsive } from '@/utils/responsive'
 import { useUserStore } from '@/stores/user'
@@ -117,19 +104,18 @@ import { useWorkbenchStore } from '@/stores/workbench'
 import { taskPaths } from '@/utils/workbench-links'
 import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { useSiteStore } from '@/stores/site'
-import {thumbnailUrl} from '@/utils/image'
 import { installMobileTableCards } from '@/utils/mobile-table-cards'
 import { canonicalAdminPath, h5Path, isH5Path } from '@/utils/h5-route'
+import StaffAvatar from '@/components/StaffAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
-const props = defineProps({ h5: { type: Boolean, default: false } })
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const workbench = useWorkbenchStore()
 const centerOpen = ref(false)
 const centerMode = ref('tasks')
-const mobileAccountOpen = ref(false)
+const compactMenuOpen = ref(false)
 function openCenter(mode) { centerMode.value = mode; centerOpen.value = true }
 function badge(count) { return count > 99 ? '99+' : count }
 const menuBadges = computed(() => {
@@ -151,8 +137,7 @@ const pageVersion = ref(0)
 function reloadPage() { loadingFeedback.readError = null; pageVersion.value++ }
 onErrorCaptured(error => { if (error?.requestHandled) return false })
 const { isCompact: viewportCompact } = useResponsive()
-const isCompact = computed(() => props.h5 || viewportCompact.value)
-const h5Mode = computed(() => props.h5)
+const isCompact = computed(() => viewportCompact.value)
 let stopMobileTables = () => {}
 function toggleNavigation() {
   isCollapse.value = !isCollapse.value
@@ -164,32 +149,6 @@ watch(() => route.path, async () => {
 })
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
-const mobileBottomItems = computed(() => {
-  const items = [{ key: 'dashboard', label: '工作台', icon: HomeFilled }]
-  if (can('order.read')) items.push({ key: 'orders', label: '订单', icon: Tickets })
-  items.push({ key: 'tasks', label: '待办', icon: Bell, badge: workbench.summary?.unread || 0 })
-  items.push({ key: 'messages', label: '消息', icon: ChatDotRound, badge: can('chat.manage') ? (workbench.summary?.chatUnread || 0) : (workbench.summary?.systemUnread || 0) })
-  items.push({ key: 'account', label: '我的', icon: UserFilled })
-  return items
-})
-function mobileTabActive(key) {
-  if (key === 'dashboard') return currentAdminPath.value === '/dashboard'
-  if (key === 'orders') return currentAdminPath.value.startsWith('/order')
-  if (key === 'messages') return currentAdminPath.value.startsWith('/chat') || (centerOpen.value && centerMode.value === 'notices')
-  if (key === 'tasks') return centerOpen.value && centerMode.value === 'tasks'
-  if (key === 'account') return mobileAccountOpen.value
-  return false
-}
-function runMobileTab(key) {
-  if (key === 'dashboard') router.push(adminPath('/dashboard'))
-  else if (key === 'orders') router.push(adminPath('/order/list'))
-  else if (key === 'tasks') openCenter('tasks')
-  else if (key === 'messages') can('chat.manage') ? router.push(adminPath('/chat/service')) : openCenter('notices')
-  else if (key === 'account') mobileAccountOpen.value = true
-}
-function openPc() {
-  window.location.assign('/')
-}
 const currentAdminPath = computed(() => canonicalAdminPath(route.path))
 function adminPath(path) {
   return isH5Path(route.path) ? h5Path(path) : path
@@ -215,7 +174,15 @@ const profileDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
 
 async function handleCommand(cmd) {
-  if (cmd === 'wechat') {
+  if (cmd === 'h5') {
+    window.location.assign('/h5/dashboard')
+  } else if (cmd === 'tasks') {
+    openCenter('tasks')
+  } else if (cmd === 'notices') {
+    openCenter('notices')
+  } else if (cmd === 'chat') {
+    goChat()
+  } else if (cmd === 'wechat') {
     router.push(adminPath('/wechat-binding'))
   } else if (cmd === 'profile') {
     profileDialogVisible.value = true
@@ -226,16 +193,6 @@ async function handleCommand(cmd) {
     await userStore.logout()
     router.push(isH5Path(route.path) ? '/h5/login' : '/login')
   }
-}
-
-async function accountAction(cmd) {
-  if (cmd === 'notices') {
-    mobileAccountOpen.value = false
-    openCenter('notices')
-    return
-  }
-  mobileAccountOpen.value = false
-  await handleCommand(cmd)
 }
 
 async function onPasswordChanged() {
@@ -427,7 +384,7 @@ onUnmounted(() => {
   .layout-main {
     width: 100%;
     margin: 0;
-    padding: 12px calc(12px + var(--app-safe-right)) calc(82px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
+    padding: 12px calc(12px + var(--app-safe-right)) calc(20px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
   }
   .layout-body { flex:1 1 auto; width:100%; max-width:100%; }
   .layout-page-frame { width:100%; max-width:100%; margin:0 auto; }
@@ -437,41 +394,9 @@ onUnmounted(() => {
     margin-left:0;
     margin-right:0;
   }
-  .mobile-bottom-nav {
-    position: fixed;
-    z-index: 80;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(62px + var(--app-safe-bottom));
-    padding: 5px max(8px, var(--app-safe-right)) var(--app-safe-bottom) max(8px, var(--app-safe-left));
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    border-top: 1px solid #e7e9ec;
-    background: rgba(255,255,255,.97);
-    box-shadow: 0 -8px 28px rgba(23,25,28,.08);
-    backdrop-filter: blur(14px);
-    box-sizing: border-box;
-  }
-  .mobile-bottom-nav button {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: #858b93;
-    cursor: pointer;
-  }
-  .mobile-bottom-nav button.active { color: #17191c; background: transparent; }
-  .mobile-bottom-nav .el-icon { font-size: 21px; }
-  .mobile-bottom-nav span { font-size: 10px; font-weight: 650; }
-  .mobile-bottom-nav .nav-unread { position:absolute; top:1px; left:calc(50% + 8px); min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#c94f59; color:#fff; font:10px/16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align:center; box-sizing:border-box; }
 }
+.compact-menu-shell { height:100%; min-height:0; }
+:global(.compact-navigation-drawer .el-drawer__body) { height:100%; padding:0; overflow:hidden; }
 .mobile-account { min-height:100%; padding:22px 18px; box-sizing:border-box; background:#f7f8f9; }
 .mobile-account-head { display:flex; align-items:center; gap:12px; padding:18px; border:1px solid #e8eaee; border-radius:16px; background:#fff; }
 .mobile-account-head > div { display:grid; flex:1; min-width:0; gap:5px; }
@@ -502,8 +427,6 @@ onUnmounted(() => {
   .layout-header { flex-wrap: nowrap; min-height: 48px; }
   .layout-header .header-left { flex-basis: auto; }
   .layout-header .header-right { width: auto; }
-  .layout-main { padding-top: 8px; padding-bottom: calc(70px + var(--app-safe-bottom)); }
-  .mobile-bottom-nav { height: calc(52px + var(--app-safe-bottom)); }
-  .mobile-bottom-nav span { display: none; }
+  .layout-main { padding-top: 8px; padding-bottom: calc(14px + var(--app-safe-bottom)); }
 }
 </style>
