@@ -1,0 +1,408 @@
+# Delta 生态 Vibe Coding 规则
+
+最后更新：2026-11-09（Asia/Shanghai）
+文档版本：2026-11-09.6
+
+读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-09.6”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
+
+适用范围：
+
+- Delta 电竞客户端最新源码：`D:\codeStudy\code\cangshuo-detla`
+- 授权运营中心：`D:\codeStudy\code\cangshuo-detla-authorize`
+- 客户部署副本：`742`、`747`、`detla738`
+
+本文件是每次 AI 协作会话的必读入口。开始设计、改代码、改数据库、改授权、打包或发布前，先读本文件，再读与目标项目对应的实现文档和实际代码。不要把本文件当成发布说明；版本、发布和授权规则的具体执行仍以 `docs/development-conventions.md` 和授权中心当前数据为准。
+
+## 0. 规则优先级
+
+发生冲突时按以下顺序判断：
+
+1. 用户在当前会话中的最新明确指令。
+2. 全局 `AGENTS.md`、项目 `AGENTS.md` 和工作区规则。
+3. `docs/development-conventions.md`：正式版本、发布、安全和数据库约定。
+4. 本文件：项目关系、工作流程和当前事实。
+5. `docs/客户实例与授权中心关系.md`、`docs/项目结构说明.md` 和客户部署文档。
+6. 实际代码、数据库、构建结果和生产状态。
+
+历史文档只说明当时的决策。若历史文档与最新用户要求、当前代码或授权中心数据冲突，以最新事实为准，并在本次任务中修正文档。
+
+## 1. 每次会话的开工顺序
+
+每次开始任务，按以下顺序建立上下文：
+
+1. 读本文件。
+2. 读 `docs/development-conventions.md`，确认版本、分支、发布、安全和数据库规则。
+3. 读 `docs/客户实例与授权中心关系.md`，确认这次改动属于最新源码、授权中心还是某个客户实例。
+4. 读 `docs/项目结构说明.md` 和目标项目的 `README.md`、部署文档。
+5. 检查 `git status`、当前分支、最近提交；不要假设工作区干净。
+6. 只读检查目标页面、接口、Service、Mapper、数据库表和已有测试。
+7. 用一小段话说明本次范围、会改哪些文件、怎么验证；范围不清楚时先做只读核对。
+8. 实现最小闭环，完成对应测试或明确说明无法执行的原因。
+9. 同步文档、版本号、发布说明和授权配置说明。
+10. 最后报告实际改动、实际执行的命令、通过/失败/未执行的结果和剩余风险。
+
+不要凭项目名称猜版本，不要凭本地目录猜生产状态，不要把客户副本当最新源码。
+
+## 2. 必须理解的项目关系
+
+### 2.1 一句话
+
+`cangshuo-detla` 是产品主线；三套客户系统是同一套代码的三个独立部署实例；`cangshuo-detla-authorize` 是独立的授权控制面；GitHub Release 是正式制品仓库。
+
+这不是一个数据库里的三个租户。三个客户各自拥有独立 MySQL、Redis、上传目录、域名、端口、管理员账号和授权实例 UUID。
+
+### 2.2 全景
+
+```mermaid
+flowchart TB
+  subgraph DEV[研发与发布]
+    SRC["cangshuo-detla<br/>最新源码 1.11.0"]
+    BUILD["package_release.py"]
+    GH["GitHub Release<br/>backend / admin / h5"]
+    SRC --> BUILD --> GH
+  end
+
+  subgraph AUTH[授权运营中心<br/>auth.kk520yy.com:17441]
+    REG["客户 → 项目 → 实例"]
+    ENT["维护期 / 功能权益"]
+    REL["正式版本目录 / 更新计划"]
+    PAY["功能购买 / 微信支付"]
+  end
+
+  GH --> REL
+
+  subgraph HOST["客户服务器 103.38.82.146"]
+    C742["742<br/>jgs.kk520yy.com"]
+    C747["747<br/>ycdj.kk520yy.com"]
+    C738["delta / JAX<br/>jax.kkimg.top"]
+  end
+
+  C742 <-->|"上报 / 购买 / 同步"| AUTH
+  C747 <-->|"上报 / 购买 / 同步"| AUTH
+  C738 <-->|"上报 / 购买 / 同步"| AUTH
+  AUTH -->|"签名授权 / 版本目录"| C742
+  AUTH -->|"签名授权 / 版本目录"| C747
+  AUTH -->|"签名授权 / 版本目录"| C738
+```
+
+### 2.3 三个客户
+
+| 客户 | 生产域名 | 生产客户端版本 | 本地目录 | 服务器部署 | 入口端口 |
+| --- | --- | ---: | --- | --- | --- |
+| 742 | `jgsapi.kk520yy.com` / `jgs.kk520yy.com` | 1.6.1 | `D:\codeStudy\code\742`，本地为 1.2.0 | `/opt/apps/742` | 7420 / 7421 |
+| 747 | `ycdjapi.kk520yy.com` / `ycdj.kk520yy.com` | 1.5.15 | `D:\codeStudy\code\747`，本地为 1.5.12 | `/opt/apps/747` | 7470 / 7471 |
+| delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.6.1 | `D:\codeStudy\code\detla738`，旧 master | `/www/delta` | 8081 / 8082 |
+
+生产版本取自授权中心 `docs/0.6.6-授权同步状态.md` 的 2026-11-07 检查记录。客户版本以后还会变化，做发布或升级前要重新核对授权中心，不要只信这张表。
+
+`delta` 与本地 `detla738` 的对应依据是旧仓库的域名、部署记录和 CORS 默认值都指向 `jax.kkimg.top` / `jaxapi.kkimg.top`，授权中心把第三套生产项目登记为 `delta`。
+
+`742` 的本地版本按 `catalog.json` 记为 1.2.0；其前端 `package.json` 仍为 0.0.0，说明这份副本的版本号本身就不完整，不能作为正式发布基线。
+
+### 2.4 不在 Delta 授权体系内的目录
+
+- `743` 当前是空目录，不是客户实例。
+- `744` 是 PERSONA 小众文化体验馆，独立 Node/微信小程序项目，不属于 Delta 电竞系统和授权中心。
+- `cangshuo-scpu`、`cangshuo-timetable`、`cangshuo-tool`、`web`、`uniapp` 等是其他项目或资料，除非用户明确说纳入本次范围，否则不要混入 Delta 授权关系。
+- `万维`、`frp`、`nodejs_server` 等目录也不默认属于 Delta 产品线。
+
+### 2.5 授权中心对象模型
+
+| 对象 | 作用 |
+| --- | --- |
+| 客户 Customer | 商务主体 |
+| 项目 Project | 维护期、商务金额、通知邮箱、默认支付通道、暂停策略 |
+| 实例 Instance | 实际部署的 UUID、域名、客户端版本、功能权益 |
+| 软件 Product | 当前电竞软件编号 `detla`，仓库 `zhz520/cangshuo-detla` |
+| 功能模块 Module | 可单独售卖的付费能力 |
+| 权益 Entitlement | 实例对某个模块的生效/到期/启用状态 |
+| 授权 License | 绑定客户、实例、域名、维护期和功能集合的签名凭据 |
+| 版本 Release | GitHub 正式版本、组件、摘要和更新项 |
+
+授权中心决定“有没有购买、是否在有效期内”；客户管理员在本地后台决定“是否实际启用”。两者都满足，功能才真正可用。
+
+## 3. 事实来源，不要混淆
+
+| 事实 | 可信来源 | 不要使用 |
+| --- | --- | --- |
+| 最新源码版本 | `cangshuo-detla` 的 `catalog.json`、两个前端 `package.json`、小程序 `manifest.json` | 客户副本的旧版本 |
+| 客户生产版本 | 授权中心的实例 `client_version` 和最近上报时间 | 本地客户目录的 `package.json` |
+| 客户域名和端口 | 客户部署目录的 `deploy/production/README.md`、生产 `.env`、反代配置 | 代码里的旧默认值 |
+| 客户是否已接自助更新 | 服务器 systemd、`worker.json`、更新执行器日志 | 仅凭代码里有 `worker.py` |
+| 授权关系 | 生产授权中心数据库/后台 | 本地空的 `.local/authority.sqlite` |
+| 数据库实际结构 | 生产 MySQL 和迁移记录 | 只读实体类或 H2 测试库 |
+| 服务器实际容器 | 生产 `docker ps`、Compose 项目名、宝塔站点 | README 里的示例端口 |
+
+当前已知情况：
+
+- 最新源码为 1.11.0。
+- 三套生产客户端都低于最新源码。
+- 747 的部署文档明确写着“当前尚未接入 self-update-releases”。
+- 本地授权数据库只是开发初始化数据，不能用来判断生产客户、项目、实例和权益。
+- 系统 PATH 中没有 Maven，默认 Java 为 25；正式构建使用缓存 Maven 3.9.11 和 Temurin JDK 17（临时目录）。不要用 Java 25 代替项目要求的 Java 17。
+
+## 4. 版本号规则
+
+### 4.1 正式版本格式
+
+正式版本统一使用 `MAJOR.MINOR.PATCH`。
+
+| 段位 | 使用条件 | 当前基线下的例子 |
+| --- | --- | --- |
+| MAJOR | 不兼容变更、授权/更新协议不兼容、需要整体迁移 | `2.0.0` |
+| MINOR | 新增完整业务能力或一组明显可见的功能 | `1.12.0` |
+| PATCH | 正式版后的缺陷、安全或线上阻塞修复 | `1.11.1` |
+
+当前正式基线是 `1.11.0`。不要因为改了文档、加了一个测试、修了一个错别字就升版本；同一批验收中的多个小修复合并为一个发布版本。
+
+### 4.2 预览版
+
+- 预览版使用 `x.y.z-preview.N`。
+- 预览版不能进入客户正式更新目录。
+- 预览版不能创建正式 Release 标签。
+- 预览版升级为正式版时，版本号按实际变更选择 MINOR 或 PATCH，不沿用 preview 后缀。
+
+### 4.3 多端版本必须对齐
+
+后端、管理后台、H5、微信小程序必须使用同一个正式版本号。更新执行器按三个可部署组件的最低版本判断当前版本，避免后端更新了、后台或 H5 还没更新的“假最新”状态。
+
+### 4.4 版本升级清单
+
+每次正式发布必须同步检查：
+
+- `delta-game/delta-admin/src/main/resources/platform/catalog.json` 的 `version`、`schemaVersion`、`releaseNotes` 和新增功能的 `minVersion`。
+- `delta-admin-ui/package.json` 和 `package-lock.json`。
+- `delta-mp/package.json` 和 `package-lock.json`。
+- `delta-mp/manifest.json` 的 `versionName` 和 `versionCode`。
+- `docs/x.y.z-发布说明.md`。
+- `docs/client-feature-integration.md` 中“当前正式版”的描述（如有）。
+- GitHub 正式标签、Release 标题、Release 说明和更新项。
+- 授权中心同步后的 `release_catalog`、组件资产和 SHA-256。
+- 客户侧 `cangshuo-version.json` 或组件版本文件的预期值。
+
+不要只改后端 `catalog.json`。不要只改前端 `package.json`。不要在没有发布说明的情况下创建正式标签。
+
+### 4.5 标签和版本不可变
+
+- 正式标签一经发布不可改写、移动或复用。
+- 同一版本需要修复时发布新的 PATCH，不重打旧标签。
+- `package_release.py` 会拒绝脏工作区、已存在标签和预览版本；不要绕过这些检查。
+- 授权中心只接受带 SHA-256 digest 的正式 Release 资产；缺少摘要、草稿、预览版不能安装。
+
+## 5. 分支、提交和合并
+
+- 功能分支：`codex/<功能简述>`。
+- 紧急修复：`codex/hotfix-<问题简述>`。
+- `main` 始终保持可构建、可发布；不要直接在 `main` 写未验证功能。
+- 提交信息使用 `type: summary`：`feat:`、`fix:`、`security:`、`refactor:`、`test:`、`docs:`、`release:`。
+- 一个提交只处理一个主题。
+- 合并前同步最新主分支，解决冲突，确认自动测试和构建通过。
+- 不提交密码、私钥、JWT、GitHub Token、微信支付密钥、数据库凭据、客户真实数据、上传文件和本地缓存。
+
+## 6. 发布和更新规则
+
+正式发布链路固定为：
+
+1. 开发完成并通过验收。
+2. 同步所有版本文件和发布说明。
+3. 从干净工作区、固定 commit 构建后端、管理端和 H5。
+4. `deploy/updater/package_release.py` 打包 `cangshuo-backend.zip`、`cangshuo-admin.zip`、`cangshuo-h5.zip`。
+5. 生成 `release-manifest.json`，包含 Git commit、工作区状态和三个 SHA-256。
+6. 创建 GitHub 正式标签和 Release，上传全部资产。
+7. 授权中心检查正式 Release，读取 digest，登记必要更新项和可选更新项。
+8. 客户管理员自行在后台检查、选择并启动更新；发布方不代客户点击，不直接替换线上客户端。
+9. 客户服务器执行器验签、校验摘要和版本、备份 MySQL/文件、切换组件、健康检查、失败回退。
+10. 记录发布版本、提交号、资产摘要、验证结果和客户更新结果。
+
+禁止：
+
+- 不使用预览标签替代正式版。
+- 不使用旧构建产物冒充新版本。
+- 不在脏工作区打包正式资产。
+- 不在每次 CI 推送中上传后端、后台或 H5 大附件。
+- 不让客户依赖私有 GitHub 链接下载更新。
+- 不在缺少 SHA-256 digest 时开放安装。
+- 不把“总体版本号”当成“所有组件已更新”的证据。
+- 不在未备份时执行更新。
+- 不让更新执行器接受任意服务器命令、路径或数据库迁移。
+
+数据库更新边界：
+
+- 更新执行器只接受 `schemaVersion=1`，不执行任意数据库迁移。
+- 新增字段和新增表由 `DatabaseCompatibility` 在启动时做兼容检查。
+- 新版本涉及表结构时，必须同时增加独立迁移文件、兼容检查和测试。
+- 破坏性变更、数据改写和复杂回退必须单独设计，不能靠替换三个 ZIP 完成。
+
+## 7. 授权、客户和数据边界
+
+- 授权中心只保存客户、项目、实例、维护期、模块、订单、发布和授权元数据，不保存客户订单、用户、聊天、钱包和上传文件。
+- 客户业务流量直接访问各自后端；授权中心只是控制面，不是业务网关。
+- 客户端只持有验证公钥；签发私钥只保存在授权中心受保护目录。
+- 授权绑定客户、实例、域名和维护期；修改域名后必须同步更新授权中心的实例域名并重新签发。
+- 删除 `PLATFORM_STATE_PATH` 会改变实例 UUID，需要重新登记授权。
+- 客户本地启用开关与授权中心授权分离；不要用授权中心替代客户后台的实际启用操作。
+- 不跨客户复制 MySQL、Redis、uploads、`.env`、支付证书、短信密钥、公众号密钥、管理员账号和业务数据。
+- 客户副本只保存客户主题、配置和部署差异；不要把三个客户改成三套不同架构。
+
+## 8. 安全底线
+
+- 权限必须在后端校验，不能只靠前端隐藏按钮。
+- 订单、聊天、投诉、支付、退款、提现必须校验资源归属。
+- 游客只能访问本人订单、聊天、投诉、支付和必要上传。
+- 支付回调必须验签，并校验商户号、AppID、金额、交易号、本地支付单和业务类型；重复回调必须幂等。
+- 退款、余额、结算和提现必须使用数据库事务和行锁，不能只依赖 Redis 锁。
+- 金额、支付状态、退款状态和授权状态以服务端数据为准，不信任客户端参数。
+- 私钥、API v3 密钥、证书、JWT、数据库密码、短信 AccessKey、GitHub Token 不得进入代码、日志、文档、截图或对话。
+- 上传必须校验真实文件签名、MIME、扩展名、大小和图片解码；不要信任浏览器声明。
+- 管理端敏感操作必须校验具体权限并写入操作日志。
+- 手机号、证件等敏感信息必须脱敏；完整联系方式只向管理员、客服及明确授权人员开放。
+- 日志不得记录密码、授权码、JWT、支付密钥、完整证件信息或游客查单凭证。
+
+## 9. 数据库和迁移规则
+
+- 默认采用新增表、新增可空列或带安全默认值的加列。
+- 不删除字段、不覆盖历史业务数据、不在生产库做不可逆实验。
+- 迁移脚本必须可重复执行；关键新增列先查 `information_schema`。
+- 新版本涉及表结构时，必须同时维护启动兼容逻辑和独立迁移文件。
+- 升级前备份数据库、上传文件、环境文件和实例状态。
+- 金额、订单状态、退款、结算和授权相关 SQL 必须有回归测试。
+- H2 测试不能替代 MySQL 方言、锁和索引验证；涉及复杂 SQL 时要说明验证范围。
+- 数据库 `schemaVersion` 必须与更新协议一致；没有回退方案的破坏性迁移不得直接发布。
+
+## 10. 代码边界
+
+### 后端
+
+- 主流程保持 `Controller -> Service -> Mapper -> Entity`。
+- 跨模块业务通过 Service 接口或 `CrossModuleMapper`，不要制造模块循环依赖。
+- `delta-common` 只放通用安全、响应、异常、聊天、文件、Redis、短信、公众号等基础能力。
+- `delta-admin` 目前同时承担启动、后台接口、统计、通知、平台授权和待办，文件集中度高；新增功能优先放到对应业务模块，不要继续无边界堆进 `delta-admin`。
+- Controller 不新增业务事务；复杂事务放到 Service。现有 Controller 中的事务是历史结构，不要复制。
+- 退款、待办、治理等复杂 SQL 可能直接使用 `JdbcTemplate`，排查时要同时看 Service、Mapper 和 SQL。
+
+### 管理后台
+
+- 后台 PC 固定 `/`，手机端固定 `/h5`；不要恢复按窗口宽度自动跳转，`/mobile` 已移除，仅保留静态兼容分流脚本。
+- 页面请求统一走 `src/api/*` 和 `src/utils/request.js`，页面不散落 URL。
+- 路由权限同时看 `meta.roles`、`meta.permission` 和 `meta.feature`。
+- 新增页面必须接入权限守卫、菜单过滤和移动端路由别名。
+- 不把后端权限判断复制成唯一安全边界；前端隐藏只负责体验。
+- 付费功能必须同时校验员工权限和授权中心功能可见性。
+
+### 移动端
+
+- 新增页面必须写入 `pages.json`；未注册页面不会进入构建产物。
+- `pages-cs` 的绝大多数业务页已经退役，只有登录跳转页注册；客服和后台功能走管理后台 `/h5`，`/mobile` 已移除。
+- 小程序、H5、微信内置浏览器要分别验证；不能用一个环境的结果代替全部。
+- 客户、打手、客服、管理员角色入口和 Token 分开，不要混用身份。
+
+### 授权中心
+
+- `server/store.mjs`、`management.mjs`、`http.mjs`、`releases.mjs`、`payments.mjs` 分别负责核心数据、管理、协议、版本和支付。
+- 授权中心不承载客户业务数据，也不执行客户服务器命令。
+- 公开版本说明页、客户端上报、更新计划和制品下载要分别测试。
+- 授权中心数据库和私钥备份必须一起保存；不能只备份 SQLite 而丢失密钥。
+
+### 更新执行器
+
+- `worker.py` 由宿主机 systemd 管理，不监听新端口。
+- 只接受签名计划，不接受客户端提供的服务器命令、路径或密码。
+- 安装前备份，安装后健康检查，失败回退；回退失败保持维护状态。
+- 更新执行器不执行任意数据库迁移。
+
+## 11. 测试和验证
+
+按改动范围选择命令，只报告实际执行过的结果：
+
+```powershell
+# 后端（在 delta-game 目录）
+mvn -pl delta-admin -am verify
+
+# 管理后台
+Set-Location D:\codeStudy\code\cangshuo-detla\delta-admin-ui
+npm test
+npm run build
+
+# 移动端 / H5 / 小程序
+Set-Location D:\codeStudy\code\cangshuo-detla\delta-mp
+npm test
+npm run build:h5
+npm run build:mp-weixin
+
+# 授权中心
+Set-Location D:\codeStudy\code\cangshuo-detla-authorize
+npm test
+npm run build
+
+# 更新执行器
+Set-Location D:\codeStudy\code\cangshuo-detla
+python deploy\updater\test_worker.py
+```
+
+最低验证要求：
+
+- 后端改动：对应单元/集成测试、权限和异常路径、数据库兼容。
+- 管理端改动：单测、生产构建、路由守卫和移动端布局。
+- H5/小程序改动：单测、H5 构建、小程序构建、登录和支付返回路径。
+- 支付、退款、结算、授权改动：必须新增覆盖幂等、并发、金额和状态流的测试。
+- 授权中心改动：登录、CSRF、版本同步、更新计划、制品下载、邮件和支付。
+- 更新执行器改动：签名、摘要、组件版本、备份、健康检查、回退和中断恢复。
+
+系统 PATH 没有 Maven 时，不要伪造后端测试通过；说明未执行，并给出 CI 命令。Java 25 不能替代项目要求的 Java 17 验证；本次使用 Temurin JDK 17 和缓存 Maven 3.9.11 实际执行。
+
+2026-11-09 本次检查记录：
+
+- 管理后台 `npm test`：62 项通过。
+- 移动端 `npm test`：86 项通过。
+- 后端：55 个测试报告、273 项测试通过，0 failures / 0 errors；使用 Temurin JDK 17.0.21 和 Maven 3.9.11。
+- 后端 JAR：`delta-admin.jar` 内 `catalog.json` 版本为 1.11.0。
+
+## 12. 完成定义
+
+一个任务只有同时满足以下条件才算完成：
+
+- 需求行为已实现，入口、权限、状态变化和失败提示明确。
+- 关键异常、权限和边界路径已验证。
+- 测试和构建结果可复现，未执行项明确写出。
+- 数据库变更、迁移和回退说明完成。
+- 版本号、发布说明和授权中心配置说明同步。
+- 没有新增明文密钥、敏感日志或客户数据泄漏。
+- 文档与实际代码一致；发现旧文档错误时同步修正。
+- 已提交、已推送，并明确标记功能分支或正式发布。
+
+## 13. 新会话提示词模板
+
+```text
+请先阅读：
+1. D:\codeStudy\code\cangshuo-detla\docs\VIBE_CODING.md
+2. D:\codeStudy\code\cangshuo-detla\docs\development-conventions.md
+3. D:\codeStudy\code\cangshuo-detla\docs\客户实例与授权中心关系.md
+4. D:\codeStudy\code\cangshuo-detla\docs\项目结构说明.md
+
+本次只处理：<明确范围>。
+先确认目标项目、当前分支、实际代码和测试现状，再给简短计划。
+不要读取、打印或提交 .env、私钥、Token、支付密钥和客户真实数据。
+不要把客户副本当最新源码，不要跨客户复制数据。
+完成后报告实际执行的测试和构建结果，未执行的部分明确说明。
+```
+
+## 14. 维护本文件
+
+- 修改本文件时同步提升顶部“文档版本”，并同步更新全局 `AGENTS.md`、主仓库 `AGENTS.md`、授权中心 `AGENTS.md` 和三个客户 `AGENTS.md` 中的读取回执行。
+- 项目关系、生产版本、域名、端口、授权状态变化时更新本文件。
+- 版本规则变化时优先更新 `docs/development-conventions.md`，再同步本文件摘要。
+- 新增客户或新软件时，更新“三个客户”表和授权中心对象说明。
+- 新增发布、数据库或安全协议时，补充对应章节和测试清单。
+- 本文件中的生产状态必须标注检查日期，避免把历史快照当成当前事实。
+
+## 15. 相关文档
+
+- `docs/development-conventions.md`
+- `docs/客户实例与授权中心关系.md`
+- `docs/项目结构说明.md`
+- `docs/后台PC与H5入口调整方案.md`
+- `docs/client-feature-integration.md`
+- `docs/feature-market-sync.md`
+- `deploy/updater/README.md`
+- `D:\codeStudy\code\cangshuo-detla-authorize\README.md`
+- `D:\codeStudy\code\cangshuo-detla-authorize\docs\0.6.6-授权同步状态.md`

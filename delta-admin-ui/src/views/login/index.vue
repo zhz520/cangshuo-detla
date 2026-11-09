@@ -24,20 +24,26 @@
           <el-button class="login-btn" native-type="submit" :loading="loading">登 录</el-button>
         </el-form-item>
       </el-form>
+      <p class="login-switch">
+        <a v-if="!isH5" href="/h5/login">手机端入口</a>
+        <a v-else href="/">电脑版</a>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
 import { getLoginCaptcha } from '@/api/auth'
+import { isH5Path } from '@/utils/h5-route'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
+const isH5 = computed(() => isH5Path(route.path))
 const userStore = useUserStore()
 const siteStore = useSiteStore()
 
@@ -221,6 +227,19 @@ onUnmounted(() => stopParticles())
   letter-spacing: 4px;
   border-radius: 999px;
   &:hover { background: #30343a; color: #ffffff; }
+}
+.login-switch {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 13px;
+}
+.login-switch a {
+  color: #5f6670;
+  text-decoration: none;
+}
+.login-switch a:hover {
+  color: #17191c;
+  text-decoration: underline;
 }
 .captcha-row {
   width: 100%;

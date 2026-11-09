@@ -17,27 +17,16 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { loadingFeedback } from '@/utils/loading-feedback'
 import { useSiteStore } from '@/stores/site'
-import { canonicalAdminPath, isMobileAdminPath, mobileAdminPath, MOBILE_ADMIN_MAX_WIDTH } from '@/utils/mobile-route'
 const siteStore = useSiteStore()
 const route = useRoute()
 const router = useRouter()
 const progressVisible = ref(false)
 const busy = computed(() => Boolean(loadingFeedback.destination) || loadingFeedback.requests > 0)
 let progressTimer
-const mobileViewportQuery = window.matchMedia(`(max-width: ${MOBILE_ADMIN_MAX_WIDTH}px)`)
-function switchAdminViewport() {
-  const current = router.currentRoute.value
-  if (['Forbidden', 'NotFound', 'MobileNotFound'].includes(String(current.name))) return
-  if (current.query.code && current.query.state) return
-  const compact = mobileViewportQuery.matches
-  if (compact === isMobileAdminPath(current.path)) return
-  const target = compact ? mobileAdminPath(current.path) : canonicalAdminPath(current.path)
-  if (target !== current.path) router.replace({ path: target, query: current.query, hash: current.hash }).catch(() => {})
-}
 watch(busy, value => {
   clearTimeout(progressTimer)
   if (value) progressTimer = setTimeout(() => { progressVisible.value = true }, 160)
@@ -46,14 +35,8 @@ watch(busy, value => {
 watch(() => [route.meta.title, siteStore.adminTitle], ([title, brand]) => {
   document.title = title ? `${title} - ${brand}` : brand
 }, { immediate: true })
-onMounted(() => {
-  if (mobileViewportQuery.addEventListener) mobileViewportQuery.addEventListener('change', switchAdminViewport)
-  else mobileViewportQuery.addListener(switchAdminViewport)
-})
 onUnmounted(() => {
   clearTimeout(progressTimer)
-  if (mobileViewportQuery.removeEventListener) mobileViewportQuery.removeEventListener('change', switchAdminViewport)
-  else mobileViewportQuery.removeListener(switchAdminViewport)
 })
 
 function retryNavigation() {

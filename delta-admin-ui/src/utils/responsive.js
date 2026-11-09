@@ -1,14 +1,19 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { isH5Path } from './h5-route.js'
 
 // Keep the CSS breakpoints and the drawer/chat behaviour in sync, including rotation.
 export function useResponsive() {
+  const route = useRoute()
   const compactQuery = window.matchMedia('(max-width: 1024px)')
   const narrowQuery = window.matchMedia('(max-width: 768px)')
-  const isCompact = ref(compactQuery.matches)
-  const isNarrow = ref(narrowQuery.matches)
+  const compactMatch = ref(compactQuery.matches)
+  const narrowMatch = ref(narrowQuery.matches)
+  const isCompact = computed(() => isH5Path(route.path) || compactMatch.value)
+  const isNarrow = computed(() => isH5Path(route.path) || narrowMatch.value)
   const update = () => {
-    isCompact.value = compactQuery.matches
-    isNarrow.value = narrowQuery.matches
+    compactMatch.value = compactQuery.matches
+    narrowMatch.value = narrowQuery.matches
   }
   const listen = (query, remove = false) => {
     // Safari 13 and older embedded WebViews only expose addListener/removeListener.

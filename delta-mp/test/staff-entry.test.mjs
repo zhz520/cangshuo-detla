@@ -4,9 +4,9 @@ import {staffAdminUrl,staffHomeUrl,staffLoginUrl} from '../utils/staff-entry.js'
 import {readFile} from 'node:fs/promises'
 
 test('legacy customer-H5 staff links transfer to the configured backend origin', () => {
-  assert.equal(staffLoginUrl('https://jgsapi.kk520yy.com/'),'https://jgsapi.kk520yy.com/mobile/login')
-  assert.equal(staffHomeUrl('https://jgsapi.kk520yy.com'),'https://jgsapi.kk520yy.com/mobile/dashboard')
-  assert.equal(staffAdminUrl('https://jgsapi.kk520yy.com','/mobile/wechat-binding'),'https://jgsapi.kk520yy.com/mobile/wechat-binding')
+  assert.equal(staffLoginUrl('https://jgsapi.kk520yy.com/'),'https://jgsapi.kk520yy.com/h5/login')
+  assert.equal(staffHomeUrl('https://jgsapi.kk520yy.com'),'https://jgsapi.kk520yy.com/h5/dashboard')
+  assert.equal(staffAdminUrl('https://jgsapi.kk520yy.com','/h5/wechat-binding'),'https://jgsapi.kk520yy.com/h5/wechat-binding')
 })
 
 test('staff transfer never accepts an unsafe or empty origin', () => {

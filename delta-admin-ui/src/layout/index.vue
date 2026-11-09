@@ -82,6 +82,7 @@
         <div class="mobile-account-list">
           <button type="button" @click="accountAction('wechat')"><span>公众号消息通知</span><small>绑定当前账号的微信</small><b>›</b></button>
           <button type="button" @click="accountAction('notices')"><span>系统通知</span><small>查看审核、订单和售后消息</small><b>›</b></button>
+          <button v-if="h5Mode" type="button" @click="openPc"><span>电脑版</span><small>返回 PC 后台</small><b>›</b></button>
           <button type="button" @click="accountAction('profile')"><span>编辑资料</span><b>›</b></button>
           <button type="button" @click="accountAction('password')"><span>修改密码</span><b>›</b></button>
           <button type="button" class="danger" @click="accountAction('logout')"><span>退出登录</span><b>›</b></button>
@@ -118,10 +119,11 @@ import WorkbenchCenter from '@/components/WorkbenchCenter.vue'
 import { useSiteStore } from '@/stores/site'
 import {thumbnailUrl} from '@/utils/image'
 import { installMobileTableCards } from '@/utils/mobile-table-cards'
-import { canonicalAdminPath, isMobileAdminPath, mobileAdminPath } from '@/utils/mobile-route'
+import { canonicalAdminPath, h5Path, isH5Path } from '@/utils/h5-route'
 
 const route = useRoute()
 const router = useRouter()
+const props = defineProps({ h5: { type: Boolean, default: false } })
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const workbench = useWorkbenchStore()
@@ -148,7 +150,9 @@ const main = ref(null)
 const pageVersion = ref(0)
 function reloadPage() { loadingFeedback.readError = null; pageVersion.value++ }
 onErrorCaptured(error => { if (error?.requestHandled) return false })
-const { isCompact } = useResponsive()
+const { isCompact: viewportCompact } = useResponsive()
+const isCompact = computed(() => props.h5 || viewportCompact.value)
+const h5Mode = computed(() => props.h5)
 let stopMobileTables = () => {}
 function toggleNavigation() {
   isCollapse.value = !isCollapse.value
@@ -183,16 +187,19 @@ function runMobileTab(key) {
   else if (key === 'messages') can('chat.manage') ? router.push(adminPath('/chat/service')) : openCenter('notices')
   else if (key === 'account') mobileAccountOpen.value = true
 }
+function openPc() {
+  window.location.assign('/')
+}
 const currentAdminPath = computed(() => canonicalAdminPath(route.path))
 function adminPath(path) {
-  return isMobileAdminPath(route.path) ? mobileAdminPath(path) : path
+  return isH5Path(route.path) ? h5Path(path) : path
 }
 const logoInitial = computed(() => {
   const title = siteStore.adminTitle || siteStore.siteName || '护'
   return title.trim().slice(0, 1)
 })
 
-const activeMenu = computed(() => route.meta.activeMenu || route.path)
+const activeMenu = computed(() => canonicalAdminPath(route.meta.activeMenu || route.path))
 const breadcrumbs = computed(() => route.matched.filter((r) => r.meta?.title))
 const currentPageTitle = computed(() => {
   if (currentAdminPath.value === '/dashboard') return role.value === 'admin' ? '运营管理' : '客服工作台'
@@ -217,7 +224,7 @@ async function handleCommand(cmd) {
   } else if (cmd === 'logout') {
     chatStore.stop()
     await userStore.logout()
-    router.push(isMobileAdminPath(route.path) ? '/mobile/login' : '/login')
+    router.push(isH5Path(route.path) ? '/h5/login' : '/login')
   }
 }
 
@@ -234,7 +241,7 @@ async function accountAction(cmd) {
 async function onPasswordChanged() {
   chatStore.stop()
     await userStore.logout()
-  router.replace(isMobileAdminPath(route.path) ? '/mobile/login' : '/login')
+  router.replace(isH5Path(route.path) ? '/h5/login' : '/login')
 }
 
 function onProfileSaved(data) {

@@ -107,6 +107,7 @@ public class OfficialWechatService {
   boolean staff="ADMIN".equals(type)||"CS".equals(type);
   String redirectKey=staff?"wechat.official.staff_redirect_url":"wechat.official.redirect_url";
   String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue(redirectKey,"");URI uri;
+  if(staff)redirect=redirect.replace("/mobile/wechat-binding","/h5/wechat-binding");
   try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,staff?"请先配置管理员与客服的公众号绑定回调页":"请先配置客户与打手的公众号绑定回调页");}
   if(appId.isBlank())throw new BusinessException(400,"请先配置公众号AppID");
   String state=UUID.randomUUID().toString().replace("-","");redis.opsForValue().set("wechat:binding:"+state,JSON.toJSONString(Map.of("type",type,"id",id)),Duration.ofMinutes(5));

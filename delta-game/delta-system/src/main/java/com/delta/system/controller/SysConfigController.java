@@ -134,8 +134,9 @@ public class SysConfigController {
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
         ensureConfig("wechat.official.redirect_url","客户与打手绑定回调页","","text","公众号通知","客户 H5 的HTTPS地址，例如 https://shop.example.com/# 前的主页面地址；授权后会回到客户 H5 并继续完成客户或打手绑定");
         syncConfigMetadata("wechat.official.redirect_url","客户与打手绑定回调页","客户 H5 的HTTPS地址，例如 https://shop.example.com/# 前的主页面地址；授权后会回到客户 H5 并继续完成客户或打手绑定");
-        ensureConfig("wechat.official.staff_redirect_url","管理员与客服绑定回调页","","text","公众号通知","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
-        syncConfigMetadata("wechat.official.staff_redirect_url","管理员与客服绑定回调页","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
+        ensureConfig("wechat.official.staff_redirect_url","管理员与客服绑定回调页","","text","公众号通知","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/h5/wechat-binding；旧 /mobile/wechat-binding 配置会自动改写；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
+        syncConfigMetadata("wechat.official.staff_redirect_url","管理员与客服绑定回调页","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/h5/wechat-binding；旧 /mobile/wechat-binding 配置会自动改写；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
+        migrateLegacyStaffRedirect();
         ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
@@ -471,6 +472,19 @@ public class SysConfigController {
         config.setCreatedAt(LocalDateTime.now());
         config.setUpdatedAt(LocalDateTime.now());
         sysConfigService.save(config);
+    }
+
+    /** 一次性修正旧版工作人员公众号回调路径，避免 /mobile 下线后绑定失败。 */
+    private void migrateLegacyStaffRedirect() {
+        SysConfig config = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>()
+                .eq(SysConfig::getConfigKey, "wechat.official.staff_redirect_url"));
+        if (config == null || config.getConfigValue() == null
+                || !config.getConfigValue().contains("/mobile/wechat-binding")) return;
+        SysConfig update = new SysConfig();
+        update.setId(config.getId());
+        update.setConfigValue(config.getConfigValue().replace("/mobile/wechat-binding", "/h5/wechat-binding"));
+        update.setUpdatedAt(LocalDateTime.now());
+        sysConfigService.updateById(update);
     }
 
     private void syncConfigMetadata(String key, String name, String remark) {

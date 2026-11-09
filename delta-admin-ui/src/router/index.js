@@ -2,20 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
-import { adminLoginPath, buildMobileAdminRoutes, canonicalAdminPath, mobileAdminPath, shouldUseMobileRoute, useMobileAdminViewport } from '@/utils/mobile-route'
+import { buildH5Routes, canonicalAdminPath, h5RedirectTarget, isH5Path } from '@/utils/h5-route'
 
 const Layout = () => import('@/layout/index.vue')
+const H5Layout = () => import('@/layout/H5Layout.vue')
 
 const desktopRoutes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/login/index.vue'),
-    meta: { title: '登录' }
-  },
-  {
-    path: '/mobile/login',
-    name: 'MobileLogin',
     component: () => import('@/views/login/index.vue'),
     meta: { title: '登录' }
   },
@@ -346,7 +341,42 @@ const desktopRoutes = [
   }
 ]
 
-const routes = [...desktopRoutes, ...buildMobileAdminRoutes(desktopRoutes)]
+const pageRoutes = desktopRoutes.filter(route => route.path !== '/403' && route.path !== '/:pathMatch(.*)*')
+const h5Routes = buildH5Routes(pageRoutes, H5Layout)
+const routes = [
+  ...pageRoutes,
+  {
+    path: '/h5/login',
+    name: 'H5Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { title: '登录', h5: true }
+  },
+  ...h5Routes,
+  {
+    path: '/h5/403',
+    name: 'H5Forbidden',
+    component: () => import('@/views/error/403.vue'),
+    meta: { title: '无权限', h5: true }
+  },
+  {
+    path: '/h5/:pathMatch(.*)*',
+    name: 'H5NotFound',
+    component: () => import('@/views/error/404.vue'),
+    meta: { title: '页面不存在', h5: true }
+  },
+  {
+    path: '/403',
+    name: 'Forbidden',
+    component: () => import('@/views/error/403.vue'),
+    meta: { title: '无权限' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/error/404.vue'),
+    meta: { title: '页面不存在' }
+  }
+]
 
 const router = createRouter({
   history: createWebHistory(),
@@ -354,52 +384,51 @@ const router = createRouter({
 })
 
 // 路由守卫
-const whiteList = ['/login', '/mobile/login']
+const whiteList = ['/login', '/h5/login']
 router.beforeEach(async (to, from, next) => {
   beginNavigation(to)
   const token = getToken()
-  const mobileViewport = useMobileAdminViewport()
+  const h5 = isH5Path(to.path)
+
+  // Keep canonical links inside the H5 shell. Explicit PC entry uses a full page load.
+  const h5Redirect = h5RedirectTarget(to, from)
+  if (h5Redirect) {
+    next(h5Redirect)
+    return
+  }
 
   if (token) {
-    if (to.path === '/login' || to.path === '/mobile/login') {
-      next(mobileViewport ? '/mobile/dashboard' : '/dashboard')
+    if (to.path === '/login' || to.path === '/h5/login') {
+      next(h5 ? '/h5/dashboard' : '/dashboard')
     } else {
-      if (shouldUseMobileRoute(to.path, mobileViewport)) {
-        next({ path: mobileAdminPath(to.path), query: to.query, hash: to.hash, replace: true })
-        return
-      }
       const user = getUserInfo()
       try { await loadStaffPermissions() } catch (error) {
-        if (error.code === 401) { removeToken(); next('/login'); return }
+        if (error.code === 401) { removeToken(); next(h5 ? '/h5/login' : '/login'); return }
         throw error
       }
       const permission=to.meta.permission||permissionFor(canonicalAdminPath(to.path))
-      if(permission&&!can(permission)){next('/403');return}
-      if (to.matched.some(record => record.meta.roles && !record.meta.roles.includes(user?.role))) { next('/403'); return }
+      if(permission&&!can(permission)){next(h5 ? '/h5/403' : '/403');return}
+      if (to.matched.some(record => record.meta.roles && !record.meta.roles.includes(user?.role))) { next(h5 ? '/h5/403' : '/403'); return }
       if (to.meta.feature) {
         const { loadPlatformFeatureVisibility, platformFeatureAllowed, platformFeatureError } = await import('@/utils/platform-feature-visibility')
         await loadPlatformFeatureVisibility()
         if (platformFeatureError.value) throw new Error(platformFeatureError.value)
-        if (!platformFeatureAllowed(to.meta.feature)) { next('/403'); return }
+        if (!platformFeatureAllowed(to.meta.feature)) { next(h5 ? '/h5/403' : '/403'); return }
       }
       const roles = to.meta.roles
       if (roles && !roles.includes(user?.role)) {
-        next('/403')
+        next(h5 ? '/h5/403' : '/403')
       } else {
         next()
       }
     }
   } else {
     if (whiteList.includes(to.path)) {
-      if (mobileViewport && to.path === '/login') {
-        next({ path: '/mobile/login', query: to.query, hash: to.hash, replace: true })
-      } else {
-        next()
-      }
+      next()
     } else {
       next({
-        path: adminLoginPath(mobileViewport),
-        query: { redirect: mobileViewport ? mobileAdminPath(to.fullPath) : to.fullPath }
+        path: h5 ? '/h5/login' : '/login',
+        query: { redirect: to.fullPath }
       })
     }
   }

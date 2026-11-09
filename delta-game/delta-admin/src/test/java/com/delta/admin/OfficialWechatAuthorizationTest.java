@@ -115,9 +115,9 @@ class OfficialWechatAuthorizationTest {
         assertThat(service.startBinding("USER", 7L, "shop.example.com"))
                 .contains("redirect_uri=" + URLEncoder.encode("https://shop.example.com/", StandardCharsets.UTF_8));
         assertThat(service.startBinding("ADMIN", 11L, "staff.example.com"))
-                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/mobile/wechat-binding", StandardCharsets.UTF_8));
+                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/h5/wechat-binding", StandardCharsets.UTF_8));
         assertThat(service.startBinding("CS", 22L, "staff.example.com"))
-                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/mobile/wechat-binding", StandardCharsets.UTF_8));
+                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/h5/wechat-binding", StandardCharsets.UTF_8));
     }
 
     private static void authenticate(String type, Long id, String authority) {

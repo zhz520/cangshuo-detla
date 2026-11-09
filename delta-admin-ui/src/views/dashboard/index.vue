@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard" :aria-busy="loading || userLoading || playerLoading">
-    <MobileDashboard v-if="isCompact" :stats="stats" :is-admin="isAdmin" :loading="loading" :error="dashboardError" @refresh="refreshOverview" />
+    <MobileDashboard v-if="isCompact || h5Shell" :stats="stats" :is-admin="isAdmin" :loading="loading" :error="dashboardError" @refresh="refreshOverview" />
     <div v-else class="dashboard-desktop">
     <div class="dashboard-heading">
       <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
@@ -297,6 +297,8 @@ import { computed, onMounted } from 'vue'
 import { useLoadTask } from '@/composables/useLoadTask'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useUserStore } from '@/stores/user'
+import { useRoute } from 'vue-router'
+import { isH5Path } from '@/utils/h5-route'
 import { can } from '@/utils/staff-permissions'
 import { getAdminDashboard, getCsDashboard, getStatisticsUser, getStatisticsPlayer } from '@/api/dashboard'
 import {
@@ -305,6 +307,8 @@ import {
 } from '@element-plus/icons-vue'
 
 const { isCompact, isNarrow } = useResponsive()
+const route = useRoute()
+const h5Shell = computed(() => isH5Path(route.path))
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.role === 'admin')

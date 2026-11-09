@@ -26,6 +26,8 @@
 
 研发、版本、测试、发布和安全规则请参阅[开发约定](docs/development-conventions.md)，在线版本：[沧烁研发约定](https://cangshuo-development-conventions.knobbycity.chatgpt.site)。
 
+AI 协作的项目关系、版本号规则、发布检查和新会话开工顺序见 [VIBE_CODING.md](docs/VIBE_CODING.md)。
+
 微信支付配置请参阅[微信公众号支付配置教程](docs/1.4.4-微信公众号支付配置教程.md)和[微信支付商户平台配置教程](docs/微信支付商户平台配置教程.md)。公众号支付仅用于微信内置浏览器；小程序支付和微信外 H5 支付使用独立开关。
 
 ## 项目特点

@@ -8,7 +8,7 @@ test('compact admin and CS screens use the dedicated mobile operations dashboard
   const dashboard = await read('src/views/dashboard/index.vue')
   const mobile = await read('src/views/dashboard/MobileDashboard.vue')
 
-  assert.match(dashboard, /<MobileDashboard v-if="isCompact"/)
+  assert.match(dashboard, /<MobileDashboard v-if="isCompact \|\| h5Shell"/)
   assert.match(dashboard, /<div v-else class="dashboard-desktop">/)
   assert.match(mobile, /运营管理后台/)
   assert.match(mobile, /客服工作台/)

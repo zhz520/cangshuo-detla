@@ -19,8 +19,9 @@ test('customer H5 keeps only a backend transfer page for staff', async () => {
 
 test('backend owns the administrator and CS official-account binding flow', async () => {
   const router = await read('../delta-admin-ui/src/router/index.js')
-  assert.match(router, /path: '\/mobile\/login'/)
-  assert.match(router, /path: 'wechat-binding'|buildMobileAdminRoutes/)
+  assert.match(router, /path: '\/h5\/login'/)
+  assert.match(router, /buildH5Routes/)
+  assert.doesNotMatch(router, /LegacyMobile/)
   const binding = await read('../delta-admin-ui/src/views/wechat/Binding.vue')
   assert.match(binding, /startOfficialWechatBinding/)
   assert.match(binding, /completeOfficialWechatBinding/)
