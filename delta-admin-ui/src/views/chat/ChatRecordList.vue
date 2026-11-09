@@ -29,13 +29,15 @@
 <script setup>
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { adminChatSessionList, csChatSessionAllList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import Pagination from '@/components/Pagination.vue'
+import { h5Path, isH5Path } from '@/utils/h5-route'
 
 const { isCompact } = useResponsive()
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
@@ -61,7 +63,9 @@ async function fetchData() {
 }
 
 function goDetail(row) {
-  router.push({ name: 'ChatRecordDetail', params: { id: row.id } })
+  router.push(isH5Path(route.path)
+    ? h5Path(`/chat/record/${row.id}`)
+    : { name: 'ChatRecordDetail', params: { id: row.id } })
 }
 
 onMounted(fetchData)

@@ -27,7 +27,6 @@ export function h5RedirectTarget(to, from) {
     path: h5Path(to?.path || '/'),
     query: to?.query || {},
     hash: to?.hash || '',
-    replace: true
   }
 }
 
@@ -42,7 +41,7 @@ export function buildH5Routes(routes = [], layoutComponent) {
         component: layoutComponent,
         redirect: typeof route.redirect === 'string' ? h5Path(route.redirect) : route.redirect,
         meta: { ...(route.meta || {}), mobileAlias: true, h5Alias: true },
-        children: route.children.map(child => ({
+        children: route.children.filter(child => !child.meta?.errorPage).map(child => ({
           ...child,
           ...(child.name ? { name: `H5${child.name}` } : {}),
           redirect: typeof child.redirect === 'string' ? h5Path(child.redirect) : child.redirect,

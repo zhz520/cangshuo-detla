@@ -38,7 +38,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
 import { getLoginCaptcha } from '@/api/auth'
-import { isH5Path } from '@/utils/h5-route'
+import { h5Path, isH5Path } from '@/utils/h5-route'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -82,7 +82,9 @@ async function handleLogin() {
     await userStore.login(form)
     ElMessage.success('登录成功')
     const redirect = route.query.redirect
-    await router.push(typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+    const target = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : (isH5.value ? '/h5/dashboard' : '/')
+    if (isH5.value) await router.replace(isH5Path(target) ? target : h5Path(target))
+    else await router.push(target)
   } catch (e) {
     // error handled by request interceptor
     await refreshCaptcha()
@@ -276,6 +278,10 @@ onUnmounted(() => stopParticles())
 @media (max-width: 480px) {
   .login-box { padding: 28px 22px; }
   .login-title { font-size: 24px; overflow-wrap: anywhere; word-break: break-word; }
+}
+@media (max-width: 360px) {
+  .captcha-row { grid-template-columns: 1fr; gap: 8px; }
+  .captcha-image { width: 100%; height: 44px; }
 }
 @media (max-height: 500px) {
   .login-container { padding-top: calc(12px + var(--app-safe-top)); padding-bottom: calc(12px + var(--app-safe-bottom)); }

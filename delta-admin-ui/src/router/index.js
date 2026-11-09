@@ -30,6 +30,18 @@ const desktopRoutes = [
         name: 'WechatBinding',
         component: () => import('@/views/wechat/Binding.vue'),
         meta: { title: '公众号消息通知', icon: 'ChatDotRound', roles: ['admin', 'cs'], hidden: true }
+      },
+      {
+        path: '403',
+        name: 'Forbidden',
+        component: () => import('@/views/error/403.vue'),
+        meta: { title: '无权限', errorPage: true, hidden: true }
+      },
+      {
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => import('@/views/error/404.vue'),
+        meta: { title: '页面不存在', errorPage: true, hidden: true }
       }
     ]
   },
@@ -325,24 +337,25 @@ const desktopRoutes = [
       }
     ]
   },
-  // 403
-  {
-    path: '/403',
-    name: 'Forbidden',
-    component: () => import('@/views/error/403.vue'),
-    meta: { title: '无权限' }
-  },
-  // 404
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/error/404.vue'),
-    meta: { title: '页面不存在' }
-  }
 ]
 
 const pageRoutes = desktopRoutes.filter(route => route.path !== '/403' && route.path !== '/:pathMatch(.*)*')
 const h5Routes = buildH5Routes(pageRoutes, H5Layout)
+const h5Root = h5Routes.find(route => route.path === '/h5')
+h5Root?.children.push(
+  {
+    path: '403',
+    name: 'H5Forbidden',
+    component: () => import('@/views/error/403.vue'),
+    meta: { title: '无权限', mobileAlias: true, h5Alias: true, hidden: true }
+  },
+  {
+    path: ':pathMatch(.*)*',
+    name: 'H5NotFound',
+    component: () => import('@/views/error/404.vue'),
+    meta: { title: '页面不存在', mobileAlias: true, h5Alias: true, hidden: true }
+  }
+)
 const routes = [
   ...pageRoutes,
   {
@@ -352,30 +365,6 @@ const routes = [
     meta: { title: '登录', h5: true }
   },
   ...h5Routes,
-  {
-    path: '/h5/403',
-    name: 'H5Forbidden',
-    component: () => import('@/views/error/403.vue'),
-    meta: { title: '无权限', h5: true }
-  },
-  {
-    path: '/h5/:pathMatch(.*)*',
-    name: 'H5NotFound',
-    component: () => import('@/views/error/404.vue'),
-    meta: { title: '页面不存在', h5: true }
-  },
-  {
-    path: '/403',
-    name: 'Forbidden',
-    component: () => import('@/views/error/403.vue'),
-    meta: { title: '无权限' }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/error/404.vue'),
-    meta: { title: '页面不存在' }
-  }
 ]
 
 const router = createRouter({

@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="detail-header">
-          <el-button link type="primary" @click="router.push({ name: 'ChatRecordList' })">
+          <el-button link type="primary" @click="goList">
             <el-icon><ArrowLeft /></el-icon> 返回列表
           </el-button>
           <span class="session-title">会话 #{{ sessionId }} 聊天记录（只读）</span>
@@ -38,6 +38,7 @@ import { adminChatMessageList, csChatMessageList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import Pagination from '@/components/Pagination.vue'
 import {thumbnailUrl} from '@/utils/image'
+import { isH5Path } from '@/utils/h5-route'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,6 +54,9 @@ const senderLabelMap = { USER: '用户', PLAYER: '打手', CS: '客服', SYSTEM:
 const senderTagMap = { USER: '', PLAYER: 'success', CS: 'warning', SYSTEM: 'info' }
 function senderLabel(t) { return senderLabelMap[t] || t }
 function senderTagType(t) { return senderTagMap[t] || 'info' }
+function goList() {
+  router.push(isH5Path(route.path) ? '/h5/chat/record' : { name: 'ChatRecordList' })
+}
 
 async function fetchMessages() {
   if (!sessionId.value) return

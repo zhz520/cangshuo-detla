@@ -100,6 +100,8 @@ html { -webkit-text-size-adjust: 100%; }
 }
 
 @media (max-width: 768px) {
+  /* Element Plus rows use negative gutter margins that overflow narrow columns. */
+  .layout-main .el-row { margin-left: 0 !important; margin-right: 0 !important; }
   .layout-main .el-tabs__nav-wrap {
     overflow: visible;
   }
@@ -242,6 +244,10 @@ html { -webkit-text-size-adjust: 100%; }
   .mobile-card-table .el-table__body-wrapper,
   .mobile-card-table .el-scrollbar__wrap { overflow:visible!important; }
   .mobile-card-table .el-scrollbar__bar { display:none!important; }
+  /* Element Plus wraps the body table in an inline-block scroll view. Without
+     this the card grid shrinks to the widest cell instead of filling the page. */
+  .mobile-card-table .el-scrollbar__view,
+  .mobile-card-table .el-scrollbar__wrap { display:block!important; width:100%!important; min-width:0!important; }
   .mobile-card-table table,
   .mobile-card-table tbody,
   .mobile-card-table tr,
