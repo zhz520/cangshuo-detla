@@ -57,7 +57,9 @@
         <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
         <router-view v-slot="{ Component, route: pageRoute }">
           <transition name="page-fade" mode="out-in">
-            <component :is="Component" :key="`${pageRoute.path}:${pageVersion}`" />
+            <div :key="`${pageRoute.path}:${pageVersion}`" class="layout-page-frame">
+              <component :is="Component" />
+            </div>
           </transition>
         </router-view>
       </el-main>
@@ -381,6 +383,7 @@ onUnmounted(() => {
     #f5f6f7;
   padding: 22px 24px 28px;
 }
+.layout-page-frame { width:100%; min-width:0; max-width:100%; }
 .mobile-page-title { display: none; }
 .user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .navigation-close {
@@ -415,7 +418,17 @@ onUnmounted(() => {
   .layout-header .header-right .user-info { min-width: 0; }
   .user-info :deep(.el-avatar), .user-info :deep(.el-icon) { flex-shrink: 0; }
   .layout-main {
+    width: 100%;
+    margin: 0;
     padding: 12px calc(12px + var(--app-safe-right)) calc(82px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
+  }
+  .layout-body { flex:1 1 auto; width:100%; max-width:100%; }
+  .layout-page-frame { width:100%; max-width:100%; margin:0 auto; }
+  .layout-page-frame > * {
+    width:100%;
+    max-width:100%;
+    margin-left:0;
+    margin-right:0;
   }
   .mobile-bottom-nav {
     position: fixed;

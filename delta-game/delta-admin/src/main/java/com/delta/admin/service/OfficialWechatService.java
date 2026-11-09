@@ -104,8 +104,10 @@ public class OfficialWechatService {
   String type=canonicalUserType(rawType);
   platform.requireFeature(FEATURE_ID,requestDomain);
   if(!"true".equals(configs.getConfigValue("wechat.official.enabled","false")))throw new BusinessException(503,"公众号通知尚未启用");
-  String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue("wechat.official.redirect_url","");URI uri;
-  try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,"请先配置公众号授权回调页面的HTTPS地址");}
+  boolean staff="ADMIN".equals(type)||"CS".equals(type);
+  String redirectKey=staff?"wechat.official.staff_redirect_url":"wechat.official.redirect_url";
+  String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue(redirectKey,"");URI uri;
+  try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,staff?"请先配置管理员与客服的公众号绑定回调页":"请先配置客户与打手的公众号绑定回调页");}
   if(appId.isBlank())throw new BusinessException(400,"请先配置公众号AppID");
   String state=UUID.randomUUID().toString().replace("-","");redis.opsForValue().set("wechat:binding:"+state,JSON.toJSONString(Map.of("type",type,"id",id)),Duration.ofMinutes(5));
   return "https://open.weixin.qq.com/connect/oauth2/authorize?appid="+encode(appId)+"&redirect_uri="+encode(redirect)+"&response_type=code&scope=snsapi_base&state="+state+"#wechat_redirect";

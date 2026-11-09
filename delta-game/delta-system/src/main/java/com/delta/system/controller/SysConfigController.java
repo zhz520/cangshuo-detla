@@ -132,8 +132,10 @@ public class SysConfigController {
         ensureConfig("wechat.official.enabled","启用公众号模板通知","false","boolean","公众号通知","公众号模板消息与原小程序订阅通知相互独立");
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
-        ensureConfig("wechat.official.redirect_url","公众号绑定回调页面","","text","公众号通知","填写工作人员后台的HTTPS绑定页地址，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置网页授权域名");
-        syncConfigMetadata("wechat.official.redirect_url","公众号绑定回调页面","填写工作人员后台的HTTPS绑定页地址，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置网页授权域名");
+        ensureConfig("wechat.official.redirect_url","客户与打手绑定回调页","","text","公众号通知","客户 H5 的HTTPS地址，例如 https://shop.example.com/# 前的主页面地址；授权后会回到客户 H5 并继续完成客户或打手绑定");
+        syncConfigMetadata("wechat.official.redirect_url","客户与打手绑定回调页","客户 H5 的HTTPS地址，例如 https://shop.example.com/# 前的主页面地址；授权后会回到客户 H5 并继续完成客户或打手绑定");
+        ensureConfig("wechat.official.staff_redirect_url","管理员与客服绑定回调页","","text","公众号通知","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
+        syncConfigMetadata("wechat.official.staff_redirect_url","管理员与客服绑定回调页","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/mobile/wechat-binding；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
         ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
         ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
@@ -307,7 +309,7 @@ public class SysConfigController {
         if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
         if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(key.startsWith("sms.notification.templates.")) validateSmsRoleTemplates(value);
-        if(java.util.Set.of("risk.media.endpoint","wechat.official.redirect_url").contains(key)&&!value.isBlank())try{var uri=java.net.URI.create(value);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"请填写有效HTTPS地址");}
+        if(java.util.Set.of("risk.media.endpoint","wechat.official.redirect_url","wechat.official.staff_redirect_url").contains(key)&&!value.isBlank())try{var uri=java.net.URI.create(value);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"请填写有效HTTPS地址");}
         if("risk.freeze_threshold".equals(key))try{int n=Integer.parseInt(value);if(n<1||n>100)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"违规阈值须为1至100之间整数");}
         if("site.tech_support_text".equals(key)) {
             value = value.trim();

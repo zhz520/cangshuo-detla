@@ -100,6 +100,49 @@ html { -webkit-text-size-adjust: 100%; }
 }
 
 @media (max-width: 768px) {
+  .layout-main .el-tabs__nav-wrap {
+    overflow: visible;
+  }
+  .layout-main .el-tabs__nav-scroll {
+    overflow: visible;
+  }
+  .layout-main .el-tabs__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100% !important;
+    transform: none !important;
+    white-space: normal;
+  }
+  .layout-main .el-tabs__nav-prev,
+  .layout-main .el-tabs__nav-next,
+  .layout-main .el-tabs__active-bar {
+    display: none;
+  }
+  .layout-main .el-tabs__item {
+    height: auto;
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 9px;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+  }
+  .layout-main .el-tabs__item.is-active {
+    background: var(--app-primary-soft);
+  }
+  .layout-main > .el-card,
+  .layout-main > .page-container,
+  .layout-main > .dashboard,
+  .layout-main > .binding-page,
+  .layout-main > .updates-page,
+  .layout-main > .platform-page,
+  .layout-main > .analysis-page,
+  .layout-main > .chat-service,
+  .layout-main > .income-daily {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
   .el-card__header { padding: 12px; min-height: 48px; }
   .el-card__body { padding: 12px; }
   .card-header,

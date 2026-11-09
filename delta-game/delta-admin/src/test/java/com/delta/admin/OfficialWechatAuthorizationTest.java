@@ -9,6 +9,7 @@ import com.delta.system.service.SysConfigService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,7 +18,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Map;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -91,6 +95,29 @@ class OfficialWechatAuthorizationTest {
         verify(service).finishBinding("ADMIN", 11L, "admin-code", "admin-state", "staff.example.com");
         verify(service).binding("CS", 22L);
         verify(service).finishBinding("CS", 22L, "cs-code", "cs-state", "staff.example.com");
+    }
+
+    @Test void staffAndCustomerBindingUseDifferentCallbackPages() {
+        var jdbc = mock(JdbcTemplate.class);
+        var configs = mock(SysConfigService.class);
+        var permissions = mock(StaffPermissions.class);
+        var platform = mock(PlatformService.class);
+        var redis = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked") var values = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(configs.getConfigValue("wechat.official.enabled", "false")).thenReturn("true");
+        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx1234567890");
+        when(configs.getConfigValue("wechat.official.redirect_url", "")).thenReturn("https://shop.example.com/");
+        when(configs.getConfigValue("wechat.official.staff_redirect_url", ""))
+                .thenReturn("https://staff.example.com/mobile/wechat-binding");
+        var service = new OfficialWechatService(jdbc, configs, new com.delta.admin.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
+
+        assertThat(service.startBinding("USER", 7L, "shop.example.com"))
+                .contains("redirect_uri=" + URLEncoder.encode("https://shop.example.com/", StandardCharsets.UTF_8));
+        assertThat(service.startBinding("ADMIN", 11L, "staff.example.com"))
+                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/mobile/wechat-binding", StandardCharsets.UTF_8));
+        assertThat(service.startBinding("CS", 22L, "staff.example.com"))
+                .contains("redirect_uri=" + URLEncoder.encode("https://staff.example.com/mobile/wechat-binding", StandardCharsets.UTF_8));
     }
 
     private static void authenticate(String type, Long id, String authority) {
