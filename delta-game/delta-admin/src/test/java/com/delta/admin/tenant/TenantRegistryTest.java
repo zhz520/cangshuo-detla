@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 
 import java.util.List;
 
@@ -77,6 +78,11 @@ class TenantRegistryTest {
                 {"tenants":{"tenant-a":{"hosts":["shop-a.example.com"],
                   "jdbcUrl":"jdbc:h2:mem:registry","username":"sa","driverClassName":"org.h2.Driver"}}}
                 """);
+        try {
+            Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+        } catch (UnsupportedOperationException ignored) {
+            // Windows uses ACLs rather than POSIX mode bits.
+        }
         TenantProperties properties = new TenantProperties();
         properties.setEnabled(true);
         properties.setRegistryFile(file.toString());
