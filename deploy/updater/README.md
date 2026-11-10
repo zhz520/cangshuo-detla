@@ -29,3 +29,11 @@
 `redact` 输出可审计的脱敏副本；`sql --tenant <id>` 只生成创建数据库、租户账号和授权的 SQL 模板，密码位置保持占位符。该工具不连接数据库、不执行 SQL，也不替代备份、数据导入、支付/退款对账或客户切换。
 
 注册文件包含敏感凭据，生产上必须限制为运维账号可读，不能提交到 Git 或通过聊天发送。
+
+## 共享服务组发布计划
+
+`python deploy/updater/shared_release.py config-example` 输出共享服务组执行器配置模板。`validate <envelope.json> --config <config.json>` 验证 Ed25519 签名、服务组绑定、有效期、维护窗口、数据库 schema=1、备份要求、租户注册文件中的启用租户集合、组件版本不降级、三个制品的大小/摘要和 GitHub Release 地址。
+
+计划只包含发布标签、版本、租户、时间窗和三个制品摘要，不包含服务器命令或任意路径。主机路径、容器名、Compose 文件和密钥位置全部来自运维配置。`--require-window` 只在维护窗口内接受计划；`--audit` 追加脱敏审计记录。输出是 dry-run 步骤，不启动容器、不连接数据库、不执行迁移。
+
+签名信封格式为 `cangshuo-shared-release-v1`，payload 是同一字段的 JSON 的 base64url，签名为 `format + "." + payload` 的 Ed25519 签名。`inspect` 仅在验签后输出计划内容；不要把含凭据的配置或私钥打印到日志。实际共享服务组安装、备份、健康检查和回退执行器仍属于 W9 未完成部分，不能在当前 `tenant.enabled=false` 的生产路径上启用。
