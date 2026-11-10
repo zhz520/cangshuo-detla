@@ -36,4 +36,16 @@
 
 计划只包含发布标签、版本、租户、时间窗和三个制品摘要，不包含服务器命令或任意路径。主机路径、容器名、Compose 文件和密钥位置全部来自运维配置。`--require-window` 只在维护窗口内接受计划；`--audit` 追加脱敏审计记录。输出是 dry-run 步骤，不启动容器、不连接数据库、不执行迁移。
 
-签名信封格式为 `cangshuo-shared-release-v1`，payload 是同一字段的 JSON 的 base64url，签名为 `format + "." + payload` 的 Ed25519 签名。`inspect` 仅在验签后输出计划内容；不要把含凭据的配置或私钥打印到日志。实际共享服务组安装、备份、健康检查和回退执行器仍属于 W9 未完成部分，不能在当前 `tenant.enabled=false` 的生产路径上启用。
+签名信封格式为 `cangshuo-shared-release-v1`，payload 是同一字段的 JSON 的 base64url，签名为 `format + "." + payload` 的 Ed25519 签名。`inspect` 仅在验签后输出计划内容；不要把含凭据的配置或私钥打印到日志。真实共享服务组的 Compose 安装、跨版本回退和生产切换仍属于 W9 未完成部分，不能在当前 `tenant.enabled=false` 的生产路径上启用。
+
+## 共享服务组执行器
+
+`python deploy/updater/shared_worker.py execute <envelope.json> --config <config.json> --confirm <service-group-id>` 只接受已验签、处于维护窗口内、租户集合与注册文件一致的计划。执行顺序固定为：获取独占锁、逐租户 `mysqldump` 和文件归档、下载并校验三个制品、按组件解包和版本核对、写入 Compose 覆盖文件、后端健康检查、后台健康检查、H5 健康检查、写入当前版本和审计记录。
+
+`health_host` 必须是该服务组启用租户的登记域名，用于共享后端带 Host 的站点健康检查。`compose_override` 默认是 `<root>/compose.shared-release.json`；`release_retention` 至少为 2，确保回退目标不会被清理。`allow_execute` 为 false 时只允许 `validate`。Compose 文件、容器名、MySQL 容器、备份路径和公钥都来自运维配置，不接受签名计划提供的命令或路径。
+
+失败时恢复原 Compose 覆盖文件、原 `current.json` 和上一个版本，删除本次已安装标记和发布目录；回退健康检查失败会保留 `journal.json` 和 `maintenance` 门禁，禁止继续执行。`python deploy/updater/shared_worker.py recover --config <config.json>` 按宿主私有日志恢复。审计记录只包含服务组、发布 ID、版本、租户和结果，不含签名、凭据或业务数据。
+
+执行器不执行数据库迁移，计划仍只接受 `schemaVersion=1`；真实共享服务组的 Compose 安装、跨版本回退和客户切换必须另行取得变更确认并在隔离环境演练，不能把单元测试或 dry-run 当作生产验收。
+
+宿主机验签依赖 Python 3.7+ 和 `cryptography`。742 现有系统 Python 3.6 没有该依赖，不能直接用它执行正式共享发布；上线前需准备独立受限 Python 运行时或 verifier 容器。暂存环境只验证了执行器的备份和健康检查，未执行签名计划安装。

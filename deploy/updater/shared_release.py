@@ -18,9 +18,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import serialization
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import shared_registry
 
@@ -37,8 +34,20 @@ MAX_ARTIFACT = 500_000_000
 def instant(value, field):
     if not isinstance(value, str) or not value.strip():
         raise ValueError(field + " must be an ISO-8601 UTC timestamp")
+    text = value.strip().replace("Z", "+00:00")
     try:
-        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(text)
+    except AttributeError:
+        parsed = None
+        fallback = re.sub(r"([+-]\d{2}):(\d{2})$", r"\1\2", text)
+        for pattern in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z"):
+            try:
+                parsed = datetime.strptime(fallback, pattern)
+                break
+            except ValueError:
+                pass
+        if parsed is None:
+            raise ValueError(field + " must be an ISO-8601 UTC timestamp")
     except ValueError as error:
         raise ValueError(field + " must be an ISO-8601 UTC timestamp") from error
     if parsed.tzinfo is None:
@@ -100,6 +109,9 @@ def validate_config(raw):
     maximum = raw.get("maintenance_max_minutes", 240)
     if not isinstance(maximum, int) or not 1 <= maximum <= 1440:
         raise ValueError("maintenance_max_minutes must be 1..1440")
+    retention = raw.get("release_retention", 3)
+    if not isinstance(retention, int) or retention < 2:
+        raise ValueError("release_retention must be at least 2 for rollback")
     return raw
 
 
@@ -107,10 +119,13 @@ def load_config(path):
     return validate_config(load_json(path))
 
 
-def active_tenants(config):
+def tenant_rows(config):
     document = shared_registry.load(config["registry_file"])
-    rows = shared_registry.validate_registry(document)
-    return [row["id"] for row in rows if row["active"]]
+    return shared_registry.validate_registry(document)
+
+
+def active_tenants(config):
+    return [row["id"] for row in tenant_rows(config) if row["active"]]
 
 
 def current_state(state_dir):
@@ -134,6 +149,11 @@ def current_state(state_dir):
 
 
 def verify_envelope(envelope, public_key_path, now=None):
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives import serialization
+    except ImportError as error:
+        raise ValueError("cryptography is required to verify shared release plans") from error
     if not isinstance(envelope, dict) or envelope.get("format") != FORMAT:
         raise ValueError("Invalid shared release format")
     payload, signature = envelope.get("payload", ""), envelope.get("signature", "")
@@ -181,7 +201,7 @@ def validate_plan(plan, config, tenants, current, now, require_window=False):
         raise ValueError("only database schemaVersion=1 is supported")
     if plan.get("backupRequired") is not True:
         raise ValueError("backupRequired must be true")
-    if not isinstance(plan.get("releaseTag"), str) or not re.fullmatch(r"[A-Za-z0-9._/-]{1,100}", plan["releaseTag"]):
+    if not isinstance(plan.get("releaseTag"), str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", plan["releaseTag"]):
         raise ValueError("releaseTag is invalid")
     selected = plan.get("tenants")
     if not isinstance(selected, list) or not selected or any(not isinstance(item, str) or not TENANT_ID.fullmatch(item) for item in selected):
@@ -226,6 +246,8 @@ def validate_plan(plan, config, tenants, current, now, require_window=False):
         parsed = urlsplit(url)
         if parsed.query or parsed.fragment or not parsed.path.endswith(".zip"):
             raise ValueError("package URL must be a plain ZIP release asset: " + component)
+        if any(part == ".." for part in Path(parsed.path).parts) or component not in Path(parsed.path).name:
+            raise ValueError("package URL does not identify the component asset: " + component)
     if seen != set(COMPONENTS):
         raise ValueError("plan is missing a component package")
     marker = Path(config["state_dir"]) / "installed-plans" / plan["id"]

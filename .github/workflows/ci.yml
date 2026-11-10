@@ -39,7 +39,7 @@ jobs:
       - name: Test and build backend
         working-directory: delta-game
         run: mvn --batch-mode --settings ../.github/maven-settings.xml -pl delta-admin -am verify
-      - name: Validate signed installer and rollback
+      - name: Validate installer, shared release and rollback
         env:
           TEMP: ${{ runner.temp }}
         run: |
