@@ -32,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -49,6 +51,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     private final SysConfigService sysConfigService;
     private final WxPayConfiguration wxPayConfiguration;
     private final StringRedisTemplate redisTemplate;
+    @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     private final ApplicationEventPublisher eventPublisher;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
@@ -260,7 +263,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         incrementSalesCount(order.getProductId());
 
         // 支付成功，删除Redis超时取消key
-        redisTemplate.delete("order:pay_timeout:" + orderId);
+        redisTemplate.delete(namespaced("order:pay_timeout:" + orderId));
 
         eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_PAID",
                 "USER", userId, orderId, "订单支付成功，等待打手接单"));
@@ -388,7 +391,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 incrementSalesCount(order.getProductId());
 
                 // 支付成功，删除Redis超时取消key
-                redisTemplate.delete("order:pay_timeout:" + order.getId());
+                redisTemplate.delete(namespaced("order:pay_timeout:" + order.getId()));
 
                 eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_PAID",
                         "USER", order.getUserId(), order.getId(), "订单支付成功，等待打手接单"));
@@ -687,4 +690,6 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             return new BigDecimal("100");
         }
     }
+
+    private String namespaced(String key) { return tenantKeys == null ? key : tenantKeys.key(key); }
 }

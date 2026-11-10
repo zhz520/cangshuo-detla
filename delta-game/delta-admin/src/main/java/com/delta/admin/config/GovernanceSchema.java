@@ -8,13 +8,22 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantStartup;
 
 @Component
 @Order(-100)
 @RequiredArgsConstructor
 public class GovernanceSchema implements ApplicationRunner {
     private final JdbcTemplate jdbc;
+    @Autowired(required = false)
+    private TenantRegistry tenantRegistry;
     @Override public void run(ApplicationArguments args) throws Exception {
+        TenantStartup.forEachActive(tenantRegistry, this::initializeCurrentTenant);
+    }
+
+    private void initializeCurrentTenant() throws Exception {
         try(var connection=jdbc.getDataSource().getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/workbench.sql"));

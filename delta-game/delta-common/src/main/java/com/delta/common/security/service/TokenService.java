@@ -2,6 +2,8 @@ package com.delta.common.security.service;
 
 import com.delta.common.constant.CacheConstants;
 import com.delta.common.redis.service.RedisService;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -30,12 +32,18 @@ public class TokenService {
     private RedisService redisService;
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     public String createToken(Long userId, com.delta.common.enums.UserTypeEnum userTypeEnum) {
         return createToken(userId, userTypeEnum.getCode());
     }
 
     public String createToken(Long userId, String userType) {
+        String tenantId = TenantContext.currentIdOrNull();
+        if (sharedMode() && tenantId == null) {
+            throw new com.delta.common.exception.BusinessException(503, "租户上下文不可用，无法登录");
+        }
         String stamp = accountStamp(userId, userType);
         if (stamp == null) throw new com.delta.common.exception.BusinessException(401, "账号不可用");
         String uuid = UUID.randomUUID().toString().replace("-", "");
@@ -43,6 +51,7 @@ public class TokenService {
         claims.put("userId", userId);
         claims.put("userType", userType);
         claims.put("uuid", uuid);
+        if (tenantId != null) claims.put("tenantId", tenantId);
 
         String token = Jwts.builder()
                 .claims(claims)
@@ -56,6 +65,7 @@ public class TokenService {
         userContext.put("userId", userId);
         userContext.put("userType", userType);
         userContext.put("accountStamp", stamp);
+        if (tenantId != null) userContext.put("tenantId", tenantId);
         redisService.set(CacheConstants.LOGIN_TOKEN_KEY + uuid, userContext,
                 CacheConstants.TOKEN_EXPIRE, TimeUnit.MINUTES);
         return token;
@@ -83,6 +93,10 @@ public class TokenService {
         Object obj = redisService.get(CacheConstants.LOGIN_TOKEN_KEY + uuid);
         if (obj instanceof Map<?, ?> context && context.get("userId") instanceof Number id
                 && context.get("userType") instanceof String type) {
+            if (!tenantMatches((String) context.get("tenantId"))) {
+                removeToken(uuid);
+                return null;
+            }
             String current = accountStamp(id.longValue(), type);
             if (current != null && current.equals(context.get("accountStamp"))) return (Map<String, Object>) obj;
             removeToken(uuid);
@@ -104,10 +118,21 @@ public class TokenService {
     public Map<String, Object> authenticate(String token) {
         Claims claims=parseToken(token);
         if(claims==null) return null;
+        if (!tenantMatches(claims.get("tenantId", String.class))) return null;
         Map<String,Object> context=getUserContext(claims.get("uuid",String.class));
         if(context==null || !String.valueOf(context.get("userId")).equals(String.valueOf(claims.get("userId")))
                 || !context.get("userType").equals(claims.get("userType"))) return null;
         return context;
+    }
+
+    private boolean sharedMode() {
+        return tenantProperties != null && tenantProperties.isEnabled();
+    }
+
+    private boolean tenantMatches(String tokenTenant) {
+        String requestTenant = TenantContext.currentIdOrNull();
+        if (sharedMode()) return requestTenant != null && requestTenant.equals(tokenTenant);
+        return requestTenant == null && tokenTenant == null;
     }
 
     private String accountStamp(Long id, String type) {

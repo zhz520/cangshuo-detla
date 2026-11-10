@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantStartup;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -25,6 +28,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DatabaseCompatibility {
     private final JdbcTemplate jdbc;
+    @Autowired(required = false)
+    private TenantRegistry tenantRegistry;
 
     private record AdditiveColumn(String table, String column, String ddl) {}
 
@@ -83,6 +88,10 @@ public class DatabaseCompatibility {
 
     @PostConstruct
     public void ensure() {
+        TenantStartup.forEachActive(tenantRegistry, this::ensureCurrentTenant);
+    }
+
+    private void ensureCurrentTenant() {
         try {
             ensureTable("identity_verification", "CREATE TABLE IF NOT EXISTS identity_verification (" +
                     "user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL, " +

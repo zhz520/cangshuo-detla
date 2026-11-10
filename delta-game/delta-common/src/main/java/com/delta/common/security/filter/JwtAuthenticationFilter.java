@@ -1,6 +1,8 @@
 package com.delta.common.security.filter;
 
 import com.delta.common.security.service.TokenService;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -11,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final TokenService tokenService;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -28,10 +33,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             Claims claims = tokenService.parseToken(token);
             if (claims != null) {
+                String requestTenant = TenantContext.currentIdOrNull();
+                String tokenTenant = claims.get("tenantId", String.class);
+                if (tenantProperties != null && tenantProperties.isEnabled()
+                        && (requestTenant == null || !requestTenant.equals(tokenTenant))) {
+                    chain.doFilter(request, response);
+                    return;
+                }
                 String uuid = claims.get("uuid", String.class);
                 Map<String, Object> userContext = tokenService.getUserContext(uuid);
                 if (userContext != null && String.valueOf(userContext.get("userId")).equals(String.valueOf(claims.get("userId")))
-                        && userContext.get("userType").equals(claims.get("userType"))) {
+                        && userContext.get("userType").equals(claims.get("userType"))
+                        && (!(tenantProperties != null && tenantProperties.isEnabled())
+                            || requestTenant.equals(userContext.get("tenantId")))) {
                     // 根据 userType 构建角色权限
                     List<org.springframework.security.core.GrantedAuthority> authorities = buildAuthorities(
                             (String) userContext.get("userType"));
