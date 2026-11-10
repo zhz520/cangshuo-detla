@@ -2,6 +2,9 @@ package com.delta.common.job.task;
 
 import com.delta.common.mapper.ScheduledTaskMapper;
 import com.delta.common.redis.service.RedisService;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,9 +18,14 @@ import java.util.concurrent.TimeUnit;
 public class StatisticsTask {
     private final RedisService redisService;
     private final ScheduledTaskMapper scheduledTaskMapper;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Scheduled(cron = "0 0 1 * * ?")
     public void execute() {
+        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+    }
+
+    private void executeForTenant() {
         if (!redisService.tryLock("lock:task:statistics", 50, TimeUnit.MINUTES)) return;
         try {
             // 计算前一天统计指标并写入statistics_daily

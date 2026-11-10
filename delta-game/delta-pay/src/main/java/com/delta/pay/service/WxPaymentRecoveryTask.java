@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.delta.pay.entity.Payment;
 import com.delta.pay.config.WxPayConfiguration;
 import com.delta.common.redis.service.RedisService;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.system.service.SysConfigService;
 import com.wechat.pay.java.core.exception.ServiceException;
 import com.wechat.pay.java.service.refund.model.*;
@@ -22,9 +25,14 @@ public class WxPaymentRecoveryTask {
     private final WxPayConfiguration configuration;
     private final SysConfigService configs;
     private final RedisService redis;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Scheduled(fixedDelay=30000,initialDelay=30000)
     public void recover() {
+        TenantScheduler.run(tenantRegistry,this::recoverForTenant);
+    }
+
+    private void recoverForTenant() {
         if(!configuration.isEnabled()) return;
         var clients=configuration.getClients();if(clients==null || !redis.tryLock("task:wx-payment-recovery",5,TimeUnit.MINUTES)) return;
         try {

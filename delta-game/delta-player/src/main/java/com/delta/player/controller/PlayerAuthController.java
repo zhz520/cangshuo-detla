@@ -11,6 +11,7 @@ import com.delta.player.service.PlayerService;
 import com.delta.player.service.PlayerWalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.delta.common.tenant.TenantWxMaServiceProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/player/auth")
 @RequiredArgsConstructor
 public class PlayerAuthController {
-    private final ObjectProvider<WxMaService> wxMaServiceProvider;
+    private final ObjectProvider<TenantWxMaServiceProvider> wxMaServiceProvider;
     private final PlayerService playerService;
     private final PlayerWalletService playerWalletService;
     private final TokenService tokenService;
@@ -27,7 +28,8 @@ public class PlayerAuthController {
 
     @PostMapping("/login")
     public R<com.delta.player.dto.PlayerLoginResponse> wxLogin(@RequestBody com.delta.player.dto.PlayerLoginRequest request) {
-        WxMaService wxMaService = wxMaServiceProvider.getIfAvailable();
+        TenantWxMaServiceProvider tenantWxMa = wxMaServiceProvider.getIfAvailable();
+        WxMaService wxMaService = tenantWxMa == null ? null : tenantWxMa.get();
         if (wxMaService == null) {
             return R.fail("微信小程序登录未启用");
         }

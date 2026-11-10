@@ -3,6 +3,9 @@ package com.delta.common.file.service.impl;
 import com.delta.common.file.service.FileService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.nio.file.Files;
@@ -20,6 +23,8 @@ public class LocalFileServiceImpl implements FileService {
     private String uploadPath;
     @Value("${file.upload.url-prefix:/upload/}")
     private String urlPrefix;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     @Override
     public String upload(MultipartFile file) throws Exception {
@@ -31,7 +36,8 @@ public class LocalFileServiceImpl implements FileService {
         boolean audio=java.util.Set.of("mp3","m4a","wav","aac","ogg","webm").contains(extension);
         if(!image && !audio) throw new com.delta.common.exception.BusinessException(400,"仅支持JPG、PNG、GIF图片或受支持的语音文件");
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        Path dir = Paths.get(uploadPath, datePath);
+        String tenantId=tenantProperties!=null&&tenantProperties.isEnabled()?TenantContext.requireId():null;
+        Path dir = tenantId==null?Paths.get(uploadPath, datePath):Paths.get(uploadPath, tenantId, datePath);
         Files.createDirectories(dir);
 
         String originalName = file.getOriginalFilename();
@@ -73,6 +79,7 @@ public class LocalFileServiceImpl implements FileService {
             if(!recognized) throw new com.delta.common.exception.BusinessException(400,"音频内容无效");
             file.transferTo(target.toFile());
         }
-        return urlPrefix + datePath + "/" + fileName;
+        String prefix=urlPrefix.endsWith("/")?urlPrefix:urlPrefix+"/";
+        return prefix + (tenantId==null?"":tenantId+"/") + datePath + "/" + fileName;
     }
 }

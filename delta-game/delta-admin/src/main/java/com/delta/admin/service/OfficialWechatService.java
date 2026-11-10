@@ -2,6 +2,10 @@ package com.delta.admin.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.common.tenant.TenantKeyEncoder;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
 
 import com.alibaba.fastjson2.*;
 import com.delta.common.event.BusinessEvent;
@@ -25,6 +29,7 @@ import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -37,8 +42,10 @@ public class OfficialWechatService {
  private final PlatformService platform;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  @Autowired(required = false) private TenantKeyEncoder tenantKeys;
+ @Autowired(required = false) private TenantProperties tenantProperties;
+ @Autowired(required = false) private TenantRegistry tenantRegistry;
  private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
- private volatile String accessToken="";private volatile long tokenUntil=0;
+ private final ConcurrentHashMap<String,AccessToken> accessTokens=new ConcurrentHashMap<>();
  public static final String FEATURE_ID="official_wechat_notifications";
  private static final List<String> TEMPLATE_GROUPS=List.of("new_order","order_status","refund_status","complaint_status","staff_review");
  private static final DefaultRedisScript<Long> RELEASE_BINDING_LOCK=new DefaultRedisScript<>(
@@ -56,7 +63,10 @@ public class OfficialWechatService {
   }
  }
  @Scheduled(fixedDelay=15000,initialDelay=30000)
- public synchronized void deliver(){
+ public void deliver(){
+  TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+ }
+ private synchronized void deliverForTenant(){
   try{
    jdbc.update("UPDATE wechat_notice_queue SET status='EXPIRED',last_error='WECHAT_EXPIRED' WHERE status IN ('PENDING','RETRY') AND created_at<?",LocalDateTime.now().minusDays(1));
    jdbc.update("DELETE FROM wechat_notice_queue WHERE status IN ('SENT','FAILED','EXPIRED') AND created_at<?",LocalDateTime.now().minusDays(30));
@@ -86,13 +96,13 @@ public class OfficialWechatService {
   Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String source=fields.getString(field),value=values.get(source);if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");data.put(field,Map.of("value",templateFieldValue(field,source,value)));}
   Map<String,Object> payload=messagePayload(Objects.toString(bindings.get(0).get("openid"),""),templateId,data,template.getString("url"),template.getJSONObject("miniprogram"),"cangshuo-"+row.get("id"));
   var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+token(),payload);
-  if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))tokenUntil=0;throw new DeliveryError("WECHAT_"+code);}
+  if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))accessTokens.remove(scope());throw new DeliveryError("WECHAT_"+code);}
  }
  private synchronized String token()throws Exception{
-  if(System.currentTimeMillis()<tokenUntil)return accessToken;
+  AccessToken cached=accessTokens.get(scope());if(cached!=null&&System.currentTimeMillis()<cached.until())return cached.value();
   var result=post("https://api.weixin.qq.com/cgi-bin/stable_token",Map.of("grant_type","client_credential","appid",configs.getConfigValue("wechat.official.app_id",""),"secret",configs.getConfigValue("wechat.official.app_secret","")));
   String value=result.getString("access_token");if(value==null||value.isBlank())throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");
-  accessToken=value;tokenUntil=System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L;return value;
+  accessTokens.put(scope(),new AccessToken(value,System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L));return value;
  }
  public Map<String,Object> binding(String rawType,Long id){
   String type=canonicalUserType(rawType);
@@ -241,6 +251,8 @@ public class OfficialWechatService {
   catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
  }
  private String namespaced(String key){return tenantKeys==null?key:tenantKeys.key(key);}
+ private String scope(){if(tenantProperties==null||!tenantProperties.isEnabled())return "default";return TenantContext.requireId();}
+ private record AccessToken(String value,long until){}
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
  private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}
 }

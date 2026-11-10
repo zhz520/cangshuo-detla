@@ -1,6 +1,8 @@
 package com.delta.pay.config;
 
 import com.delta.system.service.SysConfigService;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAPublicKeyConfig;
 import com.wechat.pay.java.core.notification.NotificationConfig;
@@ -12,10 +14,13 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 微信支付动态配置及客户端管理。
@@ -27,6 +32,8 @@ import java.util.Objects;
 @Slf4j
 public class WxPayConfiguration {
     private final SysConfigService sysConfigService;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     @Value("${wx.miniapp.appid:}")
     private String fallbackMiniAppId;
@@ -51,21 +58,24 @@ public class WxPayConfiguration {
     @Value("${wx.pay.h5-app-name:三角洲服务}")
     private String fallbackH5AppName;
 
-    private volatile CachedClients cachedClients;
+    private final ConcurrentHashMap<String, CachedClients> cachedClients = new ConcurrentHashMap<>();
 
     public WxPayConfiguration(SysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
     }
 
     public boolean isEnabled() {
+        tenantScope();
         return loadConfig().enabled();
     }
 
     public RuntimeConfig getRuntimeConfig() {
+        tenantScope();
         return loadConfig();
     }
 
     public CachedClients getClients() {
+        String scope = tenantScope();
         RuntimeConfig config = loadConfig();
         // 关闭开关只禁止新支付，不影响已有订单的回调验签和退款。
         // 只有在没有任何可用凭据时才不创建客户端。
@@ -74,12 +84,12 @@ public class WxPayConfiguration {
                     "微信支付商户证书缺失或无效，请在系统配置中重新上传商户私钥和微信支付公钥");
             return null;
         }
-        CachedClients current = cachedClients;
+        CachedClients current = cachedClients.get(scope);
         if (current != null && current.getConfig().equals(config)) {
             return current;
         }
         synchronized (this) {
-            current = cachedClients;
+            current = cachedClients.get(scope);
             if (current != null && current.getConfig().equals(config)) {
                 return current;
             }
@@ -99,7 +109,7 @@ public class WxPayConfiguration {
                         new RefundService.Builder().config(wxConfig).build(),
                         new NotificationParser((NotificationConfig) wxConfig)
                 );
-                cachedClients = created;
+                cachedClients.put(scope, created);
                 return created;
             } catch (RuntimeException error) {
                 log.error("微信支付客户端初始化失败: {}", error.getClass().getSimpleName());
@@ -129,7 +139,8 @@ public class WxPayConfiguration {
 
     private String get(String key, String fallback) {
         String value = sysConfigService.getConfigValue(key);
-        return value == null || value.isBlank() ? fallback : value.trim();
+        if (value != null && !value.isBlank()) return value.trim();
+        return sharedMode() && tenantCredential(key) ? "" : fallback;
     }
 
     private boolean getBoolean(String key, boolean fallback) {
@@ -153,6 +164,19 @@ public class WxPayConfiguration {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean sharedMode() { return tenantProperties != null && tenantProperties.isEnabled(); }
+
+    private boolean tenantCredential(String key) {
+        return Set.of("wx.pay.appid","wx.pay.mch-id","wx.pay.notify-url","wx.pay.api-v3-key",
+                "wx.pay.private-key-path","wx.pay.cert-serial-no","wx.pay.public-key-id","wx.pay.public-key-path")
+                .contains(key);
+    }
+
+    private String tenantScope() {
+        if (!sharedMode()) return "default";
+        return TenantContext.requireId();
     }
 
     public record RuntimeConfig(

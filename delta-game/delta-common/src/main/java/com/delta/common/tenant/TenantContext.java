@@ -26,7 +26,7 @@ public final class TenantContext {
             throw new BusinessException(503, "同一线程内禁止切换租户");
         }
         if (previous == null) CURRENT.set(valid);
-        return new Scope(previous == null);
+        return new Scope(previous);
     }
 
     public static void runAs(String tenantId, Runnable action) {
@@ -51,18 +51,18 @@ public final class TenantContext {
     }
 
     public static final class Scope implements AutoCloseable {
-        private final boolean release;
+        private final String previous;
         private boolean closed;
 
-        private Scope(boolean release) {
-            this.release = release;
+        private Scope(String previous) {
+            this.previous = previous;
         }
 
         @Override
         public void close() {
             if (closed) return;
             closed = true;
-            if (release) CURRENT.remove();
+            if (previous == null) CURRENT.remove(); else CURRENT.set(previous);
         }
     }
 }

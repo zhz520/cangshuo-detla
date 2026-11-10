@@ -4,6 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,16 +34,27 @@ public class ThumbnailCacheCleaner {
     private long retentionDays;
     @Value("${file.thumbnail.max-size-mb:2048}")
     private long maxSizeMb;
+    @Autowired(required=false) private TenantProperties tenantProperties;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     public record Result(int retained, int removed, long retainedBytes, long removedBytes) {}
 
     @Scheduled(cron = "${file.thumbnail.cleanup-cron:0 20 4 * * *}")
     public void scheduledCleanup() {
         try {
-            Result result = cleanup(Paths.get(uploadPath), Duration.ofDays(Math.max(1, retentionDays)),
-                    Math.max(1, maxSizeMb) * 1024 * 1024);
-            if (result.removed() > 0) log.info("缩略图缓存清理完成: retained={}, removed={}, freedBytes={}",
-                    result.retained(), result.removed(), result.removedBytes());
+            long maxBytes=Math.max(1,maxSizeMb)*1024*1024;
+            Duration age=Duration.ofDays(Math.max(1,retentionDays));
+            if(tenantProperties!=null&&tenantProperties.isEnabled()){
+                for(var tenant:tenantRegistry.activeTenants()){
+                    Result result=cleanup(Paths.get(uploadPath,tenant.id()),age,maxBytes);
+                    if(result.removed()>0)log.info("租户[{}]缩略图缓存清理完成: retained={}, removed={}, freedBytes={}",
+                            tenant.id(),result.retained(),result.removed(),result.removedBytes());
+                }
+            }else{
+                Result result = cleanup(Paths.get(uploadPath),age,maxBytes);
+                if (result.removed() > 0) log.info("缩略图缓存清理完成: retained={}, removed={}, freedBytes={}",
+                        result.retained(), result.removed(), result.removedBytes());
+            }
         } catch (Exception error) {
             log.warn("缩略图缓存清理失败: {}", error.getClass().getSimpleName());
         }

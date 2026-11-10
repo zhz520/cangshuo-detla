@@ -12,6 +12,11 @@ public final class TenantDefinition {
     private final String username;
     private final String password;
     private final String driverClassName;
+    private final String platformCustomerId;
+    private final String platformInstanceId;
+    private final boolean miniappEnabled;
+    private final String miniappAppId;
+    private final String miniappSecret;
     private final int maximumPoolSize;
     private final int minimumIdle;
     private final long connectionTimeoutMs;
@@ -25,6 +30,17 @@ public final class TenantDefinition {
         this.username = source.getUsername() == null ? "" : source.getUsername().trim();
         this.password = source.getPassword() == null ? "" : source.getPassword();
         this.driverClassName = source.getDriverClassName() == null ? "" : source.getDriverClassName().trim();
+        this.platformCustomerId = source.getPlatformCustomerId() == null ? "" : source.getPlatformCustomerId().trim();
+        this.platformInstanceId = source.getPlatformInstanceId() == null ? "" : source.getPlatformInstanceId().trim();
+        if (!platformInstanceId.isBlank()) {
+            try { java.util.UUID.fromString(platformInstanceId); }
+            catch (IllegalArgumentException error) {
+                throw new IllegalArgumentException("租户平台实例编号必须是UUID: " + id);
+            }
+        }
+        this.miniappEnabled = source.isMiniappEnabled();
+        this.miniappAppId = source.getMiniappAppId() == null ? "" : source.getMiniappAppId().trim();
+        this.miniappSecret = source.getMiniappSecret() == null ? "" : source.getMiniappSecret();
         this.maximumPoolSize = source.getMaximumPoolSize();
         this.minimumIdle = source.getMinimumIdle();
         this.connectionTimeoutMs = source.getConnectionTimeoutMs();
@@ -47,6 +63,11 @@ public final class TenantDefinition {
     public String username() { return username; }
     public String password() { return password; }
     public String driverClassName() { return driverClassName; }
+    public String platformCustomerId() { return platformCustomerId; }
+    public String platformInstanceId() { return platformInstanceId; }
+    public boolean miniappEnabled() { return miniappEnabled; }
+    public String miniappAppId() { return miniappAppId; }
+    public String miniappSecret() { return miniappSecret; }
     public int maximumPoolSize() { return maximumPoolSize; }
     public int minimumIdle() { return minimumIdle; }
     public long connectionTimeoutMs() { return connectionTimeoutMs; }

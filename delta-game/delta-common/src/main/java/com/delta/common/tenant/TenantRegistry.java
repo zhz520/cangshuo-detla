@@ -1,6 +1,11 @@
 package com.delta.common.tenant;
 
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -18,10 +23,16 @@ public class TenantRegistry {
     private final Map<String, TenantDefinition> byHost;
 
     public TenantRegistry(TenantProperties properties) {
-        this.sharedEnabled = properties.isEnabled();
+        this(properties, new ObjectMapper());
+    }
+
+    @Autowired
+    public TenantRegistry(TenantProperties properties, ObjectMapper json) {
+        TenantProperties loaded = loadRegistry(properties, json);
+        this.sharedEnabled = loaded.isEnabled();
         Map<String, TenantDefinition> definitions = new LinkedHashMap<>();
         Map<String, TenantDefinition> hosts = new LinkedHashMap<>();
-        for (Map.Entry<String, TenantProperties.Tenant> entry : properties.getTenants().entrySet()) {
+        for (Map.Entry<String, TenantProperties.Tenant> entry : loaded.getTenants().entrySet()) {
             TenantDefinition definition = new TenantDefinition(entry.getKey(), entry.getValue());
             if (sharedEnabled && definition.active() && definition.hosts().isEmpty()) {
                 throw new IllegalStateException("启用中的租户未配置域名: " + definition.id());
@@ -39,6 +50,37 @@ public class TenantRegistry {
         }
         this.byId = Map.copyOf(definitions);
         this.byHost = Map.copyOf(hosts);
+    }
+
+    private static TenantProperties loadRegistry(TenantProperties properties, ObjectMapper json) {
+        String file = properties.getRegistryFile() == null ? "" : properties.getRegistryFile().trim();
+        if (file.isEmpty()) return properties;
+        try {
+            Path path = Path.of(file).toAbsolutePath().normalize();
+            if (!Files.isRegularFile(path) || Files.size(path) > 2_000_000) {
+                throw new IllegalStateException("租户注册文件不可用");
+            }
+            try {
+                boolean exposed=Files.getPosixFilePermissions(path).stream()
+                        .anyMatch(permission->permission.name().startsWith("OTHERS_"));
+                if(exposed)throw new IllegalStateException("租户注册文件权限过宽，必须设为仅运维账号可读");
+            }catch(UnsupportedOperationException ignored){/* Windows or non-POSIX storage. */}
+            JsonNode root = json.readTree(path.toFile());
+            if (root == null || !root.isObject()) throw new IllegalStateException("租户注册文件格式无效");
+            JsonNode envelope = root.has("tenants") ? root
+                    : json.createObjectNode().set("tenants", root);
+            TenantProperties loaded = json.treeToValue(envelope, TenantProperties.class);
+            loaded.setEnabled(properties.isEnabled());
+            loaded.setRegistryFile(file);
+            if (loaded.getTenants() == null || loaded.getTenants().isEmpty()) {
+                throw new IllegalStateException("租户注册文件没有客户");
+            }
+            return loaded;
+        } catch (IllegalStateException error) {
+            throw error;
+        } catch (Exception error) {
+            throw new IllegalStateException("租户注册文件读取失败", error);
+        }
     }
 
     public boolean isSharedEnabled() { return sharedEnabled; }

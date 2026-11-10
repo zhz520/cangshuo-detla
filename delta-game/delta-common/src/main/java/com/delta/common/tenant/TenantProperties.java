@@ -21,6 +21,8 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "tenant")
 public class TenantProperties {
     private boolean enabled;
+    /** Optional externally managed JSON registry. The file is never logged. */
+    private String registryFile = "";
     private Map<String, Tenant> tenants = new LinkedHashMap<>();
 
     @Getter
@@ -36,6 +38,13 @@ public class TenantProperties {
         private String username = "";
         private String password = "";
         private String driverClassName = "com.mysql.cj.jdbc.Driver";
+        // Set these when migrating an existing licensed instance. They are
+        // generated only for a brand-new tenant database.
+        private String platformCustomerId = "";
+        private String platformInstanceId = "";
+        private boolean miniappEnabled;
+        private String miniappAppId = "";
+        private String miniappSecret = "";
         private int maximumPoolSize = 8;
         private int minimumIdle;
         private long connectionTimeoutMs = 5_000L;

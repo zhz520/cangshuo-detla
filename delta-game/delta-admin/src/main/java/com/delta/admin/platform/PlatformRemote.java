@@ -1,6 +1,9 @@
 package com.delta.admin.platform;
 
 import com.delta.common.exception.BusinessException;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +18,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service @Slf4j
 public class PlatformRemote {
@@ -22,11 +26,13 @@ public class PlatformRemote {
     private final PlatformService platform;
     private final ObjectMapper json;
     private final Clock clock;
-    private volatile JsonNode cached;
-    private Long lastAttempt;
-    private Long lastManualAttempt;
-    private CompletableFuture<Void> syncInFlight;
-    private final java.util.concurrent.atomic.AtomicBoolean planning = new java.util.concurrent.atomic.AtomicBoolean();
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private TenantProperties tenantProperties;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private TenantRegistry tenantRegistry;
+    private final Map<String,JsonNode> cachedByScope = new ConcurrentHashMap<>();
+    private final Map<String,Long> lastAttempts = new ConcurrentHashMap<>();
+    private final Map<String,Long> lastManualAttempts = new ConcurrentHashMap<>();
+    private final Map<String,CompletableFuture<Void>> syncInFlight = new ConcurrentHashMap<>();
+    private final Map<String,java.util.concurrent.atomic.AtomicBoolean> planningByScope = new ConcurrentHashMap<>();
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformRemote(PlatformProperties properties, PlatformService platform, ObjectMapper json) {
         this(properties,platform,json,Clock.systemUTC());
@@ -34,12 +40,22 @@ public class PlatformRemote {
     PlatformRemote(PlatformProperties properties, PlatformService platform, ObjectMapper json, Clock clock) {
         this.properties=properties;this.platform=platform;this.json=json.copy().enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);this.clock=clock;
     }
-    private Path path(String name) { return Path.of(properties.getStatePath()).toAbsolutePath().getParent().resolve(name); }
+    private Path path(String name) { return baseDir().resolve(name); }
+    private Path baseDir() {
+        Path parent=Path.of(properties.getStatePath()).toAbsolutePath().normalize().getParent();
+        return sharedMode()?parent.resolve("tenants").resolve(TenantContext.requireId()):parent;
+    }
+    private boolean sharedMode(){return tenantProperties!=null&&tenantProperties.isEnabled();}
+    private String scope(){return sharedMode()?TenantContext.requireId():"default";}
+    private JsonNode cached(){return cachedByScope.get(scope());}
+    private java.util.concurrent.atomic.AtomicBoolean planning(){return planningByScope.computeIfAbsent(scope(),key->new java.util.concurrent.atomic.AtomicBoolean());}
     private void loadSnapshot() {
-        if (cached != null) return;
+        String scope=scope();
+        if (cachedByScope.containsKey(scope)) return;
         try {
             var file = path("authority.json");
-            if (Files.isRegularFile(file) && Files.size(file) < 2_000_000) cached = json.readTree(Files.readString(file));
+            if (Files.isRegularFile(file) && Files.size(file) < 2_000_000)
+                cachedByScope.put(scope,json.readTree(Files.readString(file)));
         } catch (Exception ignored) { /* No usable cached snapshot. */ }
     }
 
@@ -49,11 +65,13 @@ public class PlatformRemote {
 
     public synchronized String lastSuccessfulSync() {
         loadSnapshot();
+        var cached=cached();
         return cached == null ? null : cached.path("receivedAt").asText(null);
     }
 
     public synchronized JsonNode status() {
         loadSnapshot();
+        var cached=cached();
         String currentVersion=effectiveVersion();
         var result=json.createObjectNode();result.put("currentVersion",currentVersion);result.put("backendVersion",platform.overview().version());result.put("connected",cached!=null);
         result.set("componentVersions",componentVersions());
@@ -73,6 +91,7 @@ public class PlatformRemote {
     /** Read the locally synchronized release catalog without contacting the authority. */
     public synchronized String pendingReleaseVersion() {
         loadSnapshot();
+        var cached=cached();
         if (cached == null) return null;
         String latest = null;
         for (var item : currentUpdates(cached.path("updates"), effectiveVersion()).path("releases")) {
@@ -83,6 +102,7 @@ public class PlatformRemote {
     }
     public synchronized Map<String, JsonNode> commercialModules() {
         loadSnapshot();
+        var cached=cached();
         if (cached == null) return Map.of();
         var result = new LinkedHashMap<String, JsonNode>();
         for (var module : cached.path("modules")) {
@@ -101,7 +121,8 @@ public class PlatformRemote {
         var signature=Signature.getInstance("Ed25519");signature.initVerify(key);signature.update((format+"."+payload).getBytes(StandardCharsets.UTF_8));
         if(!signature.verify(Base64.getUrlDecoder().decode(sig)))throw new IllegalArgumentException();
         var claims=json.readTree(Base64.getUrlDecoder().decode(payload));
-        if(!properties.getCustomerId().equals(claims.path("customerId").asText())||!platform.overview().instanceId().equals(claims.path("instanceId").asText()))throw new IllegalArgumentException();
+        if(!platform.currentCustomerId().equals(claims.path("customerId").asText())
+                ||!platform.currentInstanceId().equals(claims.path("instanceId").asText()))throw new IllegalArgumentException();
         if(Instant.parse(claims.path("issuedAt").asText()).isAfter(clock.instant().plusSeconds(300)))throw new IllegalArgumentException();
         return claims;
     }
@@ -160,7 +181,9 @@ public class PlatformRemote {
     private static int compare(String left,String right){String[] a=left.split("\\."),b=right.split("\\.");try{for(int i=0;i<3;i++){int value=Integer.compare(Integer.parseInt(a[i]),Integer.parseInt(b[i]));if(value!=0)return value;}}catch(Exception ignored){}return 0;}
     public synchronized JsonNode project() {
         if(platform!=null){var stored=platform.remoteProject();if(stored!=null&&!stored.isEmpty())return stored;}
+        var cached=cached();
         if(cached==null)status();
+        cached=cached();
         if(cached==null)return json.createObjectNode();
         try{return verify(cached.path("project"),"cangshuo-project-v1");}catch(Exception error){return json.createObjectNode();}
     }
@@ -207,20 +230,24 @@ public class PlatformRemote {
             return;
         }
 
+        String scope=scope();
         CompletableFuture<Void> operation;
         boolean start;
         synchronized (this) {
-            if (syncInFlight != null) {
-                operation = syncInFlight;
+            if (syncInFlight.get(scope) != null) {
+                operation = syncInFlight.get(scope);
                 start = false;
             } else {
                 long now = clock.millis();
+                Long lastAttempt=lastAttempts.get(scope);
+                Long lastManualAttempt=lastManualAttempts.get(scope);
                 if (!manual && lastAttempt != null && now - lastAttempt < 10000) return;
                 if (manual && lastManualAttempt != null && now - lastManualAttempt < 3000)
                     throw new BusinessException(429, "同步过于频繁，请稍后再试");
-                if (manual) lastManualAttempt = now;
-                lastAttempt = now;
-                operation = syncInFlight = new CompletableFuture<>();
+                if (manual) lastManualAttempts.put(scope,now);
+                lastAttempts.put(scope,now);
+                operation = new CompletableFuture<>();
+                syncInFlight.put(scope,operation);
                 start = true;
             }
         }
@@ -243,7 +270,7 @@ public class PlatformRemote {
             operation.completeExceptionally(error);
             throw error;
         } finally {
-            synchronized (this) { syncInFlight = null; }
+            synchronized (this) { syncInFlight.remove(scope); }
         }
     }
 
@@ -266,7 +293,7 @@ public class PlatformRemote {
                 throw new IllegalArgumentException("feature state requires a valid license");
             platform.applyVerifiedAuthoritySnapshot(license,project,featureEnabled,featureStartsAt,featureExpiresAt);
             ((com.fasterxml.jackson.databind.node.ObjectNode)response).put("receivedAt",clock.instant().toString());
-            cached=response;
+            cachedByScope.put(scope(),response);
             try{atomic(path("authority.json"),json.writeValueAsBytes(response));}
             catch(Exception cacheError){log.warn("授权中心缓存更新失败：{}",cacheError.getClass().getSimpleName());}
         } catch(InterruptedException error){Thread.currentThread().interrupt();throw new BusinessException(503,"授权中心连接已中断");}
@@ -311,8 +338,10 @@ public class PlatformRemote {
         var result=json.readTree(response.body());if(response.statusCode()/100!=2)throw new BusinessException(response.statusCode(),result.path("message").asText("授权中心请求失败"));return result;
     }
     public JsonNode install(JsonNode selection) {
+        if(sharedMode())throw new BusinessException(409,"共享服务组版本由平台统一发布，租户后台不能独立安装后端容器");
         if(!Files.exists(path("installer-ready")))throw new BusinessException(409,"本实例尚未接入更新执行器");
         if(suspended())throw new BusinessException(403,"项目维护期已到期，请先续期");
+        var planning=planning();
         if(!planning.compareAndSet(false,true))throw new BusinessException(409,"已有更新计划正在生成");
         try {
             var payload=json.createObjectNode();payload.set("license",json.valueToTree(platform.reportPayload().license()));payload.put("version",effectiveVersion());payload.set("componentVersions",componentVersions());payload.set("selection",selection);

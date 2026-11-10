@@ -3,6 +3,10 @@ package com.delta.admin.tenant;
 import com.delta.common.tenant.TenantProperties;
 import com.delta.common.tenant.TenantRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.List;
 
@@ -10,6 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TenantRegistryTest {
+    @TempDir Path directory;
+
     @Test
     void resolvesOnlyExplicitlyRegisteredNormalizedHosts() {
         TenantRegistry registry = new TenantRegistry(properties());
@@ -62,6 +68,23 @@ class TenantRegistryTest {
 
         assertThat(rendered).doesNotContain("never-print-this");
         assertThat(rendered).contains("tenant-a");
+    }
+
+    @Test
+    void canLoadTheRegistryFromTheProtectedControlPlaneFile() throws Exception {
+        Path file = directory.resolve("tenants.json");
+        Files.writeString(file, """
+                {"tenants":{"tenant-a":{"hosts":["shop-a.example.com"],
+                  "jdbcUrl":"jdbc:h2:mem:registry","username":"sa","driverClassName":"org.h2.Driver"}}}
+                """);
+        TenantProperties properties = new TenantProperties();
+        properties.setEnabled(true);
+        properties.setRegistryFile(file.toString());
+
+        TenantRegistry registry = new TenantRegistry(properties, new ObjectMapper());
+
+        assertThat(registry.findByHost("shop-a.example.com")).get().extracting(t -> t.id()).isEqualTo("tenant-a");
+        assertThat(registry.isSharedEnabled()).isTrue();
     }
 
     private TenantProperties properties() {

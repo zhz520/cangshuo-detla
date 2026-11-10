@@ -2,6 +2,9 @@ package com.delta.common.job.task;
 
 import com.delta.common.mapper.ScheduledTaskMapper;
 import com.delta.common.redis.service.RedisService;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,9 +20,14 @@ import java.util.concurrent.TimeUnit;
 public class WithdrawNotifyTask {
     private final RedisService redisService;
     private final ScheduledTaskMapper scheduledTaskMapper;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Scheduled(cron = "0 0 * * * ?")
     public void execute() {
+        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+    }
+
+    private void executeForTenant() {
         if (!redisService.tryLock("lock:task:withdraw_notify", 50, TimeUnit.MINUTES)) return;
         try {
             // 查询PENDING且超过24小时未处理的提现申请

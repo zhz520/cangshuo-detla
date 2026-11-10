@@ -47,6 +47,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @RestController
@@ -68,6 +71,8 @@ public class PayController {
     /** 文件上传目录已经由生产 Compose 持久化，支付证书默认放在其 private 子目录。 */
     @Value("${FILE_UPLOAD_PATH:./uploads/}")
     private String fileUploadPath;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     @PostMapping("/wx/{orderId}")
     public R<Map<String, String>> wxPay(@PathVariable Long orderId) {
@@ -538,7 +543,8 @@ public class PayController {
         String text=new String(file.getBytes(),java.nio.charset.StandardCharsets.US_ASCII);
         if("wx.pay.private-key-path".equals(configKey) ? !text.contains("-----BEGIN PRIVATE KEY-----") : !text.contains("-----BEGIN PUBLIC KEY-----"))
             return R.fail(400,"证书内容不符合要求，请上传对应的PEM密钥");
-        Path dir = resolveKeyStoreDirectory(configuredKeyStorePath, fileUploadPath).resolve(datePath);
+        String tenantId=tenantProperties!=null&&tenantProperties.isEnabled()?TenantContext.requireId():null;
+        Path dir = resolveKeyStoreDirectory(configuredKeyStorePath, fileUploadPath,tenantId).resolve(datePath);
         Files.createDirectories(dir);
         try {Files.setPosixFilePermissions(dir,java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));} catch(UnsupportedOperationException ignored) {}
         String ext = lowerName.substring(lowerName.lastIndexOf('.'));
@@ -558,9 +564,15 @@ public class PayController {
     }
 
     static Path resolveKeyStoreDirectory(String configuredPath, String uploadPath) {
+        return resolveKeyStoreDirectory(configuredPath,uploadPath,null);
+    }
+
+    static Path resolveKeyStoreDirectory(String configuredPath, String uploadPath, String tenantId) {
         String configured = configuredPath == null ? "" : configuredPath.trim();
-        if (!configured.isEmpty()) return Paths.get(configured).toAbsolutePath().normalize();
-        return Paths.get(uploadPath == null || uploadPath.isBlank() ? "./uploads/" : uploadPath,
-                "private", "wxpay").toAbsolutePath().normalize();
+        Path base=configured.isEmpty()
+                ?Paths.get(uploadPath == null || uploadPath.isBlank() ? "./uploads/" : uploadPath,"private","wxpay")
+                :Paths.get(configured);
+        if(tenantId!=null&&!tenantId.isBlank())base=base.resolve(tenantId);
+        return base.toAbsolutePath().normalize();
     }
 }

@@ -20,4 +20,5 @@ platform:
 # tenant migration and security checklist has passed.
 tenant:
   enabled: ${TENANT_MODE_ENABLED:false}
+  registry-file: ${TENANT_REGISTRY_FILE:}
   tenants: {}

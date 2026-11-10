@@ -14,6 +14,7 @@ import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.delta.common.tenant.TenantWxMaServiceProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/user/auth")
 @RequiredArgsConstructor
 public class UserAuthController {
-    private final ObjectProvider<WxMaService> wxMaServiceProvider;
+    private final ObjectProvider<TenantWxMaServiceProvider> wxMaServiceProvider;
     private final UserService userService;
     private final TokenService tokenService;
     private final CrossModuleMapper crossModuleMapper;
@@ -57,7 +58,8 @@ public class UserAuthController {
     @PostMapping("/login")
     public R<LoginResponse> wxLogin(@RequestBody WxLoginRequest request) {
         if(request.getCode()==null || request.getCode().isBlank() || request.getCode().length()>256) return R.fail(400,"登录凭据无效");
-        WxMaService wxMaService = wxMaServiceProvider.getIfAvailable();
+        TenantWxMaServiceProvider tenantWxMa = wxMaServiceProvider.getIfAvailable();
+        WxMaService wxMaService = tenantWxMa == null ? null : tenantWxMa.get();
         if (wxMaService == null) {
             return R.fail("微信小程序登录未启用，请使用H5手机号登录");
         }

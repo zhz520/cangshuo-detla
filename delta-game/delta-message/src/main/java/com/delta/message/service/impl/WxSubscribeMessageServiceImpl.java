@@ -12,8 +12,9 @@ import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Async;
+import com.delta.common.tenant.TenantWxMaServiceProvider;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,7 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WxSubscribeMessageServiceImpl implements WxSubscribeMessageService {
 
-    private final ObjectProvider<WxMaService> wxMaServiceProvider;
+    private final ObjectProvider<TenantWxMaServiceProvider> wxMaServiceProvider;
     private final UserService userService;
     private final PlayerService playerService;
     private final SubscribeMessageLogService subscribeMessageLogService;
@@ -40,7 +41,8 @@ public class WxSubscribeMessageServiceImpl implements WxSubscribeMessageService 
             return;
         }
 
-        WxMaService wxMaService = wxMaServiceProvider.getIfAvailable();
+        TenantWxMaServiceProvider tenantWxMa = wxMaServiceProvider.getIfAvailable();
+        WxMaService wxMaService = tenantWxMa == null ? null : tenantWxMa.get();
         if (wxMaService == null) {
             log.debug("微信小程序未启用，跳过订阅消息: templateId={}", templateId);
             return;
