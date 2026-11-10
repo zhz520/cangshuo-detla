@@ -39,9 +39,10 @@ def instant(value, field):
         parsed = datetime.fromisoformat(text)
     except AttributeError:
         parsed = None
+        fallback = re.sub(r"([+-]\d{2}):(\d{2})$", r"\1\2", text)
         for pattern in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z"):
             try:
-                parsed = datetime.strptime(text, pattern)
+                parsed = datetime.strptime(fallback, pattern)
                 break
             except ValueError:
                 pass
