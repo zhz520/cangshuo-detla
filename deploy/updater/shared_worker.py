@@ -166,7 +166,10 @@ class DockerOperations:
         if self.config.get("env_file"):
             command += ["--env-file", self.config["env_file"]]
         for name in self.config["compose_files"]:
-            command += ["-f", name]
+            compose_file = Path(name)
+            if not compose_file.is_absolute():
+                compose_file = Path(self.config["compose_directory"]) / compose_file
+            command += ["-f", str(compose_file)]
         if override:
             command += ["-f", str(override)]
         command += ["up", "-d", "--no-deps"] + list(services)
