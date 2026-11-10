@@ -1,0 +1,31 @@
+# 共享租户迁移校验工具
+
+这两个工具只读源数据或只连接指定租户数据库执行 SELECT，不执行迁移、删除或业务写入。报告文件默认写入调用方指定路径，建议放在 root-only 目录，不通过聊天或日志传递。
+
+## 文件增量
+
+`deploy/migration/file_delta.py manifest --root <dir> --output <json>` 生成路径、大小和 SHA-256 清单。清单只含文件元数据，不含文件内容。
+
+`compare` 比较源和目标，报告 `missing`、`changed`、`extra`、字节数；`verify` 在存在差异时返回非零；`sync` 默认只输出计划，必须显式加 `--apply` 才复制。复制只新增或替换有差异的文件，不删除目标额外文件；源文件变化会导致校验失败并保留原目标文件。`--exclude .thumbnails` 可跳过可再生成的缩略图。
+
+示例：
+
+```bash
+python deploy/migration/file_delta.py compare --source /old/uploads --target /new/uploads --report /root/migration/files.json
+python deploy/migration/file_delta.py sync --source /old/uploads --target /new/uploads --exclude .thumbnails --apply
+python deploy/migration/file_delta.py verify --source /old/uploads --target /new/uploads --exclude .thumbnails
+```
+
+工具拒绝符号链接和越界路径；目标额外文件不会自动删除，迁移后应由运维确认后再清理。
+
+## 财务对账
+
+`deploy/migration/financial_reconciliation.py audit --mysql-container <container> --database <tenant_database> --report <json>` 通过 `docker exec` 在指定 MySQL 容器内执行只读检查。数据库名只允许字母、数字和下划线。报告只包含检查名、违规数量和状态，不包含用户、订单、支付单号或手机号。
+
+检查覆盖：钱包和打手钱包负余额、交易 `balance_after = balance_before + 方向金额`、按用户/身份的交易连续性、钱包余额与最后一笔交易一致性、订单支付金额、退款申请金额、提现冻结金额、待结算收入和退款不超过支付金额。`ADMIN_DEDUCT` 的金额字段为正数但方向为扣减，其他交易按金额正负方向计算。
+
+`--fail-on-violation` 可在发现违规时返回非零，适合变更单门禁。对账通过不代表资金流水与第三方支付平台账单完全一致；真实切换前仍需逐笔核对微信账单、退款、提现和结算。
+
+## 暂存验证记录
+
+2026-11-10 在 742 暂存 742 clone 上执行：12 项财务检查全部为 0 违规；文件比较在排除 `.thumbnails` 和演练用的 `742/` 目录后为 510 个文件完全一致。该 clone 中包含真实业务数据，报告和暂存目录必须保持 root-only，不能作为客户数据交付物。
