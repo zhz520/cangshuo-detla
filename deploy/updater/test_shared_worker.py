@@ -239,6 +239,19 @@ class SharedWorkerTests(unittest.TestCase):
         operations.extract(frontend, self.root / "admin-out", {"component": "admin", "version": "1.11.3"})
         self.assertTrue((self.root / "admin-out" / "index.html").is_file())
 
+    def test_compose_files_are_resolved_against_project_directory(self):
+        operations = shared_worker.DockerOperations({
+            "compose_directory": "/srv/delta-shared",
+            "compose_files": ["compose.yml"],
+            "env_file": "/srv/delta-shared/.env",
+        })
+        calls = []
+        operations.run = lambda args, timeout=180: calls.append(args)
+        operations.compose_up(["backend"], Path("/srv/delta-shared/override.json"))
+        self.assertIn("-f", calls[0])
+        self.assertIn(str(Path("/srv/delta-shared/compose.yml")), calls[0])
+        self.assertIn(str(Path("/srv/delta-shared/override.json")), calls[0])
+
     def test_lock_maintenance_and_disabled_execution_are_rejected(self):
         (self.state / "execute.lock").write_text("other", encoding="utf-8")
         with self.assertRaises(RuntimeError):
