@@ -1,0 +1,77 @@
+# Shared Delta service group. This template is not a production migration.
+# Replace the image tag with the verified formal release before use.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: delta-shared-mysql
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    env_file: /www/delta-shared/.env
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci"]
+    volumes:
+      - /www/delta-shared/data/mysql:/var/lib/mysql
+    networks: [delta-shared]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin --protocol=TCP -h 127.0.0.1 -u root ping >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    container_name: delta-shared-redis
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    env_file: /www/delta-shared/.env
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    volumes:
+      - /www/delta-shared/data/redis:/data
+    networks: [delta-shared]
+
+  backend:
+    image: lenglengyou/delta-game:tagname
+    platform: linux/amd64
+    container_name: delta-shared-backend
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    env_file: /www/delta-shared/.env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /www/delta-shared/data/upload:/www/data/upload
+      - /www/delta-shared/data/platform:/www/data/platform
+      - /www/delta-shared/config/public.pem:/www/data/platform/public.pem:ro
+      - /www/delta-shared/config/tenant-registry.json:/www/data/tenant-registry.json:ro
+    networks: [delta-shared]
+
+  admin:
+    image: lenglengyou/delta-game-admin:tagname
+    platform: linux/amd64
+    container_name: delta-shared-admin
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    depends_on: [backend]
+    ports: ["127.0.0.1:18180:80"]
+    volumes:
+      - /www/delta-shared/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [delta-shared]
+
+  h5:
+    image: lenglengyou/delta-game-h5:tagname
+    platform: linux/amd64
+    container_name: delta-shared-h5
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    depends_on: [backend]
+    ports: ["127.0.0.1:18181:80"]
+    volumes:
+      - /www/delta-shared/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [delta-shared]
+
+networks:
+  delta-shared:
+    driver: bridge
