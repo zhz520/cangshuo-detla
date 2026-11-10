@@ -220,6 +220,25 @@ class SharedWorkerTests(unittest.TestCase):
         with self.assertRaises(Exception):
             operations.extract(wrong, self.root / "wrong", {"component": "backend", "version": "1.11.3"})
 
+    def test_real_backend_and_frontend_archive_shapes_are_accepted(self):
+        operations = shared_worker.DockerOperations({})
+        inner = self.root / "inner.jar"
+        with zipfile.ZipFile(inner, "w") as zipped:
+            zipped.writestr("BOOT-INF/classes/platform/catalog.json", json.dumps({
+                "version": "1.11.3", "schemaVersion": 1}))
+        backend = self.root / "backend.zip"
+        with zipfile.ZipFile(backend, "w") as zipped:
+            zipped.write(inner, "delta-admin.jar")
+        operations.extract(backend, self.root / "backend-out", {"component": "backend", "version": "1.11.3"})
+        self.assertTrue((self.root / "backend-out" / "delta-admin.jar").is_file())
+
+        frontend = self.root / "admin.zip"
+        with zipfile.ZipFile(frontend, "w") as zipped:
+            zipped.writestr("index.html", "<html></html>")
+            zipped.writestr("cangshuo-version.json", json.dumps({"component": "admin", "version": "1.11.3"}))
+        operations.extract(frontend, self.root / "admin-out", {"component": "admin", "version": "1.11.3"})
+        self.assertTrue((self.root / "admin-out" / "index.html").is_file())
+
     def test_lock_maintenance_and_disabled_execution_are_rejected(self):
         (self.state / "execute.lock").write_text("other", encoding="utf-8")
         with self.assertRaises(RuntimeError):
