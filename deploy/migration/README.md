@@ -43,3 +43,20 @@ python deploy/migration/tenant_state.py show --state-dir /var/lib/delta-migratio
 ```
 
 证据只接受各阶段固定的布尔值、SHA-256、数据库标识、时间窗和审计文本，不接受密码、Token、私钥或任意命令。备份摘要、导入报告、文件差异报告、财务报告和客户验收证据必须由对应工具产生；维护窗口未开启、观察期未结束、路由代次未递增或证据缺失都会被拒绝。状态文件和审计默认 `600`，租户目录 `700`。该状态机只记录和校验流程，不执行备份、数据导入、DNS 或服务切换。
+
+## 迁移就绪检查
+
+`deploy/migration/cutover_readiness.py audit` 汇总发布 manifest/候选 ZIP、租户状态、注册文件、文件差异报告、财务报告、暂存验收、维护窗口和客户确认，输出 JSON go/no-go 报告。它校验候选 ZIP 的大小和 SHA-256、状态必须处于 `accepted`、租户在注册文件中启用、文件报告 identical、财务 0 违规、暂存报告通过、窗口当前开启且客户已确认。缺少任何一项都会列入 `blocking`；报告只含检查名、版本、数量和状态，不写凭据或业务标识。
+
+示例：
+
+```bash
+python deploy/migration/cutover_readiness.py audit \
+  --tenant 742 --release-manifest release-manifest.json --artifacts-dir release-assets \
+  --state-dir /var/lib/delta-migration --registry tenant-registry.json \
+  --file-report files.json --finance-report finance.json --staging-report staging.json \
+  --maintenance-start 2026-11-11T01:00:00+08:00 --maintenance-end 2026-11-11T03:00:00+08:00 \
+  --customer-accepted --report readiness.json --fail-if-not-ready
+```
+
+该工具不会修改状态、DNS、数据库或容器；它只是把切换前证据汇总为可复核的门禁。
