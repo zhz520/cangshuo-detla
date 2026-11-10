@@ -51,8 +51,14 @@ public class SwaggerConfig implements WebMvcConfigurer {
                     @Override protected org.springframework.core.io.Resource getResource(String resourcePath,org.springframework.core.io.Resource location) throws java.io.IOException {
                         if(tenantProperties!=null&&tenantProperties.isEnabled()){
                             var matcher=TENANT_FILE.matcher(resourcePath);
-                            if(!matcher.matches()||tenantRegistry==null
-                                    ||tenantRegistry.findById(matcher.group(1)).filter(t->t.active()).isEmpty())return null;
+                            if(matcher.matches() && tenantRegistry!=null
+                                    && tenantRegistry.findById(matcher.group(1)).filter(t->t.active()).isPresent())return super.getResource(resourcePath,location);
+                            // During a one-tenant pilot, the historical upload root is
+                            // still the only source of existing image URLs. Do not
+                            // permit a shared root once multiple active tenants exist.
+                            if(tenantRegistry!=null&&tenantRegistry.activeTenants().size()==1
+                                    &&FILE_NAME.matcher(resourcePath).matches())return super.getResource(resourcePath,location);
+                            return null;
                         }else if(!FILE_NAME.matcher(resourcePath).matches())return null;
                         return super.getResource(resourcePath,location);
                     }

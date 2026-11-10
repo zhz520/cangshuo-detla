@@ -36,7 +36,8 @@ public class ImageThumbnailController {
     @GetMapping("/file/thumbnail/{width}/{year}/{month}/{day}/{filename:.+}")
     public ResponseEntity<FileSystemResource> thumbnail(@PathVariable int width, @PathVariable String year,
             @PathVariable String month, @PathVariable String day, @PathVariable String filename) throws Exception {
-        if(sharedMode())throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if(sharedMode() && (tenantRegistry==null||tenantRegistry.activeTenants().size()!=1))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return thumbnailFor(null,width,year,month,day,filename);
     }
 
