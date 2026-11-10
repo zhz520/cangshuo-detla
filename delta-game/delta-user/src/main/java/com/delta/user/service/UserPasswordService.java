@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import java.security.*;
 import java.time.Duration;
@@ -20,6 +22,7 @@ public class UserPasswordService {
     private final UserService users;
     private final StringRedisTemplate redis;
     private final PasswordEncoder encoder;
+    @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     private static final SecureRandom RANDOM=new SecureRandom();
     private record Setup(Long userId,String phone,Long authVersion) {}
     public String issueSetup(User user) {
@@ -56,7 +59,10 @@ public class UserPasswordService {
         if(!users.updateById(update))throw new IllegalStateException("密码重置失败");
     }
     private String key(String ticket) {
-        try{return "auth:password-setup:"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(ticket.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));}
+        try{
+            String key="auth:password-setup:"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(ticket.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            return tenantKeys==null?key:tenantKeys.key(key);
+        }
         catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}
     }
 }

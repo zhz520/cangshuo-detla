@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import com.delta.common.tenant.TenantContext;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -49,7 +50,8 @@ public class AnalyticsVisitRecorder {
         String deviceHash = digest("device\n" + request.getRemoteAddr() + "\n" + (userAgent == null ? "" : userAgent));
         String visitorHash = digest("visitor-device\n" + deviceHash);
         String normalizedUserType = userId == null ? null : userType;
-        String throttleKey = today + "|" + visitorHash + "|" + normalizedUserType + "|" + userId;
+        String tenant=TenantContext.currentIdOrNull();
+        String throttleKey = (tenant==null?"default":tenant) + "|" + today + "|" + visitorHash + "|" + normalizedUserType + "|" + userId;
         long now = clock.millis();
         Long previous = recentWrites.putIfAbsent(throttleKey, now);
         if (previous != null && now - previous < THROTTLE_MILLIS) return;

@@ -18,4 +18,12 @@ class PaymentKeyStorePathTest {
         assertThat(PayController.resolveKeyStoreDirectory(" /www/data/private/wxpay ", "/app/uploads/"))
                 .isEqualTo(Path.of("/www/data/private/wxpay").toAbsolutePath().normalize());
     }
+
+    @Test
+    void tenantCertificateDirectoryIsNestedInsideTheConfiguredOrPersistentRoot() {
+        assertThat(PayController.resolveKeyStoreDirectory("", "/app/uploads/", "tenant-a"))
+                .isEqualTo(Path.of("/app/uploads/private/wxpay/tenant-a").toAbsolutePath().normalize());
+        assertThat(PayController.resolveKeyStoreDirectory("/www/data/private/wxpay", "/app/uploads/", "tenant-a"))
+                .isEqualTo(Path.of("/www/data/private/wxpay/tenant-a").toAbsolutePath().normalize());
+    }
 }

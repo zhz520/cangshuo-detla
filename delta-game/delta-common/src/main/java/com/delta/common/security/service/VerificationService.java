@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -20,6 +22,7 @@ public class VerificationService {
     private final RateLimitService limits;
     private final CrossModuleMapper configs;
     private final AliyunSmsService sms;
+    @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     @Value("${jwt.secret}") private String secret;
     private static final SecureRandom RANDOM=new SecureRandom();
     private static final DefaultRedisScript<Long> CONSUME=new DefaultRedisScript<>(
@@ -31,7 +34,7 @@ public class VerificationService {
     public Map<String,String> captcha(String ip) {
         limits.check("captcha:"+ip,60,60);
         String id=UUID.randomUUID().toString(),code=String.format(Locale.ROOT,"%06d",RANDOM.nextInt(1000000));
-        redis.opsForValue().set("captcha:"+id,digest("CAPTCHA",id,"",code),Duration.ofMinutes(3));
+        redis.opsForValue().set(namespaced("captcha:"+id),digest("CAPTCHA",id,"",code),Duration.ofMinutes(3));
         return captchaImage(id,code);
     }
 
@@ -62,19 +65,19 @@ public class VerificationService {
         limits.check("grab-captcha-ip:"+ip,120,60);
         limits.check("grab-captcha-player:"+playerId,1,refreshSeconds);
         String id=UUID.randomUUID().toString(),code=String.format(Locale.ROOT,"%06d",RANDOM.nextInt(1000000));
-        redis.execute(GRAB_CREATE,List.of("grab:captcha:"+playerId),grabDigest(playerId,orderId,device,agent,id,code),String.valueOf(maxAttempts),String.valueOf(seconds));
+        redis.execute(GRAB_CREATE,List.of(namespaced("grab:captcha:"+playerId)),grabDigest(playerId,orderId,device,agent,id,code),String.valueOf(maxAttempts),String.valueOf(seconds));
         metric(playerId,"refreshes");return captchaImage(id,code);
     }
     public void verifyGrab(Long playerId,Long orderId,String device,String agent,String id,String code,String ip) {
         requireDevice(device);
         limits.check("grab-verify-player:"+playerId,30,60);limits.check("grab-verify-ip:"+ip,200,60);
         String safe=safeId(id);
-        Long result=redis.execute(GRAB_CONSUME,List.of("grab:captcha:"+playerId),grabDigest(playerId,orderId,device,agent,safe,code));
+        Long result=redis.execute(GRAB_CONSUME,List.of(namespaced("grab:captcha:"+playerId)),grabDigest(playerId,orderId,device,agent,safe,code));
         if(!Long.valueOf(1).equals(result)) {metric(playerId,"failures");throw new BusinessException(400,"验证码错误或已过期，请刷新后重试");}
         metric(playerId,"verified");
     }
-    public Map<Object,Object> grabMetrics(Long playerId) {return redis.opsForHash().entries("grab:metrics:"+playerId);}
-    private void metric(Long id,String field) {String key="grab:metrics:"+id;redis.opsForHash().increment(key,field,1);redis.expire(key,Duration.ofDays(30));}
+    public Map<Object,Object> grabMetrics(Long playerId) {return redis.opsForHash().entries(namespaced("grab:metrics:"+playerId));}
+    private void metric(Long id,String field) {String key=namespaced("grab:metrics:"+id);redis.opsForHash().increment(key,field,1);redis.expire(key,Duration.ofDays(30));}
     private void requireDevice(String device) {if(device==null || !device.matches("[a-zA-Z0-9-]{16,80}")) throw new BusinessException(400,"请刷新页面后重试验证");}
     private String grabDigest(Long player,Long order,String device,String agent,String id,String code) {return digest("GRAB",player+":"+order+":"+device+":"+Objects.toString(agent,"")+":"+id,"",code);}
 
@@ -93,10 +96,10 @@ public class VerificationService {
         limits.check("otp-minute:"+phone,1,60);limits.check("otp-hour:"+phone,5,3600);limits.check("otp-day:"+phone,10,86400);
         limits.check("otp-global",1000,86400);
         String id=UUID.randomUUID().toString(),code=String.format(Locale.ROOT,"%06d",RANDOM.nextInt(1000000));
-        String redisKey="otp:"+purpose+":"+id;
-        String activeKey="otp-active:"+purpose+":"+phone;
+        String redisKey=namespaced("otp:"+purpose+":"+id);
+        String activeKey=namespaced("otp-active:"+purpose+":"+phone);
         String previous=redis.opsForValue().getAndSet(activeKey,id);
-        if(previous!=null&&previous.matches("[a-f0-9-]{36}"))redis.delete("otp:"+purpose+":"+previous);
+        if(previous!=null&&previous.matches("[a-f0-9-]{36}"))redis.delete(namespaced("otp:"+purpose+":"+previous));
         redis.expire(activeKey,Duration.ofMinutes(5));
         redis.opsForValue().set(redisKey,digest(purpose,subject,phone,code),Duration.ofMinutes(5));
         try {sms.sendTemplate("dysmsapi.aliyuncs.com",access,key,sign,template,phone,Map.of("code",code));}
@@ -109,7 +112,7 @@ public class VerificationService {
         if(code==null || !code.matches("[0-9]{6}")) throw new BusinessException(400,"验证码错误或已过期");
         limits.check("otp-verify:"+purpose+":"+phone,20,600);
         consume("otp:"+purpose+":"+safeId(id),digest(purpose,subject,phone,code));
-        String activeKey="otp-active:"+purpose+":"+phone;
+        String activeKey=namespaced("otp-active:"+purpose+":"+phone);
         if(id.equals(redis.opsForValue().get(activeKey)))redis.delete(activeKey);
     }
     public void verifyLoginCaptcha(String id,String code,String ip) {
@@ -121,9 +124,11 @@ public class VerificationService {
         consume("captcha:"+safeId(id),digest("CAPTCHA",id,"",code));
     }
     private void consume(String key,String expected) {
-        Long result=redis.execute(CONSUME,List.of(key,key+":attempts"),expected);
+        String redisKey=namespaced(key);
+        Long result=redis.execute(CONSUME,List.of(redisKey,namespaced(key+":attempts")),expected);
         if(!Long.valueOf(1).equals(result)) throw new BusinessException(400,"验证码错误或已过期");
     }
+    private String namespaced(String key){return tenantKeys==null?key:tenantKeys.key(key);}
     private String value(String key){return Objects.toString(configs.selectConfigValue(key),"").trim();}
     private String safeId(String id){if(id==null || !id.matches("[a-f0-9-]{36}")) throw new BusinessException(400,"验证码错误或已过期");return id;}
     public static void requirePhone(String phone){if(phone==null || !phone.matches("1[0-9]{10}")) throw new BusinessException(400,"请输入正确的手机号");}

@@ -3,6 +3,8 @@ package com.delta.common.maintenance;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
+import com.delta.common.tenant.TenantContext;
 
 /**
  * 全局开关状态：控制接口是否对外开放。
@@ -14,14 +16,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class MaintenanceState {
 
-    private static final AtomicBoolean ENABLED = new AtomicBoolean(true);
+    private static final ConcurrentHashMap<String,AtomicBoolean> STATES = new ConcurrentHashMap<>();
 
     public boolean isEnabled() {
-        return ENABLED.get();
+        return state().get();
     }
 
     public void setEnabled(boolean enabled) {
-        ENABLED.set(enabled);
+        state().set(enabled);
+    }
+
+    private AtomicBoolean state(){
+        String tenant=TenantContext.currentIdOrNull();
+        return STATES.computeIfAbsent(tenant==null?"default":tenant,key->new AtomicBoolean(true));
     }
 }
 

@@ -17,7 +17,8 @@ public class WebSocketSessionManager {
     public int getOnlineCount() { return sessions.size(); }
     public java.util.Collection<WebSocketSession> getAll() { return sessions.values(); }
 
-    public static String buildKey(String userType, Long userId) {
-        return userType + ":" + userId;
+    public static String buildKey(String tenantId, String userType, Long userId) {
+        String identity = userType + ":" + userId;
+        return tenantId == null || tenantId.isBlank() ? identity : tenantId + "|" + identity;
     }
 }

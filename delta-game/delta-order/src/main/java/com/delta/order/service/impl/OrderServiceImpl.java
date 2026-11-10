@@ -25,6 +25,8 @@ import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -40,6 +42,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final ProductService productService;
     private final ChatSessionService chatSessionService;
     private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.common.mapper.CrossModuleMapper crossModuleMapper;
     private final SysConfigService sysConfigService;
@@ -139,7 +142,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         // 写入Redis超时key，到期自动取消订单
         redisTemplate.opsForValue().set(
-                "order:pay_timeout:" + order.getId(), String.valueOf(order.getId()),
+                namespaced("order:pay_timeout:" + order.getId()), String.valueOf(order.getId()),
                 java.time.Duration.ofMinutes(payDeadlineMinutes));
 
         return order;
@@ -154,7 +157,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (OrderStatusEnum.PENDING_PAYMENT.name().equals(status)) {
             // 未支付取消
             transition(order, OrderStatusEnum.CANCELLED, "USER", userId, "用户取消订单");
-            redisTemplate.delete("order:pay_timeout:" + orderId);
+            redisTemplate.delete(namespaced("order:pay_timeout:" + orderId));
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCELLED", "USER", userId, orderId, "订单已取消"));
         } else if (OrderStatusEnum.PAID.name().equals(status) && order.getPlayerId() == null) {
             // 已支付但未接单：只创建退款申请，必须经客服初审和管理员终审后才能退款。
@@ -168,6 +171,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException("当前状态不允许取消");
         }
     }
+
+    private String namespaced(String key) { return tenantKeys == null ? key : tenantKeys.key(key); }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

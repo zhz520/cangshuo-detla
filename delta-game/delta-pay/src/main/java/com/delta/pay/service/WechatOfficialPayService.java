@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -34,6 +36,7 @@ public class WechatOfficialPayService {
     private final SysConfigService configs;
     private final StringRedisTemplate redis;
     private final ObjectMapper json;
+    @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
             .followRedirects(HttpClient.Redirect.NEVER)
@@ -72,7 +75,7 @@ public class WechatOfficialPayService {
             payload.put("kind", kind);
             payload.put("returnPath", returnPath);
             payload.put("returnOrigin", config.returnOrigin());
-            redis.opsForValue().set(STATE_PREFIX + state, json.writeValueAsString(payload), STATE_TTL);
+            redis.opsForValue().set(namespaced(STATE_PREFIX + state), json.writeValueAsString(payload), STATE_TTL);
             String redirect = config.returnOrigin() + "/api/pay/wx/official/callback";
             return "https://open.weixin.qq.com/connect/oauth2/authorize?appid="
                     + encode(config.appId()) + "&redirect_uri=" + encode(redirect)
@@ -91,7 +94,7 @@ public class WechatOfficialPayService {
         if (code == null || code.isBlank() || code.length() > 512 || state == null || !state.matches("[a-f0-9]{64}")) {
             throw new BusinessException(400, "公众号支付授权凭据无效");
         }
-        String key = STATE_PREFIX + state;
+        String key = namespaced(STATE_PREFIX + state);
         String raw = redis.opsForValue().getAndDelete(key);
         if (raw == null) throw new BusinessException(400, "公众号支付授权已过期，请返回订单重新支付");
         try {
@@ -211,6 +214,7 @@ public class WechatOfficialPayService {
     }
 
     private static String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
+    private String namespaced(String key) { return tenantKeys == null ? key : tenantKeys.key(key); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
     private static String trim(String value) { return value == null ? "" : value.trim(); }
     private static boolean parseBoolean(String value) { return "true".equalsIgnoreCase(trim(value)); }

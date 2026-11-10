@@ -7,6 +7,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
+
+import java.util.LinkedHashSet;
 
 @Configuration
 @EnableWebSocket
@@ -14,12 +18,19 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
     private final ChatWebSocketHandler chatWebSocketHandler;
     private final com.delta.common.websocket.ChatHandshakeInterceptor handshakeInterceptor;
+    private final TenantRegistry tenantRegistry;
+    private final TenantProperties tenantProperties;
     @org.springframework.beans.factory.annotation.Value("${app.allowed-origins:https://jax.kkimg.top,https://jaxapi.kkimg.top}")
     private String allowedOrigins;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        LinkedHashSet<String> origins=new LinkedHashSet<>(java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(value->!value.isEmpty()).toList());
+        if(tenantProperties.isEnabled()){
+            tenantRegistry.activeTenants().forEach(tenant->tenant.hosts().forEach(host->origins.add("https://"+host)));
+        }
         registry.addHandler(chatWebSocketHandler, "/ws/chat").addInterceptors(handshakeInterceptor)
-                .setAllowedOrigins(allowedOrigins.split(","));
+                .setAllowedOrigins(origins.toArray(String[]::new));
     }
 }

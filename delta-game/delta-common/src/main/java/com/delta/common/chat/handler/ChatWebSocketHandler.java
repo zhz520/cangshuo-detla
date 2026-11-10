@@ -8,6 +8,9 @@ import com.delta.common.chat.util.ChatParticipantId;
 import com.delta.common.security.service.TokenService;
 import com.delta.common.security.service.RateLimitService;
 import com.delta.common.websocket.manager.WebSocketSessionManager;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,6 +29,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatServiceImpl chatService;
     private final TokenService tokenService;
     private final RateLimitService limits;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     /** session -> userKey 映射，用于断开时清理 */
     private final ConcurrentHashMap<String, String> sessionUserMap = new ConcurrentHashMap<>();
@@ -34,6 +39,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        if(sharedMode() && tenantId(session)==null){closeQuietly(session);return;}
         session.setTextMessageSizeLimit(16384);
         activeSessions.put(session.getId(),session);
         unauthenticated.put(session.getId(),System.currentTimeMillis());
@@ -41,6 +47,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        String tenantId=tenantId(session);
+        if(sharedMode()&&tenantId==null){closeQuietly(session);return;}
+        if(tenantId==null){
+            processTextMessage(session,message);
+        }else{
+            TenantContext.callAs(tenantId,()->{processTextMessage(session,message);return null;});
+        }
+    }
+
+    private void processTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         Map<String, Object> data = JSON.parseObject(message.getPayload());
         if(data==null){closeQuietly(session);return;}
         if(!sessionUserMap.containsKey(session.getId())){
@@ -53,11 +69,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             try {userType=com.delta.common.chat.util.ChatIdentity.role((String)principal.get("userType"),chatRole);}
             catch(com.delta.common.exception.BusinessException e){closeQuietly(session);return;}
             Long userId=((Number)principal.get("userId")).longValue();
-            String userKey=WebSocketSessionManager.buildKey(userType,userId);
+            String userKey=WebSocketSessionManager.buildKey(tenantId(session),userType,userId);
             WebSocketSession replaced=sessionManager.add(userKey,session);
             if(replaced!=null&&replaced!=session)closeQuietly(replaced);
             sessionUserMap.put(session.getId(),userKey);
-            session.getAttributes().put("authenticatedToken",token);unauthenticated.remove(session.getId());
+            session.getAttributes().put("authenticatedToken",token);
+            session.getAttributes().put("authenticatedUserType",userType);
+            session.getAttributes().put("authenticatedUserId",userId);
+            unauthenticated.remove(session.getId());
             session.sendMessage(new TextMessage("{\"type\":\"auth\",\"success\":true}"));
             log.info("WebSocket authenticated: {} -> {}",session.getId(),userKey);return;
         }
@@ -82,9 +101,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Long sessionId = Long.parseLong(data.get("sessionId").toString());
             String userKey = sessionUserMap.get(session.getId());
             if (userKey != null) {
-                String[] identity=userKey.split(":",2);
+                String userType=(String)session.getAttributes().get("authenticatedUserType");
+                Object id=session.getAttributes().get("authenticatedUserId");
+                if(!(id instanceof Number number)){closeQuietly(session);return;}
                 com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(sessionId),
-                        com.delta.common.chat.util.ChatIdentity.encoded(identity[0],Long.parseLong(identity[1])));
+                        com.delta.common.chat.util.ChatIdentity.encoded(userType,number.longValue()));
                 chatService.markRead(sessionId, userKey);
             }
             return;
@@ -104,26 +125,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             closeQuietly(session);
             return;
         }
-        String[] parts = userKey.split(":", 2);
-        if (parts.length != 2) {
-            log.warn("非法的userKey格式: {}", userKey);
-            closeQuietly(session);
-            return;
-        }
         try { limits.check("chat-message:"+userKey,30,60); }
         catch (com.delta.common.exception.BusinessException error) {
             closeQuietly(session);
             return;
         }
-        String senderType = parts[0];
-        long rawSenderId;
-        try {
-            rawSenderId = Long.parseLong(parts[1]);
-        } catch (NumberFormatException e) {
-            log.warn("userKey中的用户ID解析失败: {}", userKey);
+        String senderType = (String) session.getAttributes().get("authenticatedUserType");
+        Object authenticatedId = session.getAttributes().get("authenticatedUserId");
+        if (senderType == null || !(authenticatedId instanceof Number number)) {
             closeQuietly(session);
             return;
         }
+        long rawSenderId = number.longValue();
         String chatRole = (String) data.get("chatRole");
         senderType=com.delta.common.chat.util.ChatIdentity.role(senderType,chatRole);
         long encodedSenderId = ChatParticipantId.encode(senderType, rawSenderId);
@@ -172,8 +185,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if(started!=null&&started<cutoff){closeQuietly(session);return;}
             Object token=session.getAttributes().get("authenticatedToken");
             if(token instanceof String value){
-                try{if(tokenService.authenticate(value)==null)closeQuietly(session);}
-                catch(RuntimeException ignored){closeQuietly(session);}
+                runInTenant(session,()->{if(tokenService.authenticate(value)==null)closeQuietly(session);});
             }
         });
     }
@@ -182,7 +194,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void pushToSessionMembers(ChatMessage msg) {
         ChatSession s = chatService.getById(msg.getSessionId());
         if (s == null || s.getId1() == null || s.getId2() == null) return;
-        String senderKey = msg.getSenderType() + ":" + msg.getSenderId();
+        String senderKey = WebSocketSessionManager.buildKey(TenantContext.currentIdOrNull(),msg.getSenderType(), msg.getSenderId());
         long senderEncoded = ChatParticipantId.encode(msg.getSenderType(), msg.getSenderId());
         String msgJson = JSON.toJSONString(msg);
         // 对方 id1 或 id2（编码ID）→ userType:rawId
@@ -197,13 +209,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     /** A payload-free hint; the authorized HTTP endpoint remains the data source. */
     public void signalWorkbench(String receiverType, long receiverId) {
         if (receiverId <= 0) return;
+        if (sharedMode() && TenantContext.currentIdOrNull() == null) {
+            log.warn("共享模式下缺少租户上下文，忽略工作台通知");
+            return;
+        }
         String role = "ADMIN".equals(receiverType) ? "CS" : receiverType;
         if (!java.util.Set.of("USER","PLAYER","CS").contains(role)) return;
         pushToMember(role, Long.toString(receiverId), "", "{\"type\":\"workbench_changed\"}");
     }
 
     private void pushToMember(String userType, String memberId, String senderKey, String msgJson) {
-        String key = userType + ":" + memberId;
+        String key = WebSocketSessionManager.buildKey(TenantContext.currentIdOrNull(),userType, Long.valueOf(memberId));
         if (key.equals(senderKey)) return; // 不推送给发送者
         WebSocketSession memberSession = sessionManager.get(key);
         if (memberSession != null && memberSession.isOpen()) {
@@ -228,4 +244,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void closeQuietly(WebSocketSession session) {
         try { session.close(); } catch (IOException ignored) {}
     }
+
+    private String tenantId(WebSocketSession session){
+        Object value=session.getAttributes().get("tenantId");
+        return value instanceof String tenant&&!tenant.isBlank()?tenant:null;
+    }
+
+    private boolean sharedMode(){return tenantProperties!=null&&tenantProperties.isEnabled();}
+
+    private void runInTenant(WebSocketSession session,SessionTask task){
+        String tenant=tenantId(session);
+        try{
+            if(tenant==null)task.run();
+            else TenantContext.callAs(tenant,()->{task.run();return null;});
+        }catch(Exception error){closeQuietly(session);}
+    }
+
+    @FunctionalInterface
+    private interface SessionTask{void run()throws Exception;}
 }

@@ -4,6 +4,8 @@ import com.alibaba.fastjson2.JSON;
 import com.delta.admin.platform.PlatformService;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
 import com.delta.system.entity.SysConfig;
 import com.delta.system.service.SysConfigService;
 import jakarta.mail.AuthenticationFailedException;
@@ -73,6 +75,7 @@ public class EmailNotificationService {
     private final PlatformService platform;
     private final EmailNotificationTemplate templates;
     private final Clock clock;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Autowired
     public EmailNotificationService(JdbcTemplate jdbc, SysConfigService configs,
@@ -215,7 +218,11 @@ public class EmailNotificationService {
     }
 
     @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
-    public synchronized void deliver() {
+    public void deliver() {
+        TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+    }
+
+    private synchronized void deliverForTenant() {
         if (!platform.featureEnabled(FEATURE_ID)) return;
         SettingsData data = readSettings();
         if (!data.enabled() || !isDeliveryConfigured(data)) return;

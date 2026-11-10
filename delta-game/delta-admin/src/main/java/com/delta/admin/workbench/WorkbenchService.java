@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantRegistry;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,9 +36,15 @@ public class WorkbenchService {
     private final PlatformRemote remote;
     private final SysConfigService config;
     private final PaymentService payments;
+    @Autowired(required = false)
+    private TenantRegistry tenantRegistry;
     private boolean mysql;
 
     @PostConstruct void configureCollation() {
+        if (tenantRegistry != null && tenantRegistry.isSharedEnabled()) {
+            mysql = true;
+            return;
+        }
         mysql = Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection -> {
             String engine = connection.getMetaData().getDatabaseProductName();
             return "MySQL".equalsIgnoreCase(engine) || "MariaDB".equalsIgnoreCase(engine);

@@ -9,12 +9,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.regex.Pattern;
 
 @Configuration
 public class SwaggerConfig implements WebMvcConfigurer {
 
     @Value("${file.upload.path:D:/data/upload}")
     private String uploadPath;
+    @Autowired(required = false) private TenantProperties tenantProperties;
+    @Autowired(required = false) private TenantRegistry tenantRegistry;
+    private static final Pattern FILE_NAME=Pattern.compile("\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif|webp|mp3|m4a|wav|aac|ogg|webm)");
+    private static final Pattern TENANT_FILE=Pattern.compile("([a-z0-9][a-z0-9-]{0,47})/(\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif|webp|mp3|m4a|wav|aac|ogg|webm))");
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -41,7 +49,11 @@ public class SwaggerConfig implements WebMvcConfigurer {
                         .cachePublic().immutable().staleWhileRevalidate(java.time.Duration.ofDays(7)))
                 .resourceChain(true).addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
                     @Override protected org.springframework.core.io.Resource getResource(String resourcePath,org.springframework.core.io.Resource location) throws java.io.IOException {
-                        if(!resourcePath.matches("\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif|webp|mp3|m4a|wav|aac|ogg|webm)")) return null;
+                        if(tenantProperties!=null&&tenantProperties.isEnabled()){
+                            var matcher=TENANT_FILE.matcher(resourcePath);
+                            if(!matcher.matches()||tenantRegistry==null
+                                    ||tenantRegistry.findById(matcher.group(1)).filter(t->t.active()).isEmpty())return null;
+                        }else if(!FILE_NAME.matcher(resourcePath).matches())return null;
                         return super.getResource(resourcePath,location);
                     }
                 });

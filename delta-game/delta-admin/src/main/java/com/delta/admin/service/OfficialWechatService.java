@@ -1,5 +1,12 @@
 package com.delta.admin.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import com.delta.common.tenant.TenantKeyEncoder;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+
 import com.alibaba.fastjson2.*;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
@@ -22,6 +29,7 @@ import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -33,8 +41,11 @@ public class OfficialWechatService {
  private final StaffPermissions permissions;
  private final PlatformService platform;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
+ @Autowired(required = false) private TenantKeyEncoder tenantKeys;
+ @Autowired(required = false) private TenantProperties tenantProperties;
+ @Autowired(required = false) private TenantRegistry tenantRegistry;
  private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
- private volatile String accessToken="";private volatile long tokenUntil=0;
+ private final ConcurrentHashMap<String,AccessToken> accessTokens=new ConcurrentHashMap<>();
  public static final String FEATURE_ID="official_wechat_notifications";
  private static final List<String> TEMPLATE_GROUPS=List.of("new_order","order_status","refund_status","complaint_status","staff_review");
  private static final DefaultRedisScript<Long> RELEASE_BINDING_LOCK=new DefaultRedisScript<>(
@@ -52,7 +63,10 @@ public class OfficialWechatService {
   }
  }
  @Scheduled(fixedDelay=15000,initialDelay=30000)
- public synchronized void deliver(){
+ public void deliver(){
+  TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+ }
+ private synchronized void deliverForTenant(){
   try{
    jdbc.update("UPDATE wechat_notice_queue SET status='EXPIRED',last_error='WECHAT_EXPIRED' WHERE status IN ('PENDING','RETRY') AND created_at<?",LocalDateTime.now().minusDays(1));
    jdbc.update("DELETE FROM wechat_notice_queue WHERE status IN ('SENT','FAILED','EXPIRED') AND created_at<?",LocalDateTime.now().minusDays(30));
@@ -82,13 +96,13 @@ public class OfficialWechatService {
   Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String source=fields.getString(field),value=values.get(source);if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");data.put(field,Map.of("value",templateFieldValue(field,source,value)));}
   Map<String,Object> payload=messagePayload(Objects.toString(bindings.get(0).get("openid"),""),templateId,data,template.getString("url"),template.getJSONObject("miniprogram"),"cangshuo-"+row.get("id"));
   var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+token(),payload);
-  if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))tokenUntil=0;throw new DeliveryError("WECHAT_"+code);}
+  if(result.getIntValue("errcode")!=0){int code=result.getIntValue("errcode");if(Set.of(40001,40014,42001).contains(code))accessTokens.remove(scope());throw new DeliveryError("WECHAT_"+code);}
  }
  private synchronized String token()throws Exception{
-  if(System.currentTimeMillis()<tokenUntil)return accessToken;
+  AccessToken cached=accessTokens.get(scope());if(cached!=null&&System.currentTimeMillis()<cached.until())return cached.value();
   var result=post("https://api.weixin.qq.com/cgi-bin/stable_token",Map.of("grant_type","client_credential","appid",configs.getConfigValue("wechat.official.app_id",""),"secret",configs.getConfigValue("wechat.official.app_secret","")));
   String value=result.getString("access_token");if(value==null||value.isBlank())throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");
-  accessToken=value;tokenUntil=System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L;return value;
+  accessTokens.put(scope(),new AccessToken(value,System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L));return value;
  }
  public Map<String,Object> binding(String rawType,Long id){
   String type=canonicalUserType(rawType);
@@ -110,7 +124,7 @@ public class OfficialWechatService {
   if(staff)redirect=redirect.replace("/mobile/wechat-binding","/h5/wechat-binding");
   try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,staff?"请先配置管理员与客服的公众号绑定回调页":"请先配置客户与打手的公众号绑定回调页");}
   if(appId.isBlank())throw new BusinessException(400,"请先配置公众号AppID");
-  String state=UUID.randomUUID().toString().replace("-","");redis.opsForValue().set("wechat:binding:"+state,JSON.toJSONString(Map.of("type",type,"id",id)),Duration.ofMinutes(5));
+  String state=UUID.randomUUID().toString().replace("-","");redis.opsForValue().set(namespaced("wechat:binding:"+state),JSON.toJSONString(Map.of("type",type,"id",id)),Duration.ofMinutes(5));
   return "https://open.weixin.qq.com/connect/oauth2/authorize?appid="+encode(appId)+"&redirect_uri="+encode(redirect)+"&response_type=code&scope=snsapi_base&state="+state+"#wechat_redirect";
  }
  @Transactional(rollbackFor=Exception.class)
@@ -118,13 +132,13 @@ public class OfficialWechatService {
   String type=canonicalUserType(rawType);
   platform.requireFeature(FEATURE_ID,requestDomain);
   if(state==null||!state.matches("[a-f0-9]{32}")||code==null||code.length()>256)throw new BusinessException(400,"绑定凭据无效");
-  String value=redis.opsForValue().getAndDelete("wechat:binding:"+state);if(value==null)throw new BusinessException(400,"绑定凭据已过期，请重新操作");
+  String value=redis.opsForValue().getAndDelete(namespaced("wechat:binding:"+state));if(value==null)throw new BusinessException(400,"绑定凭据已过期，请重新操作");
   JSONObject claim=JSON.parseObject(value);if(!type.equals(claim.getString("type"))||id.longValue()!=claim.getLongValue("id"))throw new BusinessException(403,"绑定身份不匹配");
   String url="https://api.weixin.qq.com/sns/oauth2/access_token?appid="+encode(configs.getConfigValue("wechat.official.app_id",""))+"&secret="+encode(configs.getConfigValue("wechat.official.app_secret",""))+"&code="+encode(code)+"&grant_type=authorization_code";
   var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
   JSONObject result=JSON.parseObject(response.body());String openid=result.getString("openid");if(response.statusCode()!=200||openid==null||!openid.matches("[A-Za-z0-9_-]{10,128}"))throw new BusinessException(400,"微信授权未完成，请重新绑定");
   String lockKey="wechat:binding:openid:"+openid,lockValue=UUID.randomUUID().toString();
-  Boolean acquired=redis.opsForValue().setIfAbsent(lockKey,lockValue,Duration.ofSeconds(15));
+  Boolean acquired=redis.opsForValue().setIfAbsent(namespaced(lockKey),lockValue,Duration.ofSeconds(15));
   if(!Boolean.TRUE.equals(acquired))throw new BusinessException(409,"该微信正在绑定其他账号，请稍后刷新重试");
   boolean synchronizationActive=TransactionSynchronizationManager.isSynchronizationActive();
   if(synchronizationActive)TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
@@ -153,7 +167,7 @@ public class OfficialWechatService {
   jdbc.update("DELETE FROM wechat_official_binding WHERE user_type=? AND user_id=?",type,id);
  }
  private void releaseBindingLock(String key,String value){
-  try{redis.execute(RELEASE_BINDING_LOCK,List.of(key),value);}catch(Exception error){log.warn("释放公众号绑定锁失败",error);}
+  try{redis.execute(RELEASE_BINDING_LOCK,List.of(namespaced(key)),value);}catch(Exception error){log.warn("释放公众号绑定锁失败",error);}
  }
  private List<String> missingTemplateGroups(String type){
   String role=templateRole(type);if(role==null)return TEMPLATE_GROUPS;
@@ -236,6 +250,9 @@ public class OfficialWechatService {
   try{URI uri=URI.create(clean);String scheme=Objects.toString(uri.getScheme(),"").toLowerCase(Locale.ROOT);if(!Set.of("http","https").contains(scheme)||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();return clean;}
   catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
  }
+ private String namespaced(String key){return tenantKeys==null?key:tenantKeys.key(key);}
+ private String scope(){if(tenantProperties==null||!tenantProperties.isEnabled())return "default";return TenantContext.requireId();}
+ private record AccessToken(String value,long until){}
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
  private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}
 }

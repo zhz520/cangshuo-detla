@@ -14,3 +14,11 @@ platform:
   state-path: ${PLATFORM_STATE_PATH:./.local/platform/state.json}
   public-key-path: ${PLATFORM_PUBLIC_KEY_PATH:}
   report-url: ${PLATFORM_REPORT_URL:}
+
+# Shared-service mode is opt-in. A tenant's database credentials belong in the protected
+# deployment environment, never in this repository. Keep this disabled until the complete
+# tenant migration and security checklist has passed.
+tenant:
+  enabled: ${TENANT_MODE_ENABLED:false}
+  registry-file: ${TENANT_REGISTRY_FILE:}
+  tenants: {}

@@ -3,6 +3,9 @@ package com.delta.admin.job;
 import com.delta.admin.service.SettlementRecoveryService;
 import com.delta.admin.listener.SettlementEventListener;
 import com.delta.common.event.BusinessEvent;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.common.exception.BusinessException;
 import com.delta.pay.service.TransactionService;
 import com.delta.player.entity.PlayerWallet;
@@ -33,9 +36,14 @@ public class PendingIncomeReleaseTask {
     private final SettlementEventListener settlement;
     private final ApplicationEventPublisher events;
     private final PlatformTransactionManager transactionManager;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
     public void run() {
+        TenantScheduler.run(tenantRegistry,this::runForTenant);
+    }
+
+    private void runForTenant() {
         TransactionTemplate retryTransaction = new TransactionTemplate(transactionManager);
         try {
             List<Long> unsettled = jdbc.queryForList("SELECT id FROM `order` WHERE status IN ('CONFIRMED','REVIEWED') " +

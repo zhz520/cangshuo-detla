@@ -1,0 +1,26 @@
+{
+  "tenants": {
+    "tenant-a": {
+      "active": true,
+      "hosts": ["admin-a.example.com", "h5-a.example.com"],
+      "jdbcUrl": "jdbc:mysql://mysql:3306/delta_tenant_a?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
+      "username": "delta_tenant_a",
+      "password": "REPLACE_WITH_TENANT_A_DB_PASSWORD",
+      "driverClassName": "com.mysql.cj.jdbc.Driver",
+      "maximumPoolSize": 8,
+      "minimumIdle": 0,
+      "platformCustomerId": "tenant-a-customer-id"
+    },
+    "tenant-b": {
+      "active": false,
+      "hosts": ["admin-b.example.com", "h5-b.example.com"],
+      "jdbcUrl": "jdbc:mysql://mysql:3306/delta_tenant_b?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
+      "username": "delta_tenant_b",
+      "password": "REPLACE_WITH_TENANT_B_DB_PASSWORD",
+      "driverClassName": "com.mysql.cj.jdbc.Driver",
+      "maximumPoolSize": 8,
+      "minimumIdle": 0,
+      "platformCustomerId": "tenant-b-customer-id"
+    }
+  }
+}

@@ -4,6 +4,9 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.delta.common.sms.service.AliyunSmsService;
 import com.delta.system.service.SysConfigService;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,6 +30,7 @@ public class SmsNoticeService {
     private final SysConfigService configs;
     private final AliyunSmsService sms;
     private final NotificationTemplateDataService templateData;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     public String phoneFor(String userType,Long userId){
         if(userId==null)return "";
@@ -62,7 +66,11 @@ public class SmsNoticeService {
     }
 
     @Scheduled(fixedDelay=15_000,initialDelay=45_000)
-    public synchronized void deliver(){
+    public void deliver(){
+        TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+    }
+
+    private synchronized void deliverForTenant(){
         try{
             jdbc.update("UPDATE sms_notice_queue SET status='EXPIRED',last_error='SMS_EXPIRED' WHERE status IN ('PENDING','RETRY') AND created_at<?",
                     LocalDateTime.now().minusDays(1));

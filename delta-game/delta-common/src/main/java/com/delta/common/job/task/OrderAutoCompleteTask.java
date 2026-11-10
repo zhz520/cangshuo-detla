@@ -3,6 +3,9 @@ package com.delta.common.job.task;
 import com.delta.common.event.OrderConfirmedEvent;
 import com.delta.common.mapper.ScheduledTaskMapper;
 import com.delta.common.redis.service.RedisService;
+import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,9 +23,14 @@ public class OrderAutoCompleteTask {
     private final ScheduledTaskMapper scheduledTaskMapper;
     private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Scheduled(cron = "0 */10 * * * ?")
     public void execute() {
+        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+    }
+
+    private void executeForTenant() {
         if (!redisService.tryLock("lock:task:order_confirm", 9, TimeUnit.MINUTES)) return;
         try {
             // 1. 先查出待自动确认的订单ID

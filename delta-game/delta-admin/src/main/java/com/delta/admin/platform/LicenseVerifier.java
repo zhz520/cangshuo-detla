@@ -26,6 +26,10 @@ final class LicenseVerifier {
     boolean configured() { return properties.getPublicKeyPath() != null && !properties.getPublicKeyPath().isBlank(); }
 
     PlatformLicense.Claims verify(PlatformLicense.Envelope envelope, String instanceId, Instant now) {
+        return verify(envelope,instanceId,now,properties.getCustomerId());
+    }
+
+    PlatformLicense.Claims verify(PlatformLicense.Envelope envelope, String instanceId, Instant now, String expectedCustomerId) {
         if (!configured()) throw new BusinessException(503, "尚未配置授权验证公钥，请联系系统维护人员");
         try {
             if (envelope == null || !PlatformLicense.FORMAT.equals(envelope.format())
@@ -45,7 +49,7 @@ final class LicenseVerifier {
             if (signed.length != 64 || !signature.verify(signed)) throw new IllegalArgumentException();
             var claims = json.readValue(Base64.getUrlDecoder().decode(envelope.payload()), PlatformLicense.Claims.class);
             UUID.fromString(claims.licenseId());
-            if (!Objects.equals(properties.getCustomerId(), claims.customerId())
+            if (!Objects.equals(expectedCustomerId, claims.customerId())
                     || !Objects.equals(instanceId, claims.instanceId()) || claims.issuedAt() == null
                     || claims.notBefore() == null || claims.issuedAt().isAfter(now.plusSeconds(300))
                     || (claims.expiresAt() != null && !claims.expiresAt().isAfter(claims.notBefore()))

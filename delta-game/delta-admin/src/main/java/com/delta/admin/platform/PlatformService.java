@@ -1,6 +1,10 @@
 package com.delta.admin.platform;
 
 import com.delta.common.exception.BusinessException;
+import com.delta.common.tenant.TenantContext;
+import com.delta.common.tenant.TenantDefinition;
+import com.delta.common.tenant.TenantProperties;
+import com.delta.common.tenant.TenantRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +17,12 @@ import java.util.*;
 public class PlatformService {
     private final PlatformProperties properties;
     private final PlatformCatalog catalog;
-    private final PlatformStateStore store;
+    private final PlatformStateStore legacyStore;
+    private final ObjectMapper json;
     private final LicenseVerifier verifier;
     private final Clock clock;
+    @Autowired(required=false) private TenantProperties tenantProperties;
+    @Autowired(required=false) private TenantRegistry tenantRegistry;
 
     @Autowired
     public PlatformService(PlatformProperties properties, ObjectMapper json) {
@@ -24,7 +31,8 @@ public class PlatformService {
     PlatformService(PlatformProperties properties, ObjectMapper json, Clock clock) {
         this.properties = properties;
         this.catalog = PlatformCatalog.load(json);
-        this.store = new PlatformStateStore(properties.getStatePath(), json);
+        this.json = json;
+        this.legacyStore = new PlatformStateStore(properties.getStatePath(), json);
         this.verifier = new LicenseVerifier(properties, json, catalog);
         this.clock = clock;
     }
@@ -45,9 +53,9 @@ public class PlatformService {
                                 PlatformLicense.Envelope license) {}
 
     public synchronized Overview overview() {
-        var state = store.load();
+        var state = store().load();
         var claims = claims(state);
-        return new Overview(properties.getCustomerId(), state.instanceId(), catalog.version(), catalog.channel(),
+        return new Overview(customerId(state, claims), state.instanceId(), catalog.version(), catalog.channel(),
                 verifier.configured(), licenseStatus(state, claims), claims == null ? null : claims.licenseId(),
                 claims == null ? null : claims.expiresAt(), "MANUAL", "MANUAL",
                 claims == null || claims.allowedDomains() == null ? List.of() : claims.allowedDomains(),
@@ -55,13 +63,13 @@ public class PlatformService {
     }
 
     public synchronized List<FeatureView> features() {
-        var state = store.load();
+        var state = store().load();
         var claims = claims(state);
         return catalog.features().stream().map(feature -> view(feature, state, claims)).toList();
     }
 
     public UpdateInfo updates() {
-        var selected = store.load().updateComponents();
+        var selected = store().load().updateComponents();
         var components = List.of(
                 option("core_platform", "基础业务与安全", "后端、数据库迁移和基础安全修复", selected),
                 option("admin_console", "管理后台", "管理员页面与运营配置界面", selected),
@@ -77,17 +85,17 @@ public class PlatformService {
         var allowed = Set.of("core_platform","admin_console","mobile_client","image_rendering","advanced_income_reports");
         if (!allowed.containsAll(requested) || new HashSet<>(requested).size() != requested.size())
             throw new BusinessException(400, "更新内容包含未知项目");
-        var state = store.load();
-        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), state.enabledFeatures(),
+        var state = store().load();
+        store().save(new PlatformStateStore.State(1, state.instanceId(), state.license(), state.enabledFeatures(),
                 state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
                 Set.copyOf(requested), state.remoteProject()));
         return updates();
     }
     public synchronized ReportPayload reportPayload() {
-        var state = store.load();
+        var state = store().load();
         var claims = claims(state);
         if (claims == null) return null;
-        return new ReportPayload(properties.getCustomerId(), state.instanceId(), catalog.version(), state.license());
+        return new ReportPayload(customerId(state, claims), state.instanceId(), catalog.version(), state.license());
     }
 
     /** Applies one verified authority response to the license and switches in a single atomic state write. */
@@ -108,7 +116,7 @@ public class PlatformService {
             if (entry.getValue() == null || expiry == null || !entry.getValue().isBefore(expiry))
                 throw new IllegalArgumentException("remote feature period is invalid");
         }
-        var state = store.load();
+        var state = store().load();
         if (project != null) {
             Instant incoming = projectIssuedAt(project), previous = state.remoteProject() == null ? null : projectIssuedAt(state.remoteProject());
             if (previous != null && !incoming.isAfter(previous))
@@ -148,25 +156,25 @@ public class PlatformService {
         }
         Map<String, Instant> startsAt = advertisedStartsAt == null ? state.remoteFeatureStartsAt() : Map.copyOf(advertisedStartsAt);
         Map<String, Instant> expiresAt = advertisedExpiresAt == null ? state.remoteFeatureExpiresAt() : Map.copyOf(advertisedExpiresAt);
-        store.save(new PlatformStateStore.State(1, state.instanceId(), license, enabled, managed, startsAt, expiresAt,
+        store().save(new PlatformStateStore.State(1, state.instanceId(), license, enabled, managed, startsAt, expiresAt,
                 state.updateComponents(), project == null ? state.remoteProject() : project));
     }
 
     public synchronized Overview importLicense(PlatformLicense.Envelope envelope) {
-        var state = store.load();
+        var state = store().load();
         if (!state.remoteFeatureEnabled().isEmpty() || state.remoteProject() != null)
             throw new BusinessException(409, "该实例已由授权中心托管，请等待自动同步或联系运营人员更新授权");
         var next = verifyReplacement(state, envelope);
         var enabled = new HashSet<>(state.enabledFeatures());
         enabled.retainAll(next.features());
-        store.save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled,
+        store().save(new PlatformStateStore.State(1, state.instanceId(), envelope, enabled,
                 state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
                 state.updateComponents(), state.remoteProject()));
         return overview();
     }
 
     private PlatformLicense.Claims verifyReplacement(PlatformStateStore.State state, PlatformLicense.Envelope envelope) {
-        var next = verifier.verify(envelope, state.instanceId(), clock.instant());
+        var next = verifier.verify(envelope, state.instanceId(), clock.instant(),currentCustomerId());
         if (next.expiresAt() != null && !next.expiresAt().isAfter(clock.instant()))
             throw new BusinessException(400, "该授权已经到期，请联系维护人员续期");
         var previous = claims(state);
@@ -180,7 +188,7 @@ public class PlatformService {
         var feature = catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
                 .orElseThrow(() -> new BusinessException(404, "功能模块不存在"));
         if (!feature.paid()) throw new BusinessException(400, "基础业务功能始终可用，无需开关");
-        var state = store.load();
+        var state = store().load();
         var claims = claims(state);
         var current = view(feature, state, claims);
         if (enabled && !current.entitled()) throw new BusinessException(403, current.reason());
@@ -192,33 +200,33 @@ public class PlatformService {
             throw new BusinessException(409, "请先关闭依赖此模块的功能");
         var selected = new HashSet<>(state.enabledFeatures());
         if (enabled) selected.add(id); else selected.remove(id);
-        store.save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected,
+        store().save(new PlatformStateStore.State(1, state.instanceId(), state.license(), selected,
                 state.remoteFeatureEnabled(), state.remoteFeatureStartsAt(), state.remoteFeatureExpiresAt(),
                 state.updateComponents(), state.remoteProject()));
         return features();
     }
 
-    synchronized JsonNode remoteProject() { return store.load().remoteProject(); }
+    synchronized JsonNode remoteProject() { return store().load().remoteProject(); }
 
     public synchronized void requireFeature(String id) {
         requireFeature(id, null);
     }
     public synchronized boolean featureEnabled(String id) {
-        var state = store.load();
+        var state = store().load();
         return catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
                 .map(feature -> view(feature, state, claims(state)).enabled())
                 .orElse(false);
     }
     public synchronized boolean featureEnabled(String id, String requestDomain) {
         if (requestDomain == null || requestDomain.isBlank()) return featureEnabled(id);
-        var state = store.load();
+        var state = store().load();
         var claims = claims(state);
         return catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
                 .map(feature -> view(feature, state, claims).enabled() && domainAllowed(claims, requestDomain))
                 .orElse(false);
     }
     public synchronized void requireFeature(String id, String requestDomain) {
-        var state = store.load();
+        var state = store().load();
         var feature = catalog.features().stream().filter(item -> item.id().equals(id)).findFirst()
                 .orElseThrow(() -> new BusinessException(404, "功能模块不存在"));
         var claims = claims(state);
@@ -226,6 +234,51 @@ public class PlatformService {
         if (!view.enabled()) throw new BusinessException(403, view.reason());
         if (!domainAllowed(claims, requestDomain))
             throw new BusinessException(403, "当前访问域名未获得此模块授权，请使用购买时登记的域名");
+    }
+
+    synchronized String currentCustomerId() {
+        return configuredCustomerId();
+    }
+
+    synchronized String currentInstanceId() {
+        return store().load().instanceId();
+    }
+
+    private boolean sharedMode(){
+        return tenantProperties!=null&&tenantProperties.isEnabled();
+    }
+
+    private TenantDefinition currentTenant(){
+        if(!sharedMode())return null;
+        String id=TenantContext.requireId();
+        if(tenantRegistry==null)throw new BusinessException(503,"租户登记不可用");
+        return tenantRegistry.findById(id).filter(TenantDefinition::active)
+                .orElseThrow(()->new BusinessException(503,"当前租户登记不可用"));
+    }
+
+    private PlatformStateStore store(){
+        if(!sharedMode())return legacyStore;
+        TenantDefinition tenant=currentTenant();
+        var statePath=java.nio.file.Path.of(properties.getStatePath()).toAbsolutePath().normalize();
+        var directory=statePath.getParent().resolve("tenants").resolve(tenant.id());
+        return new PlatformStateStore(directory.resolve("state.json").toString(),json,tenant.platformInstanceId());
+    }
+
+    private String customerId(PlatformStateStore.State state,PlatformLicense.Claims claims){
+        if(sharedMode()){
+            TenantDefinition tenant=currentTenant();
+            if(!tenant.platformCustomerId().isBlank())return tenant.platformCustomerId();
+        }
+        if(claims!=null&&claims.customerId()!=null&&!claims.customerId().isBlank())return claims.customerId();
+        return properties.getCustomerId();
+    }
+
+    private String configuredCustomerId(){
+        if(sharedMode()){
+            TenantDefinition tenant=currentTenant();
+            if(!tenant.platformCustomerId().isBlank())return tenant.platformCustomerId();
+        }
+        return properties.getCustomerId();
     }
 
     private PlatformLicense.Claims claims(PlatformStateStore.State state) {
