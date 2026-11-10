@@ -29,3 +29,17 @@ python deploy/migration/file_delta.py verify --source /old/uploads --target /new
 ## 暂存验证记录
 
 2026-11-10 在 742 暂存 742 clone 上执行：12 项财务检查全部为 0 违规；文件比较在排除 `.thumbnails` 和演练用的 `742/` 目录后为 510 个文件完全一致。该 clone 中包含真实业务数据，报告和暂存目录必须保持 root-only，不能作为客户数据交付物。
+
+## 租户迁移状态机
+
+`deploy/migration/tenant_state.py` 按租户记录迁移阶段和证据。阶段顺序为 `planned`、`backup_verified`、`target_ready`、`maintenance_started`、`data_imported`、`files_synced`、`finance_verified`、`accepted`、`route_switched`、`observed`、`old_stopped`；除正常前进外，从 `target_ready` 起可进入 `rolled_back`，任何阶段都可进入 `failed`。不能跳阶段，终态不能再前进。
+
+初始化示例：
+
+```bash
+python deploy/migration/tenant_state.py init --state-dir /var/lib/delta-migration --tenant 742 --change-ticket CHG-2026-001
+python deploy/migration/tenant_state.py transition --state-dir /var/lib/delta-migration --tenant 742 --to backup_verified --evidence backup.json
+python deploy/migration/tenant_state.py show --state-dir /var/lib/delta-migration --tenant 742
+```
+
+证据只接受各阶段固定的布尔值、SHA-256、数据库标识、时间窗和审计文本，不接受密码、Token、私钥或任意命令。备份摘要、导入报告、文件差异报告、财务报告和客户验收证据必须由对应工具产生；维护窗口未开启、观察期未结束、路由代次未递增或证据缺失都会被拒绝。状态文件和审计默认 `600`，租户目录 `700`。该状态机只记录和校验流程，不执行备份、数据导入、DNS 或服务切换。
