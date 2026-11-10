@@ -5,6 +5,8 @@ import com.delta.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
+import com.delta.common.tenant.TenantProperties;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -32,5 +34,18 @@ class BootstrapAdminRunnerTest {
         assertThatThrownBy(() -> new BootstrapAdminRunner(jdbc, new BCryptPasswordEncoder(), "admin", "123")
                 .run(null)).isInstanceOf(BusinessException.class);
         verify(jdbc, never()).update(anyString(), any(Object[].class));
+    }
+
+    @Test void sharedTenantModeRejectsGlobalBootstrapBeforeQueryingTheDatabase() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        BootstrapAdminRunner runner = new BootstrapAdminRunner(jdbc, new BCryptPasswordEncoder(), "admin", "Fresh742Password");
+        TenantProperties properties = new TenantProperties();
+        properties.setEnabled(true);
+        ReflectionTestUtils.setField(runner, "tenantProperties", properties);
+
+        assertThatThrownBy(() -> runner.run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("共享租户模式");
+        verifyNoInteractions(jdbc);
     }
 }

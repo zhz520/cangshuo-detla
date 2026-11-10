@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantProperties;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Explicitly enabled first-account setup for a fresh customer database. */
@@ -22,6 +23,8 @@ public class BootstrapAdminRunner implements ApplicationRunner {
     private final String password;
     @Autowired(required = false)
     private TenantRegistry tenantRegistry;
+    @Autowired(required = false)
+    private TenantProperties tenantProperties;
 
     public BootstrapAdminRunner(JdbcTemplate jdbc, PasswordEncoder encoder,
             @Value("${app.bootstrap-admin.username:admin}") String username,
@@ -35,7 +38,8 @@ public class BootstrapAdminRunner implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (tenantRegistry != null && tenantRegistry.isSharedEnabled()) {
+        if ((tenantRegistry != null && tenantRegistry.isSharedEnabled())
+                || (tenantProperties != null && tenantProperties.isEnabled())) {
             throw new IllegalStateException("共享租户模式不能使用全局首次管理员初始化");
         }
         Long count = jdbc.queryForObject("SELECT COUNT(*) FROM admin", Long.class);
