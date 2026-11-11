@@ -58,6 +58,22 @@ def read_optional(path):
     return target.read_text(encoding="utf-8") if target.exists() else None
 
 
+def read_symlink(path):
+    target = Path(path)
+    return os.readlink(str(target)) if target.is_symlink() else None
+
+
+def replace_symlink(target, destination):
+    destination = Path(destination)
+    temporary = destination.with_name("." + destination.name + "." + uuid.uuid4().hex)
+    os.symlink(str(target), str(temporary), target_is_directory=True)
+    if destination.is_symlink():
+        destination.unlink()
+    elif destination.exists():
+        raise ValueError("current release path exists and is not a symlink")
+    os.replace(str(temporary), str(destination))
+
+
 def prune_directories(parent, keep, preserve=()):
     parent = Path(parent)
     if not parent.is_dir():
@@ -269,6 +285,7 @@ class SharedExecutor:
         self.acquire()
         previous_override = None
         previous_current = None
+        previous_link = None
         previous_versions = {}
         staging = self.state / "releases-staging" / self.plan["id"]
         backup_dir = self.state / "backups" / self.plan["id"]
@@ -281,6 +298,7 @@ class SharedExecutor:
                 self.now, require_window=True)
             previous_override = read_optional(self.override)
             previous_current = read_optional(self.current)
+            previous_link = read_symlink(self.root / "current")
             previous_versions = json.loads(previous_current).get("components", {}) if previous_current else {}
             if backup_dir.exists():
                 raise ValueError("backup directory already exists")
@@ -302,6 +320,7 @@ class SharedExecutor:
                 "id": self.plan["id"],
                 "previousOverride": previous_override,
                 "previousCurrent": previous_current,
+                "previousCurrentLink": previous_link,
                 "services": list(shared_release.COMPONENTS),
                 "versionsBefore": previous_versions,
                 "releaseDir": str(release_dir),
@@ -315,6 +334,7 @@ class SharedExecutor:
             self.write_override(release_dir)
             start_services(self.ops, self.health_host, list(shared_release.COMPONENTS), self.override,
                            {package["component"]: package["version"] for package in self.plan["packages"]})
+            replace_symlink(release_dir, self.root / "current")
             write_json(self.current, {
                 "release": self.plan["targetVersion"],
                 "releaseId": self.plan["id"],
@@ -342,6 +362,12 @@ class SharedExecutor:
                         remove(self.current)
                     else:
                         self.current.write_text(previous_current, encoding="utf-8")
+                    current_link = self.root / "current"
+                    if previous_link is None:
+                        if current_link.is_symlink():
+                            current_link.unlink()
+                    else:
+                        replace_symlink(previous_link, current_link)
                     remove(self.state / "installed-plans" / self.plan["id"])
                     start_services(self.ops, self.health_host, list(shared_release.COMPONENTS),
                                    self.override if previous_override else None, previous_versions)
@@ -406,6 +432,13 @@ def recover(config, operations=None, now=None):
         else:
             current.write_text(previous_current, encoding="utf-8")
             os.chmod(current, 0o600)
+        previous_link = journal.get("previousCurrentLink")
+        current_link = Path(config["root"]) / "current"
+        if previous_link is None:
+            if current_link.is_symlink():
+                current_link.unlink()
+        else:
+            replace_symlink(previous_link, current_link)
         remove(state / "installed-plans" / release_id)
         health_host = journal.get("healthHost") or config.get("health_host")
         if not health_host:

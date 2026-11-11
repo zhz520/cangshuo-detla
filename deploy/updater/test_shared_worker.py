@@ -101,6 +101,13 @@ class SharedWorkerTests(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
+    @staticmethod
+    def read_link(path):
+        value = os.readlink(str(path))
+        if value.startswith("\\\\?\\"):
+            value = value[4:]
+        return value
+
     def make_plan(self, **changes):
         version = "1.11.3"
         tag = "v" + version
@@ -178,6 +185,7 @@ class SharedWorkerTests(unittest.TestCase):
         self.assertTrue((self.state / "installed-plans" / self.plan["id"]).exists())
         self.assertFalse((self.state / "journal.json").exists())
         self.assertFalse((self.state / "execute.lock").exists())
+        self.assertEqual(self.read_link(self.root / "current"), str(self.root / "releases" / self.plan["id"]))
         audit = (self.state / "audit.jsonl").read_text(encoding="utf-8")
         self.assertIn('"result": "SUCCEEDED"', audit)
 
@@ -186,6 +194,8 @@ class SharedWorkerTests(unittest.TestCase):
         previous_override.write_text('{"services":{"backend":{"volumes":["/old:/app/app.jar:ro"]}}}', encoding="utf-8")
         (self.state / "current.json").write_text(json.dumps({
             "release": "1.11.2", "components": {"backend": "1.11.2", "admin": "1.11.2", "h5": "1.11.2"}}), encoding="utf-8")
+        previous_link = str(self.root / "releases" / "previous")
+        os.symlink(previous_link, str(self.root / "current"), target_is_directory=True)
         operations = FakeOperations(fail_health_once="admin")
         with self.assertRaises(RuntimeError):
             shared_worker.SharedExecutor(self.config, self.plan, operations, self.now).execute()
@@ -197,6 +207,7 @@ class SharedWorkerTests(unittest.TestCase):
         self.assertFalse((self.state / "installed-plans" / self.plan["id"]).exists())
         self.assertFalse((self.state / "journal.json").exists())
         self.assertFalse((self.state / "execute.lock").exists())
+        self.assertEqual(self.read_link(self.root / "current"), previous_link)
         audit = (self.state / "audit.jsonl").read_text(encoding="utf-8")
         self.assertIn('"result": "ROLLED_BACK"', audit)
 
@@ -224,18 +235,21 @@ class SharedWorkerTests(unittest.TestCase):
             "previousCurrent": json.dumps({"release": "1.11.2", "components": {"backend": "1.11.2"}}),
             "services": ["backend", "admin", "h5"],
             "versionsBefore": {"backend": "1.11.2", "admin": "1.11.2", "h5": "1.11.2"},
+            "previousCurrentLink": str(self.root / "releases" / "previous"),
             "releaseDir": str(release_dir),
             "serviceGroupId": "delta-shared-prod",
             "targetVersion": "1.11.3",
             "healthHost": "tenant-a.example.test",
         }
         (self.state / "journal.json").write_text(json.dumps(journal), encoding="utf-8")
+        os.symlink(str(release_dir), str(self.root / "current"), target_is_directory=True)
         operations = FakeOperations()
         result = shared_worker.recover(self.config, operations, self.now)
         self.assertEqual(result["status"], "ROLLED_BACK")
         self.assertFalse((self.state / "journal.json").exists())
         self.assertFalse(release_dir.exists())
         self.assertEqual(json.loads(current.read_text(encoding="utf-8"))["release"], "1.11.2")
+        self.assertEqual(self.read_link(self.root / "current"), str(self.root / "releases" / "previous"))
         self.assertFalse((self.state / "execute.lock").exists())
 
     def test_zip_traversal_and_wrong_backend_version_are_rejected(self):
