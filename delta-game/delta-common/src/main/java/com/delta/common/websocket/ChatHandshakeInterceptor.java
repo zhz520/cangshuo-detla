@@ -9,6 +9,7 @@ import com.delta.common.tenant.TenantRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
@@ -27,12 +28,17 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
         TenantDefinition tenant=null;
         if(tenantProperties.isEnabled()){
             tenant=tenants.findByHost(request.getURI().getHost()).orElse(null);
-            if(tenant==null||!tenant.active()||!sameTenantOrigin(request,tenant.id()))return false;
+            if(tenant==null||!tenant.active()||!sameTenantOrigin(request,tenant.id())){
+                response.setStatusCode(HttpStatus.FORBIDDEN);
+                return false;
+            }
             try(TenantContext.Scope ignored=TenantContext.open(tenant.id())){
-                try{limits.check("ws-handshake:"+remote,30,60);}catch(Exception e){return false;}
+                try{limits.check("ws-handshake:"+remote,30,60);}
+                catch(Exception e){response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);return false;}
             }
         }else{
-            try{limits.check("ws-handshake:"+remote,30,60);}catch(Exception e){return false;}
+            try{limits.check("ws-handshake:"+remote,30,60);}
+            catch(Exception e){response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);return false;}
         }
         attributes.put("remoteIp",remote);
         if(tenant!=null)attributes.put("tenantId",tenant.id());

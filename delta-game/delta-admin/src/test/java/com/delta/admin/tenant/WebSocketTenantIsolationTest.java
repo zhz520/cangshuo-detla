@@ -45,6 +45,19 @@ class WebSocketTenantIsolationTest {
         assertThat(TenantContext.currentIdOrNull()).isNull();
     }
 
+    @Test
+    void rejectedCrossTenantOriginUsesForbiddenStatus() {
+        Fixture fixture = fixture();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean accepted = fixture.interceptor.beforeHandshake(
+                request("shop-a.example.com", "https://shop-b.example.com"),
+                new ServletServerHttpResponse(response), mock(WebSocketHandler.class), new HashMap<>());
+
+        assertThat(accepted).isFalse();
+        assertThat(response.getStatus()).isEqualTo(403);
+    }
+
     private ServletServerHttpRequest request(String host, String origin) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ws/chat");
         request.setScheme("https");

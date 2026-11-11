@@ -4,15 +4,21 @@ import com.delta.common.domain.R;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<R<?>> handleNoResource(NoResourceFoundException e) {
+        return ResponseEntity.status(404).body(R.fail(404, "请求的资源不存在"));
+    }
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
     public org.springframework.http.ResponseEntity<R<?>> handleResponseStatus(org.springframework.web.server.ResponseStatusException e) {
         return org.springframework.http.ResponseEntity.status(e.getStatusCode()).body(R.fail(e.getStatusCode().value(), "请求的资源不可用"));
