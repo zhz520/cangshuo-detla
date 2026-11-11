@@ -66,5 +66,9 @@ jobs:
           npm test
           npm run build:h5
           npm run build:mp-weixin
+      - name: Validate static asset references
+        run: |
+          python -m unittest discover -s deploy/qa -p 'test_*.py'
+          python deploy/qa/check_static_assets.py delta-admin-ui/dist delta-mp/dist/build/h5
       # Formal release archives are generated and digest-checked separately.
       # Do not upload preview bundles on every push; they exhaust Actions storage.

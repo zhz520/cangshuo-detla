@@ -74,6 +74,8 @@ GitHub Release 的自动 digest 与本地 `release-manifest.json` 一致。授�
 
 复核：`/assets/pages-mine-index.C5IBNkgg.js` 返回 `application/javascript` 200，错误的旧 chunk 返回 404，`/static/icons/订单.svg` 返回 `image/svg+xml` 200；全新浏览器标签打开“我的”页无控制台错误。管理后台 70 项、H5 87 项测试通过，包括新增的静态资源 404 回归测试。`v1.12.1` 标签和 Release 资产未改动；客户自更新执行器本身使用 Python `zipfile`，不受该手工解压问题影响。
 
+后续又对 JAX、742、747 当前使用的静态目录做只读资源审计：JAX admin 133、H5 279，742 admin 134、H5 279，747 admin 114、H5 316 个文件；所有引用缺失 0，所有可检查文件通过 HTTP 状态和 MIME 检查。新增 `deploy/qa/check_static_assets.py` 并接入 CI 和打包脚本，静态引用缺失时发布会直接失败。
+
 ## 回滚
 
 把后台/H5 Compose 覆盖切回 `compose.jax-upgrade-1.12.0.json`，重建 `delta-shared-backend` 并挂回 `jax-1.12.0-20261111-112407/backend/delta-admin.jar`。数据库没有结构变更，不需要恢复数据库；若发生业务数据异常，按切换前备份恢复并逐笔核对订单、退款、提现和钱包。

@@ -24,6 +24,8 @@ output=Path(sys.argv[1]).resolve()
 if sys.platform=='win32' and output.drive.lower()!='d:':raise SystemExit('Release output must be on D:')
 output.mkdir(parents=True,exist_ok=True)
 sources={'backend':root/'delta-game/delta-admin/target/delta-admin.jar','admin':root/'delta-admin-ui/dist','h5':root/'delta-mp/dist/build/h5'}
+subprocess.run([sys.executable,str(root/'deploy/qa/check_static_assets.py'),
+                str(sources['admin']),str(sources['h5'])],check=True)
 assets=[]
 for component,source in sources.items():
     if not source.exists():raise SystemExit('Build artifact missing: '+str(source))
