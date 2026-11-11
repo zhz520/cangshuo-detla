@@ -66,6 +66,14 @@ GitHub Release 的自动 digest 与本地 `release-manifest.json` 一致。授�
 
 完整记录：`D:\CodexData\outputs\delta-multitenant\JAX-1.12.1-acceptance-20261111.md`。
 
+## H5 静态资源编码修复（2026-11-11）
+
+客户 H5 的“我的”页曾显示“连接服务器超时”，浏览器控制台报 `pages-mine-index.*.js` 等动态 chunk 的 MIME 错误。根因不是 H5 代码，而是生产手工部署使用 Linux `unzip` 解压包含中文文件名的 H5 包时，54 个文件名被错误转码；主 bundle 的 4 个动态 JS chunk 因此缺失，Nginx 的 SPA 回退又把 `index.html` 以 HTTP 200 返回给 `.js` 请求。
+
+已用 Python `zipfile` 将同一个 `cangshuo-h5.zip` 重新解压到新目录 `/www/delta/self-update-releases/jax-1.12.1-h5fix-20261111-1455/h5`，共 280 个文件，动态引用缺失数为 0；H5 Compose 覆盖切换到新目录。Nginx 增加 `/assets/`、`/static/` 的缺失文件 404 规则，并让 `index.html`、`instance-config.js` 禁止缓存。
+
+复核：`/assets/pages-mine-index.C5IBNkgg.js` 返回 `application/javascript` 200，错误的旧 chunk 返回 404，`/static/icons/订单.svg` 返回 `image/svg+xml` 200；全新浏览器标签打开“我的”页无控制台错误。管理后台 70 项、H5 87 项测试通过，包括新增的静态资源 404 回归测试。`v1.12.1` 标签和 Release 资产未改动；客户自更新执行器本身使用 Python `zipfile`，不受该手工解压问题影响。
+
 ## 回滚
 
 把后台/H5 Compose 覆盖切回 `compose.jax-upgrade-1.12.0.json`，重建 `delta-shared-backend` 并挂回 `jax-1.12.0-20261111-112407/backend/delta-admin.jar`。数据库没有结构变更，不需要恢复数据库；若发生业务数据异常，按切换前备份恢复并逐笔核对订单、退款、提现和钱包。
