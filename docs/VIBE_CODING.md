@@ -1,9 +1,9 @@
 # Delta 生态 Vibe Coding 规则
 
 最后更新：2026-11-11（Asia/Shanghai）
-文档版本：2026-11-11.12
+文档版本：2026-11-11.13
 
-读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-11.12”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
+读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-11.13”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
 
 适用范围：
 
@@ -72,7 +72,7 @@ flowchart TB
   GH --> REL
 
   subgraph HOST["客户服务器 103.38.82.146"]
-    C742["742<br/>jgs.kk520yy.com"]
+    C742["742<br/>chuan742.idcgov.cn"]
     C747["747<br/>ycdj.kk520yy.com"]
     C738["delta / JAX<br/>jax.kkimg.top"]
   end
@@ -89,7 +89,7 @@ flowchart TB
 
 | 客户 | 生产域名 | 生产客户端版本 | 本地目录 | 服务器部署 | 入口端口 |
 | --- | --- | ---: | --- | --- | --- |
-| 742 | `jgsapi.kk520yy.com` / `jgs.kk520yy.com` | 1.12.4 | `D:\codeStudy\code\742`，本地为 1.2.0 | 共享服务组；旧 `/opt/apps/742` 仅回退 | 8081 / 8082；旧 7420/7421 已停 |
+| 742 | `chuanapi742.idcgov.cn` / `chuan742.idcgov.cn` | 1.12.4 | `D:\codeStudy\code\742`，本地为 1.2.0 | 共享服务组；旧 `/opt/apps/742` 仅回退 | 8081 / 8082；旧 7420/7421 已停 |
 | 747 | `ycdjapi.kk520yy.com` / `ycdj.kk520yy.com` | 1.12.4 | `D:\codeStudy\code\747`，本地为 1.5.12 | 共享服务组；旧 `/opt/apps/747` 仅回退 | 8081 / 8082 |
 | delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.12.4 | `D:\codeStudy\code\detla738`，旧 master | 共享服务组 `/www/delta` | 8081 / 8082 |
 
@@ -138,6 +138,7 @@ flowchart TB
 - 最新源码和正式基线为 1.12.4。
 - JAX、742 和 747 生产均已于 2026-11-11 更新到 1.12.4，并运行在同一个共享服务组；三套数据库、文件目录、授权状态和域名仍独立。
 - 747 已完成 `1.5.15 → 1.11.2 → 1.12.2 → 1.12.3 → 1.12.4`，随后迁入共享组；旧 747 backend/admin/H5/MySQL/Redis 和 updater 已停止并禁用，旧数据和发布目录保留。
+- 742 已于 2026-11-11 切换域名为后台 `chuanapi742.idcgov.cn`、前台 `chuan742.idcgov.cn`；授权许可证、共享租户注册、Nginx 和业务 URL 已同步，旧域名不再作为生产入口。
 - 1.12.4 修复共享服务组中 `@Async` 未使用租户传播执行器、异步通知丢失租户上下文的问题；授权中心已登记 1.12.4 三个必选更新项，JAX/742/747 共享后端和静态入口已部署并验证。
 - 1.12.3 修复共享租户 license 使用全局客户编号的问题；JAX/742 的 1.12.3 授权上报已验证。
 - 本地授权数据库只是开发初始化数据，不能用来判断生产客户、项目、实例和权益。
@@ -425,6 +426,7 @@ python deploy\updater\test_worker.py
 - `docs/客户实例与授权中心关系.md`
 - `docs/项目结构说明.md`
 - `docs/三客户共享服务组上线与全页面验收-2026-11-11.md`
+- `docs/742域名切换记录.md`
 - `docs/后台PC与H5入口调整方案.md`
 - `docs/client-feature-integration.md`
 - `docs/feature-market-sync.md`
