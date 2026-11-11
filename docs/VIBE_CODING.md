@@ -1,9 +1,9 @@
 # Delta 生态 Vibe Coding 规则
 
 最后更新：2026-11-11（Asia/Shanghai）
-文档版本：2026-11-11.5
+文档版本：2026-11-11.6
 
-读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-11.5”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
+读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-11.6”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
 
 适用范围：
 
@@ -56,7 +56,7 @@
 ```mermaid
 flowchart TB
   subgraph DEV[研发与发布]
-    SRC["cangshuo-detla<br/>最新源码 1.12.1"]
+    SRC["cangshuo-detla<br/>最新源码 1.12.2"]
     BUILD["package_release.py"]
     GH["GitHub Release<br/>backend / admin / h5"]
     SRC --> BUILD --> GH
@@ -91,7 +91,7 @@ flowchart TB
 | --- | --- | ---: | --- | --- | --- |
 | 742 | `jgsapi.kk520yy.com` / `jgs.kk520yy.com` | 1.11.2 | `D:\codeStudy\code\742`，本地为 1.2.0 | `/opt/apps/742` | 7420 / 7421 |
 | 747 | `ycdjapi.kk520yy.com` / `ycdj.kk520yy.com` | 1.5.15 | `D:\codeStudy\code\747`，本地为 1.5.12 | `/opt/apps/747` | 7470 / 7471 |
-| delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.12.1 | `D:\codeStudy\code\detla738`，旧 master | `/www/delta` | 8081 / 8082 |
+| delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.12.2 | `D:\codeStudy\code\detla738`，旧 master | `/www/delta` | 8081 / 8082 |
 
 生产版本按 2026-11-11 的 JAX 生产验收和授权中心记录整理。客户版本以后还会变化，做发布或升级前要重新核对授权中心，不要只信这张表。
 
@@ -135,8 +135,8 @@ flowchart TB
 
 当前已知情况：
 
-- 最新源码为 1.12.1。
-- JAX 生产已于 2026-11-11 更新到 1.12.1；742 为 1.11.2，747 为 1.5.15，仍低于最新源码。
+- 最新源码为 1.12.2。
+- JAX 生产已于 2026-11-11 更新到 1.12.2；742 为 1.11.2，747 为 1.5.15，仍低于最新源码。
 - 747 的部署文档明确写着“当前尚未接入 self-update-releases”。
 - 本地授权数据库只是开发初始化数据，不能用来判断生产客户、项目、实例和权益。
 - 系统 PATH 中没有 Maven，默认 Java 为 25；正式构建使用缓存 Maven 3.9.9 和 Temurin JDK 17（临时目录）。不要用 Java 25 代替项目要求的 Java 17。
@@ -151,9 +151,9 @@ flowchart TB
 | --- | --- | --- |
 | MAJOR | 不兼容变更、授权/更新协议不兼容、需要整体迁移 | `2.0.0` |
 | MINOR | 新增完整业务能力或一组明显可见的功能 | `1.12.0` |
-| PATCH | 正式版后的缺陷、安全或线上阻塞修复 | `1.12.1` |
+| PATCH | 正式版后的缺陷、安全或线上阻塞修复 | `1.12.2` |
 
-当前正式基线是 `1.12.1`。不要因为改了文档、加了一个测试、修了一个错别字就升版本；同一批验收中的多个小修复合并为一个发布版本。
+当前正式基线是 `1.12.2`。不要因为改了文档、加了一个测试、修了一个错别字就升版本；同一批验收中的多个小修复合并为一个发布版本。
 
 ### 4.2 预览版
 
@@ -359,7 +359,7 @@ python deploy\updater\test_worker.py
 
 - 管理后台 `npm test`：69 项通过。
 - 移动端 `npm test`：86 项通过。
-- 后端：315 项测试通过，0 failures / 0 errors；使用 Temurin JDK 17.0.21 和 Maven 3.9.9。
+- 后端：316 项测试通过，0 failures / 0 errors；使用 Temurin JDK 17.0.21 和 Maven 3.9.9。
 - 更新器 28 项、迁移工具 21 项测试通过。
 - 管理后台、H5 和微信小程序生产构建通过。
 - 真实嵌入式 Tomcat 握手验证：允许来源 101，跨租户来源 403；MVC 缺失静态资源返回 404。
@@ -369,6 +369,8 @@ python deploy\updater\test_worker.py
 - 静态容器 Nginx 模板已增加 `/assets/`、`/static/` 缺失资源 404 和入口文件禁缓存规则；手工部署必须用 Python `zipfile` 或等效 UTF-8 解压，不要使用会转码文件名的 `unzip`。
 - 已增加 `deploy/qa/check_static_assets.py`：打包前和 CI 构建后检查所有静态引用；可用 `--archive` 校验 ZIP 与实际解压目录逐文件一致。手工解压 H5/后台后必须执行该检查。
 - 2026-11-11 对 JAX、742、747 的当前 admin/H5 静态目录做只读审计：JAX admin 133、H5 279，742 admin 134、H5 279，747 admin 114、H5 316 个文件；全部静态引用缺失 0，所有可检查文件 HTTP 200 且非 HTML 类型。
+- 1.12.2 后端 316 项、后台 70 项、H5 87 项、更新器 28 项、迁移工具 21 项测试通过；JAX 已更新到 1.12.2，缺失参数接口实测返回 400。
+- 742 共享迁移只读审计结论为 NO-GO：存在持续失败的微信退款、12 笔历史 PAYING、共享 MySQL 容量仅约 19 MiB、缺少可恢复的生产共享 Compose 清单；不得在当前状态切换。
 
 ## 12. 完成定义
 
