@@ -36,6 +36,9 @@ public class WxPaymentRecoveryTask {
         if(!configuration.isEnabled()) return;
         var clients=configuration.getClients();if(clients==null || !redis.tryLock("task:wx-payment-recovery",5,TimeUnit.MINUTES)) return;
         try {
+            long closeHours=24;
+            try { closeHours=Math.max(1,Math.min(168,Long.parseLong(configs.getConfigValue("wx.pay.pending-close-hours","24").trim()))); }
+            catch(NumberFormatException ignored) {}
             for(Payment payment:payments.list(new LambdaQueryWrapper<Payment>().eq(Payment::getStatus,"REFUNDING")
                     .in(Payment::getPayMethod,"WECHAT",WechatPayScene.MINIAPP.payMethod(),
                             WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod())
@@ -61,7 +64,9 @@ public class WxPaymentRecoveryTask {
                             WechatPayScene.OFFICIAL_ACCOUNT.payMethod(),WechatPayScene.H5.payMethod())
                     .lt(Payment::getCreatedAt,java.time.LocalDateTime.now().minusMinutes(1))
                     .orderByAsc(Payment::getUpdatedAt).last("LIMIT 20"))) {
-                try{payments.reconcilePayment(payment.getId());}catch(Exception e){log.error("微信支付待对账: paymentId={}",payment.getId(),e);}
+                boolean closeUnpaid=payment.getCreatedAt()!=null
+                        && payment.getCreatedAt().isBefore(java.time.LocalDateTime.now().minusHours(closeHours));
+                try{payments.reconcilePayment(payment.getId(),closeUnpaid);}catch(Exception e){log.error("微信支付待对账: paymentId={}",payment.getId(),e);}
             }
         } finally {redis.unlock("task:wx-payment-recovery");}
     }

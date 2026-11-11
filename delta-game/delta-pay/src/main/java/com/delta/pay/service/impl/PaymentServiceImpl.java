@@ -490,11 +490,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         Payment candidate=getOne(new LambdaQueryWrapper<Payment>().eq(Payment::getPaymentNo,paymentNo));
         if(candidate==null) throw new BusinessException("退款支付单不存在");
         Payment payment=lockPayment(candidate.getId());
-        if(!isWechatPayment(payment) || !java.util.Objects.equals(refundNo,payment.getRefundNo())
-                || transactionId==null || !transactionId.equals(payment.getWxTransactionId()) || amount==null || payment.getRefundAmount()==null
-                || !"CNY".equals(amount.getCurrency()) || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
-                || !Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund()))
-            throw new BusinessException("退款通知与本地退款单不一致");
+        validateRefundNotification(payment,refundNo,transactionId,amount);
         if("REFUNDED".equals(payment.getStatus())) return;
         if(!"REFUNDING".equals(payment.getStatus())) throw new BusinessException("退款状态不允许处理");
         if(status==com.wechat.pay.java.service.refund.model.Status.SUCCESS) {
@@ -507,13 +503,41 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         }
     }
 
+    void validateRefundNotification(Payment payment,String refundNo,String transactionId,
+                                    com.wechat.pay.java.service.refund.model.Amount amount) {
+        boolean detailsMatch=isWechatPayment(payment)
+                && java.util.Objects.equals(refundNo,payment.getRefundNo())
+                && amount!=null && payment.getAmount()!=null && payment.getRefundAmount()!=null
+                && "CNY".equals(amount.getCurrency())
+                && Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
+                && Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund());
+        if(!detailsMatch) throw new BusinessException("退款通知与本地退款单不一致");
+        // A completed refund can receive delayed duplicate notifications. Some historical rows
+        // predate wx_transaction_id persistence, so a missing stored or incoming id is accepted
+        // only when the refund number and both amounts already match the completed local record.
+        if("REFUNDED".equals(payment.getStatus())) {
+            if(transactionId!=null && !transactionId.isBlank() && payment.getWxTransactionId()!=null
+                    && !transactionId.equals(payment.getWxTransactionId()))
+                throw new BusinessException("退款通知与本地退款单不一致");
+            return;
+        }
+        if(transactionId==null || !transactionId.equals(payment.getWxTransactionId()))
+            throw new BusinessException("退款通知与本地退款单不一致");
+    }
+
     @Override
     @Transactional(rollbackFor=Exception.class)
     public void reconcilePayment(Long paymentId) {
+        reconcilePayment(paymentId,false);
+    }
+
+    @Override
+    @Transactional(rollbackFor=Exception.class)
+    public void reconcilePayment(Long paymentId, boolean closeUnpaid) {
         Payment payment=lockPayment(paymentId);
         if(!"PAYING".equals(payment.getStatus()) || !isWechatPayment(payment)) return;
         var clients=wxPayConfiguration.getClients();if(clients==null) return;
-        resolvePendingPayment(payment,clients,false);
+        resolvePendingPayment(payment,clients,closeUnpaid);
     }
 
     @Override

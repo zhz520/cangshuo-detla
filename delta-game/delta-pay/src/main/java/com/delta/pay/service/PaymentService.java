@@ -22,5 +22,6 @@ public interface PaymentService extends IService<Payment> {
     void handleWxRefundV3Notify(String body,String serial,String nonce,String timestamp,String signature);
     void acceptRefundResult(com.wechat.pay.java.service.refund.model.Refund result);
     void reconcilePayment(Long paymentId);
+    void reconcilePayment(Long paymentId, boolean closeUnpaid);
     boolean closeWxPayment(Long orderId,Long userId);
 }
