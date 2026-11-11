@@ -40,8 +40,8 @@
 
 | 项目 | 现状 |
 | --- | --- |
-| 前台域名 | 例如 742 的 `jgs.kk520yy.com`，747 的 `ycdj.kk520yy.com`，delta 的 `jax.kkimg.top` |
-| 后台域名 | 例如 742 的 `jgsapi.kk520yy.com`，747 的 `ycdjapi.kk520yy.com`，delta 的 `jaxapi.kkimg.top` |
+| 前台域名 | 例如 742 的 `chuan742.idcgov.cn`，747 的 `ycdj.kk520yy.com`，delta 的 `jax.kkimg.top` |
+| 后台域名 | 例如 742 的 `chuanapi742.idcgov.cn`，747 的 `ycdjapi.kk520yy.com`，delta 的 `jaxapi.kkimg.top` |
 | 后台 PC | 后台域名根路径 `/` |
 | 后台 H5 | 目前是同一个 SPA 的 `/mobile` 路由 |
 | 自动切换 | `App.vue` 根据 `max-width: 1024px` 自动在 `/` 和 `/mobile` 之间切换 |
@@ -55,7 +55,7 @@
 
 | 客户 | 前台域名 | 后台 PC | 后台 H5 |
 | --- | --- | --- | --- |
-| 742 | `https://jgs.kk520yy.com/` | `https://jgsapi.kk520yy.com/` | `https://jgsapi.kk520yy.com/h5/` |
+| 742 | `https://chuan742.idcgov.cn/` | `https://chuanapi742.idcgov.cn/` | `https://chuanapi742.idcgov.cn/h5/` |
 | 747 | `https://ycdj.kk520yy.com/` | `https://ycdjapi.kk520yy.com/` | `https://ycdjapi.kk520yy.com/h5/` |
 | delta / JAX | `https://jax.kkimg.top/` | `https://jaxapi.kkimg.top/` | `https://jaxapi.kkimg.top/h5/` |
 
