@@ -327,6 +327,7 @@ class SharedExecutor:
         self.databases = {row_id: self.rows[row_id]["database"] for row_id in plan["tenants"] if row_id in self.rows}
         if set(self.databases) != set(plan["tenants"]):
             raise ValueError("selected tenant has no database")
+        self.platform_tenants_dir = Path(config["platform_tenants_dir"]) if config.get("platform_tenants_dir") else None
 
     def acquire(self):
         try:
@@ -362,6 +363,7 @@ class SharedExecutor:
         previous_current = None
         previous_link = None
         previous_versions = {}
+        previous_component_versions = {}
         staging = self.state / "releases-staging" / self.plan["id"]
         backup_dir = self.state / "backups" / self.plan["id"]
         release_dir = self.root / "releases" / self.plan["id"]
@@ -375,6 +377,12 @@ class SharedExecutor:
             previous_current = read_optional(self.current)
             previous_link = read_symlink(self.root / "current")
             previous_versions = json.loads(previous_current).get("components", {}) if previous_current else {}
+            if self.platform_tenants_dir:
+                for tenant in self.plan["tenants"]:
+                    tenant_dir = self.platform_tenants_dir / tenant
+                    if not tenant_dir.is_dir():
+                        raise ValueError("platform tenant directory does not exist: " + tenant)
+                    previous_component_versions[tenant] = read_optional(tenant_dir / "component-versions.json")
             if backup_dir.exists():
                 raise ValueError("backup directory already exists")
             if release_dir.exists():
@@ -398,6 +406,7 @@ class SharedExecutor:
                 "previousCurrentLink": previous_link,
                 "services": list(shared_release.COMPONENTS),
                 "versionsBefore": previous_versions,
+                "previousComponentVersions": previous_component_versions,
                 "releaseDir": str(release_dir),
                 "serviceGroupId": self.plan["serviceGroupId"],
                 "targetVersion": self.plan["targetVersion"],
@@ -410,6 +419,12 @@ class SharedExecutor:
             start_services(self.ops, self.health_host, list(shared_release.COMPONENTS), self.override,
                            {package["component"]: package["version"] for package in self.plan["packages"]})
             replace_symlink(release_dir, self.root / "current")
+            if self.platform_tenants_dir:
+                for tenant in self.plan["tenants"]:
+                    write_json(self.platform_tenants_dir / tenant / "component-versions.json", {
+                        "backend": self.plan["targetVersion"], "admin": self.plan["targetVersion"],
+                        "h5": self.plan["targetVersion"], "release": self.plan["targetVersion"],
+                    })
             write_json(self.current, {
                 "release": self.plan["targetVersion"],
                 "releaseId": self.plan["id"],
@@ -443,6 +458,13 @@ class SharedExecutor:
                             current_link.unlink()
                     else:
                         replace_symlink(previous_link, current_link)
+                    for tenant, content in previous_component_versions.items():
+                        target = self.platform_tenants_dir / tenant / "component-versions.json"
+                        if content is None:
+                            remove(target)
+                        else:
+                            target.write_text(content, encoding="utf-8")
+                            os.chmod(target, 0o600)
                     remove(self.state / "installed-plans" / self.plan["id"])
                     start_services(self.ops, self.health_host, list(shared_release.COMPONENTS),
                                    self.override if previous_override else None, previous_versions)
@@ -514,6 +536,17 @@ def recover(config, operations=None, now=None):
                 current_link.unlink()
         else:
             replace_symlink(previous_link, current_link)
+        previous_component_versions = journal.get("previousComponentVersions", {})
+        platform_tenants_dir = Path(config["platform_tenants_dir"]) if config.get("platform_tenants_dir") else None
+        for tenant, content in previous_component_versions.items():
+            if platform_tenants_dir is None:
+                break
+            target = platform_tenants_dir / tenant / "component-versions.json"
+            if content is None:
+                remove(target)
+            else:
+                target.write_text(content, encoding="utf-8")
+                os.chmod(target, 0o600)
         remove(state / "installed-plans" / release_id)
         health_host = journal.get("healthHost") or config.get("health_host")
         if not health_host:

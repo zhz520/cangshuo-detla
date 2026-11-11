@@ -108,6 +108,8 @@ def validate_config(raw):
         raise ValueError("allow_execute must be boolean")
     if raw.get("github_token_path") and not Path(str(raw["github_token_path"])).is_absolute():
         raise ValueError("github_token_path must be an absolute path")
+    if raw.get("platform_tenants_dir") and not Path(str(raw["platform_tenants_dir"])).is_absolute():
+        raise ValueError("platform_tenants_dir must be an absolute path")
     maximum = raw.get("maintenance_max_minutes", 240)
     if not isinstance(maximum, int) or not 1 <= maximum <= 1440:
         raise ValueError("maintenance_max_minutes must be 1..1440")
@@ -330,6 +332,7 @@ def config_example():
         "repository": "zhz520/cangshuo-detla",
         "public_key_path": "/www/delta/shared/public.pem",
         "github_token_path": "/www/delta/shared/github-token",
+        "platform_tenants_dir": "/www/delta/data/platform/tenants",
         "health_host": "jaxapi738.idcgov.cn",
         "inbox_dir": "/var/lib/delta-shared/updater/inbox",
         "allow_execute": False,

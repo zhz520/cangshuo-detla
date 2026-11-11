@@ -199,6 +199,17 @@ class SharedWorkerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "owner"):
                 shared_worker.read_github_token(config)
 
+    def test_successful_execution_updates_each_platform_tenant_component_version(self):
+        platform = self.root / "platform" / "tenants"
+        tenant_dir = platform / "tenant-a"
+        tenant_dir.mkdir(parents=True)
+        version_file = tenant_dir / "component-versions.json"
+        version_file.write_text('{"backend":"1.11.2","admin":"1.11.2","h5":"1.11.2","release":"1.11.2"}', encoding="utf-8")
+        config = dict(self.config, platform_tenants_dir=str(platform))
+        shared_worker.SharedExecutor(config, self.plan, FakeOperations(), self.now).execute()
+        values = json.loads(version_file.read_text(encoding="utf-8"))
+        self.assertEqual(values, {"backend": "1.11.3", "admin": "1.11.3", "h5": "1.11.3", "release": "1.11.3"})
+
     def test_private_github_asset_is_resolved_through_the_release_api(self):
         package = {
             "component": "backend",

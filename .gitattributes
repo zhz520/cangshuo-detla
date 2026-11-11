@@ -1,0 +1,3 @@
+deploy/updater/shared-worker.service.template text eol=lf
+deploy/qa/cangshuo-shared-metrics.service text eol=lf
+deploy/qa/cangshuo-shared-metrics.timer text eol=lf
