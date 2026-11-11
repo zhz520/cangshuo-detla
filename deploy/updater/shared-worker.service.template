@@ -1,0 +1,28 @@
+[Unit]
+Description=Cangshuo Delta shared service-group release worker
+Documentation=file:/www/delta/shared/README-shared-worker.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=30s
+Environment=DOCKER_CONFIG=/tmp/docker-config
+ExecStart=/usr/bin/docker run --rm --name delta-shared-worker \
+  --network host \
+  --read-only \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /www/delta:/www/delta \
+  -v /var/lib/delta-shared:/var/lib/delta-shared \
+  @IMAGE@ \
+  daemon --config /www/delta/shared/shared-worker.json --inbox /var/lib/delta-shared/updater/inbox --interval 5
+
+[Install]
+WantedBy=multi-user.target

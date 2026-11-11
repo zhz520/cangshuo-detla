@@ -30,6 +30,36 @@
 
 注册文件包含敏感凭据，生产上必须限制为运维账号可读，不能提交到 Git 或通过聊天发送。
 
+## 新增租户凭据合并
+
+`python deploy/updater/tenant_onboarding.py merge --authorization-export <runtime-tenants.json> --credentials <tenant-credentials.json> --output <tenant-registry.json> --allowed-root <config-dir>` 将授权中心 `/api/runtime/tenants` 导出的租户元数据与本地受保护凭据合并为 `shared_registry.py` 可校验的注册文件。默认只输出脱敏摘要和字段名差异；增加 `--apply` 才写入目标。
+
+授权导出中的 `tenantId` 必须是显式运行租户标识（例如 `jax`、`742`、`747`），`platformInstanceId` 只作为 UUID 身份一致性校验。工具不会从实例 UUID 反推 `tenantId`。凭据文件的每个条目也必须重复填写同一显式 `tenantId`；`platformInstanceId` 可选，填写时必须与授权导出一致。
+
+```json
+{
+  "formatVersion": 1,
+  "tenants": [
+    {
+      "tenantId": "jax",
+      "platformInstanceId": "00000000-0000-0000-0000-000000000001",
+      "jdbcUrl": "jdbc:mysql://mysql:3306/delta_jax?useSSL=false",
+      "username": "delta_jax",
+      "password": "<root-only-credential>",
+      "minimumIdle": 0,
+      "maximumPoolSize": 8,
+      "miniappEnabled": false
+    }
+  ]
+}
+```
+
+合并会拒绝授权导出中的凭据字段、重复域名、启用租户缺少本地数据库凭据、凭据租户不在授权导出、`platformInstanceId` 不一致以及路径越界。目标必须位于 `--allowed-root` 下，父目录必须已经存在；最终文件不得是符号链接，写入使用同目录临时文件和原子替换，POSIX 权限为 `0600`。目标中不属于本次授权导出的既有租户会保留，不会因导出只包含部分租户而被删除。
+
+凭据文件在 POSIX 上必须仅所有者可读。可附加 `--audit-log <audit.jsonl> --actor <operator>` 记录脱敏审计，内容只包括操作者、时间、输入 SHA-256、租户集合和结果，不包含密码、小程序密钥、JDBC 地址或用户名。
+
+`python deploy/updater/tenant_onboarding.py sql-template --authorization-export <runtime-tenants.json> --credentials <tenant-credentials.json> [--tenant jax]` 只生成建库、建账号和授权 SQL 模板，密码位置固定为占位符，不连接数据库，也不输出真实密码。该工具不执行生产变更，建库、导入、备份、对账、维护窗口和客户验收仍按共享迁移门禁执行。
+
 ## 共享服务组发布计划
 
 `python deploy/updater/shared_release.py config-example` 输出共享服务组执行器配置模板。`validate <envelope.json> --config <config.json>` 验证 Ed25519 签名、服务组绑定、有效期、维护窗口、数据库 schema=1、备份要求、租户注册文件中的启用租户集合、组件版本不降级、三个制品的大小/摘要和 GitHub Release 地址。
@@ -54,4 +84,20 @@
 
 随后用当前 JAR 生成 catalog 版本 `1.11.1` 的合成前置包，完成 `1.11.1` 到当前 `1.11.2` 的升级，再用损坏的 `1.11.3` 后端触发失败并恢复 `1.11.2`；三组件在每个健康阶段均通过版本检查。该演练验证跨版本升级/回退机制，但 `1.11.1` 不是正式 Release，`1.11.3` 也不是真实版本差异，正式发布包和客户迁移仍需验收。
 
-宿主机验签依赖 Python 3.7+ 和 `cryptography`。742 现有系统 Python 3.6 没有该依赖，不能直接用它执行正式共享发布；上线前需准备独立受限 Python 运行时或 verifier 容器。暂存环境只验证了执行器的备份和健康检查，未执行签名计划安装。
+## 共享服务组守护模式与安装
+
+共享生产主机为 CentOS 7，系统 Python 3.6 不带 `cryptography`，因此执行器不由宿主机 Python 直接运行。`Dockerfile.shared-worker` 使用 Python 3.11、固定 `cryptography==46.0.5`，并从 Docker 官方 CLI 镜像复制 `docker` 与 `docker compose` 插件。容器通过只读挂载 `/var/run/docker.sock` 调用宿主 Docker，因此该容器实际具有宿主 Docker 控制权限，只允许 root 安装、启动和维护，不能暴露公网或交给普通用户。
+
+`shared_worker.py daemon --config <config.json> --inbox <private-dir> --interval 5` 只会轮询私有 inbox 中的 JSON 计划，逐份验签并执行。文件先原子移动到 `processing/`，成功后进入 `processed/`，失败进入 `rejected/` 并写入只含异常类型的 error 文件。`allow_execute=false` 或存在未恢复 `journal.json` 时，守护模式拒绝启动。
+
+生产安装顺序：
+
+1. 将授权中心验证公钥放到配置指定的 `public_key_path`，权限可为公开只读；
+2. 把 `shared-worker.json.example` 复制为 root-only 实际配置，先保持 `allow_execute=false`；
+3. 由 `install_shared_worker.py` 构建镜像、创建 0700 状态目录并安装 `cangshuo-shared-worker.service`；
+4. 用真实签名计划运行 `shared_worker.py validate`，确认服务组、租户集合、维护窗口和三个制品摘要；
+5. 完成当前版本备份和回退演练后，才把配置改为 `allow_execute=true` 并启用服务。
+
+`allowed_root`、Compose 文件、容器名、备份路径和公钥路径全部来自运维配置文件；签名计划不能提供命令、路径或容器名。共享执行器仍只接受 `schemaVersion=1`，不执行数据库迁移。
+
+2026-11-11 已在生产共享组完成签名计划预验：计划绑定 `delta-shared-prod`、三客户租户集合、`v1.12.4`、三个 SHA-256 制品和当前维护窗口；`shared_worker validate` 返回 `VALID`，在 `allow_execute=false` 时按预期阻止安装。真正跨版本共享发布仍必须在 1.13.0 正式制品和备份门禁完成后执行。

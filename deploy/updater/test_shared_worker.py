@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import uuid
 import zipfile
+import base64
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -129,6 +130,36 @@ class SharedWorkerTests(unittest.TestCase):
         }
         plan.update(changes)
         return plan
+
+    def envelope(self, plan=None):
+        plan = plan or self.plan
+        payload = base64.urlsafe_b64encode(json.dumps(plan).encode()).decode().rstrip("=")
+        signature = self.key.sign((shared_release.FORMAT + "." + payload).encode())
+        return {
+            "format": shared_release.FORMAT,
+            "payload": payload,
+            "signature": base64.urlsafe_b64encode(signature).decode().rstrip("="),
+        }
+
+    def test_private_inbox_executes_a_signed_plan_and_moves_it_to_processed(self):
+        inbox = self.state / "inbox"
+        inbox.mkdir()
+        (inbox / "release.json").write_text(json.dumps(self.envelope()), encoding="utf-8")
+        results = shared_worker.process_inbox(self.config, FakeOperations(), self.now)
+        self.assertEqual(results[0]["status"], "SUCCEEDED")
+        self.assertFalse((inbox / "release.json").exists())
+        self.assertEqual(len(list((self.state / "processed").glob("*.json.*"))), 1)
+        self.assertEqual(json.loads((self.state / "current.json").read_text(encoding="utf-8"))["release"], "1.11.3")
+
+    def test_private_inbox_rejects_invalid_json_without_executing(self):
+        inbox = self.state / "inbox"
+        inbox.mkdir()
+        (inbox / "broken.json").write_text("not-json", encoding="utf-8")
+        results = shared_worker.process_inbox(self.config, FakeOperations(), self.now)
+        self.assertEqual(results[0]["status"], "REJECTED")
+        self.assertFalse((self.state / "current.json").exists())
+        rejected = [path for path in (self.state / "rejected").glob("broken.json.*") if not path.name.endswith(".error")]
+        self.assertEqual(len(rejected), 1)
 
     def test_successful_execution_backs_up_stages_and_checks_in_order(self):
         operations = FakeOperations()

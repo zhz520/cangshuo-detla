@@ -1,0 +1,17 @@
+FROM docker:26.1.4-cli AS dockercli
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DOCKER_CONFIG=/tmp/docker-config
+
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=dockercli /usr/local/libexec/docker/cli-plugins /usr/local/libexec/docker/cli-plugins
+
+RUN pip install --no-cache-dir cryptography==46.0.5
+
+WORKDIR /opt/shared-worker
+COPY shared_registry.py shared_release.py shared_worker.py ./
+
+ENTRYPOINT ["python", "shared_worker.py"]
+CMD ["daemon", "--config", "/www/delta/shared/shared-worker.json"]

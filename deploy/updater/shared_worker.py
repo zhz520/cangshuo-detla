@@ -438,17 +438,70 @@ def recover(config, operations=None, now=None):
         remove(lock_path)
 
 
+def process_inbox(config, operations=None, now=None, inbox=None):
+    """Claim and execute every JSON release plan in the private inbox once."""
+    if not config.get("allow_execute", False):
+        raise PermissionError("shared execution is disabled by config")
+    state = Path(config["state_dir"])
+    source = Path(inbox or config.get("inbox_dir") or state / "inbox")
+    processing = state / "processing"
+    processed = state / "processed"
+    rejected = state / "rejected"
+    for directory in (source, processing, processed, rejected):
+        directory.mkdir(parents=True, exist_ok=True)
+        os.chmod(directory, 0o700)
+    results = []
+    current = now or datetime.now(timezone.utc)
+    for path in sorted(source.iterdir(), key=lambda item: item.name):
+        if path.suffix.lower() != ".json" or path.is_symlink() or not path.is_file():
+            continue
+        claimed = processing / (path.name + "." + uuid.uuid4().hex[:8])
+        shutil.move(str(path), str(claimed))
+        try:
+            if claimed.stat().st_size > 2_000_000:
+                raise ValueError("release envelope is too large")
+            envelope = shared_release.load_json(claimed)
+            plan = shared_release.verify_envelope(envelope, config["public_key_path"], current)
+            SharedExecutor(config, plan, operations=operations, now=current).execute()
+            shutil.move(str(claimed), str(processed / claimed.name))
+            results.append({"file": path.name, "status": "SUCCEEDED", "releaseId": plan["id"]})
+        except Exception as error:
+            shutil.move(str(claimed), str(rejected / claimed.name))
+            reason = rejected / (claimed.name + ".error")
+            reason.write_text(type(error).__name__ + "\n", encoding="utf-8")
+            os.chmod(reason, 0o600)
+            results.append({"file": path.name, "status": "REJECTED", "error": type(error).__name__})
+    return results
+
+
+def run_daemon(config, operations=None, inbox=None, interval=5):
+    if not config.get("allow_execute", False):
+        raise PermissionError("shared execution is disabled by config")
+    if Path(config["state_dir"]).joinpath("journal.json").exists():
+        raise RuntimeError("unfinished shared release journal exists; recover before starting daemon")
+    while True:
+        results = process_inbox(config, operations=operations, inbox=inbox)
+        if results:
+            print(json.dumps(results, ensure_ascii=False, sort_keys=True), flush=True)
+        time.sleep(max(1.0, float(interval)))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("validate", "execute", "recover"))
+    parser.add_argument("command", choices=("validate", "execute", "recover", "daemon"))
     parser.add_argument("envelope", nargs="?")
     parser.add_argument("--config", required=True)
     parser.add_argument("--confirm", help="service group id required for execute")
     parser.add_argument("--now", help="UTC timestamp for deterministic testing")
     parser.add_argument("--audit", help="append a redacted validation audit record")
+    parser.add_argument("--inbox", help="private JSON release-plan inbox for daemon mode")
+    parser.add_argument("--interval", type=float, default=5, help="daemon polling interval in seconds")
     args = parser.parse_args()
     config = shared_release.load_config(args.config)
     now = shared_release.instant(args.now, "--now") if args.now else datetime.now(timezone.utc)
+    if args.command == "daemon":
+        run_daemon(config, inbox=args.inbox, interval=args.interval)
+        return 0
     if args.command == "recover":
         print(json.dumps(recover(config, now=now), ensure_ascii=False, sort_keys=True))
         return 0
