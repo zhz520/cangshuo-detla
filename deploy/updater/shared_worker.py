@@ -17,6 +17,7 @@ import tarfile
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -95,6 +96,37 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def github_asset_api_url(package, repository, token):
+    prefix = "https://github.com/" + repository + "/releases/download/"
+    if not package.get("url", "").startswith(prefix):
+        raise ValueError("untrusted artifact URL")
+    suffix = package["url"][len(prefix):]
+    if "/" not in suffix:
+        raise ValueError("artifact URL is incomplete")
+    tag, name = suffix.split("/", 1)
+    if not tag or not name or "/" in name:
+        raise ValueError("artifact URL is invalid")
+    request = urllib.request.Request(
+        "https://api.github.com/repos/" + repository + "/releases/tags/" + urllib.parse.quote(tag, safe=""),
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer " + token,
+            "User-Agent": "Cangshuo-Shared-Updater",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            release = json.loads(response.read(2_000_000).decode("utf-8"))
+    except Exception as error:
+        raise ValueError("GitHub release metadata is unavailable") from error
+    asset = next((item for item in release.get("assets", [])
+                  if item.get("name") == name and item.get("size") == package.get("size")), None)
+    if not asset or not isinstance(asset.get("id"), int):
+        raise ValueError("GitHub release asset does not match the signed plan")
+    return "https://api.github.com/repos/" + repository + "/releases/assets/" + str(asset["id"])
+
+
 def prune_directories(parent, keep, preserve=()):
     parent = Path(parent)
     if not parent.is_dir():
@@ -160,7 +192,11 @@ class DockerOperations:
         headers = {"User-Agent": "Cangshuo-Shared-Updater"}
         if token:
             headers["Authorization"] = "Bearer " + token
-        request = urllib.request.Request(package["url"], headers=headers)
+            headers["Accept"] = "application/octet-stream"
+            request_url = github_asset_api_url(package, self.config["repository"], token)
+        else:
+            request_url = package["url"]
+        request = urllib.request.Request(request_url, headers=headers)
         redirect = urllib.request.build_opener(NoRedirect())
         try:
             source = redirect.open(request, timeout=self.config.get("download_timeout_seconds", 60))

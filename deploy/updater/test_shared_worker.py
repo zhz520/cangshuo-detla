@@ -5,6 +5,7 @@ import unittest
 import uuid
 import zipfile
 import base64
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
@@ -15,6 +16,24 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 sys.path.insert(0, str(Path(__file__).parent))
 import shared_release
 import shared_worker
+
+
+class FakeResponse:
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+    def read(self, _limit=-1):
+        return json.dumps(self.value).encode("utf-8")
+
+
+def mock_response(value):
+    return FakeResponse(value)
 
 
 class FakeOperations:
@@ -179,6 +198,30 @@ class SharedWorkerTests(unittest.TestCase):
             os.chmod(token_file, 0o644)
             with self.assertRaisesRegex(ValueError, "owner"):
                 shared_worker.read_github_token(config)
+
+    def test_private_github_asset_is_resolved_through_the_release_api(self):
+        package = {
+            "component": "backend",
+            "version": "1.11.3",
+            "size": 100,
+            "sha256": "a" * 64,
+            "url": "https://github.com/owner/cangshuo-detla/releases/download/v1.11.3/cangshuo-backend.zip",
+        }
+        response = mock_response({"assets": [{"id": 17, "name": "cangshuo-backend.zip", "size": 100}]})
+        with patch("shared_worker.urllib.request.urlopen", return_value=response):
+            url = shared_worker.github_asset_api_url(package, "owner/cangshuo-detla", "private-token")
+        self.assertEqual(url, "https://api.github.com/repos/owner/cangshuo-detla/releases/assets/17")
+
+    def test_private_github_asset_rejects_size_mismatch(self):
+        package = {
+            "component": "admin", "version": "1.11.3", "size": 100,
+            "sha256": "a" * 64,
+            "url": "https://github.com/owner/cangshuo-detla/releases/download/v1.11.3/cangshuo-admin.zip",
+        }
+        response = mock_response({"assets": [{"id": 18, "name": "cangshuo-admin.zip", "size": 99}]})
+        with patch("shared_worker.urllib.request.urlopen", return_value=response):
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                shared_worker.github_asset_api_url(package, "owner/cangshuo-detla", "private-token")
 
     def test_successful_execution_backs_up_stages_and_checks_in_order(self):
         operations = FakeOperations()
