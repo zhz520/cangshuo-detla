@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {editableSystemConfigs,isSystemConfigVisible} from '../src/utils/system-config.js'
+import {configGroupCounts,editableSystemConfigs,isSystemConfigVisible,orderedConfigGroups} from '../src/utils/system-config.js'
 
 const config = (configKey, configName = configKey, configGroup = '站点配置') => ({configKey,configName,configGroup})
 
@@ -36,4 +36,18 @@ test('official notification settings expose one dedicated template group per rol
 
   assert.equal(isSystemConfigVisible(legacy, enabled), false)
   assert.deepEqual(editableSystemConfigs([legacy, ...roles], enabled).map(item => item.configKey), roles.map(item => item.configKey))
+})
+
+test('system config groups keep a stable menu order and expose item counts', () => {
+  const configs = [
+    config('a', 'A', '公众号通知'),
+    config('b', 'B', '站点配置'),
+    config('c', 'C', '打手配置'),
+    config('d', 'D', '自定义分组'),
+    config('e', 'E', '站点配置')
+  ]
+
+  assert.deepEqual(orderedConfigGroups(configs), ['站点配置', '打手配置', '公众号通知', '自定义分组'])
+  assert.equal(configGroupCounts(configs).get('站点配置'), 2)
+  assert.equal(configGroupCounts(configs).get('自定义分组'), 1)
 })

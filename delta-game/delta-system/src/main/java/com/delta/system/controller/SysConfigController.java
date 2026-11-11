@@ -8,18 +8,22 @@ import com.delta.common.notification.NotificationTemplateSources;
 import com.delta.system.entity.SysConfig;
 import com.delta.system.dto.RechargePackage;
 import com.delta.system.service.SysConfigService;
+import com.delta.system.support.SysConfigMetadataRepair;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/system/config")
 @RequiredArgsConstructor
+@Slf4j
 public class SysConfigController {
     private final SysConfigService sysConfigService;
 
@@ -31,8 +35,47 @@ public class SysConfigController {
     public R<List<SysConfig>> list() {
         ensureBuiltinConfigs();
         List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId));
+        repairMetadata(list);
         list.forEach(c -> {if(secret(c.getConfigKey()) && c.getConfigValue()!=null && !c.getConfigValue().isBlank()) c.setConfigValue("********");});
         return R.ok(list);
+    }
+
+    /**
+     * Repairs metadata written by old ad-hoc SQL scripts that did not set the MySQL client charset.
+     * Only names, groups and remarks are touched; business values and secrets are never rewritten here.
+     */
+    private void repairMetadata(List<SysConfig> configs) {
+        for (SysConfig config : configs) {
+            String name = SysConfigMetadataRepair.name(config.getConfigKey(), config.getConfigName());
+            String group = SysConfigMetadataRepair.group(config.getConfigKey(), config.getConfigGroup());
+            String remark = SysConfigMetadataRepair.remark(config.getConfigKey(), config.getRemark());
+            boolean nameChanged = !Objects.equals(name, config.getConfigName());
+            boolean groupChanged = !Objects.equals(group, config.getConfigGroup());
+            boolean remarkChanged = !Objects.equals(remark, config.getRemark());
+            if (!nameChanged && !groupChanged && !remarkChanged) continue;
+
+            SysConfig update = new SysConfig();
+            update.setId(config.getId());
+            if (nameChanged) {
+                update.setConfigName(name);
+                config.setConfigName(name);
+            }
+            if (groupChanged) {
+                update.setConfigGroup(group);
+                config.setConfigGroup(group);
+            }
+            if (remarkChanged) {
+                update.setRemark(remark);
+                config.setRemark(remark);
+            }
+            try {
+                sysConfigService.updateById(update);
+                log.warn("Repaired mojibake system config metadata for {}", config.getConfigKey());
+            } catch (Exception error) {
+                log.warn("Failed to persist repaired system config metadata for {}: {}",
+                        config.getConfigKey(), error.getMessage());
+            }
+        }
     }
 
     @PutMapping

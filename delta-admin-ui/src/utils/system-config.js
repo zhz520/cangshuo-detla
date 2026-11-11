@@ -10,6 +10,49 @@ const dedicatedConfigKeys = new Set([
   'wechat.official.template.withdraw_reviewed'
 ])
 
+export const SYSTEM_CONFIG_GROUP_ORDER = [
+  '站点配置',
+  '打手配置',
+  '订单配置',
+  '微信支付配置',
+  '短信配置',
+  '公众号通知',
+  '公告配置',
+  '提现配置',
+  '入驻配置',
+  '内容风控',
+  '客服配置',
+  '结算配置',
+  '邮件通知',
+  '余额配置',
+  '打手与审核',
+  'reward-grab'
+]
+
+export function configGroupName(config) {
+  return config?.configGroup || '默认'
+}
+
+export function orderedConfigGroups(configs) {
+  const groups = [...new Set((configs || []).map(configGroupName))]
+  const rank = new Map(SYSTEM_CONFIG_GROUP_ORDER.map((name, index) => [name, index]))
+  return groups.sort((left, right) => {
+    const leftRank = rank.has(left) ? rank.get(left) : Number.MAX_SAFE_INTEGER
+    const rightRank = rank.has(right) ? rank.get(right) : Number.MAX_SAFE_INTEGER
+    if (leftRank !== rightRank) return leftRank - rightRank
+    return left.localeCompare(right, 'zh-CN')
+  })
+}
+
+export function configGroupCounts(configs) {
+  const counts = new Map()
+  for (const config of configs || []) {
+    const group = configGroupName(config)
+    counts.set(group, (counts.get(group) || 0) + 1)
+  }
+  return counts
+}
+
 export function isSystemConfigVisible(config, enabledFeatures = new Set()) {
   if (!config?.configKey || dedicatedConfigKeys.has(config.configKey) || config.configKey.startsWith('email.notifications.')) {
     return false
