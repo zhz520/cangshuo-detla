@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -15,6 +16,11 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<R<?>> handleMissingParameter(MissingServletRequestParameterException e) {
+        return ResponseEntity.status(400).body(R.fail(400, "缺少必要参数: " + e.getParameterName()));
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<R<?>> handleNoResource(NoResourceFoundException e) {
         return ResponseEntity.status(404).body(R.fail(404, "请求的资源不存在"));

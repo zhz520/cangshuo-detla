@@ -13,6 +13,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,6 +41,16 @@ class GlobalExceptionHandlerTest {
         mvc.perform(get("/assets/missing.jpg"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    void missingRequestParameterUses400InsteadOf500() {
+        var response = new GlobalExceptionHandler().handleMissingParameter(
+                new MissingServletRequestParameterException("from", "LocalDate"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody().getCode()).isEqualTo(400);
+        assertThat(response.getBody().getMsg()).contains("from");
     }
 
     @Configuration
