@@ -1,5 +1,5 @@
 {
-  "version": "1.12.3",
+  "version": "1.12.4",
   "channel": "stable",
   "schemaVersion": 1,
   "features": [
@@ -110,6 +110,8 @@
     }
   ],
   "releaseNotes": [
+    "1.12.4 修复共享服务组中异步任务丢失租户上下文的问题；站内通知、邮件通知和微信订阅任务现在沿用提交任务时的可信租户，不再因空租户上下文失败。",
+    "1.12.4 固定 Spring 异步默认执行器名称为 taskExecutor，保留 asyncExecutor 兼容别名；数据库 schemaVersion=1，无结构变更。",
     "1.12.3 修复共享租户授权校验使用全局客户编号的问题；每个租户现在按自己的 platformCustomerId 验证 license，742 的授权上报和功能授权恢复正常。",
     "1.12.3 保持单租户路径兼容；数据库 schemaVersion=1，无结构变更。",
     "1.12.2 修复管理接口缺少必填请求参数时返回 HTTP 500 的问题，现在返回 400 参数错误。",
