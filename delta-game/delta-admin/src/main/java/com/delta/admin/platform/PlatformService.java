@@ -283,7 +283,7 @@ public class PlatformService {
 
     private PlatformLicense.Claims claims(PlatformStateStore.State state) {
         if (state.license() == null) return null;
-        try { return verifier.verify(state.license(), state.instanceId(), clock.instant()); }
+        try { return verifier.verify(state.license(), state.instanceId(), clock.instant(), configuredCustomerId()); }
         catch (BusinessException error) { return null; }
     }
 
