@@ -241,6 +241,9 @@ class SharedWorkerTests(unittest.TestCase):
         self.assertFalse((self.state / "journal.json").exists())
         self.assertFalse((self.state / "execute.lock").exists())
         self.assertEqual(self.read_link(self.root / "current"), str(self.root / "releases" / self.plan["id"]))
+        override = json.loads((self.root / "compose.shared-release.json").read_text(encoding="utf-8"))
+        self.assertEqual(override["services"]["backend"]["volumes"][0].rsplit(":", 2)[0],
+                         str(self.root / "releases" / self.plan["id"] / "backend" / "delta-admin.jar"))
         audit = (self.state / "audit.jsonl").read_text(encoding="utf-8")
         self.assertIn('"result": "SUCCEEDED"', audit)
 

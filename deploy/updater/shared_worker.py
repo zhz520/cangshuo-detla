@@ -343,6 +343,8 @@ class SharedExecutor:
         merged = {"services": {}}
         for component in shared_release.COMPONENTS:
             source = release_dir / component
+            if component == "backend":
+                source = source / "delta-admin.jar"
             destination = "/app/app.jar" if component == "backend" else "/usr/share/nginx/html"
             volume = str(source) + ":" + destination + ":ro"
             merged["services"][component] = {"volumes": [volume]}
