@@ -16,6 +16,7 @@ import sys
 import tarfile
 import time
 import urllib.request
+import urllib.error
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -72,6 +73,26 @@ def replace_symlink(target, destination):
     elif destination.exists():
         raise ValueError("current release path exists and is not a symlink")
     os.replace(str(temporary), str(destination))
+
+
+def read_github_token(config):
+    value = config.get("github_token_path")
+    if not value:
+        return None
+    source = Path(value)
+    if not source.is_file() or source.is_symlink():
+        raise ValueError("github_token_path must be a regular file")
+    if os.name == "posix" and stat.S_IMODE(source.stat().st_mode) & 0o077:
+        raise ValueError("github_token_path must be readable only by its owner")
+    token = source.read_text(encoding="utf-8").strip()
+    if not token or len(token) > 500 or any(character.isspace() for character in token):
+        raise ValueError("GitHub token file is invalid")
+    return token
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
 
 
 def prune_directories(parent, keep, preserve=()):
@@ -135,8 +156,24 @@ class DockerOperations:
             raise ValueError("untrusted artifact URL")
         digest = hashlib.sha256()
         size = 0
-        request = urllib.request.Request(package["url"], headers={"User-Agent": "Cangshuo-Shared-Updater"})
-        with urllib.request.urlopen(request, timeout=self.config.get("download_timeout_seconds", 60)) as source, target.open("wb") as output:
+        token = read_github_token(self.config)
+        headers = {"User-Agent": "Cangshuo-Shared-Updater"}
+        if token:
+            headers["Authorization"] = "Bearer " + token
+        request = urllib.request.Request(package["url"], headers=headers)
+        redirect = urllib.request.build_opener(NoRedirect())
+        try:
+            source = redirect.open(request, timeout=self.config.get("download_timeout_seconds", 60))
+        except urllib.error.HTTPError as error:
+            if error.code not in (301, 302, 303, 307, 308):
+                raise ValueError("GitHub artifact download failed") from error
+            location = error.headers.get("Location", "")
+            error.close()
+            if not location.startswith(("https://github.com/", "https://release-assets.githubusercontent.com/", "https://objects.githubusercontent.com/")):
+                raise ValueError("untrusted artifact redirect")
+            source = redirect.open(urllib.request.Request(location, headers={"User-Agent": "Cangshuo-Shared-Updater"}),
+                                   timeout=self.config.get("download_timeout_seconds", 60))
+        with source, target.open("wb") as output:
             if not source.url.startswith(("https://github.com/", "https://release-assets.githubusercontent.com/", "https://objects.githubusercontent.com/")):
                 raise ValueError("untrusted artifact redirect")
             while True:

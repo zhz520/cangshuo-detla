@@ -106,6 +106,8 @@ def validate_config(raw):
         raise ValueError("backup_paths must contain absolute paths")
     if not isinstance(raw.get("allow_execute", False), bool):
         raise ValueError("allow_execute must be boolean")
+    if raw.get("github_token_path") and not Path(str(raw["github_token_path"])).is_absolute():
+        raise ValueError("github_token_path must be an absolute path")
     maximum = raw.get("maintenance_max_minutes", 240)
     if not isinstance(maximum, int) or not 1 <= maximum <= 1440:
         raise ValueError("maintenance_max_minutes must be 1..1440")
@@ -327,6 +329,7 @@ def config_example():
         "backup_paths": ["/www/delta/data/upload", "/www/delta/data/platform"],
         "repository": "zhz520/cangshuo-detla",
         "public_key_path": "/www/delta/shared/public.pem",
+        "github_token_path": "/www/delta/shared/github-token",
         "health_host": "jaxapi738.idcgov.cn",
         "inbox_dir": "/var/lib/delta-shared/updater/inbox",
         "allow_execute": False,

@@ -168,6 +168,18 @@ class SharedWorkerTests(unittest.TestCase):
         rejected = [path for path in (self.state / "rejected").glob("broken.json.*") if not path.name.endswith(".error")]
         self.assertEqual(len(rejected), 1)
 
+    def test_private_github_token_file_is_loaded_without_printing_it(self):
+        token_file = self.root / "github-token"
+        token_file.write_text("test-token-value", encoding="utf-8")
+        if os.name == "posix":
+            os.chmod(token_file, 0o600)
+        config = dict(self.config, github_token_path=str(token_file))
+        self.assertEqual(shared_worker.read_github_token(config), "test-token-value")
+        if os.name == "posix":
+            os.chmod(token_file, 0o644)
+            with self.assertRaisesRegex(ValueError, "owner"):
+                shared_worker.read_github_token(config)
+
     def test_successful_execution_backs_up_stages_and_checks_in_order(self):
         operations = FakeOperations()
         shared_worker.SharedExecutor(self.config, self.plan, operations, self.now).execute()
