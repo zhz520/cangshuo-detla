@@ -97,3 +97,12 @@ JAX 的 1.12.0 升级技术路径已经验证，备份和隔离恢复可用。
 ### 回滚
 
 停止 `delta-shared-backend`，重新启动 `delta-backend`，恢复旧更新器（仅在回滚到独立部署时），验证站点/API/文件；数据库未迁移，无需恢复数据。
+
+## 11. 2026-11-11 JAX 共享 MySQL/Redis 服务组完成
+
+- 新建 `delta-shared-mysql`（512 MB）和 `delta-shared-redis`（64 MB），独立数据目录，网络 `delta_delta-game`。
+- 停写共享后端后从旧 `delta-mysql` 导出 `delta_game`，导入新库：65 张表，8 张关键表 checksum 一致，关键行数不变。
+- 共享后端和注册文件切换到新 MySQL/Redis；新库有 1 个应用连接，新 Redis 有 `delta:jax:` 键，财务 12 项 0 违规。
+- 旧 `delta-backend`、`delta-mysql`、`delta-redis` 全部停止，重启策略改为 no；旧更新器已禁用。Nginx 继续通过 `backend` 别名访问新共享后端。
+- 站点、后台/H5 根路径、版本文件、历史文件均 200；共享后端近期错误数 0；最终可用内存约 1.85 GB。
+- 当前 JAX 已是完整的单租户共享服务组；后续增加其他租户需在新 MySQL 创建独立库/账号、更新注册文件和容量监控，不能复制 JAX 数据到其他租户。
