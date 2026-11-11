@@ -1,9 +1,9 @@
 # Delta 生态 Vibe Coding 规则
 
-最后更新：2026-11-09（Asia/Shanghai）
-文档版本：2026-11-09.8
+最后更新：2026-11-11（Asia/Shanghai）
+文档版本：2026-11-11.1
 
-读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-09.8”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
+读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-11.1”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
 
 适用范围：
 
@@ -56,7 +56,7 @@
 ```mermaid
 flowchart TB
   subgraph DEV[研发与发布]
-    SRC["cangshuo-detla<br/>最新源码 1.11.2"]
+    SRC["cangshuo-detla<br/>最新源码 1.12.1"]
     BUILD["package_release.py"]
     GH["GitHub Release<br/>backend / admin / h5"]
     SRC --> BUILD --> GH
@@ -89,11 +89,11 @@ flowchart TB
 
 | 客户 | 生产域名 | 生产客户端版本 | 本地目录 | 服务器部署 | 入口端口 |
 | --- | --- | ---: | --- | --- | --- |
-| 742 | `jgsapi.kk520yy.com` / `jgs.kk520yy.com` | 1.6.1 | `D:\codeStudy\code\742`，本地为 1.2.0 | `/opt/apps/742` | 7420 / 7421 |
+| 742 | `jgsapi.kk520yy.com` / `jgs.kk520yy.com` | 1.11.2 | `D:\codeStudy\code\742`，本地为 1.2.0 | `/opt/apps/742` | 7420 / 7421 |
 | 747 | `ycdjapi.kk520yy.com` / `ycdj.kk520yy.com` | 1.5.15 | `D:\codeStudy\code\747`，本地为 1.5.12 | `/opt/apps/747` | 7470 / 7471 |
-| delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.6.1 | `D:\codeStudy\code\detla738`，旧 master | `/www/delta` | 8081 / 8082 |
+| delta / JAX | `jaxapi.kkimg.top` / `jax.kkimg.top` | 1.12.0 | `D:\codeStudy\code\detla738`，旧 master | `/www/delta` | 8081 / 8082 |
 
-生产版本取自授权中心 `docs/0.6.6-授权同步状态.md` 的 2026-11-07 检查记录。客户版本以后还会变化，做发布或升级前要重新核对授权中心，不要只信这张表。
+生产版本按 2026-11-11 的 JAX 生产验收和授权中心记录整理。客户版本以后还会变化，做发布或升级前要重新核对授权中心，不要只信这张表。
 
 `delta` 与本地 `detla738` 的对应依据是旧仓库的域名、部署记录和 CORS 默认值都指向 `jax.kkimg.top` / `jaxapi.kkimg.top`，授权中心把第三套生产项目登记为 `delta`。
 
@@ -135,11 +135,11 @@ flowchart TB
 
 当前已知情况：
 
-- 最新源码为 1.11.2。
-- 三套生产客户端都低于最新源码。
+- 最新源码为 1.12.1。
+- JAX 生产为 1.12.0，等待安装 1.12.1；742 为 1.11.2，747 为 1.5.15。三套生产客户端都低于最新源码。
 - 747 的部署文档明确写着“当前尚未接入 self-update-releases”。
 - 本地授权数据库只是开发初始化数据，不能用来判断生产客户、项目、实例和权益。
-- 系统 PATH 中没有 Maven，默认 Java 为 25；正式构建使用缓存 Maven 3.9.11 和 Temurin JDK 17（临时目录）。不要用 Java 25 代替项目要求的 Java 17。
+- 系统 PATH 中没有 Maven，默认 Java 为 25；正式构建使用缓存 Maven 3.9.9 和 Temurin JDK 17（临时目录）。不要用 Java 25 代替项目要求的 Java 17。
 
 ## 4. 版本号规则
 
@@ -151,9 +151,9 @@ flowchart TB
 | --- | --- | --- |
 | MAJOR | 不兼容变更、授权/更新协议不兼容、需要整体迁移 | `2.0.0` |
 | MINOR | 新增完整业务能力或一组明显可见的功能 | `1.12.0` |
-| PATCH | 正式版后的缺陷、安全或线上阻塞修复 | `1.11.2` |
+| PATCH | 正式版后的缺陷、安全或线上阻塞修复 | `1.12.1` |
 
-当前正式基线是 `1.11.2`。不要因为改了文档、加了一个测试、修了一个错别字就升版本；同一批验收中的多个小修复合并为一个发布版本。
+当前正式基线是 `1.12.1`。不要因为改了文档、加了一个测试、修了一个错别字就升版本；同一批验收中的多个小修复合并为一个发布版本。
 
 ### 4.2 预览版
 
@@ -355,13 +355,14 @@ python deploy\updater\test_worker.py
 
 系统 PATH 没有 Maven 时，不要伪造后端测试通过；说明未执行，并给出 CI 命令。Java 25 不能替代项目要求的 Java 17 验证；本次使用 Temurin JDK 17 和缓存 Maven 3.9.11 实际执行。
 
-2026-11-09 本次检查记录：
+2026-11-11 本次检查记录：
 
 - 管理后台 `npm test`：69 项通过。
 - 移动端 `npm test`：86 项通过。
-- 后端：55 个测试报告、273 项测试通过，0 failures / 0 errors；使用 Temurin JDK 17.0.21 和 Maven 3.9.11。
-- H5 47 个页面在 320/390/440/768 四个视口完成 188 次加载和 1316 项布局断言；PC 47 个页面在 320/375/768/1024 四个宽度完成 192 项检查；iOS、Android、微信、QQ 四端再覆盖全部 PC/H5 页面。
-- 后端 JAR：`delta-admin.jar` 内 `catalog.json` 版本为 1.11.2。
+- 后端：315 项测试通过，0 failures / 0 errors；使用 Temurin JDK 17.0.21 和 Maven 3.9.9。
+- 更新器 28 项、迁移工具 21 项测试通过。
+- 管理后台、H5 和微信小程序生产构建通过。
+- 真实嵌入式 Tomcat 握手验证：允许来源 101，跨租户来源 403；MVC 缺失静态资源返回 404。
 
 ## 12. 完成定义
 
