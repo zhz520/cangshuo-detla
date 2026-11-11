@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Java-17-007396" alt="Java 17">
-  <img src="https://img.shields.io/badge/Spring%20Boot-3.2.0-6DB33F" alt="Spring Boot 3.2.0">
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.5.16-6DB33F" alt="Spring Boot 3.5.16">
   <img src="https://img.shields.io/badge/Vue-3-42B883" alt="Vue 3">
   <img src="https://img.shields.io/badge/UniApp-Vue%203-2B9939" alt="UniApp Vue 3">
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1" alt="MySQL 8.0">
@@ -21,6 +21,10 @@
 > 项目围绕陪玩、代练、护航和虚拟服务接单场景设计，提供商品展示、动态下单、在线支付、客服派单、接单员抢单与履约、实时沟通、评价投诉、退款售后、收益结算和提现审核等完整业务流程。
 
 > 系统包含 Vue 3 管理后台、UniApp 移动端和 Spring Boot 多模块后端。移动端可构建为 H5 与微信小程序，并在一个工程内按身份提供普通用户、客服和接单员工作台。
+
+当前正式版本为 **1.13.0**，后端、管理后台、H5 和微信小程序统一使用该版本。JAX、742、747 三个客户生产环境运行在同一共享服务组，但各自使用独立数据库、文件目录、域名和授权；本仓库是产品主线，不是客户部署副本。
+
+完整文档入口见 [docs/README.md](docs/README.md)，其中按必读规则、当前版本、多租户、客户迁移、支付通知和专项方案分类。
 
 待办中心、消息角标及数据库验收说明见[待办中心文档](docs/workbench.md)。
 
@@ -49,7 +53,7 @@ AI 协作的项目关系、版本号规则、发布检查和新会话开工顺�
 
 | 分类 | 技术 |
 |---|---|
-| 后端基础 | Java 17、Spring Boot 3.2.0、Maven |
+| 后端基础 | Java 17、Spring Boot 3.5.16、Maven |
 | 数据访问 | MyBatis-Plus 3.5.5、MySQL 8、Druid |
 | 缓存 | Redis 7 |
 | 身份认证 | JWT、角色权限校验 |
@@ -98,8 +102,8 @@ AI 协作的项目关系、版本号规则、发布检查和新会话开工顺�
 ## 工程结构
 
 ```text
-delta-game/
-├── delta-game/                 # Spring Boot 后端父工程
+cangshuo-detla/
+├── delta-game/                 # Spring Boot 后端父工程（pom.xml 与业务模块）
 │   ├── delta-common/           # 通用响应、异常、工具和基础配置
 │   ├── delta-system/           # 系统、账号、权限和公共配置
 │   ├── delta-user/             # 用户、钱包和用户侧业务
@@ -110,13 +114,21 @@ delta-game/
 │   ├── delta-message/          # 消息、通知和实时通信
 │   ├── delta-cs/               # 客服、会话、投诉和协同处理
 │   └── delta-admin/            # 后端启动模块
-├── delta-admin-ui/             # Vue 3 PC 管理后台
-├── delta-mp/                   # UniApp H5 / 微信小程序
-├── docker-deploy/              # Docker Compose 与部署脚本
-├── docs/                       # 项目与部署文档
-├── delta_game.sql              # 数据库初始化脚本
-└── test_seed_data.sql          # 可选测试数据
+├── delta-admin-ui/             # Vue 3 管理后台：PC `/` 与 H5 `/h5`
+├── delta-mp/                   # UniApp 客户 H5 / 微信小程序 / 打手端
+├── deploy/
+│   ├── baota/                  # 宝塔 Compose、Nginx 与业务 SQL 迁移
+│   ├── migration/              # 租户迁移、文件增量与财务对账工具
+│   ├── qa/                     # 静态资源、视口和生产指标检查
+│   ├── security/               # 安全审查与修复记录
+│   └── updater/                # 正式版打包、共享组执行器与签名校验
+├── docs/                       # 规则、版本说明、部署与客户记录；入口 docs/README.md
+├── .github/workflows/ci.yml    # 后端、前端与更新器 CI
+├── delta_game.sql              # 基础数据库初始化脚本（46 张基础表）
+├── delta_game_recharge_migration.sql
+└── 部署文档.md                 # 旧单机 Docker 部署说明；共享部署见 docs/多租户共享部署与迁移.md
 ```
+
 ## 后端模块
 
 | 模块 | 说明 |
@@ -142,5 +154,39 @@ delta-game/
 | MySQL | 8.0+ |
 | Redis | 7+ |
 | 微信开发者工具 | 构建或调试微信小程序时需要 |
+
+## 本地开发与验证
+
+依赖目录、日志和构建产物不提交，也不随仓库分发。首次检出或清理后先安装依赖：
+
+```powershell
+cd delta-admin-ui
+npm ci
+npm test
+npm run build
+
+cd ..\delta-mp
+npm ci
+npm test
+npm run build:h5
+npm run build:mp-weixin
+```
+
+后端要求 JDK 17 和 Maven 3.9+，不要用 Java 25 代替项目要求的 Java 17：
+
+```powershell
+cd delta-game
+mvn -pl delta-admin -am verify
+```
+
+更新器、迁移工具和静态资源检查：
+
+```powershell
+python -m unittest discover -s deploy/updater -p "test_*.py"
+python -m unittest discover -s deploy/migration -p "test_*.py"
+python deploy/qa/check_static_assets.py
+```
+
+构建和发布规则以 [development-conventions.md](docs/development-conventions.md) 和 [deploy/updater/README.md](deploy/updater/README.md) 为准。
 
 
