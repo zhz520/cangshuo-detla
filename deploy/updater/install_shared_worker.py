@@ -19,7 +19,7 @@ UNIT = "cangshuo-shared-worker.service"
 def build_unit(template, image):
     if not IMAGE.fullmatch(image or ""):
         raise ValueError("invalid Docker image name")
-    text = template.read_text(encoding="utf-8")
+    text = template.read_text(encoding="utf-8").replace("\r\n", "\n")
     if text.count("@IMAGE@") != 1:
         raise ValueError("service template must contain exactly one @IMAGE@ placeholder")
     return text.replace("@IMAGE@", image)
