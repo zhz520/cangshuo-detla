@@ -28,6 +28,12 @@ services:
     volumes:
       - /www/delta-shared/data/redis:/data
     networks: [delta-shared]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping 2>/dev/null | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
 
   backend:
     image: lenglengyou/delta-game:tagname
