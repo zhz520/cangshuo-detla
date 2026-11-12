@@ -22,6 +22,8 @@ public class CreateOrderRequest {
     private Long designatedPlayerId;
     @Positive
     private Integer playerLevelId;
+    @Positive
+    private Long couponId;
     @Size(max=50)
     private java.util.Map<String, String> extraFields;
 }
