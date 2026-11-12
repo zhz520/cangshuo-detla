@@ -19,9 +19,9 @@ class CouponRefundListenerTest {
         jdbc=new JdbcTemplate(ds);
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,amount DECIMAL(12,2))");
         jdbc.execute("CREATE TABLE payment(order_id BIGINT,status VARCHAR(20),refund_amount DECIMAL(12,2))");
-        jdbc.execute("CREATE TABLE user_coupon(id BIGINT PRIMARY KEY,status VARCHAR(16),used_order_id BIGINT,used_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE user_coupon(id BIGINT PRIMARY KEY,status VARCHAR(16),used_order_id BIGINT,used_at TIMESTAMP,expires_at TIMESTAMP)");
         jdbc.update("INSERT INTO `order` VALUES(100,100.00)");
-        jdbc.update("INSERT INTO user_coupon VALUES(1,'USED',100,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO user_coupon VALUES(1,'USED',100,CURRENT_TIMESTAMP,DATEADD('DAY',7,CURRENT_TIMESTAMP))");
         listener=new CouponRefundListener(jdbc);
     }
 
@@ -35,5 +35,12 @@ class CouponRefundListenerTest {
         jdbc.update("INSERT INTO payment VALUES(100,'REFUNDED',50.00)");
         listener.onOrderRefunded(new BusinessEvent(this,"ORDER_REFUNDED","USER",7L,100L,"部分退款"));
         assertThat(jdbc.queryForObject("SELECT status FROM user_coupon WHERE id=1",String.class)).isEqualTo("USED");
+    }
+
+    @Test void fullRefundDoesNotResurrectAnExpiredCoupon(){
+        jdbc.update("UPDATE user_coupon SET expires_at=DATEADD('DAY',-1,CURRENT_TIMESTAMP) WHERE id=1");
+        jdbc.update("INSERT INTO payment VALUES(100,'REFUNDED',100.00)");
+        listener.onOrderRefunded(new BusinessEvent(this,"ORDER_REFUNDED","USER",7L,100L,"退款"));
+        assertThat(jdbc.queryForObject("SELECT status FROM user_coupon WHERE id=1",String.class)).isEqualTo("EXPIRED");
     }
 }

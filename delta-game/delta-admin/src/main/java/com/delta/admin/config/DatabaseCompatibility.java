@@ -223,7 +223,8 @@ public class DatabaseCompatibility {
             ensureTable("user_coupon", "CREATE TABLE IF NOT EXISTS user_coupon (" +
                     "id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT NOT NULL,user_id BIGINT NOT NULL," +
                     "status VARCHAR(16) NOT NULL,claimed_at TIMESTAMP NOT NULL,expires_at TIMESTAMP NOT NULL," +
-                    "used_order_id BIGINT,used_at TIMESTAMP,UNIQUE KEY uk_coupon_user_template(template_id,user_id))");
+                    "used_order_id BIGINT,used_at TIMESTAMP," +
+                    "KEY idx_user_coupon_user_template(user_id,template_id),KEY idx_user_coupon_user_status(user_id,status))");
             ensureTable("invite_code", "CREATE TABLE IF NOT EXISTS invite_code (" +
                     "user_id BIGINT PRIMARY KEY,code VARCHAR(16) NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
                     "UNIQUE KEY uk_invite_code(code))");
@@ -235,6 +236,15 @@ public class DatabaseCompatibility {
                     "id BIGINT AUTO_INCREMENT PRIMARY KEY,inviter_id BIGINT NOT NULL,invitee_id BIGINT NOT NULL," +
                     "order_id BIGINT NOT NULL,amount DECIMAL(12,2) NOT NULL,status VARCHAR(16) NOT NULL DEFAULT 'PENDING'," +
                     "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uk_invite_reward_invitee(invitee_id))");
+            ensureTable("invite_reward_debt", "CREATE TABLE IF NOT EXISTS invite_reward_debt (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY,reward_id BIGINT NOT NULL,inviter_id BIGINT NOT NULL," +
+                    "amount DECIMAL(12,2) NOT NULL,status VARCHAR(16) NOT NULL DEFAULT 'PENDING'," +
+                    "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,recovered_at TIMESTAMP NULL," +
+                    "UNIQUE KEY uk_invite_reward_debt(reward_id))");
+            ensureTable("display_privacy", "CREATE TABLE IF NOT EXISTS display_privacy (" +
+                    "user_id BIGINT PRIMARY KEY,spend_rank_visible TINYINT NOT NULL DEFAULT 1," +
+                    "purchase_feed_consent TINYINT NOT NULL DEFAULT 0," +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
@@ -243,6 +253,7 @@ public class DatabaseCompatibility {
                     "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");
             ensureIndex("wechat_notice_queue", "idx_wechat_notice_delivery",
                     "CREATE INDEX idx_wechat_notice_delivery ON wechat_notice_queue(status,next_at)");
+            removeLegacyCouponUniqueIndex();
             ensureRewardGrabConfig();
             ensureGuestCheckoutConfig();
             ensureSettlementConfig();
@@ -278,6 +289,20 @@ public class DatabaseCompatibility {
                     if (retryTable != null && hasIndex(retry, retryTable, index)) return;
                 }
                 throw error;
+            }
+        }
+    }
+
+    /** Older installations used a unique (template,user) key, which made per_user_limit > 1
+     * impossible. The user_coupon row itself is the claim ticket, so multiple rows are valid. */
+    private void removeLegacyCouponUniqueIndex() throws SQLException {
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            String actualTable = findTable(connection, "user_coupon");
+            if (actualTable == null || !hasIndex(connection, actualTable, "uk_coupon_user_template")) return;
+            if (connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql")) {
+                jdbc.execute("DROP INDEX `uk_coupon_user_template` ON `" + actualTable + "`");
+            } else {
+                jdbc.execute("DROP INDEX uk_coupon_user_template");
             }
         }
     }

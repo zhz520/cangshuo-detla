@@ -23,6 +23,7 @@ public class CouponRefundListener {
         BigDecimal amount = (BigDecimal) rows.get(0).get("amount");
         BigDecimal refunded = (BigDecimal) rows.get(0).get("refunded");
         if (amount != null && refunded != null && refunded.compareTo(amount) >= 0)
-            jdbc.update("UPDATE user_coupon SET status='AVAILABLE',used_order_id=NULL,used_at=NULL WHERE used_order_id=? AND status='USED'", orderId);
+            jdbc.update("UPDATE user_coupon SET status=CASE WHEN expires_at<=CURRENT_TIMESTAMP THEN 'EXPIRED' ELSE 'AVAILABLE' END," +
+                    "used_order_id=NULL,used_at=NULL WHERE used_order_id=? AND status='USED'", orderId);
     }
 }

@@ -33,6 +33,7 @@ export const useSiteStore = defineStore('site', () => {
   const customerServiceHomeIconVisible = ref(true)
   /** 管理员与客服后台站点，客户 H5 只负责把旧工作人员入口安全转交过去。 */
   const staffWebUrl = ref('')
+  const customerWebUrl = ref('')
   const themeId = ref('default')
   const externalCustomerServiceEnabled = computed(() =>
     customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
@@ -104,6 +105,9 @@ export const useSiteStore = defineStore('site', () => {
         if (data.staff_web_url !== undefined) {
           staffWebUrl.value = String(data.staff_web_url || '').trim()
         }
+        if (data.customer_web_url !== undefined) {
+          customerWebUrl.value = String(data.customer_web_url || '').trim()
+        }
       } catch (e) {
         console.warn('[SiteStore] fetch site config failed', e)
       } finally {
@@ -132,5 +136,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, themeId, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, customerWebUrl, themeId, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

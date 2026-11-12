@@ -23,7 +23,7 @@ class CouponControllerTest {
         ds.setURL("jdbc:h2:mem:coupon-"+UUID.randomUUID()+";MODE=MySQL;DB_CLOSE_DELAY=-1");
         jdbc=new JdbcTemplate(ds);
         jdbc.execute("CREATE TABLE coupon_template(id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(80),type VARCHAR(16),coupon_value DECIMAL(12,2),min_spend DECIMAL(12,2),valid_days INT,total INT,claimed INT,per_user_limit INT,status TINYINT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-        jdbc.execute("CREATE TABLE user_coupon(id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT,user_id BIGINT,status VARCHAR(16),claimed_at TIMESTAMP,expires_at TIMESTAMP,used_order_id BIGINT,used_at TIMESTAMP,UNIQUE(template_id,user_id))");
+        jdbc.execute("CREATE TABLE user_coupon(id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT,user_id BIGINT,status VARCHAR(16),claimed_at TIMESTAMP,expires_at TIMESTAMP,used_order_id BIGINT,used_at TIMESTAMP)");
         configs=mock(SysConfigService.class);controller=new CouponController(jdbc,configs);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(Map.of("userId",7L,"userType","USER"),null,List.of()));
     }
@@ -47,6 +47,17 @@ class CouponControllerTest {
         jdbc.update("INSERT INTO coupon_template(name,type,coupon_value,min_spend,valid_days,total,claimed,per_user_limit,status) VALUES('限领券','AMOUNT',10,0,7,0,0,1,1)");
         when(configs.getConfigValue("marketing.coupon.issue_enabled","false")).thenReturn("true");
         controller.claim(1L);
+        assertThatThrownBy(() -> controller.claim(1L)).isInstanceOf(BusinessException.class).hasMessageContaining("已领取");
+    }
+
+    @Test void perUserLimitGreaterThanOneAllowsMultipleRows(){
+        jdbc.update("INSERT INTO coupon_template(name,type,coupon_value,min_spend,valid_days,total,claimed,per_user_limit,status) VALUES('可领两张','AMOUNT',10,0,7,0,0,2,1)");
+        when(configs.getConfigValue("marketing.coupon.issue_enabled","false")).thenReturn("true");
+
+        controller.claim(1L);
+        controller.claim(1L);
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM user_coupon WHERE user_id=7 AND template_id=1", Integer.class)).isEqualTo(2);
         assertThatThrownBy(() -> controller.claim(1L)).isInstanceOf(BusinessException.class).hasMessageContaining("已领取");
     }
 }

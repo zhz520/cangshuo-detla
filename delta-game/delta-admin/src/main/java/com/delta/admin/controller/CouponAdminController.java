@@ -39,9 +39,13 @@ public class CouponAdminController {
     @OpLog(module = "marketing", operation = "修改优惠券模板")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        if (jdbc.queryForObject("SELECT COUNT(*) FROM coupon_template WHERE id=?", Integer.class, id) == 0)
+        var current = jdbc.queryForList("SELECT claimed FROM coupon_template WHERE id=?", id);
+        if (current.isEmpty())
             throw new BusinessException(404, "优惠券模板不存在");
         Template t = template(body);
+        int claimed = ((Number) current.get(0).get("claimed")).intValue();
+        if (t.total() > 0 && t.total() < claimed)
+            throw new BusinessException(400, "发放总量不能小于已领取数量");
         jdbc.update("UPDATE coupon_template SET name=?,type=?,coupon_value=?,min_spend=?,valid_days=?,total=?,per_user_limit=?,status=? WHERE id=?",
                 t.name(), t.type(), t.value(), t.minSpend(), t.validDays(), t.total(), t.perUserLimit(), t.status(), id);
         return R.ok();

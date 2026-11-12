@@ -9,7 +9,7 @@
       <view class="row"><text class="label">我的邀请码</text><text class="code">{{ info.code || '生成中…' }}</text></view>
       <view class="row"><text class="label">已邀请</text><text class="value">{{ info.invitedCount || 0 }} 人</text></view>
       <view class="row"><text class="label">累计奖励</text><text class="value">¥{{ Number(info.rewardTotal || 0).toFixed(2) }}</text></view>
-      <button class="copy" @click="copyCode">复制邀请码</button>
+      <button class="copy" @click="copyInviteLink">复制邀请链接</button>
     </view>
     <view class="card">
       <text class="card-title">填写好友邀请码</text>
@@ -28,16 +28,26 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { bindInviteCode, getInviteInfo } from '@/api/invite'
+import { useSiteStore } from '@/store/site'
 
 const info = ref({})
 const relations = ref([])
 const inputCode = ref('')
 const binding = ref(false)
+const siteStore = useSiteStore()
+const inviteLink = computed(() => {
+  if (!info.value.code) return ''
+  let origin = String(siteStore.customerWebUrl || '').replace(/\/$/, '')
+  // #ifdef H5
+  if (!origin && typeof window !== 'undefined') origin = window.location.origin
+  // #endif
+  return origin ? `${origin}/?invite=${encodeURIComponent(info.value.code)}` : info.value.code
+})
 
 function statusText(status) {
-  return ({ PENDING: '等待首单', REWARDED: '已发放奖励' })[status] || status
+    return ({ PENDING: '等待首单', REWARDED: '已发放奖励', REFUNDED: '首单已退款，奖励已冲正' })[status] || status
 }
 function formatTime(value) {
   if (!value) return ''
@@ -51,9 +61,9 @@ async function load() {
     relations.value = Array.isArray(data?.relations) ? data.relations : []
   } catch (_) {}
 }
-function copyCode() {
-  if (!info.value.code) return
-  uni.setClipboardData({ data: info.value.code, success: () => uni.showToast({ title: '邀请码已复制', icon: 'none' }) })
+function copyInviteLink() {
+  if (!inviteLink.value) return
+  uni.setClipboardData({ data: inviteLink.value, success: () => uni.showToast({ title: '邀请链接已复制', icon: 'none' }) })
 }
 async function bind() {
   if (binding.value) return

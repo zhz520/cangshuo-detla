@@ -42,6 +42,8 @@ class DatabaseCompatibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_name='USER' AND column_name='IS_GUEST'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_CHECKOUT_PROFILE'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_USER_LINK'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='DISPLAY_PRIVACY'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='INVITE_REWARD_DEBT'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key IN ('order.purchase_enabled','order.guest_checkout_enabled','player.directory.enabled')", Integer.class)).isEqualTo(3);
     }
 
@@ -75,5 +77,23 @@ class DatabaseCompatibilityTest {
                 .isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='WECHAT_OFFICIAL_BINDING' AND index_name='UK_WECHAT_OFFICIAL_OPENID'", Integer.class))
                 .isZero();
+    }
+
+    @Test
+    void removesTheLegacyCouponUniqueConstraintSoPerUserLimitCanExceedOne() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:compatibility_coupon_unique;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE user_coupon(id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT NOT NULL," +
+                "user_id BIGINT NOT NULL,status VARCHAR(16) NOT NULL,claimed_at TIMESTAMP NOT NULL,expires_at TIMESTAMP NOT NULL," +
+                "used_order_id BIGINT,used_at TIMESTAMP)");
+        jdbc.execute("CREATE UNIQUE INDEX uk_coupon_user_template ON user_coupon(template_id,user_id)");
+
+        new DatabaseCompatibility(jdbc).ensure();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='USER_COUPON' AND index_name='UK_COUPON_USER_TEMPLATE'", Integer.class)).isZero();
+        jdbc.update("INSERT INTO user_coupon(template_id,user_id,status,claimed_at,expires_at) VALUES(1,7,'AVAILABLE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO user_coupon(template_id,user_id,status,claimed_at,expires_at) VALUES(1,7,'AVAILABLE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM user_coupon", Integer.class)).isEqualTo(2);
     }
 }

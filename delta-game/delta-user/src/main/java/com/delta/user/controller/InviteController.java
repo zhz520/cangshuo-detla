@@ -46,6 +46,11 @@ public class InviteController {
         if (owners.isEmpty()) throw new BusinessException(404, "邀请码不存在");
         Long inviter = ((Number) owners.get(0).get("user_id")).longValue();
         if (inviter.equals(userId)) throw new BusinessException(409, "不能邀请自己");
+        Integer priorOrders = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM `order` WHERE user_id=? AND status NOT IN ('UNPAID','CANCELLED')",
+                Integer.class, userId);
+        if (priorOrders != null && priorOrders > 0)
+            throw new BusinessException(409, "邀请关系只能在首单完成前绑定");
         if (jdbc.queryForObject("SELECT COUNT(*) FROM invite_relation WHERE invitee_id=?", Integer.class, userId) > 0)
             throw new BusinessException(409, "当前账号已归因，不能重复邀请");
         jdbc.update("INSERT INTO invite_relation(inviter_id,invitee_id,code,status) VALUES(?,?,?,'PENDING')", inviter, userId, code);

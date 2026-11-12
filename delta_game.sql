@@ -1526,6 +1526,50 @@ CREATE TABLE IF NOT EXISTS player_follow (
  PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注打手';
 
+CREATE TABLE IF NOT EXISTS coupon_template (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, name varchar(80) NOT NULL, type varchar(16) NOT NULL,
+ coupon_value decimal(12,2) NOT NULL, min_spend decimal(12,2) NOT NULL DEFAULT 0, valid_days int NOT NULL,
+ total int NOT NULL DEFAULT 0, claimed int NOT NULL DEFAULT 0, per_user_limit int NOT NULL DEFAULT 1,
+ status tinyint NOT NULL DEFAULT 1, created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='优惠券模板';
+
+CREATE TABLE IF NOT EXISTS user_coupon (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, template_id bigint NOT NULL, user_id bigint NOT NULL,
+ status varchar(16) NOT NULL, claimed_at timestamp NOT NULL, expires_at timestamp NOT NULL,
+ used_order_id bigint NULL, used_at timestamp NULL,
+ KEY idx_user_coupon_user_template(user_id,template_id), KEY idx_user_coupon_user_status(user_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户优惠券';
+
+CREATE TABLE IF NOT EXISTS invite_code (
+ user_id bigint NOT NULL PRIMARY KEY, code varchar(16) NOT NULL, created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_invite_code(code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户邀请码';
+
+CREATE TABLE IF NOT EXISTS invite_relation (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, inviter_id bigint NOT NULL, invitee_id bigint NOT NULL,
+ code varchar(16) NOT NULL, status varchar(16) NOT NULL DEFAULT 'PENDING', created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_invite_invitee(invitee_id), KEY idx_invite_relation_inviter(inviter_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邀请归因关系';
+
+CREATE TABLE IF NOT EXISTS invite_reward (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, inviter_id bigint NOT NULL, invitee_id bigint NOT NULL,
+ order_id bigint NOT NULL, amount decimal(12,2) NOT NULL, status varchar(16) NOT NULL DEFAULT 'PENDING',
+ created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uk_invite_reward_invitee(invitee_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邀请首单奖励';
+
+CREATE TABLE IF NOT EXISTS invite_reward_debt (
+ id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, reward_id bigint NOT NULL, inviter_id bigint NOT NULL,
+ amount decimal(12,2) NOT NULL, status varchar(16) NOT NULL DEFAULT 'PENDING',
+ created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, recovered_at timestamp NULL,
+ UNIQUE KEY uk_invite_reward_debt(reward_id), KEY idx_invite_reward_debt_inviter(inviter_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邀请奖励退款待追回台账';
+
+CREATE TABLE IF NOT EXISTS display_privacy (
+ user_id bigint NOT NULL PRIMARY KEY, spend_rank_visible tinyint NOT NULL DEFAULT 1,
+ purchase_feed_consent tinyint NOT NULL DEFAULT 0,
+ updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消费展示隐私设置';
+
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'settlement.hold_hours','订单收益售后观察期','72','number','结算配置','订单确认后先进入待结算收益，观察期结束且无投诉、退款时转为可提现余额；单位小时，0至720'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='settlement.hold_hours');
