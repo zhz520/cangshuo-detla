@@ -70,6 +70,14 @@
         </view>
       </view>
 
+      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/display/index' })">
+        <view>
+          <text class="community-title">消费排行 · 最近购买</text>
+          <text class="community-subtitle">看看本月活跃玩家和服务动态</text>
+        </view>
+        <text class="community-arrow">›</text>
+      </view>
+
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">
         <view class="section-header">
@@ -500,6 +508,10 @@ async function goCustomerService() {
 }
 
 /* 商品分类：图标 + 文字网格 */
+.community-entry { margin: 16rpx 24rpx 0; padding: 24rpx; display: flex; align-items: center; justify-content: space-between; border-radius: 18rpx; background: #fff; }
+.community-title { display: block; font-size: 27rpx; font-weight: 700; color: #17191c; }
+.community-subtitle { display: block; margin-top: 8rpx; font-size: 22rpx; color: #73777e; }
+.community-arrow { font-size: 42rpx; color: #73777e; }
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
