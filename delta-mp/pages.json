@@ -136,6 +136,10 @@
     {
       "path": "pages/coupons/index",
       "style": { "navigationBarTitleText": "优惠券" }
+    },
+    {
+      "path": "pages/invites/index",
+      "style": { "navigationBarTitleText": "邀请好友" }
     }
   ],
   "subPackages": [

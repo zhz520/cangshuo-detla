@@ -91,6 +91,13 @@
         </view>
         <text class="community-arrow">›</text>
       </view>
+      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/invites/index' })">
+        <view>
+          <text class="community-title">邀请好友</text>
+          <text class="community-subtitle">好友首单完成，奖励进入你的钱包</text>
+        </view>
+        <text class="community-arrow">›</text>
+      </view>
 
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">
