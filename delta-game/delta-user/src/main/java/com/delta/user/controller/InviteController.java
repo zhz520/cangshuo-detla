@@ -25,7 +25,9 @@ public class InviteController {
         Long userId = SecurityUtils.getUserId();
         String code = codeFor(userId);
         Integer invited = jdbc.queryForObject("SELECT COUNT(*) FROM invite_relation WHERE inviter_id=?", Integer.class, userId);
+        java.math.BigDecimal rewardTotal = jdbc.queryForObject("SELECT COALESCE(SUM(amount),0) FROM invite_reward WHERE inviter_id=?", java.math.BigDecimal.class, userId);
         return R.ok(Map.of("code", code, "invitedCount", invited == null ? 0 : invited,
+                "rewardTotal", rewardTotal == null ? java.math.BigDecimal.ZERO : rewardTotal,
                 "relations", jdbc.queryForList("SELECT status,created_at FROM invite_relation WHERE inviter_id=? ORDER BY id DESC LIMIT 50", userId)));
     }
 

@@ -223,6 +223,7 @@ public class SysConfigController {
                 new String[]{"marketing.coupon.issue_enabled","启用优惠券发放","false","boolean","营销配置","关闭后停止领券和新发券，已发有效券按原规则处理"},
                 new String[]{"marketing.coupon.redeem_enabled","启用优惠券核销","true","boolean","营销配置","紧急停用开关；关闭后新订单不能使用优惠券"},
                 new String[]{"marketing.invite.enabled","启用邀请奖励","false","boolean","营销配置","停止新邀请归因和新奖励，已满足资格的奖励继续履约"},
+                new String[]{"marketing.invite.reward_amount","邀请首单奖励金额","10","number","营销配置","被邀请人首个合格订单确认后记录的奖励金额，单位元"},
                 new String[]{"display.spend_rank.enabled","启用消费排行","false","boolean","展示配置","关闭后隐藏榜单及公开接口，基础财务数据保留"},
                 new String[]{"display.purchase_feed.enabled","启用最近购买动态","false","boolean","展示配置","关闭后停止公开展示，不停止订单和支付处理"}))
             ensureConfig(item[0],item[1],item[2],item[3],item[4],item[5]);
