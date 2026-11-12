@@ -13,5 +13,8 @@ public class OrderQuote {
     private BigDecimal baseAmount;
     private BigDecimal priceIncreaseRate;
     private BigDecimal priceIncreaseAmount;
+    private String memberTier;
+    private BigDecimal memberDiscountRate;
+    private BigDecimal memberDiscountAmount;
     private BigDecimal amount;
 }

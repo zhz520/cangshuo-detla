@@ -38,7 +38,9 @@ public class OrderController {
             @RequestParam(required=false) Long designatedPlayerId,@RequestParam(required=false) Integer playerLevelId,
             jakarta.servlet.http.HttpServletResponse response) {
         response.setHeader("Cache-Control","no-store, private");
-        return R.ok(orderPricing.quote(productId,designatedPlayerId,playerLevelId));
+        Long userId=null;
+        try{userId=SecurityUtils.getUserId();}catch(Exception ignored){}
+        return R.ok(orderPricing.quote(productId,designatedPlayerId,playerLevelId,userId));
     }
 
     @PostMapping

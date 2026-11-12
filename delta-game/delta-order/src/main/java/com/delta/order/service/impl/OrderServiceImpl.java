@@ -70,7 +70,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Product product = productService.getById(req.getProductId());
         if (product == null) throw new BusinessException("商品不存在");
         if (product.getStatus() != 1) throw new BusinessException("商品已下架");
-        com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId());
+        com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId(),userId);
         LocalDateTime now = LocalDateTime.now();
 
         // 1.1 限购校验：按商品设置的周期限制重复购买
@@ -107,6 +107,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setBaseAmount(quote.getBaseAmount());
         order.setPriceIncreaseRate(quote.getPriceIncreaseRate());
         order.setPriceIncreaseAmount(quote.getPriceIncreaseAmount());
+        order.setMemberTier(quote.getMemberTier());
+        order.setMemberDiscountRate(quote.getMemberDiscountRate());
+        order.setMemberDiscountAmount(quote.getMemberDiscountAmount());
         order.setRequestedPlayerLevelId(quote.getPlayerLevelId());
         order.setPlayerLevelName(quote.getPlayerLevelName());
         // 抽佣比例：商品级优先，否则用系统默认
