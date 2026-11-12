@@ -128,6 +128,10 @@
     {
       "path": "pages/display/index",
       "style": { "navigationBarTitleText": "消费排行" }
+    },
+    {
+      "path": "pages/membership/index",
+      "style": { "navigationBarTitleText": "会员中心" }
     }
   ],
   "subPackages": [

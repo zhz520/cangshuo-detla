@@ -77,6 +77,13 @@
         </view>
         <text class="community-arrow">›</text>
       </view>
+      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/membership/index' })">
+        <view>
+          <text class="community-title">会员等级</text>
+          <text class="community-subtitle">查看有效消费、当前折扣与升级进度</text>
+        </view>
+        <text class="community-arrow">›</text>
+      </view>
 
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">
