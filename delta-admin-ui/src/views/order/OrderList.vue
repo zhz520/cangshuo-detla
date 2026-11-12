@@ -48,6 +48,8 @@
         <el-descriptions-item label="商品">{{ detail.productName }}</el-descriptions-item>
         <el-descriptions-item label="规格">{{ detail.specInfo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="金额">¥{{ detail.amount }}</el-descriptions-item>
+        <el-descriptions-item v-if="Number(detail.memberDiscountAmount) > 0" label="会员优惠">{{ detail.memberTier || '会员' }}：-¥{{ Number(detail.memberDiscountAmount).toFixed(2) }}</el-descriptions-item>
+        <el-descriptions-item v-if="Number(detail.couponDiscountAmount) > 0" label="优惠券">{{ detail.couponName || '优惠券' }}：-¥{{ Number(detail.couponDiscountAmount).toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item v-if="detail.playerLevelName" label="打手等级">{{ detail.playerLevelName }}</el-descriptions-item>
         <el-descriptions-item v-if="detail.baseAmount != null" label="商品原价">¥{{ detail.baseAmount }}</el-descriptions-item>
         <el-descriptions-item v-if="Number(detail.priceIncreaseRate)>0" label="打手涨价">{{ Number(detail.priceIncreaseRate) }}%（¥{{ detail.priceIncreaseAmount }}）</el-descriptions-item>

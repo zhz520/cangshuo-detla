@@ -8,7 +8,8 @@ const sections = [
   ] },
   { id: 'business', title: '业务运营', items: [
     { id: 'orders', title: '订单与售后', icon: 'List', paths: ['/order/list', '/refund', '/complaint', '/fulfillment-review'] },
-    { id: 'products', title: '商品管理', icon: 'Goods', paths: ['/product/list', '/product/category', '/product/recommend-category', '/product/form-fields'] }
+    { id: 'products', title: '商品管理', icon: 'Goods', paths: ['/product/list', '/product/category', '/product/recommend-category', '/product/form-fields'] },
+    { id: 'marketing', title: '营销活动', icon: 'Present', paths: ['/marketing/coupons', '/marketing/invites'] }
   ] },
   { id: 'people', title: '人员管理', items: [
     { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/user/identity-review', '/privacy-requests'] },

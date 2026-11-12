@@ -154,6 +154,16 @@ const desktopRoutes = [
   {path:'/settlements',component:Layout,children:[{path:'',component:()=>import('@/views/statistics/SettlementLedger.vue'),meta:{title:'自动分账台账',icon:'Tickets',roles:['admin'],permission:'finance.read'}}]},
   // 数据统计（仅管理员）
   {
+    path: '/marketing',
+    component: Layout,
+    redirect: '/marketing/coupons',
+    meta: { title: '营销中心', icon: 'Present', roles: ['admin'] },
+    children: [
+      { path: 'coupons', name: 'MarketingCoupons', component: () => import('@/views/marketing/Coupons.vue'), meta: { title: '优惠券管理', roles: ['admin'], permission: 'system.manage' } },
+      { path: 'invites', name: 'MarketingInvites', component: () => import('@/views/marketing/Invites.vue'), meta: { title: '邀请奖励', roles: ['admin'], permission: 'system.manage' } }
+    ]
+  },
+  {
     path: '/statistics',
     component: Layout,
     redirect: '/statistics/income-daily',

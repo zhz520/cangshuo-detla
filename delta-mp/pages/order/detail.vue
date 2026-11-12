@@ -11,6 +11,8 @@
       <view class="info-row"><text class="label">商品</text><text class="value">{{ order.productName }}</text></view>
       <view v-if="order.specInfo || order.specCombination" class="info-row"><text class="label">规格</text><text class="value">{{ order.specCombination || order.specInfo }}</text></view>
       <view class="info-row"><text class="label">金额</text><PriceText :value="order.amount" :size="32" /></view>
+      <view v-if="Number(order.memberDiscountAmount)>0" class="info-row"><text class="label">会员优惠</text><text class="value">{{ order.memberTier || '会员' }} -¥{{ Number(order.memberDiscountAmount).toFixed(2) }}</text></view>
+      <view v-if="Number(order.couponDiscountAmount)>0" class="info-row"><text class="label">优惠券</text><text class="value">{{ order.couponName || '优惠券' }} -¥{{ Number(order.couponDiscountAmount).toFixed(2) }}</text></view>
       <view v-if="order.playerLevelName" class="info-row"><text class="label">打手等级</text><text class="value">{{ order.playerLevelName }}</text></view>
       <view v-if="Number(order.priceIncreaseRate)>0" class="info-row"><text class="label">含打手涨价</text><text class="value">{{ Number(order.priceIncreaseRate) }}%（¥{{ Number(order.priceIncreaseAmount).toFixed(2) }}）</text></view>
     </view>
