@@ -42,4 +42,11 @@ class CouponControllerTest {
         assertThat(controller.available().getData()).isEmpty();
         assertThatThrownBy(() -> controller.claim(1L)).isInstanceOf(BusinessException.class).hasMessageContaining("已关闭");
     }
+
+    @Test void perUserLimitIsEnforcedWhenStockIsUnlimited(){
+        jdbc.update("INSERT INTO coupon_template(name,type,coupon_value,min_spend,valid_days,total,claimed,per_user_limit,status) VALUES('限领券','AMOUNT',10,0,7,0,0,1,1)");
+        when(configs.getConfigValue("marketing.coupon.issue_enabled","false")).thenReturn("true");
+        controller.claim(1L);
+        assertThatThrownBy(() -> controller.claim(1L)).isInstanceOf(BusinessException.class).hasMessageContaining("已领取");
+    }
 }
