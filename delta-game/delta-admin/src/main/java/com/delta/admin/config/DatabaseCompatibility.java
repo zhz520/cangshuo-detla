@@ -211,7 +211,7 @@ public class DatabaseCompatibility {
                     "KEY idx_analytics_daily_visitor_last_seen(last_seen_at))");
             ensureTable("coupon_template", "CREATE TABLE IF NOT EXISTS coupon_template (" +
                     "id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(80) NOT NULL,type VARCHAR(16) NOT NULL," +
-                    "value DECIMAL(12,2) NOT NULL,min_spend DECIMAL(12,2) NOT NULL DEFAULT 0,valid_days INT NOT NULL," +
+                    "coupon_value DECIMAL(12,2) NOT NULL,min_spend DECIMAL(12,2) NOT NULL DEFAULT 0,valid_days INT NOT NULL," +
                     "total INT NOT NULL DEFAULT 0,claimed INT NOT NULL DEFAULT 0,per_user_limit INT NOT NULL DEFAULT 1," +
                     "status TINYINT NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
             ensureTable("user_coupon", "CREATE TABLE IF NOT EXISTS user_coupon (" +

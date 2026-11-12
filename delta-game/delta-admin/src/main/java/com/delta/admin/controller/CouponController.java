@@ -23,14 +23,14 @@ public class CouponController {
     @GetMapping("/available")
     public R<List<Map<String, Object>>> available() {
         if (!enabled()) return R.ok(List.of());
-        return R.ok(jdbc.queryForList("SELECT id,name,type,value,min_spend,valid_days,per_user_limit," +
+        return R.ok(jdbc.queryForList("SELECT id,name,type,coupon_value,min_spend,valid_days,per_user_limit," +
                 "(total-claimed) remain FROM coupon_template WHERE status=1 AND (total=0 OR claimed<total) ORDER BY id DESC LIMIT 100"));
     }
 
     @GetMapping("/mine")
     public R<List<Map<String, Object>>> mine() {
         return R.ok(jdbc.queryForList("SELECT uc.id,uc.status,uc.claimed_at,uc.expires_at,uc.used_at," +
-                "ct.name,ct.type,ct.value,ct.min_spend FROM user_coupon uc JOIN coupon_template ct ON ct.id=uc.template_id " +
+                "ct.name,ct.type,ct.coupon_value,ct.min_spend FROM user_coupon uc JOIN coupon_template ct ON ct.id=uc.template_id " +
                 "WHERE uc.user_id=? ORDER BY uc.claimed_at DESC LIMIT 200", SecurityUtils.getUserId()));
     }
 
