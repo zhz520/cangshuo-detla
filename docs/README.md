@@ -1,6 +1,6 @@
 # Delta 文档索引
 
-当前正式版本：`1.13.0`。本索引只负责分类和指路，不移动历史文档，避免破坏已有链接。规则、版本和发布要求以 [VIBE_CODING.md](VIBE_CODING.md) 与 [development-conventions.md](development-conventions.md) 为准。
+当前正式版本：`1.14.0`。本索引只负责分类和指路，不移动历史文档，避免破坏已有链接。规则、版本和发布要求以 [VIBE_CODING.md](VIBE_CODING.md) 与 [development-conventions.md](development-conventions.md) 为准。
 
 ## 每次会话必读
 
@@ -15,7 +15,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
-| [1.13.0-发布说明.md](1.13.0-发布说明.md) | 当前正式版的用户变化、验证和回退边界 |
+| [1.14.0-发布说明.md](1.14.0-发布说明.md) | 当前正式版的用户变化、验证和回退边界 |
 | [三客户1.13.0共享组发布记录-2026-11-11.md](三客户1.13.0共享组发布记录-2026-11-11.md) | JAX、742、747 的 1.13.0 发布记录 |
 | [三客户共享服务组上线与全页面验收-2026-11-11.md](三客户共享服务组上线与全页面验收-2026-11-11.md) | 共享组上线和页面验收证据 |
 | [client-feature-integration.md](client-feature-integration.md) | 客户功能接入与授权同步 |
