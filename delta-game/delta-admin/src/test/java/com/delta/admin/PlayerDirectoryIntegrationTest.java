@@ -242,6 +242,10 @@ class PlayerDirectoryIntegrationTest {
         when(wallets.getByPlayerId(1L)).thenReturn(wallet);
         mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
                 .andExpect(jsonPath("$.code").value(409));
+        wallet.setBalance(java.math.BigDecimal.ZERO);
+        wallet.setPendingIncome(new java.math.BigDecimal("1"));
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
         when(wallets.getByPlayerId(1L)).thenReturn(null);
 
         jdbc.update("INSERT INTO `order`(id,order_no,user_id,player_id,product_id,product_name,status) VALUES(101,'ORDER101',7,1,11,'进行中','ACCEPTED')");

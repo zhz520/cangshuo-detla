@@ -54,8 +54,8 @@ public class PlayerServiceImpl extends ServiceImpl<PlayerMapper, Player> impleme
             throw new BusinessException(409, "打手仍有进行中订单或队友任务，不能删除");
         }
         var wallet = playerWalletService.getByPlayerId(id);
-        if (wallet != null && (nonzero(wallet.getBalance()) || nonzero(wallet.getFrozenAmount()))) {
-            throw new BusinessException(409, "打手仍有余额或冻结金额，请先处理资金");
+        if (wallet != null && (nonzero(wallet.getBalance()) || nonzero(wallet.getPendingIncome()) || nonzero(wallet.getFrozenAmount()))) {
+            throw new BusinessException(409, "打手仍有余额、待结算收益或冻结金额，请先处理资金");
         }
         Long pendingWithdrawals = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM withdraw WHERE player_id=? AND status NOT IN ('COMPLETED','REJECTED','CANCELLED')",
