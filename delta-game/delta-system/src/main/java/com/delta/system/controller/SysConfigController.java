@@ -203,6 +203,8 @@ public class SysConfigController {
                 "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
         ensureConfig("order.guest_checkout_enabled", "允许游客下单", "false", "boolean", "订单配置",
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
+        ensureConfig("order.cooperation.enabled", "启用协同打单", "true", "boolean", "订单配置",
+                "关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算");
         ensureConfig("player.directory.enabled", "展示打手页面", "true", "boolean", "打手配置",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");

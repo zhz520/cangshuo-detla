@@ -198,6 +198,8 @@ public class PlayerOrderController {
         Long playerId = SecurityUtils.getUserId();
         Order order = orderService.getById(orderId);
         if (order == null) return R.fail("订单不存在");
+        if (!"true".equalsIgnoreCase(sysConfigService.getConfigValue("order.cooperation.enabled", "true")))
+            return R.fail(403, "协同打单功能已关闭，暂不接受新的队友邀请");
         String st = order.getStatus();
         // 接单后（ACCEPTED）、等待队友（WAITING_TEAMMATE）以及服务进行中（IN_PROGRESS）均允许邀请队友
         if (!OrderStatusEnum.ACCEPTED.name().equals(st)

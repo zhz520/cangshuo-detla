@@ -1533,6 +1533,9 @@ INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_gro
 SELECT 'order.guest_checkout_enabled','允许游客下单','false','boolean','订单配置','开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.guest_checkout_enabled');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'order.cooperation.enabled','启用协同打单','true','boolean','订单配置','关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.cooperation.enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'player.directory.enabled','展示打手页面','true','boolean','打手配置','关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='player.directory.enabled');
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='price_increase_rate')=0, 'ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1 COMMENT ''-1跟随等级，0不涨价，其他为百分比''', 'SELECT 1');

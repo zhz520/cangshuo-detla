@@ -197,6 +197,21 @@ class PlayerBusinessRegressionTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND player_id=3", Integer.class)).isZero();
     }
 
+    @Test void disablingCooperationBlocksNewInvitationsWithoutBreakingExistingOrders() throws Exception {
+        jdbc.update("INSERT INTO sys_config(config_key,config_value) VALUES('order.cooperation.enabled','false')");
+        jdbc.update("UPDATE `order` SET status='ACCEPTED',player_id=1,required_player_count=3 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,1,'PRIMARY','ACCEPTED'),(200,2,'TEAMMATE','ACCEPTED')");
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":3,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(403));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND player_id=3", Integer.class)).isZero();
+
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,3,'TEAMMATE','ACCEPTED')");
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
+    }
+
     @Test void offDutyPlayerCannotBeAssignedANewOrder() {
         jdbc.update("UPDATE player SET is_online=0 WHERE id=2");
         assertThatThrownBy(() -> orders.assignOrder(200L, 2L)).isInstanceOf(com.delta.common.exception.BusinessException.class);
