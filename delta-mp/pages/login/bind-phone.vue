@@ -73,7 +73,12 @@ async function bind() {
     return uni.showToast({ title: '请填写手机号和短信验证码', icon: 'none' })
   binding.value = true
   try {
-    await updatePhone({ phone: phone.value, requestId: requestId.value, code: code.value })
+    try {
+      await updatePhone({ phone: phone.value, requestId: requestId.value, code: code.value })
+    } catch (error) {
+      if (error?.code !== 409) throw error
+      await userStore.linkWechatAccount({ phone: phone.value, requestId: requestId.value, code: code.value })
+    }
     await userStore.fetchProfile()
     uni.reLaunch({ url: redirectUrl.value })
   } catch (_) {

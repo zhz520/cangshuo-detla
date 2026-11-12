@@ -9,6 +9,7 @@ export const updateUserProfile = (data) => put('/user/profile', data, { role: 'u
 /** 修改手机号（始终使用 user_token） */
 export const updatePhone = (data) => put('/user/phone', data, { role: 'user' })
 export const sendPhoneBindCode = data => post('/user/phone/code', data, { role: 'user' })
+export const linkWechatAccount = data => post('/user/auth/wechat/link-account', data, { role: 'user' })
 
 /** 获取钱包信息（始终使用 user_token） */
 export const getWallet = () => get('/user/wallet', {}, { role: 'user' })

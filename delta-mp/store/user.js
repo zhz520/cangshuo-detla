@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserToken, getPlayerToken, getGuestToken, getGuestInfo, setGuestSession as saveGuestSession, removeGuestSession as clearGuestStorage, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
 import { userLogin, h5Login, setupUserPassword, userPasswordLogin, exchangeWechatTicket, revokeSession } from '@/api/auth'
+import { linkWechatAccount as linkWechatAccountApi } from '@/api/user'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
 
@@ -102,6 +103,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function linkWechatAccount(data) {
+    const response = await linkWechatAccountApi(data)
+    applyLoginResult(response.data)
+    return response.data
+  }
+
   /** 获取用户资料 */
   async function fetchProfile(silent = false) {
     if (!token.value) return
@@ -160,6 +167,7 @@ export const useUserStore = defineStore('user', () => {
     completePasswordSetup,
     loginWithPassword,
     exchangeWechatLogin,
+    linkWechatAccount,
     fetchProfile,
     setGuestSession,
     clearGuestSession,
