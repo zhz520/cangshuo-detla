@@ -33,6 +33,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import AppImage from '@/components/AppImage.vue'
 import { getDisplayPrivacy, getPurchaseFeed, getSpendRanking, updateDisplayPrivacy } from '@/api/display'
 import { useUserStore } from '@/store/user'
@@ -44,6 +45,7 @@ const feedItems = ref([])
 const userStore = useUserStore()
 const privacy = reactive({ spendRankVisible: true, purchaseFeedConsent: false })
 const items = computed(() => tab.value === 'rank' ? rankItems.value : feedItems.value)
+let ready = false
 
 async function load() {
   loading.value = true
@@ -81,8 +83,11 @@ async function changePrivacy(key, event) {
   }
 }
 
-watch(tab, load)
-onMounted(() => { load(); loadPrivacy() })
+onLoad(options => {
+  if (options?.tab === 'feed') tab.value = 'feed'
+})
+watch(tab, () => { if (ready) load() })
+onMounted(() => { ready = true; load(); loadPrivacy() })
 </script>
 
 <style lang="scss" scoped>

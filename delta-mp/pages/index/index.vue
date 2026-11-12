@@ -10,7 +10,7 @@
       <view class="search-bar-placeholder" />
 
       <!-- 轮播图 -->
-      <swiper class="banner" :style="{height: bannerHeight + 'rpx'}" @change="onBannerChange" :autoplay="true" :interval="4000" circular indicator-dots>
+      <swiper v-if="banners.length" class="banner" :style="{height: bannerHeight + 'rpx'}" @change="onBannerChange" :autoplay="true" :interval="4000" circular indicator-dots>
         <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
           <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFit" class="banner-img" @load="onBannerLoad(item.id,$event)" />
         </swiper-item>
@@ -58,7 +58,7 @@
       </view>
 
       <!-- 商品分类：图标 + 文字 -->
-      <view class="category-grid">
+      <view v-if="categories.length" class="category-grid">
         <view
           v-for="cat in categories"
           :key="cat.id"
@@ -70,33 +70,24 @@
         </view>
       </view>
 
-      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/display/index' })">
-        <view>
-          <text class="community-title">消费排行 · 最近购买</text>
-          <text class="community-subtitle">看看本月活跃玩家和服务动态</text>
+      <!-- 社区与福利入口：压缩为一行图标，商品推荐优先展示 -->
+      <view class="home-shortcuts">
+        <view class="shortcut-item" @click="goDisplay('rank')">
+          <AppImage class="shortcut-icon" :src="'/static/icons/攻略.svg'" :width="96" mode="aspectFit" />
+          <text class="shortcut-label">排行</text>
         </view>
-        <text class="community-arrow">›</text>
-      </view>
-      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/membership/index' })">
-        <view>
-          <text class="community-title">会员等级</text>
-          <text class="community-subtitle">查看有效消费、当前折扣与升级进度</text>
+        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/membership/index' })">
+          <AppImage class="shortcut-icon" :src="'/static/icons/会员.svg'" :width="96" mode="aspectFit" />
+          <text class="shortcut-label">会员</text>
         </view>
-        <text class="community-arrow">›</text>
-      </view>
-      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/coupons/index' })">
-        <view>
-          <text class="community-title">优惠券中心</text>
-          <text class="community-subtitle">领取优惠券，下单时抵扣</text>
+        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/coupons/index' })">
+          <AppImage class="shortcut-icon" :src="'/static/icons/理财.svg'" :width="96" mode="aspectFit" />
+          <text class="shortcut-label">优惠券</text>
         </view>
-        <text class="community-arrow">›</text>
-      </view>
-      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/invites/index' })">
-        <view>
-          <text class="community-title">邀请好友</text>
-          <text class="community-subtitle">好友首单完成，奖励进入你的钱包</text>
+        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/invites/index' })">
+          <AppImage class="shortcut-icon" :src="'/static/icons/分享.svg'" :width="96" mode="aspectFit" />
+          <text class="shortcut-label">邀请</text>
         </view>
-        <text class="community-arrow">›</text>
       </view>
 
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
@@ -120,10 +111,16 @@
         </view>
       </view>
 
-      <view class="tab-page-bottom-spacer" />
+      <view class="tab-page-bottom-spacer" :class="{ 'ticker-spacer': purchaseFeedEnabled && purchaseFeed.length }" />
     </scroll-view>
 
     <CustomTabBar :current="0" />
+
+    <RecentPurchaseTicker
+      v-if="purchaseFeedEnabled"
+      :items="purchaseFeed"
+      @more="goDisplay('feed')"
+    />
 
     <!-- 悬浮客服按钮 -->
     <DraggableSupport v-if="siteStore.customerServiceHomeIconVisible" @activate="goCustomerService" />
@@ -168,6 +165,7 @@ import ProductCard from '@/components/ProductCard.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import DraggableSupport from '@/components/DraggableSupport.vue'
 import ProductSortPicker from '@/components/ProductSortPicker.vue'
+import RecentPurchaseTicker from '@/components/RecentPurchaseTicker.vue'
 import { productSortParams } from '@/utils/product-sort'
 import { productDescriptionHtml } from '@/utils/product-content'
 import { bannerAction } from '@/utils/banner'
@@ -175,6 +173,7 @@ import { getRecommendProducts, getRecommendCategories } from '@/api/product'
 import { getActiveBanners } from '@/api/banner'
 import { getActiveNotices } from '@/api/notice'
 import { getCategoryTree } from '@/api/category'
+import { getPurchaseFeed } from '@/api/display'
 import { openCustomerService } from '@/utils/customer-service'
 import { getRemind } from '@/api/message'
 import { useUserStore } from '@/store/user'
@@ -199,6 +198,8 @@ function onBannerLoad(id,event){const d=event.detail||{};if(d.width>0&&d.height>
 function onBannerChange(event){bannerIndex.value=event.detail.current;resizeBanner()}
 const categories = ref([])
 const notices = ref([])
+const purchaseFeed = ref([])
+const purchaseFeedEnabled = ref(false)
 const recommendProducts = ref([])
 /** 热门推荐 Tab：全部 + 接口返回的分类（护航专区推荐、热门推荐等） */
 const recommendTabs = ref([])
@@ -283,6 +284,7 @@ async function loadData() {
 
 onShow(() => {
   loadData()
+  loadPurchaseFeed()
   if (useUserStore().token) {
     getRemind({ loading: false }).then(res => {
       const d = res.data || {}
@@ -291,6 +293,17 @@ onShow(() => {
     }).catch(() => {})
   }
 })
+
+async function loadPurchaseFeed() {
+  try {
+    const res = await getPurchaseFeed({ loading: false })
+    purchaseFeedEnabled.value = res.data?.enabled === true
+    purchaseFeed.value = Array.isArray(res.data?.items) ? res.data.items.slice(0, 20) : []
+  } catch (_) {
+    purchaseFeedEnabled.value = false
+    purchaseFeed.value = []
+  }
+}
 
 onPullDownRefresh(async () => {
   await loadData()
@@ -337,6 +350,10 @@ function goCategory(id) {
   uni.switchTab({ url: '/pages/category/index' })
 }
 
+function goDisplay(tab = 'rank') {
+  uni.navigateTo({ url: `/pages/display/index?tab=${encodeURIComponent(tab)}` })
+}
+
 function openNoticeDetail(item) {
   popupNotices.value = [item]
   popupCurrentIndex.value = 0
@@ -372,6 +389,8 @@ async function goCustomerService() {
   position: relative;
   overflow: hidden;
 }
+
+.ticker-spacer { height: 148rpx; }
 
 /* === 内容层置于背景之上 === */
 .search-bar, .banner, .notice-bar, .category-tags, .section, .notice-popup {
@@ -528,11 +547,30 @@ async function goCustomerService() {
   margin-left: 12rpx;
 }
 
+/* 社区与福利入口：一行紧凑图标，避免抢占商品首屏 */
+.home-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 16rpx 24rpx 0;
+  padding: 18rpx 10rpx 14rpx;
+  background: #fff;
+  border-radius: 18rpx;
+  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.03);
+}
+
+.shortcut-item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  &:active { opacity: 0.78; }
+}
+
+.shortcut-icon { width: 48rpx; height: 48rpx; filter: grayscale(1); opacity: 0.76; }
+.shortcut-label { font-size: 22rpx; line-height: 1.2; color: #555b63; }
+
 /* 商品分类：图标 + 文字网格 */
-.community-entry { margin: 16rpx 24rpx 0; padding: 24rpx; display: flex; align-items: center; justify-content: space-between; border-radius: 18rpx; background: #fff; }
-.community-title { display: block; font-size: 27rpx; font-weight: 700; color: #17191c; }
-.community-subtitle { display: block; margin-top: 8rpx; font-size: 22rpx; color: #73777e; }
-.community-arrow { font-size: 42rpx; color: #73777e; }
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -36,6 +36,22 @@ test('public purchase feed requires consent and ranking exposes user privacy con
   assert.match(api, /\/user\/display\/privacy/)
 })
 
+test('home prioritizes products and presents recent purchases as a floating ticker', async () => {
+  const home = await read('pages/index/index.vue')
+  const ticker = await read('components/RecentPurchaseTicker.vue')
+  const display = await read('pages/display/index.vue')
+  assert.doesNotMatch(home, /class="community-entry"/)
+  assert.match(home, /class="home-shortcuts"/)
+  assert.match(home, /v-if="banners.length"/)
+  assert.match(home, /v-if="categories.length"/)
+  assert.match(home, /<RecentPurchaseTicker/)
+  assert.match(home, /getPurchaseFeed\(/)
+  assert.match(ticker, /class="purchase-ticker"/)
+  assert.match(ticker, /vertical/)
+  assert.match(ticker, /position:\s*fixed/)
+  assert.match(display, /options\?\.tab === 'feed'/)
+})
+
 test('invite center shares a link that carries the invite code', async () => {
   const page = await read('pages/invites/index.vue')
   assert.match(page, /\?invite=\$\{encodeURIComponent\(info\.value\.code\)\}/)
