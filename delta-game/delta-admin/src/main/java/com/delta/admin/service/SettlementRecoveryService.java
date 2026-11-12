@@ -37,17 +37,20 @@ public class SettlementRecoveryService {
   List<Map<String,Object>> incomes;
   if(!settlements.isEmpty()) {
    incomes=new ArrayList<>();
-   for(var entry:settlements.entrySet())incomes.add(Map.of("user_id",entry.getKey(),"income",entry.getValue().get("amount")));
+   for(var entry:settlements.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList())
+    incomes.add(Map.of("user_id",entry.getKey(),"income",entry.getValue().get("amount")));
   } else {
    incomes=jdbc.queryForList("SELECT user_id,SUM(amount) AS income FROM `transaction` WHERE user_type='PLAYER' AND type='INCOME' AND related_order_id=? GROUP BY user_id ORDER BY user_id",id);
   }
-  boolean exactSettlement=!settlements.isEmpty();
   BigDecimal cumulativeIncome=BigDecimal.ZERO,previousTarget=BigDecimal.ZERO;
   for(var income:incomes){
    long player=((Number)income.get("user_id")).longValue();BigDecimal original=(BigDecimal)income.get("income");
-   BigDecimal expected;
-   if(exactSettlement) expected=share(original,refunded,amount);
-   else { cumulativeIncome=cumulativeIncome.add(original);BigDecimal target=share(cumulativeIncome,refunded,amount);expected=target.subtract(previousTarget);previousTarget=target; }
+   // Allocate cumulative shares so rounding cents are distributed once and the
+   // sum of player reversals always matches the order-level player refund.
+   cumulativeIncome=cumulativeIncome.add(original);
+   BigDecimal target=share(cumulativeIncome,refunded,amount);
+   BigDecimal expected=target.subtract(previousTarget);
+   previousTarget=target;
    var previous=jdbc.queryForList("SELECT refund_share,recovered,remaining FROM player_refund_recovery WHERE order_id=? AND player_id=? FOR UPDATE",id,player);
    BigDecimal old=previous.isEmpty()?BigDecimal.ZERO:(BigDecimal)previous.get(0).get("refund_share");
    BigDecimal oldRecovered=previous.isEmpty()?BigDecimal.ZERO:(BigDecimal)previous.get(0).get("recovered");

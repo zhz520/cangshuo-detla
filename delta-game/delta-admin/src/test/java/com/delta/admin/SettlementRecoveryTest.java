@@ -49,6 +49,19 @@ class SettlementRecoveryTest {
   service.refunded(refunded());
   assertThat(jdbc.queryForObject("SELECT SUM(refund_share) FROM player_refund_recovery",BigDecimal.class)).isEqualByComparingTo("0.01");
  }
+ @Test void exactSettlementRefundDistributesRoundingResidualOnceAcrossTeammates(){
+  jdbc.execute("CREATE TABLE player_income_settlement(id BIGINT AUTO_INCREMENT PRIMARY KEY,order_id BIGINT,player_id BIGINT,role VARCHAR(20),amount DECIMAL(12,2),reversed_amount DECIMAL(12,2),status VARCHAR(20),release_at TIMESTAMP,released_at TIMESTAMP,attempts INT,last_error VARCHAR(255),next_attempt_at TIMESTAMP,remark VARCHAR(255),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+  jdbc.update("INSERT INTO `order` VALUES (100,0.04,1)");jdbc.update("INSERT INTO payment VALUES (100,'REFUNDED',0.01)");
+  jdbc.update("INSERT INTO order_settlement_ledger(order_id,amount,club_amount,player_amount,cs_amount) VALUES (100,0.04,0,0.04,0)");
+  for(long id=1;id<=4;id++){
+   wallet(id,"0.01");
+   jdbc.update("INSERT INTO player_income_settlement(order_id,player_id,role,amount,reversed_amount,status,release_at,next_attempt_at) VALUES(100,?,'TEAMMATE',0.01,0,'RELEASED',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",id);
+  }
+  service.refunded(refunded());service.refunded(refunded());
+  assertThat(jdbc.queryForObject("SELECT SUM(refund_share) FROM player_refund_recovery",BigDecimal.class)).isEqualByComparingTo("0.01");
+  assertThat(jdbc.queryForObject("SELECT SUM(remaining) FROM player_refund_recovery",BigDecimal.class)).isEqualByComparingTo("0.00");
+  assertThat(balances.values().stream().map(PlayerWallet::getBalance).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("0.03");
+ }
  @Test void unfinishedWechatRefundNeverDeductsPlayerIncome(){
   jdbc.update("INSERT INTO `order` VALUES (100,100,1)");jdbc.update("INSERT INTO payment VALUES (100,'REFUNDING',50)");
   jdbc.update("INSERT INTO `transaction` VALUES (1,'PLAYER','INCOME',100,80)");wallet(1,"80");service.refunded(refunded());
