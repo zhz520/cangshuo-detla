@@ -44,6 +44,7 @@ class DatabaseCompatibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='GUEST_USER_LINK'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='DISPLAY_PRIVACY'", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='INVITE_REWARD_DEBT'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_name='STATISTICS_DAILY' AND column_name IN ('NEW_ORDER_COUNT','COMPLETED_ORDER_COUNT','NEW_USER_COUNT','TOTAL_AMOUNT')", Integer.class)).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key IN ('order.purchase_enabled','order.guest_checkout_enabled','player.directory.enabled')", Integer.class)).isEqualTo(3);
     }
 

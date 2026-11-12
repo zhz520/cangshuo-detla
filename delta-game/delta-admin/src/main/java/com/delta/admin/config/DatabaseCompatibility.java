@@ -98,6 +98,36 @@ public class DatabaseCompatibility {
                     "ALTER TABLE wechat_notice_queue ADD COLUMN dedupe_key VARCHAR(64) NULL")
     );
 
+    /** The daily statistics table has existed under more than one column naming scheme. */
+    private static final List<AdditiveColumn> STATISTICS_COLUMNS = List.of(
+            new AdditiveColumn("statistics_daily", "new_user_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN new_user_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "active_user_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN active_user_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "new_order_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN new_order_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "completed_order_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN completed_order_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "cancelled_order_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN cancelled_order_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "total_amount",
+                    "ALTER TABLE statistics_daily ADD COLUMN total_amount DECIMAL(12,2) NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "platform_income",
+                    "ALTER TABLE statistics_daily ADD COLUMN platform_income DECIMAL(12,2) NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "player_income",
+                    "ALTER TABLE statistics_daily ADD COLUMN player_income DECIMAL(12,2) NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "new_player_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN new_player_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "active_player_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN active_player_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "new_complaint_count",
+                    "ALTER TABLE statistics_daily ADD COLUMN new_complaint_count INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "avg_order_amount",
+                    "ALTER TABLE statistics_daily ADD COLUMN avg_order_amount DECIMAL(10,2) NOT NULL DEFAULT 0"),
+            new AdditiveColumn("statistics_daily", "created_at",
+                    "ALTER TABLE statistics_daily ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP")
+    );
+
     @PostConstruct
     public void ensure() {
         TenantStartup.forEachActive(tenantRegistry, this::ensureCurrentTenant);
@@ -245,7 +275,19 @@ public class DatabaseCompatibility {
                     "user_id BIGINT PRIMARY KEY,spend_rank_visible TINYINT NOT NULL DEFAULT 1," +
                     "purchase_feed_consent TINYINT NOT NULL DEFAULT 0," +
                     "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
+            ensureTable("statistics_daily", "CREATE TABLE IF NOT EXISTS statistics_daily (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY,stat_date DATE NOT NULL,new_user_count INT NOT NULL DEFAULT 0," +
+                    "active_user_count INT NOT NULL DEFAULT 0,new_order_count INT NOT NULL DEFAULT 0," +
+                    "completed_order_count INT NOT NULL DEFAULT 0,cancelled_order_count INT NOT NULL DEFAULT 0," +
+                    "total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,platform_income DECIMAL(12,2) NOT NULL DEFAULT 0," +
+                    "player_income DECIMAL(12,2) NOT NULL DEFAULT 0,new_player_count INT NOT NULL DEFAULT 0," +
+                    "active_player_count INT NOT NULL DEFAULT 0,new_complaint_count INT NOT NULL DEFAULT 0," +
+                    "avg_order_amount DECIMAL(10,2) NOT NULL DEFAULT 0,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE KEY uk_stat_date(stat_date))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
+                ensureColumn(required.table(), required.column(), required.ddl());
+            }
+            for (AdditiveColumn required : STATISTICS_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
             ensureOfficialWechatBindingUniqueness();

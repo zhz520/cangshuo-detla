@@ -111,18 +111,36 @@ public interface ScheduledTaskMapper {
 
     // ========== StatisticsTask ==========
 
-    @Insert("INSERT INTO statistics_daily (stat_date, new_orders, completed_orders, total_amount, " +
-            "new_users, new_players, total_complaints, created_at) " +
-            "SELECT CURDATE() - INTERVAL 1 DAY, " +
-            "(SELECT COUNT(*) FROM `order` WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COUNT(*) FROM `order` WHERE status = 'COMPLETED' AND DATE(complete_time) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COALESCE(SUM(amount),0) FROM payment WHERE status = 'PAID' AND DATE(paid_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COUNT(*) FROM user WHERE is_guest=0 AND DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COUNT(*) FROM player WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "(SELECT COUNT(*) FROM complaint WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY), " +
-            "NOW() " +
-            "ON DUPLICATE KEY UPDATE " +
-            "new_orders = VALUES(new_orders), completed_orders = VALUES(completed_orders), " +
-            "total_amount = VALUES(total_amount)")
+    @Insert("INSERT INTO statistics_daily (stat_date,new_user_count,active_user_count,new_order_count," +
+            "completed_order_count,cancelled_order_count,total_amount,platform_income,player_income," +
+            "new_player_count,active_player_count,new_complaint_count,avg_order_amount,created_at) " +
+            "SELECT DATE_SUB(CURDATE(), INTERVAL 1 DAY), " +
+            "(SELECT COUNT(*) FROM user WHERE is_guest=0 AND DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(DISTINCT user_id) FROM `order` WHERE DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(*) FROM `order` WHERE DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(*) FROM `order` WHERE status IN ('COMPLETED','CONFIRMED','REVIEWED') " +
+            "AND DATE(complete_time)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(*) FROM `order` WHERE status='CANCELLED' AND DATE(updated_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COALESCE(SUM(GREATEST(p.amount-COALESCE(p.refund_amount,0),0)),0) " +
+            "FROM payment p WHERE p.status IN ('PAID','REFUNDED') AND DATE(p.paid_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COALESCE(SUM(GREATEST(p.amount-COALESCE(p.refund_amount,0),0)*COALESCE(o.commission_rate,0)),0) " +
+            "FROM payment p JOIN `order` o ON o.id=p.order_id " +
+            "WHERE p.status IN ('PAID','REFUNDED') AND DATE(p.paid_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COALESCE(SUM(GREATEST(p.amount-COALESCE(p.refund_amount,0),0) * " +
+            "(1-COALESCE(o.commission_rate,0))),0) FROM payment p JOIN `order` o ON o.id=p.order_id " +
+            "WHERE p.status IN ('PAID','REFUNDED') AND DATE(p.paid_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(*) FROM player WHERE DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(DISTINCT player_id) FROM `order` WHERE player_id IS NOT NULL " +
+            "AND DATE(updated_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COUNT(*) FROM complaint WHERE DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "(SELECT COALESCE(SUM(GREATEST(p.amount-COALESCE(p.refund_amount,0),0)) / NULLIF(COUNT(DISTINCT p.order_id),0),0) " +
+            "FROM payment p WHERE p.status IN ('PAID','REFUNDED') AND DATE(p.paid_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)), " +
+            "NOW() ON DUPLICATE KEY UPDATE " +
+            "new_user_count=VALUES(new_user_count),active_user_count=VALUES(active_user_count)," +
+            "new_order_count=VALUES(new_order_count),completed_order_count=VALUES(completed_order_count)," +
+            "cancelled_order_count=VALUES(cancelled_order_count),total_amount=VALUES(total_amount)," +
+            "platform_income=VALUES(platform_income),player_income=VALUES(player_income)," +
+            "new_player_count=VALUES(new_player_count),active_player_count=VALUES(active_player_count)," +
+            "new_complaint_count=VALUES(new_complaint_count),avg_order_amount=VALUES(avg_order_amount)")
     int insertDailyStatistics();
 }
