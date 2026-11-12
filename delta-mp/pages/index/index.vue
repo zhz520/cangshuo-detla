@@ -84,6 +84,13 @@
         </view>
         <text class="community-arrow">›</text>
       </view>
+      <view class="community-entry" @click="uni.navigateTo({ url: '/pages/coupons/index' })">
+        <view>
+          <text class="community-title">优惠券中心</text>
+          <text class="community-subtitle">领取优惠券，下单时抵扣</text>
+        </view>
+        <text class="community-arrow">›</text>
+      </view>
 
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">

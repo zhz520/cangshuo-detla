@@ -132,6 +132,10 @@
     {
       "path": "pages/membership/index",
       "style": { "navigationBarTitleText": "会员中心" }
+    },
+    {
+      "path": "pages/coupons/index",
+      "style": { "navigationBarTitleText": "优惠券" }
     }
   ],
   "subPackages": [
