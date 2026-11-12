@@ -325,6 +325,7 @@ public class DatabaseCompatibility {
                 {"identity.auto.enabled","启用自动二要素实名","false","boolean","实名配置","开启后仍受授权中心服务余额和实名策略约束"},
                 {"identity.prompt_mode","实名提醒方式","OFF","text","实名配置","OFF/REMIND/REQUIRED；REQUIRED 只限制配置指定的业务动作"},
                 {"membership.enabled","启用用户会员等级","false","boolean","会员配置","关闭后停止新增会员权益，既有等级和历史记录保留"},
+                {"membership.tiers","会员等级规则","[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1},{\"code\":\"SILVER\",\"name\":\"白银会员\",\"minSpend\":500,\"discountRate\":0.98},{\"code\":\"GOLD\",\"name\":\"黄金会员\",\"minSpend\":2000,\"discountRate\":0.95}]","json","会员配置","按有效净消费成长；minSpend 单位元，discountRate 为0到1之间的折扣率"},
                 {"marketing.coupon.issue_enabled","启用优惠券发放","false","boolean","营销配置","关闭后停止领券和新发券，已发有效券按原规则处理"},
                 {"marketing.coupon.redeem_enabled","启用优惠券核销","true","boolean","营销配置","紧急停用开关；关闭后新订单不能使用优惠券"},
                 {"marketing.invite.enabled","启用邀请奖励","false","boolean","营销配置","停止新邀请归因和新奖励，已满足资格的奖励继续履约"},
