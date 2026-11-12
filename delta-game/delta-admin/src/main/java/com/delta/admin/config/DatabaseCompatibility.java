@@ -224,6 +224,13 @@ public class DatabaseCompatibility {
                     "id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT NOT NULL,user_id BIGINT NOT NULL," +
                     "status VARCHAR(16) NOT NULL,claimed_at TIMESTAMP NOT NULL,expires_at TIMESTAMP NOT NULL," +
                     "used_order_id BIGINT,used_at TIMESTAMP,UNIQUE KEY uk_coupon_user_template(template_id,user_id))");
+            ensureTable("invite_code", "CREATE TABLE IF NOT EXISTS invite_code (" +
+                    "user_id BIGINT PRIMARY KEY,code VARCHAR(16) NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE KEY uk_invite_code(code))");
+            ensureTable("invite_relation", "CREATE TABLE IF NOT EXISTS invite_relation (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY,inviter_id BIGINT NOT NULL,invitee_id BIGINT NOT NULL," +
+                    "code VARCHAR(16) NOT NULL,status VARCHAR(16) NOT NULL DEFAULT 'PENDING',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE KEY uk_invite_invitee(invitee_id))");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
