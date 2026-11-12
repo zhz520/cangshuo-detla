@@ -24,6 +24,7 @@ public class RedisService {
     // Aliases used by SysConfigServiceImpl
     @SuppressWarnings("unchecked")
     public <T> T getCacheObject(String key) { return (T) redisTemplate.opsForValue().get(tenantKeys.key(key)); }
+    public Object getAndDelete(String key) { return redisTemplate.opsForValue().getAndDelete(tenantKeys.key(key)); }
     public <T> void setCacheObject(String key, T value, Long timeout, TimeUnit unit) { redisTemplate.opsForValue().set(tenantKeys.key(key), value, timeout, unit); }
     public void deleteObject(String key) { redisTemplate.delete(tenantKeys.key(key)); }
 

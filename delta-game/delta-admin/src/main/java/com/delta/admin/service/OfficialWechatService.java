@@ -134,9 +134,7 @@ public class OfficialWechatService {
   if(state==null||!state.matches("[a-f0-9]{32}")||code==null||code.length()>256)throw new BusinessException(400,"绑定凭据无效");
   String value=redis.opsForValue().getAndDelete(namespaced("wechat:binding:"+state));if(value==null)throw new BusinessException(400,"绑定凭据已过期，请重新操作");
   JSONObject claim=JSON.parseObject(value);if(!type.equals(claim.getString("type"))||id.longValue()!=claim.getLongValue("id"))throw new BusinessException(403,"绑定身份不匹配");
-  String url="https://api.weixin.qq.com/sns/oauth2/access_token?appid="+encode(configs.getConfigValue("wechat.official.app_id",""))+"&secret="+encode(configs.getConfigValue("wechat.official.app_secret",""))+"&code="+encode(code)+"&grant_type=authorization_code";
-  var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
-  JSONObject result=JSON.parseObject(response.body());String openid=result.getString("openid");if(response.statusCode()!=200||openid==null||!openid.matches("[A-Za-z0-9_-]{10,128}"))throw new BusinessException(400,"微信授权未完成，请重新绑定");
+  String openid=exchangeOpenid(code);
   String lockKey="wechat:binding:openid:"+openid,lockValue=UUID.randomUUID().toString();
   Boolean acquired=redis.opsForValue().setIfAbsent(namespaced(lockKey),lockValue,Duration.ofSeconds(15));
   if(!Boolean.TRUE.equals(acquired))throw new BusinessException(409,"该微信正在绑定其他账号，请稍后刷新重试");
@@ -150,6 +148,16 @@ public class OfficialWechatService {
    if(!synchronizationActive)releaseBindingLock(lockKey,lockValue);
   }
   jdbc.update("UPDATE wechat_notice_queue SET status='PENDING',attempts=0,next_at=CURRENT_TIMESTAMP WHERE user_type=? AND user_id=? AND status IN ('RETRY','FAILED') AND last_error='RECIPIENT_NOT_BOUND' AND created_at>?",type,id,LocalDateTime.now().minusDays(1));
+ }
+ public String exchangeOpenid(String code)throws Exception{
+  String appId=configs.getConfigValue("wechat.official.app_id","").trim();
+  String secret=configs.getConfigValue("wechat.official.app_secret","").trim();
+  if(appId.isBlank()||secret.isBlank())throw new BusinessException(503,"公众号登录尚未配置");
+  String url="https://api.weixin.qq.com/sns/oauth2/access_token?appid="+encode(appId)+"&secret="+encode(secret)+"&code="+encode(code)+"&grant_type=authorization_code";
+  var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
+  JSONObject result=JSON.parseObject(response.body());String openid=result.getString("openid");
+  if(response.statusCode()!=200||openid==null||!openid.matches("[A-Za-z0-9_-]{10,128}"))throw new BusinessException(400,"微信授权未完成，请重新操作");
+  return openid;
  }
  void saveBinding(String rawType,Long id,String openid){
   String type=canonicalUserType(rawType);
