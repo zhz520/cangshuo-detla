@@ -1536,6 +1536,18 @@ INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_gro
 SELECT 'order.cooperation.enabled','启用协同打单','true','boolean','订单配置','关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.cooperation.enabled');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'auth.phone.enabled','启用手机验证码登录','true','boolean','账号与登录','关闭后网页端不再提供手机验证码登录；密码辅助入口和微信登录分别受独立开关控制'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='auth.phone.enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'auth.password.enabled','启用密码辅助登录','true','boolean','账号与登录','关闭后网页端不显示密码登录入口；已设置密码的账号仍可通过其他已启用方式登录'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='auth.password.enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'auth.wechat.enabled','启用网页微信登录','false','boolean','账号与登录','开启后还需配置公众号 AppID 和 AppSecret；仅影响网页登录，不改变公众号通知绑定'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='auth.wechat.enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'auth.primary_method','网页主登录方式','PHONE','text','账号与登录','可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='auth.primary_method');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'player.directory.enabled','展示打手页面','true','boolean','打手配置','关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='player.directory.enabled');
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='price_increase_rate')=0, 'ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1 COMMENT ''-1跟随等级，0不涨价，其他为百分比''', 'SELECT 1');

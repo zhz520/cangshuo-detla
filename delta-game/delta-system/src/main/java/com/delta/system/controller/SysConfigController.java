@@ -205,6 +205,14 @@ public class SysConfigController {
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         ensureConfig("order.cooperation.enabled", "启用协同打单", "true", "boolean", "订单配置",
                 "关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算");
+        ensureConfig("auth.phone.enabled", "启用手机验证码登录", "true", "boolean", "账号与登录",
+                "关闭后网页端不再提供手机验证码登录；密码辅助入口和微信登录分别受独立开关控制");
+        ensureConfig("auth.password.enabled", "启用密码辅助登录", "true", "boolean", "账号与登录",
+                "关闭后网页端不显示密码登录入口；已设置密码的账号仍可通过其他已启用方式登录");
+        ensureConfig("auth.wechat.enabled", "启用网页微信登录", "false", "boolean", "账号与登录",
+                "开启后还需配置公众号 AppID 和 AppSecret；仅影响网页登录，不改变公众号通知绑定");
+        ensureConfig("auth.primary_method", "网页主登录方式", "PHONE", "text", "账号与登录",
+                "可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式");
         ensureConfig("player.directory.enabled", "展示打手页面", "true", "boolean", "打手配置",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
@@ -352,6 +360,8 @@ public class SysConfigController {
         }
         if("withdraw.require_identity_match".equals(key)&&!java.util.Set.of("true","false").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
+        if("auth.primary_method".equals(key)&&!java.util.Set.of("PHONE","WECHAT").contains(value))
+            throw new com.delta.common.exception.BusinessException(400,"网页主登录方式只能是 PHONE 或 WECHAT");
         if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
         if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(key.startsWith("sms.notification.templates.")) validateSmsRoleTemplates(value);

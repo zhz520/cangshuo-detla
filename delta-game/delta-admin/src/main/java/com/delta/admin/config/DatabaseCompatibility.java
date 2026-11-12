@@ -307,6 +307,16 @@ public class DatabaseCompatibility {
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         insertBooleanConfigIfMissing("order.cooperation.enabled", "启用协同打单", "true",
                 "关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算");
+        insertBooleanConfigIfMissing("auth.phone.enabled", "启用手机验证码登录", "true",
+                "关闭后网页端不再提供手机验证码登录；密码辅助入口和微信登录分别受独立开关控制");
+        insertBooleanConfigIfMissing("auth.password.enabled", "启用密码辅助登录", "true",
+                "关闭后网页端不显示密码登录入口；已设置密码的账号仍可通过其他已启用方式登录");
+        insertBooleanConfigIfMissing("auth.wechat.enabled", "启用网页微信登录", "false",
+                "开启后还需配置公众号 AppID 和 AppSecret；仅影响网页登录，不改变公众号通知绑定");
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='auth.primary_method'", Integer.class) == 0)
+            jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                    "auth.primary_method", "网页主登录方式", "PHONE", "text", "账号与登录",
+                    "可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式");
         insertBooleanConfigIfMissing("player.directory.enabled", "展示打手页面", "true",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
     }
