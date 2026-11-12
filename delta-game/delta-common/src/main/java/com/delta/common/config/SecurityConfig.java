@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/product/list", "/product/recommend", "/product/recommend/categories", "/product/{id}", "/product/category/list", "/product/category/all", "/product/category/tree", "/product/category/*/form-fields").permitAll()
                 // 以上 product 接口供匿名访问（含首页热门推荐、热门分类 Tab）
                 .requestMatchers(HttpMethod.GET, "/app/product/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/app/display/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/app/players/*/reviewable-orders").hasRole("USER")
                 .requestMatchers(HttpMethod.GET, "/app/players", "/app/players/levels", "/app/players/categories",
                         "/app/players/layout", "/app/players/{id}", "/app/players/{id}/reviews").permitAll()
