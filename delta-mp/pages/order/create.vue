@@ -9,6 +9,8 @@
       <view v-if="quoteReady && Number(quote.priceIncreaseRate) > 0" class="price-breakdown">
         <text>商品原价 ¥{{ Number(quote.baseAmount).toFixed(2) }}</text>
         <text>打手涨价 {{ Number(quote.priceIncreaseRate) }}%：+¥{{ Number(quote.priceIncreaseAmount).toFixed(2) }}</text>
+        <text v-if="Number(quote.memberDiscountAmount) > 0">会员优惠：-¥{{ Number(quote.memberDiscountAmount).toFixed(2) }}</text>
+        <text v-if="Number(quote.couponDiscountAmount) > 0">优惠券：-¥{{ Number(quote.couponDiscountAmount).toFixed(2) }}</text>
       </view>
     </view>
     <!-- 使用已保存信息 -->
@@ -86,6 +88,12 @@
       </view>
       <text v-if="quoteError" class="quote-error" @click="refreshQuote">{{ quoteError }}，点击重试</text>
     </view>
+    <view v-if="userStore.isLoggedIn && couponLabels.length > 1" class="section">
+      <view class="section-title">优惠券</view>
+      <picker :range="couponLabels" :value="selectedCouponIndex" @change="changeCoupon">
+        <view class="picker-value"><text>{{ couponLabels[selectedCouponIndex] }}</text><text class="arrow">></text></view>
+      </picker>
+    </view>
     <view class="bottom-bar">
       <view class="total">合计：<PriceText v-if="quoteReady" :value="amount" :size="36" /><text v-else>待确认</text></view>
       <view class="btn-submit" :class="{disabled:!canSubmit || submitting}" @click="submitOrder">{{ submitting?'提交中…':(siteStore.orderPurchaseEnabled?'提交订单':'购买已暂停') }}</view>
@@ -153,6 +161,7 @@ import { useUserStore } from '@/store/user'
 import { useSiteStore } from '@/store/site'
 import { createGuestOrder } from '@/api/guest'
 import { getPublicPlayer, getPlayerCategories } from '@/api/player'
+import { getMyCoupons } from '@/api/coupon'
 
 const userStore = useUserStore()
 const siteStore = useSiteStore()
@@ -181,6 +190,20 @@ const canSubmit = computed(() => siteStore.orderPurchaseEnabled && quoteReady.va
     && /^[A-Za-z0-9]{6,12}$/.test(guestLookupCode.value)
     && guestPrivacyAccepted.value)))
 let quoteVersion = 0
+const coupons = ref([])
+const selectedCouponIndex = ref(0)
+const couponOptions = computed(() => coupons.value.filter(item => item.status === 'AVAILABLE' && (!item.expires_at || new Date(item.expires_at) > new Date())))
+const couponLabels = computed(() => ['不使用优惠券', ...couponOptions.value.map(item => item.name + (item.type === 'DISCOUNT' ? '（' + (Number(item.coupon_value) * 10).toFixed(1).replace('.0','') + '折）' : '（¥' + Number(item.coupon_value || 0).toFixed(2) + '）'))])
+const selectedCouponId = computed(() => selectedCouponIndex.value > 0 ? couponOptions.value[selectedCouponIndex.value - 1]?.id : undefined)
+
+async function loadCoupons() {
+  if (!userStore.isLoggedIn) return
+  try { const { data } = await getMyCoupons(); coupons.value = Array.isArray(data) ? data : [] } catch (_) {}
+}
+function changeCoupon(event) {
+  selectedCouponIndex.value = Number(event.detail.value) || 0
+  refreshQuote()
+}
 
 async function refreshQuote() {
   const version = ++quoteVersion
@@ -189,7 +212,7 @@ async function refreshQuote() {
   if (!productId.value || (wantDesignate.value && !selectedPlayer.value)) { quoteLoading.value = false; return }
   quoteLoading.value = true
   try {
-    const { data } = await getOrderQuote({ productId: productId.value, designatedPlayerId: wantDesignate.value ? selectedPlayer.value.id : undefined, playerLevelId: playerLevelId.value })
+    const { data } = await getOrderQuote({ productId: productId.value, designatedPlayerId: wantDesignate.value ? selectedPlayer.value.id : undefined, playerLevelId: playerLevelId.value, couponId: selectedCouponId.value })
     if (version !== quoteVersion) return
     quote.value = data
     amount.value = data.amount
@@ -335,6 +358,7 @@ async function loadRepeatOrder(repeatOrderId) {
 }
 
 onLoad(async (opts) => {
+  await loadCoupons()
   getPlayerCategories().then(({data}) => { playerLevels.value=data||[] }).catch(() => {})
   if (opts.repeatOrderId) {
     if (!userStore.isLoggedIn) return uni.showToast({ title: '请登录后再次下单', icon: 'none' })
@@ -383,7 +407,8 @@ async function submitOrder() {
       amount: amount.value,
       extraFields: fieldsToSubmit,
       designatedPlayerId: wantDesignate.value ? selectedPlayer.value?.id : undefined,
-      playerLevelId: playerLevelId.value
+      playerLevelId: playerLevelId.value,
+      couponId: selectedCouponId.value
     }
     if (!userStore.isLoggedIn) {
       const res = await createGuestOrder({
