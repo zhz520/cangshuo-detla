@@ -256,13 +256,7 @@ public class PlayerOrderController {
         long existing = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getPlayerId, req.getInviteePlayerId()));
-        if (existing > 0) return R.fail("已邀请过该打手");
-
-        // 校验是否有未响应的邀请
-        long pendingInvite = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getStatus, "INVITED"));
-        if (pendingInvite > 0) return R.fail("已有未响应的邀请，请等待或取消后重新邀请");
+        if (existing > 0) return R.fail(409, "已邀请过该打手");
 
         validateTeamAllocation(order, splitType, req.getCustomAmount());
 

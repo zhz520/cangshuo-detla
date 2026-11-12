@@ -197,6 +197,23 @@ class PlayerBusinessRegressionTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND player_id=3", Integer.class)).isZero();
     }
 
+    @Test void multipleTeammatesCanBeInvitedAtTheSameTimeWithoutExceedingTheTeamSize() throws Exception {
+        jdbc.update("UPDATE `order` SET status='ACCEPTED',player_id=1,required_player_count=3,amount=300,commission_rate=0 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":2,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":3,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND status='INVITED'", Integer.class)).isEqualTo(2);
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":2,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(409));
+    }
+
     @Test void disablingCooperationBlocksNewInvitationsWithoutBreakingExistingOrders() throws Exception {
         jdbc.update("INSERT INTO sys_config(config_key,config_value) VALUES('order.cooperation.enabled','false')");
         jdbc.update("UPDATE `order` SET status='ACCEPTED',player_id=1,required_player_count=3 WHERE id=200");
