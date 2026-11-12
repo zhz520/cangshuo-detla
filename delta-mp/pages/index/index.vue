@@ -70,26 +70,6 @@
         </view>
       </view>
 
-      <!-- 社区与福利入口：压缩为一行图标，商品推荐优先展示 -->
-      <view class="home-shortcuts">
-        <view class="shortcut-item" @click="goDisplay('rank')">
-          <AppImage class="shortcut-icon" :src="'/static/icons/攻略.svg'" :width="96" mode="aspectFit" />
-          <text class="shortcut-label">排行</text>
-        </view>
-        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/membership/index' })">
-          <AppImage class="shortcut-icon" :src="'/static/icons/会员.svg'" :width="96" mode="aspectFit" />
-          <text class="shortcut-label">会员</text>
-        </view>
-        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/coupons/index' })">
-          <AppImage class="shortcut-icon" :src="'/static/icons/理财.svg'" :width="96" mode="aspectFit" />
-          <text class="shortcut-label">优惠券</text>
-        </view>
-        <view class="shortcut-item" @click="uni.navigateTo({ url: '/pages/invites/index' })">
-          <AppImage class="shortcut-icon" :src="'/static/icons/分享.svg'" :width="96" mode="aspectFit" />
-          <text class="shortcut-label">邀请</text>
-        </view>
-      </view>
-
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">
         <view class="section-header">
@@ -546,29 +526,6 @@ async function goCustomerService() {
   flex-shrink: 0;
   margin-left: 12rpx;
 }
-
-/* 社区与福利入口：一行紧凑图标，避免抢占商品首屏 */
-.home-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  margin: 16rpx 24rpx 0;
-  padding: 18rpx 10rpx 14rpx;
-  background: #fff;
-  border-radius: 18rpx;
-  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.03);
-}
-
-.shortcut-item {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6rpx;
-  &:active { opacity: 0.78; }
-}
-
-.shortcut-icon { width: 48rpx; height: 48rpx; filter: grayscale(1); opacity: 0.76; }
-.shortcut-label { font-size: 22rpx; line-height: 1.2; color: #555b63; }
 
 /* 商品分类：图标 + 文字网格 */
 .category-grid {

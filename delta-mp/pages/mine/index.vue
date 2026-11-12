@@ -44,19 +44,56 @@
         </view>
       </view>
 
+      <view class="benefit-card">
+        <view class="card-heading">
+          <text class="section-title">会员与权益</text>
+          <text class="card-caption">优惠、成长与社区互动</text>
+        </view>
+        <view class="benefit-grid">
+          <view class="benefit-item" @click="go('/pages/display/index?tab=rank')">
+            <view class="benefit-icon"><image src="/static/icons/攻略.svg" mode="aspectFit" /></view>
+            <view class="benefit-copy"><text class="benefit-title">消费排行</text><text class="benefit-desc">本月活跃玩家榜单</text></view>
+            <text class="benefit-arrow">›</text>
+          </view>
+          <view class="benefit-item" @click="goAccount('/pages/membership/index')">
+            <view class="benefit-icon"><image src="/static/icons/会员.svg" mode="aspectFit" /></view>
+            <view class="benefit-copy"><text class="benefit-title">会员等级</text><text class="benefit-desc">查看折扣与升级进度</text></view>
+            <text class="benefit-arrow">›</text>
+          </view>
+          <view class="benefit-item" @click="goAccount('/pages/coupons/index')">
+            <view class="benefit-icon"><image src="/static/icons/理财.svg" mode="aspectFit" /></view>
+            <view class="benefit-copy"><text class="benefit-title">优惠券</text><text class="benefit-desc">领取与查看可用优惠</text></view>
+            <text class="benefit-arrow">›</text>
+          </view>
+          <view class="benefit-item" @click="goAccount('/pages/invites/index')">
+            <view class="benefit-icon"><image src="/static/icons/分享.svg" mode="aspectFit" /></view>
+            <view class="benefit-copy"><text class="benefit-title">邀请好友</text><text class="benefit-desc">分享链接获得奖励</text></view>
+            <text class="benefit-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
       <view class="settle-card" @click="goPlayer">
         <view class="settle-icon-box">
           <image class="settle-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
         </view>
         <view class="settle-info">
-          <text class="settle-title">我要入驻接单员端</text>
-          <text class="settle-desc">通过审核后可接单、查看收益和提现</text>
+          <text class="settle-title">{{ playerEntry.title }}</text>
+          <text class="settle-desc">{{ playerEntry.desc }}</text>
         </view>
-        <text class="settle-action">进入</text>
+        <text class="settle-action">{{ playerEntry.action }}</text>
+      </view>
+
+      <view v-if="userStore.isLoggedIn" class="section-card">
+        <text class="section-title">账号与安全</text>
+        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/library')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit"/><text>收藏与关注</text><text class="arrow">></text></view>
+        <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
+        <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
+        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
       </view>
 
       <view class="section-card">
-        <text class="section-title">服务与支持</text>
+        <text class="section-title">帮助与协议</text>
         <view v-if="siteStore.guestCheckoutEnabled" class="menu-item guest-order-menu" @click="go('/pages/order/lookup')">
           <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
           <text>{{ userStore.isLoggedIn ? '游客订单查询与绑定' : '游客订单查询' }}</text><text class="guest-order-tag">{{ userStore.isLoggedIn ? '绑定历史订单' : '无需登录' }}</text><text class="arrow">></text>
@@ -65,10 +102,6 @@
           <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
           <text>我的投诉工单</text><text class="arrow">></text>
         </view>
-        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/library')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit"/><text>收藏与关注</text><text class="arrow">></text></view>
-        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
-        <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
-        <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
         <view class="menu-item" @click="go('/pages/agreement/user')">
           <image class="menu-icon" src="/static/icons/暂无权限.svg" mode="aspectFit" />
           <text>用户协议</text><text class="arrow">></text>
@@ -113,7 +146,16 @@ const officialWechat = useOfficialWechatStore()
 const remindStore = useRemindStore()
 const systemUnread = computed(() => remindStore.systemUnread)
 const identityAvailable=ref(false),identityStatus=ref('')
+const playerStatus=ref('')
 const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJECTED:'未通过',DRAFT:'待提交',NOT_SUBMITTED:'未认证'}[identityStatus.value]||'未认证'))
+const playerEntry=computed(()=>{
+  if(!userStore.isLoggedIn)return{title:'登录后入驻接单员端',desc:'登录后申请接单、查看收益和提现',action:'登录'}
+  if(playerStatus.value==='ACTIVE')return{title:'接单员工作台',desc:'切换身份接单、查看收益和提现',action:'进入'}
+  if(playerStatus.value==='PENDING')return{title:'接单员申请审核中',desc:'审核通过后即可进入接单员端',action:'查看'}
+  if(playerStatus.value==='FROZEN')return{title:'接单员账号已冻结',desc:'请联系客服处理后再接单',action:'查看'}
+  if(playerStatus.value==='REJECTED')return{title:'重新申请接单员',desc:'补充资料后可重新提交入驻申请',action:'申请'}
+  return{title:'入驻接单员端',desc:'通过审核后可接单、查看收益和提现',action:'进入'}
+})
 
 // 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
@@ -125,10 +167,20 @@ onShow(() => {
   }
   if (userStore.token) {
     userStore.fetchProfile(true)
+    loadPlayerEntry()
     useChatStore().fetchMessageUnreadCount()
     getIdentityStatus({loading:false}).then(res=>{identityAvailable.value=!!res.data?.available;identityStatus.value=res.data?.status||''}).catch(()=>{identityAvailable.value=false})
   }
 })
+
+async function loadPlayerEntry(){
+  try{
+    const{data}=await getPlayerApplicationStatus()
+    playerStatus.value=data?.status||''
+  }catch(e){
+    if(e?.data?.code===1002||e?.code===1002){playerStatus.value=''}
+  }
+}
 
 const TAB_PAGES = ['/pages/index/index', '/pages/category/index', '/pages/players/index', '/pages/chat/list', '/pages/mine/index']
 function go(url) {
@@ -144,6 +196,7 @@ function goOrders() {
   uni.showToast({ title: '请先登录后查看订单', icon: 'none' })
 }
 function goLogin() { uni.navigateTo({ url: '/pages/login/index' }) }
+function goAccount(url) { if (!userStore.checkLogin()) return; go(url) }
 function formatPhone(p) {
   if (!p || p.length < 7) return p
   return p.slice(0, 3) + '****' + p.slice(-4)
@@ -305,6 +358,55 @@ async function goCustomerService() {
   border-radius: 32rpx;
   text-align: center;
 }
+
+.benefit-card {
+  margin: 22rpx 24rpx 0;
+  background: #ffffff;
+  border-radius: 22rpx;
+  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.card-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 22rpx 24rpx 14rpx;
+  .section-title { padding: 0; }
+}
+.card-caption { font-size: 21rpx; color: #9a9fa7; }
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1rpx solid #f4f5f6;
+}
+.benefit-item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 20rpx 18rpx;
+  border-bottom: 1rpx solid #f4f5f6;
+  &:nth-child(odd) { border-right: 1rpx solid #f4f5f6; }
+  &:active { background: #fafbfc; }
+}
+.benefit-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  background: #f4f5f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  image { width: 36rpx; height: 36rpx; filter: grayscale(1); opacity: 0.72; }
+}
+.benefit-copy { flex: 1; min-width: 0; display: grid; gap: 4rpx; }
+.benefit-title { font-size: 26rpx; font-weight: 700; color: #17191c; }
+.benefit-desc { font-size: 21rpx; color: #858a92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.benefit-arrow { flex: none; color: #b9bdc4; font-size: 30rpx; }
 
 .settle-card {
   display: flex;
