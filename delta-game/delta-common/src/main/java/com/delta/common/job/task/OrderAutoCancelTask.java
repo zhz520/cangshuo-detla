@@ -36,6 +36,7 @@ public class OrderAutoCancelTask {
             // 为每个订单记录order_progress
             for (Long orderId : orderIds) {
                 scheduledTaskMapper.insertOrderProgress(orderId, "PENDING_PAYMENT", "CANCELLED", "超时未支付，系统自动取消");
+                scheduledTaskMapper.releaseCouponForCancelledOrder(orderId);
             }
             log.info("自动取消超时未支付订单: {}条", orderIds.size());
         } finally { redisService.unlock("lock:task:order_cancel"); }

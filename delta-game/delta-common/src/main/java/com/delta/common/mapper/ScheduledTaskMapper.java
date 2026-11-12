@@ -46,6 +46,9 @@ public interface ScheduledTaskMapper {
     @Update("UPDATE `order` SET status = 'CANCELLED', updated_at = NOW() WHERE id = #{orderId} AND status = 'PENDING_PAYMENT'")
     int cancelSingleExpiredOrder(@Param("orderId") Long orderId);
 
+    @Update("UPDATE user_coupon SET status='AVAILABLE',used_order_id=NULL WHERE used_order_id=#{orderId} AND status='LOCKED'")
+    int releaseCouponForCancelledOrder(@Param("orderId") Long orderId);
+
     // ========== OrderAutoCompleteTask ==========
 
     @Select("SELECT id FROM `order` WHERE status = 'COMPLETED' AND auto_confirm_deadline < NOW()")
