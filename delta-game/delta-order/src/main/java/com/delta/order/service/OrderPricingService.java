@@ -3,18 +3,17 @@ package com.delta.order.service;
 import com.delta.common.domain.PlayerPriceConfig;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.mapper.CrossModuleMapper;
+import com.delta.common.membership.MembershipTierRules;
 import com.delta.common.utils.Money;
 import com.delta.order.dto.OrderQuote;
 import com.delta.product.entity.Product;
 import com.delta.product.service.ProductService;
 import com.delta.system.service.SysConfigService;
-import com.alibaba.fastjson2.JSON;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -62,25 +61,20 @@ public class OrderPricingService {
         BigDecimal memberRate=BigDecimal.ONE;
         BigDecimal memberDiscount=BigDecimal.ZERO;
         if(userId!=null&&"true".equalsIgnoreCase(configs.getConfigValue("membership.enabled","false"))){
-            try{
-                BigDecimal net=jdbc.queryForObject(
-                        "SELECT COALESCE(SUM(COALESCE(p.amount,0)-COALESCE(p.refund_amount,0)),0) FROM payment p "+
-                                "JOIN `order` o ON o.id=p.order_id WHERE o.user_id=? AND p.status IN ('PAID','REFUNDED')",
-                        BigDecimal.class,userId);
-                List<MemberTier> tiers=JSON.parseArray(configs.getConfigValue("membership.tiers",
-                        "[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1}]"),MemberTier.class);
-                if(tiers!=null&&!tiers.isEmpty()){
-                    tiers.sort(Comparator.comparing(MemberTier::minSpend));
-                    MemberTier selected=tiers.get(0);
-                    for(MemberTier tier:tiers)if(net!=null&&net.compareTo(tier.minSpend())>=0)selected=tier;
-                    memberTier=selected.name();
-                    memberRate=selected.discountRate()==null?BigDecimal.ONE:selected.discountRate();
-                    if(memberRate.signum()<0||memberRate.compareTo(BigDecimal.ONE)>0)memberRate=BigDecimal.ONE;
-                    memberDiscount=gross.multiply(BigDecimal.ONE.subtract(memberRate)).setScale(2,RoundingMode.HALF_UP);
-                    gross=Money.positive(gross.subtract(memberDiscount));
-                    memberDiscount=Money.positive(base.add(extra)).subtract(gross);
-                }
-            }catch(Exception ignored){}
+            BigDecimal net=jdbc.queryForObject(
+                    "SELECT COALESCE(SUM(COALESCE(p.amount,0)-COALESCE(p.refund_amount,0)),0) FROM payment p "+
+                            "JOIN `order` o ON o.id=p.order_id WHERE o.user_id=? AND p.status IN ('PAID','REFUNDED')",
+                    BigDecimal.class,userId);
+            List<MembershipTierRules.Tier> tiers=MembershipTierRules.parseStrict(
+                    configs.getConfigValue("membership.tiers",
+                            "[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1}]"));
+            MembershipTierRules.Tier selected=tiers.get(0);
+            for(MembershipTierRules.Tier tier:tiers)if(net!=null&&net.compareTo(tier.minSpend())>=0)selected=tier;
+            memberTier=selected.name();
+            memberRate=selected.discountRate();
+            memberDiscount=gross.multiply(BigDecimal.ONE.subtract(memberRate)).setScale(2,RoundingMode.HALF_UP);
+            gross=Money.positive(gross.subtract(memberDiscount));
+            memberDiscount=Money.positive(base.add(extra)).subtract(gross);
         }
         Long usedCoupon=null;
         String couponName=null;
@@ -102,5 +96,4 @@ public class OrderPricingService {
         return quote;
     }
 
-    public record MemberTier(String code,String name,BigDecimal minSpend,BigDecimal discountRate){}
 }

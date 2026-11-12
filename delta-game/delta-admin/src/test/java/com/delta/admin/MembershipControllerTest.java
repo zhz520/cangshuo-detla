@@ -1,6 +1,7 @@
 package com.delta.admin;
 
 import com.delta.admin.controller.MembershipController;
+import com.delta.common.membership.MembershipTierRules;
 import com.delta.system.service.SysConfigService;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.*;
@@ -44,7 +45,7 @@ class MembershipControllerTest {
                 "[{\"code\":\"NORMAL\",\"name\":\"普通\",\"minSpend\":0,\"discountRate\":1},{\"code\":\"SILVER\",\"name\":\"白银\",\"minSpend\":500,\"discountRate\":0.98}]");
         var result = controller.current().getData();
         assertThat(result.get("netSpend")).isEqualTo(new java.math.BigDecimal("550.00"));
-        assertThat(((MembershipController.Tier) result.get("tier")).code()).isEqualTo("SILVER");
+        assertThat(((MembershipTierRules.Tier) result.get("tier")).code()).isEqualTo("SILVER");
     }
 
     @Test

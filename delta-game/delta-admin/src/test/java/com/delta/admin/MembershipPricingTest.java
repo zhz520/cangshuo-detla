@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class MembershipPricingTest {
@@ -42,5 +43,27 @@ class MembershipPricingTest {
         assertThat(quote.getMemberTier()).isEqualTo("白银");
         assertThat(quote.getMemberDiscountRate()).isEqualByComparingTo("0.98");
         assertThat(quote.getMemberDiscountAmount()).isEqualByComparingTo("2.00");
+    }
+
+    @Test
+    void invalidMembershipRulesStopTheQuoteInsteadOfSilentlyChargingFullPrice() {
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:pricing-invalid-" + UUID.randomUUID() + ";MODE=MySQL;NON_KEYWORDS=USER;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(ds);
+        jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,user_id BIGINT)");
+        jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(20),amount DECIMAL(12,2),refund_amount DECIMAL(12,2))");
+        ProductService products = mock(ProductService.class);
+        Product product = new Product();
+        product.setId(11L); product.setName("测试商品"); product.setStatus(1); product.setPrice(new BigDecimal("100.00"));
+        when(products.getById(11L)).thenReturn(product);
+        SysConfigService configs = mock(SysConfigService.class);
+        when(configs.getConfigValue("membership.enabled", "false")).thenReturn("true");
+        when(configs.getConfigValue(eq("membership.tiers"), anyString())).thenReturn(
+                "[{\"code\":\"NORMAL\",\"name\":\"普通\",\"minSpend\":100,\"discountRate\":1}]");
+        OrderPricingService pricing = new OrderPricingService(products, mock(CrossModuleMapper.class), configs, jdbc,
+                mock(com.delta.order.service.CouponRedemptionService.class));
+
+        assertThatThrownBy(() -> pricing.quote(11L, null, null, 7L))
+                .hasMessageContaining("最低会员等级门槛");
     }
 }

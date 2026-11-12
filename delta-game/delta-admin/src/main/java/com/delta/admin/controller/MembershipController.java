@@ -1,7 +1,7 @@
 package com.delta.admin.controller;
 
-import com.alibaba.fastjson2.JSON;
 import com.delta.common.domain.R;
+import com.delta.common.membership.MembershipTierRules;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +31,10 @@ public class MembershipController {
                         "JOIN `order` o ON o.id=p.order_id WHERE o.user_id=? AND p.status IN ('PAID','REFUNDED')",
                 BigDecimal.class, userId);
         if (net == null) net = BigDecimal.ZERO;
-        List<Tier> tiers = parseTiers();
-        Tier current = tiers.get(0), next = null;
-        for (Tier tier : tiers) {
+        List<MembershipTierRules.Tier> tiers = MembershipTierRules.parseStrict(
+                configs.getConfigValue("membership.tiers", DEFAULT_TIERS));
+        MembershipTierRules.Tier current = tiers.get(0), next = null;
+        for (MembershipTierRules.Tier tier : tiers) {
             if (net.compareTo(tier.minSpend()) >= 0) current = tier;
             else if (next == null) next = tier;
         }
@@ -46,18 +47,4 @@ public class MembershipController {
         return R.ok(result);
     }
 
-    private List<Tier> parseTiers() {
-        try {
-            List<Tier> parsed = JSON.parseArray(configs.getConfigValue("membership.tiers", DEFAULT_TIERS), Tier.class);
-            if (parsed != null && !parsed.isEmpty()) {
-                parsed.sort(Comparator.comparing(Tier::minSpend));
-                return parsed;
-            }
-        } catch (Exception ignored) {}
-        List<Tier> fallback = JSON.parseArray(DEFAULT_TIERS, Tier.class);
-        fallback.sort(Comparator.comparing(Tier::minSpend));
-        return fallback;
-    }
-
-    public record Tier(String code, String name, BigDecimal minSpend, BigDecimal discountRate) {}
 }
