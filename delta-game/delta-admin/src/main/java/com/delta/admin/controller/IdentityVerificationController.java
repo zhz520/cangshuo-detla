@@ -1,6 +1,7 @@
 package com.delta.admin.controller;
 
 import com.delta.admin.platform.PlatformService;
+import com.delta.admin.service.IdentityBillingClient;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
@@ -50,6 +51,8 @@ public class IdentityVerificationController {
     private final PlatformService platform;
     private final org.springframework.context.ApplicationEventPublisher events;
     private final com.delta.common.security.service.RateLimitService limits;
+    private final com.delta.system.service.SysConfigService configs;
+    private final IdentityBillingClient identityBilling;
 
     @Value("${identity.hash-pepper}")
     private String hashPepper;
@@ -58,11 +61,13 @@ public class IdentityVerificationController {
 
     public record StatusView(boolean available, String reason, String status, String realName,
                              String idNumberMasked, String reviewNote, String submittedAt, String reviewedAt,
-                             boolean hasFrontImage, boolean hasBackImage) {}
+                             boolean hasFrontImage, boolean hasBackImage,
+                             boolean autoAvailable, String autoReason) {}
     public record SubmitRequest(@NotBlank @Size(max = 64) String realName,
                                 @NotBlank @Pattern(regexp = "[1-9][0-9]{16}[0-9Xx]", message = "请输入有效的18位身份证号码") String idNumber,
                                 boolean privacyAccepted) {}
     public record ReviewRequest(boolean approved, @Size(max = 500) String note) {}
+    public record AutoVerifyView(boolean matched, String status, String message) {}
     private record EncodedImage(String base64, String mimeType) {}
     private record FeatureAccess(boolean available, String reason) {}
 
@@ -77,7 +82,8 @@ public class IdentityVerificationController {
         return R.ok(new StatusView(true, "", Objects.toString(value(row, "status"), "NOT_SUBMITTED"),
                 Objects.toString(value(row, "real_name"), ""), Objects.toString(value(row, "id_number_masked"), ""),
                 Objects.toString(value(row, "review_note"), ""), time(value(row, "submitted_at")), time(value(row, "reviewed_at")),
-                number(value(row, "has_front")) > 0, number(value(row, "has_back")) > 0));
+                number(value(row, "has_front")) > 0, number(value(row, "has_back")) > 0,
+                autoAvailable(), autoReason()));
     }
 
     @PostMapping("/user/identity/image")
@@ -130,6 +136,45 @@ public class IdentityVerificationController {
             throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
         }
         return R.ok();
+    }
+
+    @PostMapping("/user/identity/auto-verify")
+    @Transactional(rollbackFor = Exception.class)
+    @OpLog(module = "identity", operation = "提交自动二要素实名核验")
+    public R<AutoVerifyView> autoVerify(@Valid @RequestBody SubmitRequest body, HttpServletRequest request) {
+        requireAccess(request);
+        if (!autoEnabled()) throw new BusinessException(403, "自动实名核验尚未启用");
+        if (!identityBilling.configured()) throw new BusinessException(503, "实名核验计费通道尚未配置");
+        if (!body.privacyAccepted()) throw new BusinessException(400, "请先阅读并同意实名认证隐私说明");
+        String realName = body.realName().trim();
+        if (!realName.matches("[\\p{IsHan}A-Za-z·. ]{2,32}")) throw new BusinessException(400, "真实姓名格式不正确");
+        String idNumber = validateIdNumber(body.idNumber());
+        Long userId = SecurityUtils.getUserId();
+        limits.check("identity-auto:" + userId, 10, 3600);
+        String idHash = hash(idNumber);
+        var duplicate = jdbc.queryForList("SELECT user_id FROM identity_verification WHERE id_number_hash=? AND user_id<>? LIMIT 1", idHash, userId);
+        if (!duplicate.isEmpty()) throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
+        var existing = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=? FOR UPDATE", userId);
+        if (!existing.isEmpty() && Set.of("PENDING", "APPROVED").contains(String.valueOf(value(existing.get(0), "status"))))
+            throw new BusinessException(409, "实名资料正在审核或已通过，请勿重复提交");
+
+        IdentityBillingClient.Result result = identityBilling.verify(userId, realName, idNumber);
+        if (!result.matched()) throw new BusinessException(422, "姓名与证件号码不一致，请核对后重试");
+
+        try {
+            if (existing.isEmpty()) {
+                jdbc.update("INSERT INTO identity_verification(user_id,real_name,id_number_hash,id_number_masked,status,privacy_version,privacy_accepted_at,review_note,submitted_at,reviewed_at) VALUES(?,?,?,?,'APPROVED',?,CURRENT_TIMESTAMP,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                        userId, realName, idHash, maskId(idNumber), PRIVACY_VERSION, "授权中心二要素核验通过");
+            } else {
+                jdbc.update("UPDATE identity_verification SET real_name=?,id_number_hash=?,id_number_masked=?,status='APPROVED',privacy_version=?,privacy_accepted_at=CURRENT_TIMESTAMP,review_note=?,reviewer_id=NULL,submitted_at=CURRENT_TIMESTAMP,reviewed_at=CURRENT_TIMESTAMP,front_image=NULL,front_mime=NULL,back_image=NULL,back_mime=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
+                        realName, idHash, maskId(idNumber), PRIVACY_VERSION, "授权中心二要素核验通过", userId);
+            }
+        } catch (DuplicateKeyException error) {
+            throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
+        }
+        events.publishEvent(new com.delta.common.event.BusinessEvent(this, "IDENTITY_REVIEWED", "USER", userId, null,
+                "实名认证已通过。"));
+        return R.ok(new AutoVerifyView(true, "APPROVED", "实名认证已通过"));
     }
 
     @GetMapping("/admin/identity/applications")
@@ -201,8 +246,23 @@ public class IdentityVerificationController {
     }
 
     private StatusView emptyStatus(String reason) {
+        boolean auto = reason == null || reason.isBlank() ? autoAvailable() : false;
         return new StatusView(reason == null || reason.isBlank(), reason == null ? "" : reason,
-                reason == null || reason.isBlank() ? "NOT_SUBMITTED" : "UNAVAILABLE", "", "", "", null, null, false, false);
+                reason == null || reason.isBlank() ? "NOT_SUBMITTED" : "UNAVAILABLE", "", "", "", null, null, false, false,
+                auto, auto ? "" : autoReason());
+    }
+
+    private boolean autoEnabled() {
+        return "true".equalsIgnoreCase(configs.getConfigValue("identity.auto.enabled", "false"));
+    }
+
+    private boolean autoAvailable() {
+        return autoEnabled() && identityBilling.configured();
+    }
+
+    private String autoReason() {
+        if (!autoEnabled()) return "当前使用人工证件审核";
+        return identityBilling.configured() ? "" : "自动实名核验通道尚未配置";
     }
 
     private EncodedImage encode(MultipartFile file) throws Exception {

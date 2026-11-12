@@ -3,6 +3,7 @@ package com.delta.admin;
 import com.delta.admin.controller.IdentityVerificationController;
 import com.delta.admin.platform.PlatformService;
 import com.delta.admin.service.IdentityVerificationCleanup;
+import com.delta.admin.service.IdentityBillingClient;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;
 import com.delta.common.security.filter.JwtAuthenticationFilter;
@@ -11,6 +12,7 @@ import com.delta.common.security.handler.AuthenticationEntryPointImpl;
 import com.delta.common.security.service.RateLimitService;
 import com.delta.common.security.service.StaffPermissions;
 import com.delta.common.security.service.TokenService;
+import com.delta.system.service.SysConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +69,8 @@ class IdentityVerificationIntegrationTest {
     @MockBean TokenService tokens;
     @MockBean PlatformService platform;
     @MockBean RateLimitService limits;
+    @MockBean SysConfigService configs;
+    @MockBean IdentityBillingClient identityBilling;
 
     @BeforeEach void enableFeature() {
         doNothing().when(platform).requireFeature(eq("identity_verification"), anyString());
@@ -151,6 +155,26 @@ class IdentityVerificationIntegrationTest {
         verify(platform).requireFeature("identity_verification", "localhost");
         mvc.perform(get("/admin/identity/applications").with(role("CS",2)))
                 .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test void autoVerificationMarksTheAccountApprovedWithoutStoringDocumentImages() throws Exception {
+        when(configs.getConfigValue("identity.auto.enabled", "false")).thenReturn("true");
+        when(identityBilling.configured()).thenReturn(true);
+        when(identityBilling.verify(7L, "张三", "11010519491231002X"))
+                .thenReturn(new IdentityBillingClient.Result(true, "CHARGED", 900));
+
+        mvc.perform(post("/user/identity/auto-verify").with(role("USER", 7)).contentType("application/json")
+                        .content("{\"realName\":\"张三\",\"idNumber\":\"11010519491231002X\",\"privacyAccepted\":true}"))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.matched").value(true));
+
+        var row = jdbc.queryForMap("SELECT status,real_name,id_number_masked,front_image,back_image,review_note FROM identity_verification WHERE user_id=7");
+        assertThat(row.get("status")).isEqualTo("APPROVED");
+        assertThat(row.get("real_name")).isEqualTo("张三");
+        assertThat(row.get("id_number_masked")).isEqualTo("110***********002X");
+        assertThat(row.get("front_image")).isNull();
+        assertThat(row.get("back_image")).isNull();
+        assertThat(String.valueOf(row.get("review_note"))).contains("二要素核验");
     }
 
     private void uploadBoth(long userId) throws Exception {

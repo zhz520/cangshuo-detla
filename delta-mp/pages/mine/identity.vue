@@ -20,7 +20,7 @@
           <text class="label">身份证号码</text>
           <input v-model="form.idNumber" maxlength="18" placeholder="请输入18位身份证号码" />
         </view>
-        <view class="upload-section">
+        <view v-if="!status.autoAvailable" class="upload-section">
           <text class="label">身份证照片</text>
           <text class="upload-tip">照片仅用于人工审核，审核完成后自动清除。</text>
           <view class="upload-grid">
@@ -33,10 +33,11 @@
         </view>
         <view class="agreement" @click="form.privacyAccepted=!form.privacyAccepted">
           <text class="checkbox">{{ form.privacyAccepted ? '☑' : '☐' }}</text>
-          <text>我同意平台仅为实名认证目的处理姓名、证件号码和证件照片，并知悉审核完成后证件照片会被清除。</text>
+          <text v-if="status.autoAvailable">我同意平台仅为实名认证目的处理姓名和证件号码；本次核验费用由平台承担，不向用户单独收费。</text>
+          <text v-else>我同意平台仅为实名认证目的处理姓名、证件号码和证件照片，并知悉审核完成后证件照片会被清除。</text>
         </view>
       </view>
-      <button class="submit-btn" :loading="submitting" @click="submit">提交实名认证</button>
+      <button class="submit-btn" :loading="submitting" @click="submit">{{ status.autoAvailable ? '核验并完成实名' : '提交实名认证' }}</button>
     </template>
 
     <view v-else-if="status.status==='PENDING'" class="info-card">
@@ -53,20 +54,20 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getIdentityStatus, submitIdentityVerification, uploadIdentityImage } from '@/api/user'
+import { autoVerifyIdentity, getIdentityStatus, submitIdentityVerification, uploadIdentityImage } from '@/api/user'
 
-const status=ref({available:false,status:'UNAVAILABLE',reason:'',realName:'',idNumberMasked:'',reviewNote:'',submittedAt:'',reviewedAt:'',hasFrontImage:false,hasBackImage:false})
+const status=ref({available:false,status:'UNAVAILABLE',reason:'',realName:'',idNumberMasked:'',reviewNote:'',submittedAt:'',reviewedAt:'',hasFrontImage:false,hasBackImage:false,autoAvailable:false,autoReason:''})
 const form=reactive({realName:'',idNumber:'',privacyAccepted:false})
 const uploading=ref(''),submitting=ref(false),previews=reactive({front:'',back:''}),uploaded=reactive({front:false,back:false})
 const uploadItems=computed(()=>[{side:'front',label:'身份证人像面',preview:previews.front,uploaded:uploaded.front},{side:'back',label:'身份证国徽面',preview:previews.back,uploaded:uploaded.back}])
 const canSubmit=computed(()=>status.value.available&&['NOT_SUBMITTED','DRAFT','REJECTED'].includes(status.value.status))
 const statusTitle=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJECTED:'审核未通过',DRAFT:'资料填写中',NOT_SUBMITTED:'未认证',UNAVAILABLE:'功能未开通'}[status.value.status]||'未认证'))
-const statusDescription=computed(()=>({APPROVED:'实名资料已通过管理员审核。',PENDING:'资料已提交，审核期间不能修改。',REJECTED:'请根据审核说明修改后重新提交。',DRAFT:'请完成资料和证件照片后提交。',NOT_SUBMITTED:'提交实名资料后由管理员人工审核。',UNAVAILABLE:status.value.reason||'实名认证功能尚未开通。'}[status.value.status]||''))
+const statusDescription=computed(()=>({APPROVED:'实名资料已通过审核。',PENDING:'资料已提交，审核期间不能修改。',REJECTED:'请根据审核说明修改后重新提交。',DRAFT:status.value.autoAvailable?'填写姓名和证件号码后完成核验。':'请完成资料和证件照片后提交。',NOT_SUBMITTED:status.value.autoAvailable?'填写姓名和证件号码，系统将进行权威二要素核验。':'提交实名资料后由管理员人工审核。',UNAVAILABLE:status.value.reason||'实名认证功能尚未开通。'}[status.value.status]||''))
 const statusClass=computed(()=>({approved:status.value.status==='APPROVED',pending:status.value.status==='PENDING',rejected:status.value.status==='REJECTED'}))
 
 async function load(){
   const response=await getIdentityStatus({loading:false})
-  status.value=Object.assign({available:false,status:'UNAVAILABLE',reason:'',realName:'',idNumberMasked:'',reviewNote:'',submittedAt:'',reviewedAt:'',hasFrontImage:false,hasBackImage:false},response.data||{})
+  status.value=Object.assign({available:false,status:'UNAVAILABLE',reason:'',realName:'',idNumberMasked:'',reviewNote:'',submittedAt:'',reviewedAt:'',hasFrontImage:false,hasBackImage:false,autoAvailable:false,autoReason:''},response.data||{})
   form.realName=status.value.realName||form.realName
   uploaded.front=!!status.value.hasFrontImage
   uploaded.back=!!status.value.hasBackImage
@@ -95,10 +96,15 @@ async function submit(){
   if(submitting.value)return
   if(!form.realName.trim())return uni.showToast({title:'请输入真实姓名',icon:'none'})
   if(!validId(form.idNumber))return uni.showToast({title:'请输入有效的身份证号码',icon:'none'})
-  if(!uploaded.front||!uploaded.back)return uni.showToast({title:'请上传身份证正反面照片',icon:'none'})
+  if(!status.value.autoAvailable&&(!uploaded.front||!uploaded.back))return uni.showToast({title:'请上传身份证正反面照片',icon:'none'})
   if(!form.privacyAccepted)return uni.showToast({title:'请先同意实名认证隐私说明',icon:'none'})
   submitting.value=true
-  try{await submitIdentityVerification({realName:form.realName.trim(),idNumber:form.idNumber.trim().toUpperCase(),privacyAccepted:true});await load();form.idNumber='';uni.showToast({title:'已提交审核',icon:'success'})}
+  try{
+    const payload={realName:form.realName.trim(),idNumber:form.idNumber.trim().toUpperCase(),privacyAccepted:true}
+    if(status.value.autoAvailable)await autoVerifyIdentity(payload)
+    else await submitIdentityVerification(payload)
+    await load();form.idNumber='';uni.showToast({title:status.value.autoAvailable?'实名认证已通过':'已提交审核',icon:'success'})
+  }
   finally{submitting.value=false}
 }
 

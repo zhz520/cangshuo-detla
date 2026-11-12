@@ -26,6 +26,7 @@ class DisplayControllerTest {
         jdbc.execute("CREATE TABLE `user`(id BIGINT PRIMARY KEY,nickname VARCHAR(64),avatar VARCHAR(512),is_guest INT)");
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,user_id BIGINT,product_name VARCHAR(128),status VARCHAR(32),created_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32),amount DECIMAL(12,2),refund_amount DECIMAL(12,2),paid_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE display_privacy(user_id BIGINT PRIMARY KEY,spend_rank_visible INT,purchase_feed_consent INT,updated_at TIMESTAMP)");
         configs = mock(SysConfigService.class);
         controller = new DisplayController(jdbc, configs);
     }
@@ -50,5 +51,32 @@ class DisplayControllerTest {
         var result = controller.feed(20).getData();
         assertThat(result.get("enabled")).isEqualTo(false);
         assertThat((java.util.List<?>) result.get("items")).isEmpty();
+    }
+
+    @Test
+    void rankingHonorsTheUsersOptOut() {
+        jdbc.update("INSERT INTO `user` VALUES(1,'小明','',0),(2,'小红','',0)");
+        jdbc.update("INSERT INTO `order` VALUES(10,1,'陪玩','PAID',CURRENT_TIMESTAMP),(11,2,'陪玩','PAID',CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO payment VALUES(1,10,'PAID',100,0,CURRENT_TIMESTAMP),(2,11,'PAID',50,0,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO display_privacy VALUES(1,0,0,CURRENT_TIMESTAMP)");
+        when(configs.getConfigValue("display.spend_rank.enabled", "false")).thenReturn("true");
+
+        var items = (java.util.List<?>) controller.spending(20).getData().get("items");
+
+        assertThat(items).hasSize(1);
+        assertThat(((java.util.Map<?,?>) items.get(0)).get("nickname")).isEqualTo("小**");
+    }
+
+    @Test
+    void purchaseFeedRequiresExplicitConsent() {
+        jdbc.update("INSERT INTO `user` VALUES(1,'小明','',0),(2,'小红','',0)");
+        jdbc.update("INSERT INTO `order` VALUES(10,1,'陪玩','PAID',CURRENT_TIMESTAMP),(11,2,'陪玩','PAID',CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO display_privacy VALUES(2,1,1,CURRENT_TIMESTAMP)");
+        when(configs.getConfigValue("display.purchase_feed.enabled", "false")).thenReturn("true");
+
+        var items = (java.util.List<?>) controller.feed(20).getData().get("items");
+
+        assertThat(items).hasSize(1);
+        assertThat(((java.util.Map<?,?>) items.get(0)).get("nickname")).isEqualTo("小**");
     }
 }

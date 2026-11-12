@@ -33,6 +33,7 @@ export const deleteSavedInfo = (id) => del(`/user/game-info/${id}`, {}, { role: 
 export const getIdentityStatus = (opts = {}) => get('/user/identity/status', {}, { role: 'user', ...opts })
 export const uploadIdentityImage = (filePath, side) => uploadFile(filePath, `/user/identity/image?side=${encodeURIComponent(side)}`, { role: 'user' })
 export const submitIdentityVerification = data => post('/user/identity/submit', data, { role: 'user' })
+export const autoVerifyIdentity = data => post('/user/identity/auto-verify', data, { role: 'user' })
 
 /** 商品收藏 */
 export const getFavoriteStatus = productId => get(`/user/favorites/${productId}/status`, {}, { role: 'user', loading: false })

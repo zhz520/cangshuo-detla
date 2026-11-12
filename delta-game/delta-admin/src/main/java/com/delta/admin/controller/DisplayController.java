@@ -27,7 +27,9 @@ public class DisplayController {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT u.id,u.nickname,u.avatar,SUM(COALESCE(p.amount,0)-COALESCE(p.refund_amount,0)) spend " +
                         "FROM payment p JOIN `order` o ON o.id=p.order_id JOIN `user` u ON u.id=o.user_id " +
+                        "LEFT JOIN display_privacy dp ON dp.user_id=u.id " +
                         "WHERE p.status IN ('PAID','REFUNDED') AND p.paid_at>=? AND COALESCE(u.is_guest,0)=0 " +
+                        "AND COALESCE(dp.spend_rank_visible,1)=1 " +
                         "GROUP BY u.id,u.nickname,u.avatar HAVING spend>0 ORDER BY spend DESC,u.id ASC LIMIT ?",
                 start, size);
         for (Map<String, Object> row : rows) {
@@ -48,6 +50,7 @@ public class DisplayController {
         LocalDateTime since = LocalDateTime.now().minusHours(24);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT u.nickname,u.avatar,o.product_name,o.created_at FROM `order` o JOIN `user` u ON u.id=o.user_id " +
+                        "JOIN display_privacy dp ON dp.user_id=u.id AND dp.purchase_feed_consent=1 " +
                         "WHERE o.status IN ('PAID','ASSIGNED','ACCEPTED','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED') " +
                         "AND COALESCE(u.is_guest,0)=0 AND o.created_at>=? ORDER BY o.created_at DESC LIMIT ?",
                 since, size);
