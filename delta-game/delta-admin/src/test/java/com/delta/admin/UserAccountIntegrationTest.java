@@ -146,13 +146,17 @@ class UserAccountIntegrationTest {
         doThrow(new BusinessException(400,"验证码错误")).when(verification).verifyLoginCaptcha(any(),any(),any());
         mvc.perform(post("/user/auth/password-login").contentType("application/json").content(loginBody("13900000007",PASSWORD))).andExpect(jsonPath("$.code").value(400));
     }
-    @Test void bannedOrDeletedUsersCannotRegainAccessBySmsRegistration()throws Exception{
+    @Test void bannedUsersStayBlockedWhileDeletedPhoneCanRegisterAgain()throws Exception{
         jdbc.update("UPDATE `user` SET status=0 WHERE id=7");
         mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
                 .andExpect(jsonPath("$.code").value(403));
-        jdbc.update("UPDATE `user` SET deleted=1 WHERE id=7");
+        jdbc.update("UPDATE `user` SET status=1,deleted=1 WHERE id=7");
         mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
-                .andExpect(jsonPath("$.code").value(403));
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(true));
+        assertThat(jdbc.queryForObject("SELECT deleted FROM `user` WHERE id=7",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT phone FROM `user` WHERE id=7",String.class)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT openid FROM `user` WHERE id=7",String.class)).isEqualTo("closed:7");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone='13900000007' AND deleted=0",Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone='13900000007'",Integer.class)).isEqualTo(1);
     }
     @Test void onlyAdminCanCreateEditDeleteAndHashesNeverAppearInResponses()throws Exception{
@@ -167,6 +171,11 @@ class UserAccountIntegrationTest {
         mvc.perform(put("/admin/user/"+id).with(role("ADMIN",1)).contentType("application/json").content(adminBody("13800000101",""))).andExpect(jsonPath("$.data.phone").value("13800000101"));
         mvc.perform(delete("/admin/user/"+id).with(role("ADMIN",1))).andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT deleted FROM `user` WHERE id=?",Integer.class,id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT phone FROM `user` WHERE id=?",String.class,id)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT openid FROM `user` WHERE id=?",String.class,id)).isEqualTo("closed:"+id);
+        mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13800000101\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone='13800000101' AND deleted=0",Integer.class)).isEqualTo(1);
         String audit=jdbc.queryForObject("SELECT GROUP_CONCAT(detail) FROM operation_log WHERE module='user'",String.class);assertThat(audit).doesNotContain(PASSWORD).doesNotContain("$2a$");
     }
     @Test void passwordResetPhoneChangeAndBanUnbanInvalidateExistingSessions()throws Exception{

@@ -268,6 +268,13 @@ public class AdminPlayerController {
         return R.ok();
     }
 
+    @OpLog(module = "player", operation = "删除打手（保留历史）")
+    @DeleteMapping("/{id}")
+    public R<Void> delete(@PathVariable Long id) {
+        playerService.deleteSafely(id);
+        return R.ok();
+    }
+
     @OpLog(module = "player", operation = "更新打手信息")
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)

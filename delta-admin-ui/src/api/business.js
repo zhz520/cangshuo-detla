@@ -53,6 +53,9 @@ export function adminPlayerFreeze(id, data) {
 export function adminPlayerUnfreeze(id) {
   return request({ url: `/admin/player/${id}/unfreeze`, method: 'put' })
 }
+export function adminPlayerDelete(id) {
+  return request({ url: `/admin/player/${id}`, method: 'delete' })
+}
 export const adminPlayerBatchApprove = ids => request.post('/admin/player/batch/approve', { ids })
 export const adminPlayerBatchReject = (ids, reason) => request.post('/admin/player/batch/reject', { ids, reason })
 export const adminPlayerBatchLevel = (ids, levelId) => request.post('/admin/player/batch/level', { ids, levelId })

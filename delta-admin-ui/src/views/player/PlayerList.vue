@@ -44,7 +44,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="360" :fixed="isCompact ? false : 'right'">
+        <el-table-column label="操作" width="410" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button link type="primary" @click="openEditDialog(row)">{{ isAdmin ? '编辑' : '改名' }}</el-button>
@@ -59,6 +59,7 @@
             <el-popconfirm v-if="row.status === 'FROZEN'" title="确认解冻？" @confirm="handleUnfreeze(row.id)">
               <template #reference><el-button link type="success">解冻</el-button></template>
             </el-popconfirm>
+            <el-button v-if="isAdmin" link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -232,7 +233,7 @@ import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
@@ -342,6 +343,20 @@ async function handleUnfreeze(id) {
   if (isAdmin) await adminPlayerUnfreeze(id)
   else await adminPlayerUpdateStatus(id, 'ACTIVE')
   ElMessage.success('已解冻'); fetchData()
+}
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除打手“${row.nickname || row.id}”？删除后保留历史订单和资金记录，并释放手机号与登录标识；有余额、冻结金额、进行中订单、未完成提现、未处理投诉或待追回打赏时不能删除。`,
+      '删除打手',
+      { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+    )
+  } catch (_) { return }
+  await adminPlayerDelete(row.id)
+  ElMessage.success('打手已删除')
+  if (detailVisible.value && detailData.value?.id === row.id) detailVisible.value = false
+  clearSelection()
+  await fetchData()
 }
 const detailVisible = ref(false), detailData = ref(null), detailLoading = ref(false)
 const transactionLoading = ref(false)

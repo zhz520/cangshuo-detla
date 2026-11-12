@@ -99,6 +99,8 @@ public class UserManagementService {
                 .notIn(Order::getStatus,"CONFIRMED","REVIEWED","CANCELLED","REFUNDED","ARBITRATED"))>0) throw new BusinessException(409,"用户或关联打手仍有未完成订单，请先处理");
         if(payments.count(new LambdaQueryWrapper<Payment>().eq(Payment::getUserId,id).in(Payment::getStatus,"PENDING","PAYING","REFUNDING"))>0) throw new BusinessException(409,"用户仍有未完成支付或退款");
         var before=snapshot(user);user.setStatus(0);user.setAuthVersion((user.getAuthVersion()==null?0:user.getAuthVersion())+1);users.updateById(user);users.removeById(id);
+        // Keep the user id and history, but release the unique login identifiers for future registration.
+        mapper.archiveDeletedUser(id);
         jdbc.update("DELETE FROM identity_verification WHERE user_id=?",id);
         if(player!=null){Player update=new Player();update.setId(player.getId());update.setStatus("FROZEN");update.setIsOnline(0);players.updateById(update);}
         audit("删除用户（保留业务记录）",id,before,Map.of("deleted",true,"historyRetained",true));

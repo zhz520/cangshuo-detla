@@ -2,8 +2,8 @@
   "name": "三角洲",
   "appid": "",
   "description": "三角洲游戏服务平台",
-  "versionName": "1.14.6",
-  "versionCode": 195,
+  "versionName": "1.14.7",
+  "versionCode": 196,
   "transformPx": false,
   "vueVersion": "3",
   "mp-weixin": {

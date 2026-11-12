@@ -51,6 +51,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User loginOrRegister(String openid, String nickname, String avatar) {
         User user = getByOpenid(openid);
         if (user == null) {
+            // A deleted WeChat account must not keep the unique openid reserved forever.
+            baseMapper.releaseDeletedOpenid(openid);
             user = new User();
             user.setOpenid(openid);
             user.setNickname((nickname != null && !nickname.isEmpty()) ? nickname : generateRandomNickname());
@@ -73,6 +75,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User loginOrRegisterByPhone(String phone) {
         User user = getByPhone(phone);
         if (user == null) {
+            // Release the verified phone from a deleted account before checking reservations.
+            // The deleted row and its order history stay in place; only login identifiers are archived.
+            baseMapper.releaseDeletedPhone(phone);
             if(baseMapper.countReservedPhone(phone,null)>0) throw new com.delta.common.exception.BusinessException(403,"账号暂不可用，请联系客服");
             user = new User();
             user.setOpenid("h5:" + phone);

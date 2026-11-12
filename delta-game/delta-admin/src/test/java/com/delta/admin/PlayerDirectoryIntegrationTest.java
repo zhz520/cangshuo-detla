@@ -229,6 +229,49 @@ class PlayerDirectoryIntegrationTest {
         mvc.perform(get("/app/players/1")).andExpect(jsonPath("$.data.priceIncreaseRate").value(10));
     }
 
+    @Test void adminCanDeletePlayerOnlyAfterWorkAndFundsAreClear() throws Exception {
+        jdbc.execute("CREATE TABLE IF NOT EXISTS order_player(order_id BIGINT,player_id BIGINT,status VARCHAR(20))");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS withdraw(id BIGINT AUTO_INCREMENT PRIMARY KEY,player_id BIGINT,status VARCHAR(20))");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS complaint(id BIGINT AUTO_INCREMENT PRIMARY KEY,player_id BIGINT,status VARCHAR(20))");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS player_reward(id BIGINT AUTO_INCREMENT PRIMARY KEY,player_id BIGINT,user_id BIGINT,status VARCHAR(20))");
+
+        mvc.perform(delete("/admin/player/1").with(role("CS",1)))
+                .andExpect(jsonPath("$.code").value(403));
+        var wallet = new com.delta.player.entity.PlayerWallet();
+        wallet.setBalance(new java.math.BigDecimal("1"));
+        when(wallets.getByPlayerId(1L)).thenReturn(wallet);
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        when(wallets.getByPlayerId(1L)).thenReturn(null);
+
+        jdbc.update("INSERT INTO `order`(id,order_no,user_id,player_id,product_id,product_name,status) VALUES(101,'ORDER101',7,1,11,'进行中','ACCEPTED')");
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("UPDATE `order` SET status='CONFIRMED' WHERE id=101");
+
+        jdbc.update("INSERT INTO withdraw(player_id,status) VALUES(1,'PENDING')");
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("UPDATE withdraw SET status='COMPLETED' WHERE player_id=1");
+
+        jdbc.update("INSERT INTO complaint(player_id,status) VALUES(1,'PENDING')");
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("UPDATE complaint SET status='RESOLVED' WHERE player_id=1");
+
+        jdbc.update("INSERT INTO player_reward(player_id,user_id,status) VALUES(1,NULL,'REVERSAL_PENDING')");
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        jdbc.update("UPDATE player_reward SET status='COMPLETED' WHERE player_id=1");
+
+        mvc.perform(delete("/admin/player/1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT deleted FROM player WHERE id=1", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT phone FROM player WHERE id=1", String.class)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT openid FROM player WHERE id=1", String.class)).isEqualTo("closed:1");
+        assertThat(jdbc.queryForObject("SELECT nickname FROM player WHERE id=1", String.class)).isEqualTo("已注销打手");
+    }
+
     @Test void directChatUsesAuthenticatedUserAndActiveTargetWithoutAnOrder() throws Exception {
         ChatSession session=new ChatSession();session.setId(123L);
         when(sessions.findOrCreate(1000000007L,2000000001L)).thenReturn(session);
