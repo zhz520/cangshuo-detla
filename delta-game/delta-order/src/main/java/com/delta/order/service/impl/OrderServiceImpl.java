@@ -328,6 +328,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException("当前状态不允许开始服务");
         }
         if (!playerId.equals(order.getPlayerId())) throw new BusinessException("只有主接打手可以开始服务");
+        int requiredTeam = Math.max(0, (order.getRequiredPlayerCount() == null ? 1 : order.getRequiredPlayerCount()) - 1);
+        long acceptedTeam = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, orderId)
+                .eq(OrderPlayer::getRole, "TEAMMATE")
+                .eq(OrderPlayer::getStatus, "ACCEPTED"));
+        if (acceptedTeam < requiredTeam) {
+            throw new BusinessException(409, "队伍尚未满员，还需" + (requiredTeam - acceptedTeam) + "名队友");
+        }
         // 自动作废未响应的队友邀请
         List<OrderPlayer> pendingInvites = orderPlayerService.list(
                 new LambdaQueryWrapper<OrderPlayer>()

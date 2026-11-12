@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -260,6 +262,8 @@ public class PlayerOrderController {
                 .eq(OrderPlayer::getStatus, "INVITED"));
         if (pendingInvite > 0) return R.fail("已有未响应的邀请，请等待或取消后重新邀请");
 
+        validateTeamAllocation(order, splitType, req.getCustomAmount());
+
         OrderPlayer op = new OrderPlayer();
         op.setOrderId(orderId);
         op.setPlayerId(req.getInviteePlayerId());
@@ -338,17 +342,24 @@ public class PlayerOrderController {
         // 创建打手-队友私聊会话（编码ID：PLAYER=2e9+id）
         chatSessionService.findOrCreate(ChatParticipantId.encodePlayer(order.getPlayerId()), ChatParticipantId.encodePlayer(playerId));
 
-        // 队友接受后，订单回到 ACCEPTED（主打手可继续邀请更多队友或开始服务）
-        if (OrderStatusEnum.WAITING_TEAMMATE.name().equals(order.getStatus())) {
-            order.setStatus(OrderStatusEnum.ACCEPTED.name());
+        long acceptedTeam = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, orderId)
+                .eq(OrderPlayer::getRole, "TEAMMATE")
+                .eq(OrderPlayer::getStatus, "ACCEPTED"));
+        boolean teamReady = acceptedTeam >= requiredTeam;
+        if (!OrderStatusEnum.IN_PROGRESS.name().equals(order.getStatus())) {
+            order.setStatus(teamReady ? OrderStatusEnum.ACCEPTED.name() : OrderStatusEnum.WAITING_TEAMMATE.name());
             order.setUpdatedAt(LocalDateTime.now());
             orderService.updateById(order);
         }
-        // 通知主接打手和用户
         eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_ACCEPTED",
-                "PLAYER", order.getPlayerId(), orderId, "队友已加入，可以开始服务"));
-        eventPublisher.publishEvent(new BusinessEvent(this, "TEAM_READY",
-                "USER", order.getUserId(), orderId, "打手已组队完成"));
+                "PLAYER", order.getPlayerId(), orderId,
+                teamReady ? "队友已加入，队伍已满员，可以开始服务"
+                        : "队友已加入，队伍还需" + (requiredTeam - acceptedTeam) + "名队友"));
+        if (teamReady && !OrderStatusEnum.IN_PROGRESS.name().equals(order.getStatus())) {
+            eventPublisher.publishEvent(new BusinessEvent(this, "TEAM_READY",
+                    "USER", order.getUserId(), orderId, "打手已组队完成"));
+        }
         return R.ok();
     }
 
@@ -577,6 +588,44 @@ public class PlayerOrderController {
         progress.setContent(content);
         progress.setCreatedAt(LocalDateTime.now());
         orderProgressService.save(progress);
+    }
+
+    private void validateTeamAllocation(Order order, String splitType, BigDecimal customAmount) {
+        int requiredTeam = Math.max(0, (order.getRequiredPlayerCount() == null ? 1 : order.getRequiredPlayerCount()) - 1);
+        if (requiredTeam <= 0) throw new BusinessException(409, "单人订单无需邀请队友");
+        BigDecimal commissionRate = order.getCommissionRate() != null
+                ? order.getCommissionRate()
+                : new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
+        if (commissionRate.signum() < 0 || commissionRate.compareTo(BigDecimal.ONE) > 0)
+            throw new BusinessException("抽佣比例无效");
+        BigDecimal playerTotal = order.getAmount()
+                .multiply(BigDecimal.ONE.subtract(commissionRate))
+                .setScale(2, RoundingMode.HALF_UP);
+        if (playerTotal.signum() <= 0) throw new BusinessException(409, "订单没有可分配的收益");
+
+        List<OrderPlayer> participants = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, order.getId())
+                .in(OrderPlayer::getRole, "TEAMMATE", "RELAY_OUT")
+                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
+        long relayOutCount = participants.stream().filter(item -> "RELAY_OUT".equals(item.getRole())).count();
+        int sharingPeople = requiredTeam + (int) relayOutCount;
+        BigDecimal reserved = participants.stream()
+                .map(item -> estimatedShare(item.getSplitType(), item.getSplitAmount(), playerTotal, sharingPeople))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        reserved = reserved.add(estimatedShare(splitType, customAmount, playerTotal, sharingPeople));
+        if (reserved.compareTo(playerTotal) > 0)
+            throw new BusinessException(409, "队伍分成总额超过可结算收益");
+    }
+
+    private BigDecimal estimatedShare(String splitType, BigDecimal customAmount,
+                                      BigDecimal playerTotal, int sharingPeople) {
+        if ("CUSTOM".equals(splitType))
+            return customAmount == null ? BigDecimal.ZERO : customAmount.setScale(2, RoundingMode.HALF_UP);
+        if ("FORTY_SIXTY".equals(splitType))
+            return playerTotal.multiply(new BigDecimal("0.4")).setScale(2, RoundingMode.HALF_UP);
+        if ("THIRTY_SEVENTY".equals(splitType))
+            return playerTotal.multiply(new BigDecimal("0.3")).setScale(2, RoundingMode.HALF_UP);
+        return playerTotal.divide(BigDecimal.valueOf(sharingPeople + 1L), 2, RoundingMode.HALF_UP);
     }
 
     /** 解析逗号分隔的分类 id 为 List，忽略无效值 */

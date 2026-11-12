@@ -159,6 +159,44 @@ class PlayerBusinessRegressionTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_progress WHERE order_id=200 AND type='TEAMMATE_ACCEPTED'", Integer.class)).isEqualTo(1);
     }
 
+    @Test void multiMemberTeamBecomesReadyOnlyAfterEveryRequiredInviteIsAccepted() throws Exception {
+        jdbc.update("UPDATE `order` SET status='WAITING_TEAMMATE',player_id=1,required_player_count=3 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,1,'PRIMARY','ACCEPTED')");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status,invite_deadline) VALUES(200,2,'TEAMMATE','INVITED',?),(200,3,'TEAMMATE','INVITED',?)",
+                LocalDateTime.now().plusMinutes(5), LocalDateTime.now().plusMinutes(5));
+
+        mvc.perform(post("/player/order/200/accept-invite").with(player(2))).andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=200", String.class)).isEqualTo("WAITING_TEAMMATE");
+        mvc.perform(post("/player/order/200/accept-invite").with(player(3))).andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=200", String.class)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND role='TEAMMATE' AND status='ACCEPTED'", Integer.class)).isEqualTo(2);
+    }
+
+    @Test void teamCannotStartUntilEveryRequiredTeammateHasAccepted() throws Exception {
+        jdbc.update("UPDATE `order` SET status='ACCEPTED',player_id=1,required_player_count=3 WHERE id=200");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,1,'PRIMARY','ACCEPTED'),(200,2,'TEAMMATE','ACCEPTED')");
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=200", String.class)).isEqualTo("ACCEPTED");
+
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,3,'TEAMMATE','ACCEPTED')");
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=200", String.class)).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test void invitationRejectsCombinedSharesAboveTheSettlementIncome() throws Exception {
+        jdbc.update("UPDATE `order` SET status='ACCEPTED',player_id=1,required_player_count=3,commission_rate=0.2 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status) VALUES(200,1,'PRIMARY','ACCEPTED')");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status,split_type,split_amount) VALUES(200,2,'TEAMMATE','ACCEPTED','CUSTOM',30)");
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":3,\"splitType\":\"CUSTOM\",\"customAmount\":20}"))
+                .andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND player_id=3", Integer.class)).isZero();
+    }
+
     @Test void offDutyPlayerCannotBeAssignedANewOrder() {
         jdbc.update("UPDATE player SET is_online=0 WHERE id=2");
         assertThatThrownBy(() -> orders.assignOrder(200L, 2L)).isInstanceOf(com.delta.common.exception.BusinessException.class);
