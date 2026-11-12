@@ -1548,6 +1548,9 @@ INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_gro
 SELECT 'auth.primary_method','网页主登录方式','PHONE','text','账号与登录','可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='auth.primary_method');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'site.customer_web_url','客户 H5 站点地址','','text','站点配置','微信网页登录完成后的客户 H5 HTTPS Origin，不含路径、查询参数和片段'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='site.customer_web_url');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'player.directory.enabled','展示打手页面','true','boolean','打手配置','关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='player.directory.enabled');
 SET @sql = IF((SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='player' AND column_name='price_increase_rate')=0, 'ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1 COMMENT ''-1跟随等级，0不涨价，其他为百分比''', 'SELECT 1');

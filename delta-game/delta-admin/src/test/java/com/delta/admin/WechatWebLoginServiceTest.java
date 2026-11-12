@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -70,5 +72,21 @@ class WechatWebLoginServiceTest {
         assertThat(response.getToken()).isEqualTo("signed-token");
         assertThat(response.getUserId()).isEqualTo(7L);
         assertThat(response.getNickname()).isEqualTo("客户甲");
+    }
+
+    @Test
+    void callbackRequiresAConfiguredCustomerH5OriginBeforeRedirecting() throws Exception {
+        when(redis.getAndDelete("wechat:web-login:state:0123456789abcdef0123456789abcdef"))
+                .thenReturn("/pages/login/index");
+        when(officialWechat.exchangeOpenid("code")).thenReturn("openid-example");
+        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(java.util.List.of(Map.of("user_id", 7L)));
+        User user = new User();
+        user.setId(7L); user.setStatus(1);
+        when(users.getById(7L)).thenReturn(user);
+        when(configs.getConfigValue("site.customer_web_url", "")).thenReturn("");
+
+        assertThatThrownBy(() -> service.complete("code", "0123456789abcdef0123456789abcdef",
+                mock(HttpServletRequest.class)))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("客户 H5 站点地址");
     }
 }

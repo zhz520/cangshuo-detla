@@ -191,6 +191,8 @@ public class SysConfigController {
                 "可填写 http:// 或 https:// 开头的链接；留空时底部文字不可点击");
         ensureConfig("site.staff_web_url", "工作人员后台地址", "", "text", "站点配置",
                 "管理员与客服使用的 HTTPS 后台 Origin，例如 https://jgsapi.example.com；客户H5旧工作人员入口会跳转到这里");
+        ensureConfig("site.customer_web_url", "客户 H5 站点地址", "", "text", "站点配置",
+                "微信网页登录完成后的客户 H5 HTTPS Origin，例如 https://shop.example.com；不含路径、查询参数和片段");
         ensureConfig("customer_service.mode", "客服接入方式", "internal", "text", "客服配置",
                 "internal：使用系统内置客服；external：跳转第三方企业微信客服链接");
         ensureConfig("customer_service.external_url", "第三方企业微信客服链接", "", "text", "客服配置",
@@ -393,6 +395,18 @@ public class SysConfigController {
                 value = uri.getScheme().toLowerCase(java.util.Locale.ROOT) + "://" + uri.getRawAuthority();
             } catch(Exception e) {
                 throw new com.delta.common.exception.BusinessException(400,"工作人员后台地址须为不含路径的 HTTPS Origin");
+            }
+        }
+        if("site.customer_web_url".equals(key) && !value.isBlank()) {
+            try {
+                java.net.URI uri = java.net.URI.create(value.trim());
+                if(!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null
+                        || uri.getQuery()!=null || uri.getFragment()!=null
+                        || (uri.getPath()!=null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())))
+                    throw new IllegalArgumentException();
+                value = uri.getScheme().toLowerCase(java.util.Locale.ROOT) + "://" + uri.getRawAuthority();
+            } catch(Exception e) {
+                throw new com.delta.common.exception.BusinessException(400,"客户 H5 站点地址须为不含路径的 HTTPS Origin");
             }
         }
         if("customer_service.mode".equals(key)) {

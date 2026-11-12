@@ -317,6 +317,10 @@ public class DatabaseCompatibility {
             jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
                     "auth.primary_method", "网页主登录方式", "PHONE", "text", "账号与登录",
                     "可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式");
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='site.customer_web_url'", Integer.class) == 0)
+            jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                    "site.customer_web_url", "客户 H5 站点地址", "", "text", "站点配置",
+                    "微信网页登录完成后的客户 H5 HTTPS Origin，不含路径、查询参数和片段");
         insertBooleanConfigIfMissing("player.directory.enabled", "展示打手页面", "true",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
     }

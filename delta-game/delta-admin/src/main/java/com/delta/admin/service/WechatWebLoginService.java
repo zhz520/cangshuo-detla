@@ -60,7 +60,7 @@ public class WechatWebLoginService {
         String ticket = UUID.randomUUID().toString().replace("-", "");
         redis.set(TICKET_PREFIX + ticket, String.valueOf(user.getId()), 2, TimeUnit.MINUTES);
         String target = String.valueOf(stored);
-        return target + (target.contains("?") ? "&" : "?") + "wechat_ticket=" + ticket;
+        return h5Origin() + target + (target.contains("?") ? "&" : "?") + "wechat_ticket=" + ticket;
     }
 
     public LoginResponse exchange(String ticket) {
@@ -105,6 +105,20 @@ public class WechatWebLoginService {
         int port = request.getServerPort();
         String portPart = ("https".equals(scheme) && port == 443) || ("http".equals(scheme) && port == 80) ? "" : ":" + port;
         return scheme + "://" + request.getServerName() + portPart + "/user/auth/wechat/callback";
+    }
+
+    private String h5Origin() {
+        String value = configs.getConfigValue("site.customer_web_url", "").trim();
+        try {
+            var uri = java.net.URI.create(value);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null
+                    || (uri.getPath() != null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())))
+                throw new IllegalArgumentException();
+            return "https://" + uri.getRawAuthority();
+        } catch (Exception error) {
+            throw new BusinessException(503, "请先配置客户 H5 站点地址");
+        }
     }
 
     private String safeReturn(String value) {

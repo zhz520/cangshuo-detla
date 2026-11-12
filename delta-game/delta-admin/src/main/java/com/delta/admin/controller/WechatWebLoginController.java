@@ -17,9 +17,9 @@ public class WechatWebLoginController {
     private final WechatWebLoginService service;
 
     @GetMapping("/start")
-    public void start(@RequestParam(required = false) String returnTo,
-                      HttpServletRequest request, HttpServletResponse response) throws Exception {
-        response.sendRedirect(service.startUrl(returnTo, request));
+    public R<Map<String, String>> start(@RequestParam(required = false) String returnTo,
+                                        HttpServletRequest request) {
+        return R.ok(Map.of("authorizeUrl", service.startUrl(returnTo, request)));
     }
 
     @GetMapping("/callback")
