@@ -66,8 +66,7 @@ public class OrderPricingService {
                             "JOIN `order` o ON o.id=p.order_id WHERE o.user_id=? AND p.status IN ('PAID','REFUNDED')",
                     BigDecimal.class,userId);
             List<MembershipTierRules.Tier> tiers=MembershipTierRules.parseStrict(
-                    configs.getConfigValue("membership.tiers",
-                            "[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1}]"));
+                    configs.getConfigValue("membership.tiers", MembershipTierRules.DEFAULT_TIERS_JSON));
             MembershipTierRules.Tier selected=tiers.get(0);
             for(MembershipTierRules.Tier tier:tiers)if(net!=null&&net.compareTo(tier.minSpend())>=0)selected=tier;
             memberTier=selected.name();

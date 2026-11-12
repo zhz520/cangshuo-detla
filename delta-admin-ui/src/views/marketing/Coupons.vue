@@ -31,19 +31,33 @@
       </el-table>
     </el-card>
 
+    <el-card class="records-card">
+      <template #header><div class="card-header"><strong>最近领取与核销</strong><el-button :loading="recordsLoading" @click="loadRecords">刷新</el-button></div></template>
+      <el-table :data="records" v-loading="recordsLoading" stripe>
+        <el-table-column label="用户" min-width="120"><template #default="{ row }">{{ row.nickname || '-' }}</template></el-table-column>
+        <el-table-column label="手机号" width="130"><template #default="{ row }">{{ maskPhone(row.phone) }}</template></el-table-column>
+        <el-table-column prop="coupon_name" label="优惠券" min-width="150" />
+        <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :type="recordTag(row.status)" size="small">{{ recordText(row.status) }}</el-tag></template></el-table-column>
+        <el-table-column label="领取时间" min-width="170"><template #default="{ row }">{{ formatTime(row.claimed_at) }}</template></el-table-column>
+        <el-table-column label="有效期至" min-width="170"><template #default="{ row }">{{ formatTime(row.expires_at) }}</template></el-table-column>
+        <el-table-column label="使用订单" width="110"><template #default="{ row }">{{ row.used_order_id || '-' }}</template></el-table-column>
+      </el-table>
+    </el-card>
+
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑优惠券' : '新建优惠券'" width="min(92vw, 520px)" destroy-on-close>
+      <el-alert v-if="termsLocked" class="terms-lock" type="warning" :closable="false" show-icon title="已有用户领取。为防止改动已发优惠券的价值，类型、面额和使用门槛不可修改；可调整名称、状态、总量或新建模板。" />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" label-position="top">
         <el-form-item label="名称" prop="name"><el-input v-model="form.name" maxlength="80" show-word-limit /></el-form-item>
         <el-form-item label="类型" prop="type">
           <el-radio-group v-model="form.type">
-            <el-radio-button value="AMOUNT">满减券</el-radio-button>
-            <el-radio-button value="DISCOUNT">折扣券</el-radio-button>
+            <el-radio-button value="AMOUNT" :disabled="termsLocked">满减券</el-radio-button>
+            <el-radio-button value="DISCOUNT" :disabled="termsLocked">折扣券</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="form.type === 'DISCOUNT' ? '折扣率（0.9 表示 9 折）' : '优惠金额（元）'" prop="value">
-          <el-input-number v-model="form.value" :min="0.01" :max="form.type === 'DISCOUNT' ? 0.99 : 100000" :precision="2" :step="form.type === 'DISCOUNT' ? 0.01 : 1" style="width:100%" />
+          <el-input-number v-model="form.value" :disabled="termsLocked" :min="0.01" :max="form.type === 'DISCOUNT' ? 0.99 : 100000" :precision="2" :step="form.type === 'DISCOUNT' ? 0.01 : 1" style="width:100%" />
         </el-form-item>
-        <el-form-item label="最低消费（元）" prop="minSpend"><el-input-number v-model="form.minSpend" :min="0" :max="1000000" :precision="2" style="width:100%" /></el-form-item>
+        <el-form-item label="最低消费（元）" prop="minSpend"><el-input-number v-model="form.minSpend" :disabled="termsLocked" :min="0" :max="1000000" :precision="2" style="width:100%" /></el-form-item>
         <el-form-item label="领取后有效天数" prop="validDays"><el-input-number v-model="form.validDays" :min="1" :max="3650" style="width:100%" /></el-form-item>
         <el-form-item label="发放总量（0 为不限）" prop="total"><el-input-number v-model="form.total" :min="0" :max="1000000" style="width:100%" /></el-form-item>
         <el-form-item label="每人限领" prop="perUserLimit"><el-input-number v-model="form.perUserLimit" :min="1" :max="100" style="width:100%" /></el-form-item>
@@ -57,13 +71,16 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createCouponTemplate, getCouponTemplates, updateCouponTemplate } from '@/api/marketing'
+import { createCouponTemplate, getCouponRecords, getCouponTemplates, updateCouponTemplate } from '@/api/marketing'
 
 const loading = ref(false)
 const saving = ref(false)
 const rows = ref([])
+const records = ref([])
+const recordsLoading = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref(null)
+const termsLocked = ref(false)
 const formRef = ref()
 const form = reactive({ name:'', type:'AMOUNT', value:10, minSpend:0, validDays:7, total:0, perUserLimit:1, enabled:true })
 const rules = {
@@ -79,12 +96,24 @@ async function load() {
   finally { loading.value = false }
 }
 
+async function loadRecords() {
+  recordsLoading.value = true
+  try { records.value = (await getCouponRecords()).data || [] }
+  finally { recordsLoading.value = false }
+}
+
+const recordText = status => ({ AVAILABLE:'可用', LOCKED:'锁定', USED:'已使用', EXPIRED:'已过期' })[status] || status
+const recordTag = status => status === 'USED' ? 'success' : status === 'AVAILABLE' ? 'warning' : 'info'
+const formatTime = value => value ? new Date(value).toLocaleString('zh-CN', { hour12:false }) : '-'
+const maskPhone = value => value && String(value).length >= 7 ? String(value).slice(0,3) + '****' + String(value).slice(-4) : (value || '-')
+
 function resetForm() {
   Object.assign(form, { name:'', type:'AMOUNT', value:10, minSpend:0, validDays:7, total:0, perUserLimit:1, enabled:true })
 }
-function openCreate() { editingId.value = null; resetForm(); dialogVisible.value = true }
+function openCreate() { editingId.value = null; termsLocked.value = false; resetForm(); dialogVisible.value = true }
 function openEdit(row) {
   editingId.value = row.id
+  termsLocked.value = Number(row.claimed || 0) > 0
   Object.assign(form, {
     name: row.name, type: row.type, value: Number(row.coupon_value), minSpend: Number(row.min_spend || 0),
     validDays: Number(row.valid_days), total: Number(row.total || 0), perUserLimit: Number(row.per_user_limit || 1), enabled: Number(row.status) === 1
@@ -103,11 +132,13 @@ async function save() {
     await load()
   } finally { saving.value = false }
 }
-onMounted(load)
+onMounted(() => { load(); loadRecords() })
 </script>
 
 <style scoped>
 .card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.records-card { margin-top: 18px; }
+.terms-lock { margin-bottom: 16px; }
 .subtitle { margin:8px 0 0; color:#6b7280; font-size:13px; line-height:1.6; }
 @media (max-width: 768px) { .card-header { flex-direction:column; } }
 </style>

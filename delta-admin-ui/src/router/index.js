@@ -160,7 +160,8 @@ const desktopRoutes = [
     meta: { title: '营销中心', icon: 'Present', roles: ['admin'] },
     children: [
       { path: 'coupons', name: 'MarketingCoupons', component: () => import('@/views/marketing/Coupons.vue'), meta: { title: '优惠券管理', roles: ['admin'], permission: 'system.manage' } },
-      { path: 'invites', name: 'MarketingInvites', component: () => import('@/views/marketing/Invites.vue'), meta: { title: '邀请奖励', roles: ['admin'], permission: 'system.manage' } }
+      { path: 'invites', name: 'MarketingInvites', component: () => import('@/views/marketing/Invites.vue'), meta: { title: '邀请奖励', roles: ['admin'], permission: 'system.manage' } },
+      { path: 'membership', name: 'MarketingMembership', component: () => import('@/views/marketing/MembershipLevels.vue'), meta: { title: '会员等级', roles: ['admin'], permission: 'system.manage' } }
     ]
   },
   {
@@ -327,6 +328,7 @@ const desktopRoutes = [
         meta: { title: '轮播图管理', roles: ['admin'] }
       },
       {path:'reward-grab',name:'RewardGrabSettings',component:()=>import('@/views/system/RewardGrabSettings.vue'),meta:{title:'打赏与抢单设置',roles:['admin']}},
+      {path:'content',name:'ContentSettings',component:()=>import('@/views/system/ContentSettings.vue'),meta:{title:'内容页面',roles:['admin'],permission:'system.manage'}},
       {path:'player-layout',name:'PlayerLayoutSettings',component:()=>import('@/views/system/PlayerLayoutSettings.vue'),meta:{title:'打手列表布局',roles:['admin'],permission:'system.manage',feature:'player_directory_layouts'}},
       {
         path: 'config',
@@ -345,6 +347,12 @@ const desktopRoutes = [
         name: 'OperationLog',
         component: () => import('@/views/system/OperationLog.vue'),
         meta: { title: '操作日志', roles: ['admin'] }
+      },
+      {
+        path: 'sensitive-words',
+        name: 'SensitiveWordList',
+        component: () => import('@/views/system/SensitiveWordList.vue'),
+        meta: { title: '敏感词管理', roles: ['admin'], permission: 'system.manage' }
       }
     ]
   },

@@ -1,10 +1,14 @@
 package com.delta.admin.controller;
 
 import com.delta.common.domain.R;
+import com.delta.common.annotation.OpLog;
+import com.delta.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -12,7 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Read-only operations view for referral attribution, rewards and unrecovered debts. */
+/** Operations view for referral attribution, rewards and recoverable debts. */
 @RestController
 @RequestMapping("/admin/invites")
 @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
@@ -37,5 +41,16 @@ public class InviteAdminController {
         result.put("rewards", rewards);
         result.put("debts", debts);
         return R.ok(result);
+    }
+
+    @PutMapping("/debts/{id}/recovered")
+    @OpLog(module = "marketing", operation = "标记邀请奖励欠款已追回")
+    public R<Void> markDebtRecovered(@PathVariable Long id) {
+        int updated = jdbc.update("UPDATE invite_reward_debt SET status='RECOVERED',recovered_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDING'", id);
+        if (updated == 1) return R.ok();
+        var rows = jdbc.queryForList("SELECT status FROM invite_reward_debt WHERE id=?", id);
+        if (rows.isEmpty()) throw new BusinessException(404, "待追回记录不存在");
+        if ("RECOVERED".equals(String.valueOf(rows.get(0).get("status")))) return R.ok();
+        throw new BusinessException(409, "当前欠款状态不能标记为已追回");
     }
 }

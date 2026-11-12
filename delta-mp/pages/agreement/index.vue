@@ -10,7 +10,7 @@ import { getContentByKey } from '@/api/content'
 import { productDescriptionHtml } from '@/utils/product-content'
 const rawContent = ref('')
 const content = computed(() => productDescriptionHtml(rawContent.value))
-onLoad(async (opts) => { const res = await getContentByKey(opts.type||'user_agreement'); rawContent.value = res.data?.content || '' })
+onLoad(async (opts) => { const res = await getContentByKey(opts.type||'user_agreement'); rawContent.value = res.data?.configValue || '' })
 </script>
 <style lang="scss" scoped>
 .agreement-page { padding:24rpx; background:#f4f5f6; min-height:var(--app-page-height, 100vh); font-size:28rpx; color:#17191c; line-height:1.8; }

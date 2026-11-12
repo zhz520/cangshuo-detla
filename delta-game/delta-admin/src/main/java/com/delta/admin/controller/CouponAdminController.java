@@ -25,6 +25,16 @@ public class CouponAdminController {
         return R.ok(jdbc.queryForList("SELECT * FROM coupon_template ORDER BY id DESC LIMIT 500"));
     }
 
+    @GetMapping("/records")
+    public R<List<Map<String, Object>>> records() {
+        return R.ok(jdbc.queryForList(
+                "SELECT uc.id,uc.status,uc.claimed_at,uc.expires_at,uc.used_order_id," +
+                        "u.nickname,u.phone,ct.name coupon_name,ct.type,ct.coupon_value,ct.min_spend " +
+                        "FROM user_coupon uc JOIN `user` u ON u.id=uc.user_id " +
+                        "JOIN coupon_template ct ON ct.id=uc.template_id " +
+                        "ORDER BY uc.id DESC LIMIT 500"));
+    }
+
     @PostMapping
     @OpLog(module = "marketing", operation = "创建优惠券模板")
     @Transactional(rollbackFor = Exception.class)
@@ -39,11 +49,21 @@ public class CouponAdminController {
     @OpLog(module = "marketing", operation = "修改优惠券模板")
     @Transactional(rollbackFor = Exception.class)
     public R<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var current = jdbc.queryForList("SELECT claimed FROM coupon_template WHERE id=?", id);
+        var current = jdbc.queryForList("SELECT claimed,type,coupon_value,min_spend FROM coupon_template WHERE id=? FOR UPDATE", id);
         if (current.isEmpty())
             throw new BusinessException(404, "优惠券模板不存在");
+        var existing = current.get(0);
         Template t = template(body);
-        int claimed = ((Number) current.get(0).get("claimed")).intValue();
+        int claimed = ((Number) existing.get("claimed")).intValue();
+        if (claimed > 0) {
+            BigDecimal currentValue = (BigDecimal) existing.get("coupon_value");
+            BigDecimal currentMinSpend = (BigDecimal) existing.get("min_spend");
+            boolean termsChanged = !t.type().equals(String.valueOf(existing.get("type")))
+                    || t.value().compareTo(currentValue) != 0
+                    || t.minSpend().compareTo(currentMinSpend) != 0;
+            if (termsChanged)
+                throw new BusinessException(409, "已有用户领取，不能修改优惠券类型、面额或使用门槛；请停用后新建模板");
+        }
         if (t.total() > 0 && t.total() < claimed)
             throw new BusinessException(400, "发放总量不能小于已领取数量");
         jdbc.update("UPDATE coupon_template SET name=?,type=?,coupon_value=?,min_spend=?,valid_days=?,total=?,per_user_limit=?,status=? WHERE id=?",

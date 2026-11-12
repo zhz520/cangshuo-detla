@@ -9,7 +9,7 @@ const sections = [
   { id: 'business', title: '业务运营', items: [
     { id: 'orders', title: '订单与售后', icon: 'List', paths: ['/order/list', '/refund', '/complaint', '/fulfillment-review'] },
     { id: 'products', title: '商品管理', icon: 'Goods', paths: ['/product/list', '/product/category', '/product/recommend-category', '/product/form-fields'] },
-    { id: 'marketing', title: '营销活动', icon: 'Present', paths: ['/marketing/coupons', '/marketing/invites'] }
+    { id: 'marketing', title: '营销活动', icon: 'Present', paths: ['/marketing/coupons', '/marketing/invites', '/marketing/membership'] }
   ] },
   { id: 'people', title: '人员管理', items: [
     { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/user/identity-review', '/privacy-requests'] },
@@ -19,8 +19,8 @@ const sections = [
     { id: 'finance', title: '结算与统计', icon: 'DataAnalysis', paths: ['/statistics/income-daily', '/settlements', '/withdraw', '/rewards', '/platform/income-analysis', '/system/recharge-packages'] }
   ] },
   { id: 'settings', title: '平台设置', items: [
-    { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/reward-grab', '/system/player-layout'] },
-    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/operation-log'] }
+    { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/content', '/system/reward-grab', '/system/player-layout'] },
+    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/sensitive-words', '/system/operation-log'] }
   ] },
   { id: 'updates', title: '功能更新', items: [
     { id: 'updates', title: '功能与更新', icon: 'Box', paths: ['/platform/features', '/platform/updates'] }

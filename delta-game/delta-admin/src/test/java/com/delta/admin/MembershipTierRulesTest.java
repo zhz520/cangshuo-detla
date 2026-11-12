@@ -36,4 +36,13 @@ class MembershipTierRulesTest {
                         + "{\"code\":\"A\",\"name\":\"乙\",\"minSpend\":100,\"discountRate\":0.9}]"))
                 .hasMessageContaining("不能重复");
     }
+
+    @Test
+    void higherTierCannotWorsenTheDiscount() {
+        assertThatThrownBy(() -> MembershipTierRules.parseStrict(
+                "[{\"code\":\"NORMAL\",\"name\":\"普通\",\"minSpend\":0,\"discountRate\":0.95},"
+                        + "{\"code\":\"GOLD\",\"name\":\"黄金\",\"minSpend\":1000,\"discountRate\":1}]"))
+                .isInstanceOfSatisfying(com.delta.common.exception.BusinessException.class,
+                        error -> assertThat(error.getMessage()).contains("折扣率不能高于"));
+    }
 }

@@ -28,9 +28,10 @@
           <el-table :data="debts" v-loading="loading" stripe>
             <el-table-column prop="inviter_nickname" label="邀请人" min-width="140" />
             <el-table-column label="待追回金额" width="130"><template #default="{ row }">¥{{ Number(row.amount || 0).toFixed(2) }}</template></el-table-column>
-            <el-table-column prop="status" label="状态" width="110" />
+            <el-table-column label="状态" width="110"><template #default="{ row }"><el-tag :type="row.status === 'RECOVERED' ? 'success' : 'warning'">{{ debtText(row.status) }}</el-tag></template></el-table-column>
             <el-table-column prop="reward_id" label="奖励记录" width="110" />
             <el-table-column label="创建时间" min-width="180"><template #default="{ row }">{{ formatTime(row.created_at) }}</template></el-table-column>
+            <el-table-column label="操作" width="120" fixed="right"><template #default="{ row }"><el-button v-if="row.status === 'PENDING'" link type="primary" @click="recover(row)">标记已追回</el-button><span v-else>已处理</span></template></el-table-column>
           </el-table>
         </el-tab-pane>
       </el-tabs>
@@ -40,13 +41,15 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { getInviteOperations } from '@/api/marketing'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getInviteOperations, markInviteDebtRecovered } from '@/api/marketing'
 const loading = ref(false), tab = ref('relations')
 const relations = ref([]), rewards = ref([]), debts = ref([])
 const relationText = status => ({ PENDING:'等待首单', REWARDED:'已奖励', REFUNDED:'已退款冲正' })[status] || status
 const relationTag = status => status === 'REWARDED' ? 'success' : status === 'REFUNDED' ? 'info' : 'warning'
 const rewardText = status => ({ PENDING:'待入账', PAID:'已发放', REVOKED:'已冲正', CANCELLED:'已取消' })[status] || status
 const rewardTag = status => status === 'PAID' ? 'success' : status === 'PENDING' ? 'warning' : 'info'
+const debtText = status => status === 'RECOVERED' ? '已追回' : status === 'PENDING' ? '待追回' : status
 const formatTime = value => value ? new Date(value).toLocaleString('zh-CN', { hour12:false }) : '—'
 async function load() {
   loading.value = true
@@ -56,6 +59,12 @@ async function load() {
     rewards.value = data.rewards || []
     debts.value = data.debts || []
   } finally { loading.value = false }
+}
+async function recover(row) {
+  await ElMessageBox.confirm(`确认已将 ¥${Number(row.amount || 0).toFixed(2)} 线下追回？标记后只关闭台账，不会自动修改用户余额。`, '标记欠款已追回', { type: 'warning' })
+  await markInviteDebtRecovered(row.id)
+  ElMessage.success('已标记为追回')
+  await load()
 }
 onMounted(load)
 </script>

@@ -17,7 +17,6 @@ import java.util.*;
 @RequestMapping("/user/membership")
 @RequiredArgsConstructor
 public class MembershipController {
-    private static final String DEFAULT_TIERS = "[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1},{\"code\":\"SILVER\",\"name\":\"白银会员\",\"minSpend\":500,\"discountRate\":0.98},{\"code\":\"GOLD\",\"name\":\"黄金会员\",\"minSpend\":2000,\"discountRate\":0.95}]";
     private final JdbcTemplate jdbc;
     private final SysConfigService configs;
 
@@ -32,7 +31,7 @@ public class MembershipController {
                 BigDecimal.class, userId);
         if (net == null) net = BigDecimal.ZERO;
         List<MembershipTierRules.Tier> tiers = MembershipTierRules.parseStrict(
-                configs.getConfigValue("membership.tiers", DEFAULT_TIERS));
+                configs.getConfigValue("membership.tiers", MembershipTierRules.DEFAULT_TIERS_JSON));
         MembershipTierRules.Tier current = tiers.get(0), next = null;
         for (MembershipTierRules.Tier tier : tiers) {
             if (net.compareTo(tier.minSpend()) >= 0) current = tier;

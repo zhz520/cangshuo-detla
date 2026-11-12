@@ -14,6 +14,7 @@ import java.util.Set;
 /** Strict boundary for the tenant-editable membership JSON. */
 public final class MembershipTierRules {
     private static final BigDecimal MAX_THRESHOLD = new BigDecimal("100000000.00");
+    public static final String DEFAULT_TIERS_JSON = "[{\"code\":\"NORMAL\",\"name\":\"普通会员\",\"minSpend\":0,\"discountRate\":1},{\"code\":\"SILVER\",\"name\":\"白银会员\",\"minSpend\":500,\"discountRate\":0.98},{\"code\":\"GOLD\",\"name\":\"黄金会员\",\"minSpend\":2000,\"discountRate\":0.95}]";
     private MembershipTierRules() {}
 
     public record Tier(String code, String name, BigDecimal minSpend, BigDecimal discountRate) {}
@@ -50,6 +51,8 @@ public final class MembershipTierRules {
         for (int i = 1; i < normalized.size(); i++) {
             if (normalized.get(i).minSpend().compareTo(normalized.get(i - 1).minSpend()) <= 0)
                 throw invalid("会员累计消费门槛必须逐级递增");
+            if (normalized.get(i).discountRate().compareTo(normalized.get(i - 1).discountRate()) > 0)
+                throw invalid("会员等级越高，折扣率不能高于上一等级");
         }
         return List.copyOf(normalized);
     }

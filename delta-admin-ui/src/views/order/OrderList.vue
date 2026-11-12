@@ -56,6 +56,21 @@
         <el-descriptions-item label="用户">{{ detail.userNickname || ('ID: ' + detail.userId) }}</el-descriptions-item>
         <el-descriptions-item label="客户手机号">{{ detail.userPhone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="打手">{{ detail.playerName || (detail.playerId ? 'ID: ' + detail.playerId : '未指派') }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.teammates?.length" label="协同打手" :span="2">
+          <div class="team-summary">需要 {{ detail.requiredPlayerCount || (detail.teammates.length + 1) }} 人队，已记录 {{ detail.teammates.length }} 名队友</div>
+          <div v-for="member in detail.teammates" :key="member.id" class="team-member">
+            <div class="team-member-main">
+              <el-avatar :size="30" :src="member.avatar || undefined">{{ (member.nickname || '打')[0] }}</el-avatar>
+              <span class="team-name">{{ member.nickname || ('打手 ID: ' + member.playerId) }}</span>
+              <el-tag :type="teamTag(member.status)" size="small">{{ teamStatus(member.status) }}</el-tag>
+            </div>
+            <div class="team-member-meta">
+              <span>{{ teamSplit(member) }}</span>
+              <span>邀请 {{ member.invitedAt || '-' }}</span>
+              <span v-if="member.acceptedAt">接受 {{ member.acceptedAt }}</span>
+            </div>
+          </div>
+        </el-descriptions-item>
         <el-descriptions-item label="游戏账号">{{ detail.gameAccount || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ detail.contact || '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单时间">{{ detail.createdAt }}</el-descriptions-item>
@@ -149,6 +164,22 @@ const orderTagTypeMap = {
 }
 function orderStatusLabel(s) { return orderStatusMap[s] || s }
 function orderTagType(s) { return orderTagTypeMap[s] || '' }
+const teamStatusMap = {
+  INVITED: '待接受', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已取消', SETTLED: '已结算'
+}
+function teamStatus(status) { return teamStatusMap[status] || status || '未知' }
+function teamTag(status) {
+  return ['ACCEPTED', 'SETTLED'].includes(status) ? 'success' : status === 'INVITED' ? 'warning' : 'info'
+}
+function teamSplit(member) {
+  if (!member) return '-'
+  if (member.splitType === 'CUSTOM' && member.splitAmount != null) return `自定义分成 ¥${Number(member.splitAmount).toFixed(2)}`
+  if (member.splitType === 'FIFTY_FIFTY') return '五五分成'
+  if (member.splitType === 'FORTY_SIXTY') return '六四分成（队友 40%）'
+  if (member.splitType === 'THIRTY_SEVENTY') return '七三分成（队友 30%）'
+  if (member.splitRatio != null) return `按比例分成（队友 ${(Number(member.splitRatio) * 100).toFixed(0)}%）`
+  return '五五分成'
+}
 function parsedExtraFields(order) {
   if (!order?.extraFields) return []
   try {
@@ -241,6 +272,12 @@ watch(() => route.query, queryParams => {
 .search-form { margin-bottom: 16px; }
 :deep(.offline-row) { opacity: 0.5; }
 .detail-actions { margin-top: 16px; text-align: right; }
+.team-summary { margin-bottom: 8px; color: #909399; font-size: 12px; }
+.team-member { padding: 8px 0; border-top: 1px solid #ebeef5; }
+.team-member:first-of-type { border-top: 0; }
+.team-member-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.team-name { font-weight: 500; }
+.team-member-meta { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin: 6px 0 0 38px; color: #909399; font-size: 12px; }
 .progress-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .progress-image { width: 72px; height: 72px; border-radius: 6px; overflow: hidden; }
 </style>

@@ -31,6 +31,37 @@ export function deleteQuickReply(id) {
   return request({ url: `/system/quick-reply/${id}`, method: 'delete' })
 }
 
+// ==================== 敏感词管理 ====================
+export function getSensitiveWordList(params) {
+  return request({ url: '/system/sensitive-word/list', method: 'get', params })
+}
+export function addSensitiveWord(data) {
+  return request({ url: '/system/sensitive-word', method: 'post', data })
+}
+export function updateSensitiveWord(data) {
+  return request({ url: '/system/sensitive-word', method: 'put', data })
+}
+export function deleteSensitiveWord(id) {
+  return request({ url: `/system/sensitive-word/${id}`, method: 'delete' })
+}
+
+// ==================== 内容页面 ====================
+export function getContentConfigList() {
+  return request({ url: '/system/content/list', method: 'get' })
+}
+export function getContentConfigByKey(key) {
+  return request({ url: `/system/content/key/${encodeURIComponent(key)}`, method: 'get', silent: true })
+}
+export function addContentConfig(data) {
+  return request({ url: '/system/content', method: 'post', data })
+}
+export function updateContentConfig(data) {
+  return request({ url: '/system/content', method: 'put', data })
+}
+export function deleteContentConfig(id) {
+  return request({ url: `/system/content/${id}`, method: 'delete' })
+}
+
 // ==================== 公告管理 ====================
 export function getNoticeList(params) {
   return request({ url: '/system/notice/list', method: 'get', params })

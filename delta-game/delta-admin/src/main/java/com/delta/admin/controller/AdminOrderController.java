@@ -6,8 +6,10 @@ import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.order.entity.Order;
+import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.OrderProgressService;
+import com.delta.order.service.OrderPlayerService;
 import com.delta.order.service.OrderService;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.security.utils.SecurityUtils;
@@ -24,6 +26,7 @@ import java.util.List;
 public class AdminOrderController {
     private final OrderService orderService;
     private final OrderProgressService orderProgressService;
+    private final OrderPlayerService orderPlayerService;
     private final CrossModuleMapper crossModuleMapper;
     private final OrderRefundWorkflowService refunds;
 
@@ -49,7 +52,19 @@ public class AdminOrderController {
     @GetMapping("/{id}")
     public R<Order> detail(@PathVariable Long id) {
         Order order = orderService.getById(id);
-        if (order != null) enrichOrder(order);
+        if (order != null) {
+            enrichOrder(order);
+            List<OrderPlayer> teammates = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                    .eq(OrderPlayer::getOrderId, id)
+                    .eq(OrderPlayer::getRole, "TEAMMATE")
+                    .orderByAsc(OrderPlayer::getInvitedAt)
+                    .orderByAsc(OrderPlayer::getId));
+            for (OrderPlayer teammate : teammates) {
+                teammate.setNickname(crossModuleMapper.selectPlayerNickname(teammate.getPlayerId()));
+                teammate.setAvatar(crossModuleMapper.selectPlayerAvatar(teammate.getPlayerId()));
+            }
+            order.setTeammates(teammates);
+        }
         return R.ok(order);
     }
 

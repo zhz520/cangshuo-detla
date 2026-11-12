@@ -15,3 +15,19 @@ export function updateCouponTemplate(id, data) {
 export function getInviteOperations() {
   return request({ url: '/admin/invites', method: 'get', loading: false })
 }
+
+export function markInviteDebtRecovered(id) {
+  return request({ url: `/admin/invites/debts/${id}/recovered`, method: 'put' })
+}
+
+export function getCouponRecords() {
+  return request({ url: '/admin/coupons/records', method: 'get', loading: false })
+}
+
+export function getMembershipConfig() {
+  return request({ url: '/admin/membership', method: 'get', loading: false })
+}
+
+export function saveMembershipConfig(data) {
+  return request({ url: '/admin/membership', method: 'put', data })
+}
