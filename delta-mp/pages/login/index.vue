@@ -7,9 +7,9 @@
     </view>
 
     <!-- 登录方式切换 -->
-    <view v-if="!setupToken" class="tab-bar">
-      <view class="tab-item" :class="{ active: loginMode === 'wechat' }" @click="switchWechatMode">{{ quickLoginTitle }}</view>
-      <view class="tab-item" :class="{ active: loginMode === 'password' }" @click="loginMode = 'password';loadCaptcha()">密码登录</view>
+    <view v-if="!setupToken && showLoginTabs" class="tab-bar">
+      <view v-if="quickLoginEnabled" class="tab-item" :class="{ active: loginMode === 'wechat' }" @click="switchWechatMode">{{ quickLoginTitle }}</view>
+      <view v-if="passwordEnabled" class="tab-item" :class="{ active: loginMode === 'password' }" @click="loginMode = 'password';loadCaptcha()">密码登录</view>
     </view>
 
     <view v-if="setupToken" class="login-area setup-area">
@@ -47,16 +47,19 @@
             {{ wechatStarting ? '正在跳转...' : '微信登录' }}
           </view>
           <view v-if="wechatLoginEnabled" class="wechat-tip">将在微信中完成授权，返回后继续登录</view>
-          <input v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" class="input" />
-          <view class="verification-row">
-            <input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" />
-            <AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha" />
-          </view>
-          <view class="verification-row">
-            <input v-model="verifyCode" type="number" maxlength="6" placeholder="请输入短信验证码" class="input" />
-            <button class="send-code" :disabled="sendingCode || codeCountdown > 0" @click="sendCode">{{ codeCountdown ? `${codeCountdown}秒后重试` : '获取验证码' }}</button>
-          </view>
-          <view class="login-btn wechat-btn" @click="handleH5Login">登录</view>
+          <template v-if="phoneLoginEnabled">
+            <input v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" class="input" />
+            <view class="verification-row">
+              <input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" />
+              <AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha" />
+            </view>
+            <view class="verification-row">
+              <input v-model="verifyCode" type="number" maxlength="6" placeholder="请输入短信验证码" class="input" />
+              <button class="send-code" :disabled="sendingCode || codeCountdown > 0" @click="sendCode">{{ codeCountdown ? `${codeCountdown}秒后重试` : '获取验证码' }}</button>
+            </view>
+            <view class="login-btn wechat-btn" @click="handleH5Login">登录</view>
+          </template>
+          <view v-if="!quickLoginEnabled" class="wechat-tip">暂无可用登录方式，请联系管理员</view>
         </template>
       </template>
 
@@ -85,7 +88,7 @@
 <script setup>
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
@@ -109,6 +112,8 @@ const captchaCode=ref(''),captchaId=ref(''),captchaImage=ref(''),smsRequestId=re
 const sendingCode=ref(false),codeCountdown=ref(0)
 const wechatTicket=ref('')
 const wechatLoginEnabled=ref(false)
+const phoneLoginEnabled=ref(true)
+const passwordEnabled=ref(true)
 const wechatStarting=ref(false)
 let countdownTimer
 async function loadCaptcha() {
@@ -140,13 +145,17 @@ onLoad(options=>{
   if(/^\/(pages|pages-player)\//.test(target))redirectUrl.value=target
   const ticket=String(options?.wechat_ticket||'')
   if(/^[a-f0-9]{32}$/.test(ticket)){wechatTicket.value=ticket;loginMode.value='wechat'}
+  const invited=String(options?.invite||options?.inviteCode||'').trim().toUpperCase()
+  if(/^[A-Z2-9]{8}$/.test(invited))clientStorage.set('invite_code',invited)
   if(options?.expired==='1')uni.showToast({title:'登录已过期，请重新登录',icon:'none'})
 })
 onUnmounted(()=>clearInterval(countdownTimer))
 const agreed = ref(false)
 const needPhoneAuth = ref(false)
 const canUseWechatLogin = isMpWeixin()
-const quickLoginTitle = canUseWechatLogin ? '快速登录' : '手机登录'
+const quickLoginEnabled = computed(() => phoneLoginEnabled.value || wechatLoginEnabled.value || canUseWechatLogin.value)
+const showLoginTabs = computed(() => [quickLoginEnabled.value, passwordEnabled.value].filter(Boolean).length > 1)
+const quickLoginTitle = computed(() => canUseWechatLogin.value ? '快速登录' : phoneLoginEnabled.value ? '手机登录' : '微信登录')
 
 async function handleWechatLogin() {
   if (!agreed.value) {
@@ -165,8 +174,13 @@ async function handleWechatLogin() {
 async function loadLoginPolicy(){
   try {
     const {data}=await getLoginPolicy()
+    phoneLoginEnabled.value=Boolean(data?.phoneEnabled)
+    passwordEnabled.value=Boolean(data?.passwordEnabled)
     wechatLoginEnabled.value=Boolean(data?.wechatEnabled)
-    if(data?.primaryMethod==='WECHAT'&&wechatLoginEnabled.value)loginMode.value='wechat'
+    if(data?.primaryMethod==='PASSWORD'&&passwordEnabled.value)loginMode.value='password'
+    else if(data?.primaryMethod==='WECHAT'&&wechatLoginEnabled.value)loginMode.value='wechat'
+    else if(!quickLoginEnabled.value&&passwordEnabled.value)loginMode.value='password'
+    else if(loginMode.value==='password'&&!passwordEnabled.value)loginMode.value='wechat'
   } catch (_) { wechatLoginEnabled.value=false }
 }
 
@@ -176,7 +190,8 @@ async function startWechatLogin(){
   if(typeof window==='undefined')return uni.showToast({title:'请在微信或浏览器中打开',icon:'none'})
   wechatStarting.value=true
   try{
-    const {data}=await getWechatLoginUrl('/pages/login/index')
+    const inviteCode=clientStorage.get('invite_code')||''
+    const {data}=await getWechatLoginUrl('/pages/login/index',inviteCode)
     if(!data?.authorizeUrl)throw new Error('未获取到微信授权地址')
     window.location.assign(data.authorizeUrl)
   }catch(e){uni.showToast({title:e?.message||'微信登录暂不可用',icon:'none'});wechatStarting.value=false}
@@ -259,6 +274,7 @@ function switchWechatMode() {
 
 function completeWechatLogin() {
   needPhoneAuth.value = false
+  clientStorage.remove('invite_code')
   clientStorage.set('app_role','user');appStore.restoreRole();chatStore.disconnect()
   chatStore.connect()
   if (userStore.userInfo?.phoneBound === false) {

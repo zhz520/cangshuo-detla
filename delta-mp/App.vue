@@ -43,6 +43,8 @@ onLaunch(() => {
   // #ifdef H5
   installViewportAdapter()
   const oauth=new URLSearchParams(window.location.search)
+  const invite=String(oauth.get('invite')||oauth.get('inviteCode')||'').trim().toUpperCase()
+  if(/^[A-Z2-9]{8}$/.test(invite))clientStorage.set('invite_code',invite)
   if(oauth.has('code')&&oauth.has('state')){
     const code=oauth.get('code'),state=oauth.get('state');window.history.replaceState(null,'',window.location.pathname+window.location.hash)
     setTimeout(()=>uni.navigateTo({url:'/pages/wechat/binding?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state)}),500)

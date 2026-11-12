@@ -8,6 +8,7 @@ import com.delta.system.service.SysConfigService;
 import com.delta.user.dto.LoginResponse;
 import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
+import com.delta.user.controller.InviteController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -34,16 +35,18 @@ public class WechatWebLoginService {
     private final JdbcTemplate jdbc;
     private final UserService users;
     private final TokenService tokens;
+    private final InviteController invites;
 
-    public String startUrl(String returnTo, HttpServletRequest request) {
+    public String startUrl(String returnTo, String inviteCode, HttpServletRequest request) {
         if (!"true".equalsIgnoreCase(configs.getConfigValue("auth.wechat.enabled", "false")))
             throw new BusinessException(403, "网页微信登录尚未启用");
         String appId = configs.getConfigValue("wechat.official.app_id", "").trim();
         String secret = configs.getConfigValue("wechat.official.app_secret", "").trim();
         if (appId.isBlank() || secret.isBlank()) throw new BusinessException(503, "公众号登录尚未配置");
         String safeReturn = safeReturn(returnTo);
+        String invite = safeInvite(inviteCode);
         String state = UUID.randomUUID().toString().replace("-", "");
-        redis.set(STATE_PREFIX + state, safeReturn, 5, TimeUnit.MINUTES);
+        redis.set(STATE_PREFIX + state, safeReturn + "\n" + invite, 5, TimeUnit.MINUTES);
         String redirect = callbackUrl(request);
         return "https://open.weixin.qq.com/connect/oauth2/authorize?appid=" + encode(appId)
                 + "&redirect_uri=" + encode(redirect) + "&response_type=code&scope=snsapi_base&state=" + state + "#wechat_redirect";
@@ -55,11 +58,13 @@ public class WechatWebLoginService {
         Object stored = redis.getAndDelete(STATE_PREFIX + state);
         if (stored == null) throw new BusinessException(400, "微信登录已过期，请重新发起");
         String openid = officialWechat.exchangeOpenid(code);
-        User user = findOrCreate(openid);
+        String[] stateValue = String.valueOf(stored).split("\\n", 2);
+        String target = stateValue[0];
+        String invite = stateValue.length > 1 ? stateValue[1] : "";
+        User user = findOrCreate(openid, invite);
         if (!Integer.valueOf(1).equals(user.getStatus())) throw new BusinessException(403, "账号暂不可用");
         String ticket = UUID.randomUUID().toString().replace("-", "");
         redis.set(TICKET_PREFIX + ticket, String.valueOf(user.getId()), 2, TimeUnit.MINUTES);
-        String target = String.valueOf(stored);
         return h5Origin() + target + (target.contains("?") ? "&" : "?") + "wechat_ticket=" + ticket;
     }
 
@@ -82,7 +87,7 @@ public class WechatWebLoginService {
         return response;
     }
 
-    private User findOrCreate(String openid) throws Exception {
+    private User findOrCreate(String openid, String inviteCode) throws Exception {
         var rows = jdbc.queryForList("SELECT user_id FROM wechat_official_binding WHERE user_type='USER' AND openid=?", openid);
         if (!rows.isEmpty()) return users.getById(((Number) rows.get(0).get("user_id")).longValue());
         String synthetic = "oa-" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
@@ -94,6 +99,10 @@ public class WechatWebLoginService {
             var existing = jdbc.queryForList("SELECT user_id FROM wechat_official_binding WHERE user_type='USER' AND openid=?", openid);
             if (existing.isEmpty()) throw race;
             return users.getById(((Number) existing.get(0).get("user_id")).longValue());
+        }
+        if (!inviteCode.isBlank()) {
+            try { invites.bindCode(user.getId(), inviteCode); }
+            catch (BusinessException ignored) { /* a stale invite must not break login */ }
         }
         return user;
     }
@@ -127,6 +136,13 @@ public class WechatWebLoginService {
         if (!path.startsWith("/") || path.startsWith("//") || path.contains("\r") || path.contains("\n") || path.length() > 512)
             throw new BusinessException(400, "登录回跳地址无效");
         return path;
+    }
+
+    private String safeInvite(String value) {
+        String invite = value == null ? "" : value.trim().toUpperCase();
+        if (invite.isEmpty()) return "";
+        if (!invite.matches("[A-Z2-9]{8}")) throw new BusinessException(400, "邀请码格式不正确");
+        return invite;
     }
 
     private static String encode(String value) {

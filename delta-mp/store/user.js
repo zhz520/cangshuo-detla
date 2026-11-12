@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserToken, getPlayerToken, getGuestToken, getGuestInfo, setGuestSession as saveGuestSession, removeGuestSession as clearGuestStorage, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
+import { clientStorage } from '@/utils/client-storage'
 import { userLogin, h5Login, setupUserPassword, userPasswordLogin, exchangeWechatTicket, revokeSession } from '@/api/auth'
 import { linkWechatAccount as linkWechatAccountApi } from '@/api/user'
 import { getUserProfile } from '@/api/user'
@@ -37,9 +38,11 @@ export const useUserStore = defineStore('user', () => {
   /** H5 手机号验证码登录 */
   async function loginByPhone(phone, code, requestId) {
     try {
-      const { data } = await h5Login({ phone, code, requestId, privacyAccepted:true })
+      const inviteCode = clientStorage.get('invite_code') || ''
+      const { data } = await h5Login({ phone, code, requestId, privacyAccepted:true, inviteCode })
       if(data.passwordSetupRequired) {token.value='';userInfo.value=null;removeUserToken();removePlayerToken();useChatStore().disconnect();return { success:false, passwordSetupRequired:true, data }}
       applyLoginResult(data)
+      if(inviteCode) clientStorage.remove('invite_code')
       return { success: true, code: 200, data }
     } catch (e) {
       return {

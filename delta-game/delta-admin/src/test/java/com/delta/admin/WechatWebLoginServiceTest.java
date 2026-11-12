@@ -9,6 +9,7 @@ import com.delta.common.security.service.TokenService;
 import com.delta.system.service.SysConfigService;
 import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
+import com.delta.user.controller.InviteController;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,12 +33,13 @@ class WechatWebLoginServiceTest {
     @Mock JdbcTemplate jdbc;
     @Mock UserService users;
     @Mock TokenService tokens;
+    @Mock InviteController invites;
     @InjectMocks WechatWebLoginService service;
 
     @Test
     void startRequiresExplicitEnablement() {
         when(configs.getConfigValue("auth.wechat.enabled", "false")).thenReturn("false");
-        assertThatThrownBy(() -> service.startUrl("/pages/login/index", mock(HttpServletRequest.class)))
+        assertThatThrownBy(() -> service.startUrl("/pages/login/index", "", mock(HttpServletRequest.class)))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("尚未启用");
     }
 
@@ -51,11 +53,11 @@ class WechatWebLoginServiceTest {
         when(request.getServerName()).thenReturn("shop.example.com");
         when(request.getServerPort()).thenReturn(443);
 
-        String url = service.startUrl("/pages/login/index?from=web", request);
+        String url = service.startUrl("/pages/login/index?from=web", "ABCD2345", request);
 
         assertThat(url).contains("appid=wx-public-app", "scope=snsapi_base", "state=");
         assertThat(url).contains("redirect_uri=https%3A%2F%2Fshop.example.com%2Fuser%2Fauth%2Fwechat%2Fcallback");
-        verify(redis).set(startsWith("wechat:web-login:state:"), eq("/pages/login/index?from=web"), eq(5L), any());
+        verify(redis).set(startsWith("wechat:web-login:state:"), eq("/pages/login/index?from=web\nABCD2345"), eq(5L), any());
     }
 
     @Test
@@ -77,7 +79,7 @@ class WechatWebLoginServiceTest {
     @Test
     void callbackRequiresAConfiguredCustomerH5OriginBeforeRedirecting() throws Exception {
         when(redis.getAndDelete("wechat:web-login:state:0123456789abcdef0123456789abcdef"))
-                .thenReturn("/pages/login/index");
+                .thenReturn("/pages/login/index\n");
         when(officialWechat.exchangeOpenid("code")).thenReturn("openid-example");
         when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(java.util.List.of(Map.of("user_id", 7L)));
         User user = new User();
@@ -88,5 +90,23 @@ class WechatWebLoginServiceTest {
         assertThatThrownBy(() -> service.complete("code", "0123456789abcdef0123456789abcdef",
                 mock(HttpServletRequest.class)))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("客户 H5 站点地址");
+    }
+
+    @Test
+    void newOfficialAccountUserReceivesTheInviteAttributionBeforeTicketExchange() throws Exception {
+        String state = "0123456789abcdef0123456789abcdef";
+        when(redis.getAndDelete("wechat:web-login:state:" + state)).thenReturn("/pages/login/index\nABCD2345");
+        when(officialWechat.exchangeOpenid("code")).thenReturn("openid-new-user");
+        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(java.util.List.of());
+        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx-public-app");
+        when(configs.getConfigValue("site.customer_web_url", "")).thenReturn("https://shop.example.com");
+        User user = new User();
+        user.setId(9L); user.setStatus(1);
+        when(users.loginOrRegister(anyString(), eq(""), eq(""))).thenReturn(user);
+
+        String redirect = service.complete("code", state, mock(HttpServletRequest.class));
+
+        assertThat(redirect).startsWith("https://shop.example.com/pages/login/index?wechat_ticket=");
+        verify(invites).bindCode(9L, "ABCD2345");
     }
 }

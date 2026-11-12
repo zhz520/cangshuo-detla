@@ -14,7 +14,7 @@ export const h5Login = (data) => post('/user/auth/h5-login', data, { auth: false
 export const setupUserPassword = data => post('/user/auth/set-password',data,{auth:false})
 export const userPasswordLogin = data => post('/user/auth/password-login',data,{auth:false})
 export const getLoginPolicy = () => get('/user/auth/login-policy', {}, { auth: false, loading: false })
-export const getWechatLoginUrl = returnTo => get('/user/auth/wechat/start', { returnTo }, { auth: false, loading: false })
+export const getWechatLoginUrl = (returnTo, invite = '') => get('/user/auth/wechat/start', { returnTo, invite }, { auth: false, loading: false })
 export const exchangeWechatTicket = ticket => post('/user/auth/wechat/exchange', { ticket }, { auth: false })
 
 /** Revoke a token explicitly before removing it from local storage. */

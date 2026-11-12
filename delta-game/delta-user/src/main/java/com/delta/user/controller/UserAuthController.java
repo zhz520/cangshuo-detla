@@ -12,6 +12,7 @@ import com.delta.user.dto.LoginResponse;
 import com.delta.user.dto.WxLoginRequest;
 import com.delta.user.entity.User;
 import com.delta.user.service.UserService;
+import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.delta.common.tenant.TenantWxMaServiceProvider;
@@ -33,6 +34,7 @@ public class UserAuthController {
     private final com.delta.common.security.service.RateLimitService limits;
     private final com.delta.user.service.UserPasswordService passwords;
     private final InviteController inviteController;
+    private final SysConfigService configs;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final String dummyPasswordHash=new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("unused-account-password-1234");
 
@@ -42,16 +44,19 @@ public class UserAuthController {
     }
     @PostMapping("/sms-code")
     public R<java.util.Map<String,Object>> smsCode(@RequestBody java.util.Map<String,String> body,jakarta.servlet.http.HttpServletRequest request) {
+        if (!enabled("auth.phone.enabled", true)) return R.fail(403, "手机验证码登录已关闭");
         return R.ok(verification.send(body.get("phone"),"LOGIN","LOGIN",body.get("captchaId"),body.get("captchaCode"),request.getRemoteAddr()));
     }
 
     @PostMapping("/reset-code")
     public R<java.util.Map<String,Object>> resetCode(@RequestBody java.util.Map<String,String> body,jakarta.servlet.http.HttpServletRequest request) {
+        if (!enabled("auth.password.enabled", true)) return R.fail(403, "密码登录已关闭");
         return R.ok(verification.send(body.get("phone"),"RESET","RESET",body.get("captchaId"),body.get("captchaCode"),request.getRemoteAddr()));
     }
     @PostMapping("/reset-password")
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> resetPassword(@jakarta.validation.Valid @RequestBody com.delta.user.dto.PasswordResetRequest body) {
+        if (!enabled("auth.password.enabled", true)) return R.fail(403, "密码登录已关闭");
         verification.verify(body.phone(),"RESET","RESET",body.requestId(),body.code());
         passwords.reset(body.phone(),body.password(),body.confirmation());
         return R.ok();
@@ -114,6 +119,7 @@ public class UserAuthController {
 
     @PostMapping("/h5-login")
     public R<LoginResponse> h5Login(@jakarta.validation.Valid @RequestBody H5LoginRequest request) {
+        if (!enabled("auth.phone.enabled", true)) return R.fail(403, "手机验证码登录已关闭");
         String phone = request.getPhone() == null ? "" : request.getPhone().trim();
         String code = request.getCode() == null ? "" : request.getCode().trim();
         if (!phone.matches("^1\\d{10}$")) {
@@ -141,6 +147,7 @@ public class UserAuthController {
     @PostMapping("/password-login")
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<LoginResponse> passwordLogin(@jakarta.validation.Valid @RequestBody com.delta.user.dto.PasswordLoginRequest request,jakarta.servlet.http.HttpServletRequest servlet) {
+        if (!enabled("auth.password.enabled", true)) return R.fail(403, "密码登录已关闭");
         limits.check("user-password-ip:"+servlet.getRemoteAddr(),50,600);
         limits.check("user-password-phone:"+request.getPhone(),10,600);
         verification.verifyLoginCaptcha(request.getCaptchaId(),request.getCaptchaCode(),servlet.getRemoteAddr());
@@ -166,9 +173,16 @@ public class UserAuthController {
         if (inviteCode == null || inviteCode.isBlank()) return;
         try {
             inviteController.bindCode(userId, inviteCode);
-        } catch (Exception ignored) {
-            // An invalid or already-used invite code must not create the account twice.
+        } catch (com.delta.common.exception.BusinessException error) {
+            // A stale or already-used invite code must not roll back a valid account registration.
+            log.info("邀请码未绑定 userId={} reason={}", userId, error.getMessage());
+        } catch (Exception error) {
+            log.warn("邀请码绑定异常 userId={}", userId, error);
         }
+    }
+
+    private boolean enabled(String key, boolean fallback) {
+        return "true".equalsIgnoreCase(configs.getConfigValue(key, Boolean.toString(fallback)));
     }
 
     /**

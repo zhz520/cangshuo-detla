@@ -89,6 +89,7 @@ public class SysConfigController {
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> batchUpdate(@RequestBody List<SysConfig> configs) {
         if(configs==null || configs.size()>200) return R.fail(400,"配置数量无效");
+        validateCombined(configs);
         configs.forEach(this::updateValue);
         return R.ok();
     }
@@ -148,6 +149,7 @@ public class SysConfigController {
         map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
         map.put("staff_web_url", sysConfigService.getConfigValue("site.staff_web_url", ""));
+        map.put("customer_web_url", sysConfigService.getConfigValue("site.customer_web_url", ""));
         map.put("customer_service_mode", sysConfigService.getConfigValue("customer_service.mode", "internal"));
         map.put("customer_service_external_url", sysConfigService.getConfigValue("customer_service.external_url", ""));
         map.put("customer_service_home_icon_visible", sysConfigService.getConfigValue("customer_service.home_icon_visible", "true"));
@@ -378,6 +380,16 @@ public class SysConfigController {
             throw new com.delta.common.exception.BusinessException(400,"网页主登录方式只能是 PHONE 或 WECHAT");
         if("identity.prompt_mode".equals(key)&&!java.util.Set.of("OFF","REMIND","REQUIRED").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"实名提醒方式只能是 OFF、REMIND 或 REQUIRED");
+        if("membership.tiers".equals(key)) com.delta.common.membership.MembershipTierRules.parseStrict(value);
+        if("marketing.invite.reward_amount".equals(key)) {
+            try {
+                var amount = new java.math.BigDecimal(value);
+                if (amount.signum() <= 0 || amount.compareTo(new java.math.BigDecimal("100000")) > 0 || amount.scale() > 2)
+                    throw new IllegalArgumentException();
+            } catch (Exception error) {
+                throw new com.delta.common.exception.BusinessException(400,"邀请奖励金额须为 0.01 至 100000 元，最多两位小数");
+            }
+        }
         if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
         if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(key.startsWith("sms.notification.templates.")) validateSmsRoleTemplates(value);
@@ -429,7 +441,11 @@ public class SysConfigController {
         if("customer_service.home_icon_visible".equals(key)) {
             if(!java.util.Set.of("true","false").contains(value)) throw new com.delta.common.exception.BusinessException(400,"首页客服图标显示设置不正确");
         }
-        if(java.util.Set.of("order.purchase_enabled","order.guest_checkout_enabled","player.directory.enabled").contains(key)
+        if(java.util.Set.of("order.purchase_enabled","order.guest_checkout_enabled","player.directory.enabled",
+                "order.cooperation.enabled","auth.phone.enabled","auth.password.enabled","auth.wechat.enabled",
+                "identity.auto.enabled","membership.enabled","marketing.coupon.issue_enabled",
+                "marketing.coupon.redeem_enabled","marketing.invite.enabled","display.spend_rank.enabled",
+                "display.purchase_feed.enabled").contains(key)
                 && !java.util.Set.of("true","false").contains(value)) {
             throw new com.delta.common.exception.BusinessException(400,"功能开关设置不正确");
         }
@@ -462,6 +478,28 @@ public class SysConfigController {
             }
         }
         SysConfig update=new SysConfig();update.setId(old.getId());update.setConfigValue(value);sysConfigService.updateById(update);
+    }
+
+    /** Prevent save operations that would leave every web login entry unreachable. */
+    private void validateCombined(List<SysConfig> submitted) {
+        Map<String, String> values = new java.util.HashMap<>();
+        for (SysConfig row : sysConfigService.list()) values.put(row.getConfigKey(), row.getConfigValue());
+        for (SysConfig row : submitted) {
+            if (row == null || row.getId() == null || row.getConfigValue() == null) continue;
+            SysConfig old = sysConfigService.getById(row.getId());
+            if (old != null) values.put(old.getConfigKey(), row.getConfigValue());
+        }
+        boolean phone = "true".equalsIgnoreCase(values.getOrDefault("auth.phone.enabled", "true"));
+        boolean password = "true".equalsIgnoreCase(values.getOrDefault("auth.password.enabled", "true"));
+        String appId = values.getOrDefault("wechat.official.app_id", "");
+        String appSecret = values.getOrDefault("wechat.official.app_secret", "");
+        if ("********".equals(appSecret)) appSecret = sysConfigService.getConfigValue("wechat.official.app_secret", "");
+        boolean wechat = "true".equalsIgnoreCase(values.getOrDefault("auth.wechat.enabled", "false"))
+                && !appId.isBlank() && !appSecret.isBlank();
+        if (!phone && !password && !wechat)
+            throw new com.delta.common.exception.BusinessException(400, "至少保留一种可用的网页登录方式，并先完成公众号配置后再关闭手机与密码登录");
+        if ("WECHAT".equalsIgnoreCase(values.getOrDefault("auth.primary_method", "PHONE")) && !wechat)
+            throw new com.delta.common.exception.BusinessException(400, "微信尚未启用或公众号凭据未配置，不能设为主登录方式");
     }
 
     private void validateOfficialTemplate(String value) {

@@ -13,6 +13,7 @@ import com.delta.pay.service.*;
 import com.delta.player.service.WithdrawService;
 import com.delta.player.service.impl.*;
 import com.delta.system.service.impl.OperationLogServiceImpl;
+import com.delta.system.service.SysConfigService;
 import com.delta.user.controller.UserAuthController;
 import com.delta.user.service.UserPasswordService;
 import com.delta.user.service.impl.*;
@@ -73,10 +74,13 @@ class UserAccountIntegrationTest {
     @MockBean PaymentService payments;
     @MockBean TransactionService transactions;
     @MockBean WithdrawService withdraws;
+    @MockBean SysConfigService configs;
     final Map<String,String> setupCache=new ConcurrentHashMap<>();
     final Map<String,Object> sessions=new ConcurrentHashMap<>();
     private static final String PASSWORD="SecureUserPass123";
     @BeforeEach void cache() {
+        when(configs.getConfigValue("auth.phone.enabled", "true")).thenReturn("true");
+        when(configs.getConfigValue("auth.password.enabled", "true")).thenReturn("true");
         setupCache.clear();sessions.clear();ValueOperations<String,String> values=mock(ValueOperations.class);
         when(strings.opsForValue()).thenReturn(values);
         doAnswer(a->{setupCache.put(a.getArgument(0),a.getArgument(1));return null;}).when(values).set(anyString(),anyString(),any(Duration.class));
