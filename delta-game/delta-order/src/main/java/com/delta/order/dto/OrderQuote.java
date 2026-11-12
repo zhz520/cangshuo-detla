@@ -16,5 +16,8 @@ public class OrderQuote {
     private String memberTier;
     private BigDecimal memberDiscountRate;
     private BigDecimal memberDiscountAmount;
+    private Long couponId;
+    private String couponName;
+    private BigDecimal couponDiscountAmount;
     private BigDecimal amount;
 }

@@ -36,11 +36,12 @@ public class OrderController {
     @GetMapping("/quote")
     public R<com.delta.order.dto.OrderQuote> quote(@RequestParam Long productId,
             @RequestParam(required=false) Long designatedPlayerId,@RequestParam(required=false) Integer playerLevelId,
+            @RequestParam(required=false) Long couponId,
             jakarta.servlet.http.HttpServletResponse response) {
         response.setHeader("Cache-Control","no-store, private");
         Long userId=null;
         try{userId=SecurityUtils.getUserId();}catch(Exception ignored){}
-        return R.ok(orderPricing.quote(productId,designatedPlayerId,playerLevelId,userId));
+        return R.ok(orderPricing.quote(productId,designatedPlayerId,playerLevelId,userId,couponId));
     }
 
     @PostMapping

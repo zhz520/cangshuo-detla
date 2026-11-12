@@ -24,12 +24,17 @@ public class OrderPricingService {
     private final CrossModuleMapper crossModuleMapper;
     private final SysConfigService configs;
     private final JdbcTemplate jdbc;
+    private final CouponRedemptionService couponRedemption;
 
     public OrderQuote quote(Long productId,Long playerId,Integer levelId) {
         return quote(productId,playerId,levelId,null);
     }
 
     public OrderQuote quote(Long productId,Long playerId,Integer levelId,Long userId) {
+        return quote(productId,playerId,levelId,userId,null);
+    }
+
+    public OrderQuote quote(Long productId,Long playerId,Integer levelId,Long userId,Long couponId) {
         if(productId==null || productId<=0 || playerId!=null&&playerId<=0 || levelId!=null&&levelId<=0)
             throw new BusinessException(400,"请选择有效的商品和打手");
         if(playerId!=null && levelId!=null) throw new BusinessException(400,"指定打手和指定等级不能同时选择");
@@ -77,12 +82,22 @@ public class OrderPricingService {
                 }
             }catch(Exception ignored){}
         }
+        Long usedCoupon=null;
+        String couponName=null;
+        BigDecimal couponDiscount=BigDecimal.ZERO;
+        if(couponId!=null){
+            if(userId==null)throw new BusinessException(401,"登录后才能使用优惠券");
+            CouponRedemptionService.CouponDiscount coupon=couponRedemption.quote(userId,couponId,gross);
+            usedCoupon=coupon.couponId();couponName=coupon.name();couponDiscount=coupon.discount();
+            gross=Money.positive(gross.subtract(couponDiscount));
+        }
         OrderQuote quote=new OrderQuote();
         quote.setProductId(productId);quote.setProductName(product.getName());
         quote.setDesignatedPlayerId(playerId);quote.setPlayerLevelId(levelId);
         quote.setPlayerLevelName(config==null?null:config.getLevelName());
         quote.setBaseAmount(base);quote.setPriceIncreaseRate(rate);quote.setPriceIncreaseAmount(extra);
         quote.setMemberTier(memberTier);quote.setMemberDiscountRate(memberRate);quote.setMemberDiscountAmount(memberDiscount);
+        quote.setCouponId(usedCoupon);quote.setCouponName(couponName);quote.setCouponDiscountAmount(couponDiscount);
         quote.setAmount(gross);
         return quote;
     }

@@ -33,7 +33,8 @@ class MembershipPricingTest {
         when(configs.getConfigValue("membership.enabled", "false")).thenReturn("true");
         when(configs.getConfigValue(eq("membership.tiers"), anyString())).thenReturn(
                 "[{\"code\":\"NORMAL\",\"name\":\"普通\",\"minSpend\":0,\"discountRate\":1},{\"code\":\"SILVER\",\"name\":\"白银\",\"minSpend\":500,\"discountRate\":0.98}]");
-        OrderPricingService pricing = new OrderPricingService(products, mock(CrossModuleMapper.class), configs, jdbc);
+        OrderPricingService pricing = new OrderPricingService(products, mock(CrossModuleMapper.class), configs, jdbc,
+                mock(com.delta.order.service.CouponRedemptionService.class));
 
         var quote = pricing.quote(11L, null, null, 7L);
 

@@ -26,7 +26,8 @@ class OrderPurchaseGateTest {
                 mock(com.delta.common.mapper.CrossModuleMapper.class),
                 configs,
                 mock(com.delta.common.security.service.VerificationService.class),
-                mock(com.delta.order.service.OrderPricingService.class));
+                mock(com.delta.order.service.OrderPricingService.class),
+                mock(com.delta.order.service.CouponRedemptionService.class));
 
         assertThatThrownBy(() -> service.createOrder(1L, new CreateOrderRequest()))
                 .isInstanceOf(BusinessException.class)

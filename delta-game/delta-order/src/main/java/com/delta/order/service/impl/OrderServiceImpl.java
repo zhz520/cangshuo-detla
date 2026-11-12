@@ -48,6 +48,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final SysConfigService sysConfigService;
     private final com.delta.common.security.service.VerificationService verification;
     private final com.delta.order.service.OrderPricingService orderPricing;
+    private final com.delta.order.service.CouponRedemptionService couponRedemption;
 
     @Override
     public Order getById(java.io.Serializable id) {
@@ -70,7 +71,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Product product = productService.getById(req.getProductId());
         if (product == null) throw new BusinessException("商品不存在");
         if (product.getStatus() != 1) throw new BusinessException("商品已下架");
-        com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId(),userId);
+        com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId(),userId,req.getCouponId());
         LocalDateTime now = LocalDateTime.now();
 
         // 1.1 限购校验：按商品设置的周期限制重复购买
@@ -110,6 +111,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setMemberTier(quote.getMemberTier());
         order.setMemberDiscountRate(quote.getMemberDiscountRate());
         order.setMemberDiscountAmount(quote.getMemberDiscountAmount());
+        order.setCouponId(quote.getCouponId());
+        order.setCouponName(quote.getCouponName());
+        order.setCouponDiscountAmount(quote.getCouponDiscountAmount());
         order.setRequestedPlayerLevelId(quote.getPlayerLevelId());
         order.setPlayerLevelName(quote.getPlayerLevelName());
         // 抽佣比例：商品级优先，否则用系统默认
@@ -138,6 +142,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         save(order);
+        if (quote.getCouponId() != null) couponRedemption.lock(userId, quote.getCouponId(), order.getId());
         BigDecimal csRate=new BigDecimal(sysConfigService.getConfigValue("settlement.cs_rate","0"));
         if(csRate.signum()<0||csRate.compareTo(BigDecimal.ONE)>0)throw new BusinessException("客服提成比例无效");
         jdbc.update("INSERT INTO order_finance_snapshot(order_id,cs_rate) VALUES (?,?)",order.getId(),csRate);
@@ -160,6 +165,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (OrderStatusEnum.PENDING_PAYMENT.name().equals(status)) {
             // 未支付取消
             transition(order, OrderStatusEnum.CANCELLED, "USER", userId, "用户取消订单");
+            couponRedemption.release(orderId);
             redisTemplate.delete(namespaced("order:pay_timeout:" + orderId));
             eventPublisher.publishEvent(new BusinessEvent(this, "ORDER_CANCELLED", "USER", userId, orderId, "订单已取消"));
         } else if (OrderStatusEnum.PAID.name().equals(status) && order.getPlayerId() == null) {

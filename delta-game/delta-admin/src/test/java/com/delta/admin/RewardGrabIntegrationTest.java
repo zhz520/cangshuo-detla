@@ -61,7 +61,7 @@ class RewardGrabIntegrationTest {
     @MapperScan({"com.delta.admin.mapper","com.delta.player.mapper","com.delta.order.mapper","com.delta.pay.mapper","com.delta.user.mapper","com.delta.common.mapper","com.delta.system.mapper"})
     @Import({RewardService.class,RewardController.class,RewardGrabRulesService.class,RewardGrabSettingsController.class,FeatureAuditService.class,
             OperationLogServiceImpl.class,SysConfigServiceImpl.class,WalletServiceImpl.class,PlayerWalletServiceImpl.class,UserServiceImpl.class,
-            PlayerServiceImpl.class,PlayerLevelService.class,com.delta.order.service.OrderPricingService.class,com.delta.order.controller.OrderController.class,OrderServiceImpl.class,OrderPlayerServiceImpl.class,OrderProgressServiceImpl.class,
+            PlayerServiceImpl.class,PlayerLevelService.class,com.delta.order.service.OrderPricingService.class,com.delta.order.service.CouponRedemptionService.class,com.delta.order.controller.OrderController.class,OrderServiceImpl.class,OrderPlayerServiceImpl.class,OrderProgressServiceImpl.class,
             TransactionServiceImpl.class,PlayerOrderController.class,com.delta.player.controller.PlayerEarningsController.class,com.delta.order.controller.PlayerWorkController.class,SecurityConfig.class,JwtAuthenticationFilter.class,
             AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,RateLimitService.class})
     static class Config {
