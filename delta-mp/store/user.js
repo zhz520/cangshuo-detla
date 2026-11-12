@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserToken, getPlayerToken, getGuestToken, getGuestInfo, setGuestSession as saveGuestSession, removeGuestSession as clearGuestStorage, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
-import { userLogin, h5Login, setupUserPassword, userPasswordLogin, revokeSession } from '@/api/auth'
+import { userLogin, h5Login, setupUserPassword, userPasswordLogin, exchangeWechatTicket, revokeSession } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
 
@@ -92,6 +92,16 @@ export const useUserStore = defineStore('user', () => {
     const response=await userPasswordLogin(data);applyLoginResult(response.data);return response.data
   }
 
+  async function exchangeWechatLogin(ticket) {
+    try {
+      const { data } = await exchangeWechatTicket(ticket)
+      applyLoginResult(data)
+      return { success: true, code: 200, data }
+    } catch (e) {
+      return { success: false, code: e?.code || 500, msg: e?.msg || e?.message || '微信登录失败' }
+    }
+  }
+
   /** 获取用户资料 */
   async function fetchProfile(silent = false) {
     if (!token.value) return
@@ -149,6 +159,7 @@ export const useUserStore = defineStore('user', () => {
     loginByPhone,
     completePasswordSetup,
     loginWithPassword,
+    exchangeWechatLogin,
     fetchProfile,
     setGuestSession,
     clearGuestSession,

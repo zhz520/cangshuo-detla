@@ -31,7 +31,11 @@
     <view v-else class="login-area">
       <!-- 快速登录 -->
       <template v-if="loginMode === 'wechat'">
-        <template v-if="canUseWechatLogin">
+        <template v-if="wechatTicket">
+          <view class="wechat-tip">微信授权已完成，请确认协议后完成登录。</view>
+          <view class="login-btn wechat-btn" @click="finishWechatTicket">{{ loggingIn ? '登录中...' : '完成微信登录' }}</view>
+        </template>
+        <template v-else-if="canUseWechatLogin">
           <button v-if="!needPhoneAuth" class="login-btn wechat-btn" @click="handleWechatLogin">快速登录</button>
           <button v-else class="login-btn wechat-btn" open-type="getPhoneNumber" @getphonenumber="handlePhoneAuthorize">
             首次登录请授权手机号
@@ -39,6 +43,10 @@
           <view v-if="needPhoneAuth" class="wechat-tip">检测到是首次登录，授权手机号后即可完成注册</view>
         </template>
         <template v-else>
+          <view v-if="wechatLoginEnabled" class="login-btn wechat-btn" @click="startWechatLogin">
+            {{ wechatStarting ? '正在跳转...' : '微信登录' }}
+          </view>
+          <view v-if="wechatLoginEnabled" class="wechat-tip">将在微信中完成授权，返回后继续登录</view>
           <input v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" class="input" />
           <view class="verification-row">
             <input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" />
@@ -83,7 +91,7 @@ import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
 import { useChatStore } from '@/store/chat'
-import { getLoginCaptcha, sendLoginCode, sendResetCode, resetPassword } from '@/api/auth'
+import { getLoginCaptcha, getLoginPolicy, getWechatLoginUrl, sendLoginCode, sendResetCode, resetPassword } from '@/api/auth'
 import { isMpWeixin } from '@/utils/platform'
 
 const userStore = useUserStore()
@@ -99,6 +107,9 @@ const setupToken=ref(''),newPassword=ref(''),confirmPassword=ref(''),userPasswor
 const verifyCode = ref('')
 const captchaCode=ref(''),captchaId=ref(''),captchaImage=ref(''),smsRequestId=ref('')
 const sendingCode=ref(false),codeCountdown=ref(0)
+const wechatTicket=ref('')
+const wechatLoginEnabled=ref(false)
+const wechatStarting=ref(false)
 let countdownTimer
 async function loadCaptcha() {
   // Password recovery also uses the captcha in WeChat.
@@ -123,10 +134,12 @@ async function submitReset(){
   if(!smsRequestId.value||!verifyCode.value||newPassword.value!==confirmPassword.value)return uni.showToast({title:'请填写验证码并确认两次密码一致',icon:'none'})
   loggingIn.value=true;try{await resetPassword({phone:phone.value,code:verifyCode.value,requestId:smsRequestId.value,password:newPassword.value,confirmation:confirmPassword.value});userStore.logout();resetting.value=false;loginMode.value='password';userPassword.value='';newPassword.value='';confirmPassword.value='';smsRequestId.value='';uni.showToast({title:'密码已重置，请重新登录',icon:'none'});loadCaptcha()}catch(_){}finally{loggingIn.value=false}
 }
-onMounted(loadCaptcha)
+onMounted(()=>{loadCaptcha();loadLoginPolicy()})
 onLoad(options=>{
   const target=decodeURIComponent(options?.redirect||'')
   if(/^\/(pages|pages-player)\//.test(target))redirectUrl.value=target
+  const ticket=String(options?.wechat_ticket||'')
+  if(/^[a-f0-9]{32}$/.test(ticket)){wechatTicket.value=ticket;loginMode.value='wechat'}
   if(options?.expired==='1')uni.showToast({title:'登录已过期，请重新登录',icon:'none'})
 })
 onUnmounted(()=>clearInterval(countdownTimer))
@@ -147,6 +160,41 @@ async function handleWechatLogin() {
   if (result.code === 1006) {
     needPhoneAuth.value = true
   }
+}
+
+async function loadLoginPolicy(){
+  try {
+    const {data}=await getLoginPolicy()
+    wechatLoginEnabled.value=Boolean(data?.wechatEnabled)
+    if(data?.primaryMethod==='WECHAT'&&wechatLoginEnabled.value)loginMode.value='wechat'
+  } catch (_) { wechatLoginEnabled.value=false }
+}
+
+async function startWechatLogin(){
+  if(wechatStarting.value)return
+  if(!agreed.value)return uni.showToast({title:'请先阅读并勾选同意协议',icon:'none'})
+  if(typeof window==='undefined')return uni.showToast({title:'请在微信或浏览器中打开',icon:'none'})
+  wechatStarting.value=true
+  try{
+    const {data}=await getWechatLoginUrl('/pages/login/index')
+    if(!data?.authorizeUrl)throw new Error('未获取到微信授权地址')
+    window.location.assign(data.authorizeUrl)
+  }catch(e){uni.showToast({title:e?.message||'微信登录暂不可用',icon:'none'});wechatStarting.value=false}
+}
+
+async function finishWechatTicket(){
+  if(loggingIn.value||!wechatTicket.value)return
+  if(!agreed.value)return uni.showToast({title:'请先阅读并勾选同意协议',icon:'none'})
+  loggingIn.value=true
+  try{
+    const result=await userStore.exchangeWechatLogin(wechatTicket.value)
+    if(!result.success)return uni.showToast({title:result.msg||'微信登录失败',icon:'none'})
+    wechatTicket.value=''
+    try{
+      const url=new URL(window.location.href);url.searchParams.delete('wechat_ticket');window.history.replaceState(null,'',url.pathname+url.search+url.hash)
+    }catch(_){}
+    completeWechatLogin()
+  }finally{loggingIn.value=false}
 }
 
 async function handlePhoneAuthorize(e) {
