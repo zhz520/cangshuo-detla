@@ -124,6 +124,10 @@
     {
       "path": "pages/login/bind-phone",
       "style": { "navigationBarTitleText": "绑定手机号" }
+    },
+    {
+      "path": "pages/display/index",
+      "style": { "navigationBarTitleText": "消费排行" }
     }
   ],
   "subPackages": [
