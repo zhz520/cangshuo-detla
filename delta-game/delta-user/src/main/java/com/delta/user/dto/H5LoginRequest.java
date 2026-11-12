@@ -12,4 +12,6 @@ public class H5LoginRequest {
     private Boolean privacyAccepted;
     @NotBlank @Size(max=36)
     private String requestId;
+    @Size(max=16)
+    private String inviteCode;
 }

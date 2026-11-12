@@ -35,7 +35,12 @@ public class InviteController {
     @Transactional(rollbackFor = Exception.class)
     public R<Void> bind(@RequestBody Map<String, String> body) {
         Long userId = SecurityUtils.getUserId();
-        String code = body == null ? "" : String.valueOf(body.getOrDefault("code", "")).trim().toUpperCase();
+        bindCode(userId, body == null ? "" : body.get("code"));
+        return R.ok();
+    }
+
+    public void bindCode(Long userId, String rawCode) {
+        String code = rawCode == null ? "" : rawCode.trim().toUpperCase();
         if (!code.matches("[A-Z2-9]{8}")) throw new BusinessException(400, "邀请码格式不正确");
         var owners = jdbc.queryForList("SELECT user_id FROM invite_code WHERE code=?", code);
         if (owners.isEmpty()) throw new BusinessException(404, "邀请码不存在");
@@ -44,7 +49,6 @@ public class InviteController {
         if (jdbc.queryForObject("SELECT COUNT(*) FROM invite_relation WHERE invitee_id=?", Integer.class, userId) > 0)
             throw new BusinessException(409, "当前账号已归因，不能重复邀请");
         jdbc.update("INSERT INTO invite_relation(inviter_id,invitee_id,code,status) VALUES(?,?,?,'PENDING')", inviter, userId, code);
-        return R.ok();
     }
 
     private String codeFor(Long userId) {

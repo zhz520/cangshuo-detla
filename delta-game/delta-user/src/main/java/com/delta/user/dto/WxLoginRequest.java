@@ -8,4 +8,5 @@ public class WxLoginRequest {
     private Boolean privacyAccepted;
     /** 微信获取手机号的code */
     private String phoneCode;
+    private String inviteCode;
 }

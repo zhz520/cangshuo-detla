@@ -32,6 +32,7 @@ public class UserAuthController {
     private final com.delta.common.security.service.VerificationService verification;
     private final com.delta.common.security.service.RateLimitService limits;
     private final com.delta.user.service.UserPasswordService passwords;
+    private final InviteController inviteController;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final String dummyPasswordHash=new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("unused-account-password-1234");
 
@@ -100,6 +101,7 @@ public class UserAuthController {
                     user = userService.loginOrRegister(openid, "", "");
                     user.setPhone(phone);
                     userService.updateById(user);
+                    bindInvite(user.getId(), request.getInviteCode());
                 }
             }
             if (user.getStatus() == 0) return R.fail("账号已被封禁");
@@ -119,7 +121,9 @@ public class UserAuthController {
         }
         verification.verify(phone,"LOGIN","LOGIN",request.getRequestId(),code);
         if(userService.getByPhone(phone)==null&&!Boolean.TRUE.equals(request.getPrivacyAccepted()))return R.fail(400,"首次注册请阅读并同意用户协议与隐私政策");
+        boolean newAccount = userService.getByPhone(phone) == null;
         User user = userService.loginOrRegisterByPhone(phone);
+        if (newAccount) bindInvite(user.getId(), request.getInviteCode());
         if (!Integer.valueOf(1).equals(user.getStatus())) return R.fail(403,"账号暂不可用");
         if(!user.isPasswordSet()) {
             LoginResponse response=new LoginResponse();response.setPasswordSetupRequired(true);response.setSetupToken(passwords.issueSetup(user));
@@ -156,6 +160,15 @@ public class UserAuthController {
         resp.setPasswordSetupRequired(false);
         resp.setPhoneBound(user.getPhone()!=null&&!user.getPhone().isBlank());
         return resp;
+    }
+
+    private void bindInvite(Long userId, String inviteCode) {
+        if (inviteCode == null || inviteCode.isBlank()) return;
+        try {
+            inviteController.bindCode(userId, inviteCode);
+        } catch (Exception ignored) {
+            // An invalid or already-used invite code must not create the account twice.
+        }
     }
 
     /**
