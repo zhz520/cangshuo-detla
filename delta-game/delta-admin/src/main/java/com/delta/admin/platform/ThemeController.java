@@ -6,6 +6,7 @@ import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
 import com.delta.system.entity.SysConfig;
 import com.delta.system.service.SysConfigService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -43,10 +44,10 @@ public class ThemeController {
 
     @PutMapping("/active")
     @OpLog(module = "platform", operation = "切换客户主题")
-    public R<ThemeState> activate(@Valid @RequestBody ActivateRequest body) {
+    public R<ThemeState> activate(@Valid @RequestBody ActivateRequest body, HttpServletRequest request) {
         String themeId = body.themeId().trim().toLowerCase(Locale.ROOT);
         if (!SUPPORTED.contains(themeId)) throw new BusinessException(400, "主题不存在或暂不支持");
-        if (!DEFAULT_THEME.equals(themeId)) platform.requireFeature(THEME_FEATURE);
+        if (!DEFAULT_THEME.equals(themeId)) platform.requireFeature(THEME_FEATURE, request.getServerName());
         save(ACTIVE_THEME_KEY, themeId);
         return R.ok(state());
     }

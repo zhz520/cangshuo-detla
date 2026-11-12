@@ -7,12 +7,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,20 +41,28 @@ class ThemeControllerTest {
 
     @Test
     void activationRejectsUnknownThemes() {
-        assertThatThrownBy(() -> controller.activate(new ThemeController.ActivateRequest("custom")))
+        assertThatThrownBy(() -> controller.activate(new ThemeController.ActivateRequest("custom"), request("shop.example.com")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("主题不存在");
     }
 
     @Test
-    void activationDoesNotBypassThePaidEntitlement() {
+    void activationUsesTheRequestDomainForThePaidEntitlement() {
         doThrow(new BusinessException(403, "此功能尚未获得有效授权"))
-                .when(platform).requireFeature(ThemeController.THEME_FEATURE);
+                .when(platform).requireFeature(ThemeController.THEME_FEATURE, "shop.example.com");
 
         assertThatThrownBy(() -> controller.activate(
-                new ThemeController.ActivateRequest(ThemeController.NEUMORPHISM_THEME)))
+                new ThemeController.ActivateRequest(ThemeController.NEUMORPHISM_THEME), request("shop.example.com")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("尚未获得有效授权");
+
+        verify(platform).requireFeature(ThemeController.THEME_FEATURE, "shop.example.com");
+    }
+
+    private MockHttpServletRequest request(String host) {
+        var request = new MockHttpServletRequest();
+        request.setServerName(host);
+        return request;
     }
 
     private PlatformService.FeatureView feature(boolean entitled, boolean enabled) {
