@@ -158,7 +158,8 @@ public class IdentityVerificationController {
         if (!existing.isEmpty() && Set.of("PENDING", "APPROVED").contains(String.valueOf(value(existing.get(0), "status"))))
             throw new BusinessException(409, "实名资料正在审核或已通过，请勿重复提交");
 
-        IdentityBillingClient.Result result = identityBilling.verify(userId, realName, idNumber);
+        String requestKey = "identity-" + userId + "-" + hash(realName + ":" + idNumber);
+        IdentityBillingClient.Result result = identityBilling.verify(realName, idNumber, requestKey);
         if (!result.matched()) throw new BusinessException(422, "姓名与证件号码不一致，请核对后重试");
 
         try {

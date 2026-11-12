@@ -13,9 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Duration;
-import java.util.HexFormat;
 
 /** Client for the authority-issued, metered two-factor identity check. */
 @Service
@@ -32,15 +30,14 @@ public class IdentityBillingClient {
         try { endpoint(); return true; } catch (Exception error) { return false; }
     }
 
-    public Result verify(Long userId, String realName, String idNumber) {
+    public Result verify(String realName, String idNumber, String idempotencyKey) {
         URI endpoint = endpoint();
         var license = platform.reportPayload().license();
         if (license == null) throw new BusinessException(409, "当前实例尚未完成授权接入");
-        String key = idempotencyKey(userId, realName, idNumber);
         var body = json.createObjectNode();
         body.set("license", json.valueToTree(license));
         body.put("version", platform.overview().version());
-        body.put("idempotencyKey", key);
+        body.put("idempotencyKey", idempotencyKey);
         body.put("realName", realName);
         body.put("idNumber", idNumber);
         try {
@@ -86,16 +83,6 @@ public class IdentityBillingClient {
                     path.substring(0, slash + 1) + "identity/verify", null, null);
         } catch (Exception error) {
             throw new IllegalStateException("authority report URL invalid", error);
-        }
-    }
-
-    private static String idempotencyKey(Long userId, String realName, String idNumber) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(
-                    (userId + ":" + realName + ":" + idNumber).getBytes(StandardCharsets.UTF_8));
-            return "identity-" + userId + "-" + HexFormat.of().formatHex(digest);
-        } catch (Exception error) {
-            throw new IllegalStateException(error);
         }
     }
 

@@ -160,7 +160,7 @@ class IdentityVerificationIntegrationTest {
     @Test void autoVerificationMarksTheAccountApprovedWithoutStoringDocumentImages() throws Exception {
         when(configs.getConfigValue("identity.auto.enabled", "false")).thenReturn("true");
         when(identityBilling.configured()).thenReturn(true);
-        when(identityBilling.verify(7L, "张三", "11010519491231002X"))
+        when(identityBilling.verify(eq("张三"), eq("11010519491231002X"), anyString()))
                 .thenReturn(new IdentityBillingClient.Result(true, "CHARGED", 900));
 
         mvc.perform(post("/user/identity/auto-verify").with(role("USER", 7)).contentType("application/json")
