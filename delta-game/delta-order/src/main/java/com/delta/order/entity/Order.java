@@ -23,6 +23,9 @@ public class Order {
     private String memberTier;
     private BigDecimal memberDiscountRate;
     private BigDecimal memberDiscountAmount;
+    private Long couponId;
+    private String couponName;
+    private BigDecimal couponDiscountAmount;
     private Integer requestedPlayerLevelId;
     private String playerLevelName;
     /** 下单时快照的抽佣比例（0~1，如 0.1 表示 10%），来自 sys_config settlement.commission_rate */
