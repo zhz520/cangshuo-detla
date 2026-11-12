@@ -120,6 +120,10 @@
     {
       "path": "pages/login/index",
       "style": { "navigationBarTitleText": "登录", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+    },
+    {
+      "path": "pages/login/bind-phone",
+      "style": { "navigationBarTitleText": "绑定手机号" }
     }
   ],
   "subPackages": [

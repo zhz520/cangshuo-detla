@@ -261,6 +261,10 @@ function completeWechatLogin() {
   needPhoneAuth.value = false
   clientStorage.set('app_role','user');appStore.restoreRole();chatStore.disconnect()
   chatStore.connect()
+  if (userStore.userInfo?.phoneBound === false) {
+    uni.redirectTo({ url: '/pages/login/bind-phone?redirect=' + encodeURIComponent(redirectUrl.value) })
+    return
+  }
   uni.reLaunch({ url: redirectUrl.value })
 }
 
