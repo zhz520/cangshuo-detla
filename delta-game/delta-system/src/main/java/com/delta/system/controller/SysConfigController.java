@@ -215,6 +215,16 @@ public class SysConfigController {
                 "开启后还需配置公众号 AppID 和 AppSecret；仅影响网页登录，不改变公众号通知绑定");
         ensureConfig("auth.primary_method", "网页主登录方式", "PHONE", "text", "账号与登录",
                 "可选 PHONE 或 WECHAT；微信未完成配置时客户端自动回退可用登录方式");
+        for(String[] item:java.util.List.of(
+                new String[]{"identity.auto.enabled","启用自动二要素实名","false","boolean","实名配置","开启后仍受授权中心服务余额和实名策略约束"},
+                new String[]{"identity.prompt_mode","实名提醒方式","OFF","text","实名配置","OFF/REMIND/REQUIRED；REQUIRED 只限制配置指定的业务动作"},
+                new String[]{"membership.enabled","启用用户会员等级","false","boolean","会员配置","关闭后停止新增会员权益，既有等级和历史记录保留"},
+                new String[]{"marketing.coupon.issue_enabled","启用优惠券发放","false","boolean","营销配置","关闭后停止领券和新发券，已发有效券按原规则处理"},
+                new String[]{"marketing.coupon.redeem_enabled","启用优惠券核销","true","boolean","营销配置","紧急停用开关；关闭后新订单不能使用优惠券"},
+                new String[]{"marketing.invite.enabled","启用邀请奖励","false","boolean","营销配置","停止新邀请归因和新奖励，已满足资格的奖励继续履约"},
+                new String[]{"display.spend_rank.enabled","启用消费排行","false","boolean","展示配置","关闭后隐藏榜单及公开接口，基础财务数据保留"},
+                new String[]{"display.purchase_feed.enabled","启用最近购买动态","false","boolean","展示配置","关闭后停止公开展示，不停止订单和支付处理"}))
+            ensureConfig(item[0],item[1],item[2],item[3],item[4],item[5]);
         ensureConfig("player.directory.enabled", "展示打手页面", "true", "boolean", "打手配置",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
@@ -364,6 +374,8 @@ public class SysConfigController {
             throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
         if("auth.primary_method".equals(key)&&!java.util.Set.of("PHONE","WECHAT").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"网页主登录方式只能是 PHONE 或 WECHAT");
+        if("identity.prompt_mode".equals(key)&&!java.util.Set.of("OFF","REMIND","REQUIRED").contains(value))
+            throw new com.delta.common.exception.BusinessException(400,"实名提醒方式只能是 OFF、REMIND 或 REQUIRED");
         if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
         if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(key.startsWith("sms.notification.templates.")) validateSmsRoleTemplates(value);

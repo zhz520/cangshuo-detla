@@ -321,6 +321,19 @@ public class DatabaseCompatibility {
             jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
                     "site.customer_web_url", "客户 H5 站点地址", "", "text", "站点配置",
                     "微信网页登录完成后的客户 H5 HTTPS Origin，不含路径、查询参数和片段");
+        for (String[] item : new String[][]{
+                {"identity.auto.enabled","启用自动二要素实名","false","boolean","实名配置","开启后仍受授权中心服务余额和实名策略约束"},
+                {"identity.prompt_mode","实名提醒方式","OFF","text","实名配置","OFF/REMIND/REQUIRED；REQUIRED 只限制配置指定的业务动作"},
+                {"membership.enabled","启用用户会员等级","false","boolean","会员配置","关闭后停止新增会员权益，既有等级和历史记录保留"},
+                {"marketing.coupon.issue_enabled","启用优惠券发放","false","boolean","营销配置","关闭后停止领券和新发券，已发有效券按原规则处理"},
+                {"marketing.coupon.redeem_enabled","启用优惠券核销","true","boolean","营销配置","紧急停用开关；关闭后新订单不能使用优惠券"},
+                {"marketing.invite.enabled","启用邀请奖励","false","boolean","营销配置","停止新邀请归因和新奖励，已满足资格的奖励继续履约"},
+                {"display.spend_rank.enabled","启用消费排行","false","boolean","展示配置","关闭后隐藏榜单及公开接口，基础财务数据保留"},
+                {"display.purchase_feed.enabled","启用最近购买动态","false","boolean","展示配置","关闭后停止公开展示，不停止订单和支付处理"}}) {
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key=?", Integer.class, item[0]) == 0)
+                jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                        item[0], item[1], item[2], item[3], item[4], item[5]);
+        }
         insertBooleanConfigIfMissing("player.directory.enabled", "展示打手页面", "true",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
     }
