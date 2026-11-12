@@ -38,5 +38,14 @@ public class InviteRewardListener {
             return;
         }
         jdbc.update("UPDATE invite_relation SET status='REWARDED' WHERE id=?", relationId);
+        var wallets = jdbc.queryForList("SELECT id,balance FROM wallet WHERE user_id=? FOR UPDATE", inviter);
+        if (wallets.isEmpty()) return;
+        java.math.BigDecimal before = (java.math.BigDecimal) wallets.get(0).get("balance");
+        if (before == null) before = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal after = before.add(amount);
+        jdbc.update("UPDATE wallet SET balance=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?", after, inviter);
+        jdbc.update("INSERT INTO `transaction`(type,user_type,user_id,amount,balance_before,balance_after,related_order_id,remark) VALUES('INVITE_REWARD','USER',?,?,?,?,?,?)",
+                inviter, amount, before, after, event.getOrderId(), "邀请首单奖励");
+        jdbc.update("UPDATE invite_reward SET status='PAID' WHERE invitee_id=?", invitee);
     }
 }
