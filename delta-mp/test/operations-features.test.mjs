@@ -42,3 +42,10 @@ test('invite center shares a link that carries the invite code', async () => {
   assert.match(page, /customerWebUrl/)
   assert.match(page, /复制邀请链接/)
 })
+
+test('teammate acceptance confirms the invited split before calling the API', async () => {
+  const page = await read('pages-player/invite/list.vue')
+  assert.match(page, /title: '确认接受邀请'/) 
+  assert.match(page, /按邀请时的分成方案履约/) 
+  assert.match(page, /if \(!confirmed \|\| disposed\) return[\s\S]*?await acceptInvite\(orderId\)/) 
+})

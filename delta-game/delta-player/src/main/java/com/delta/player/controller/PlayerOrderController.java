@@ -333,7 +333,7 @@ public class PlayerOrderController {
         orderPlayerService.updateById(op);
 
         // 记录进度
-        addProgress(orderId, "TEAMMATE_ACCEPTED", "PLAYER", playerId, "队友接受邀请");
+        addProgress(orderId, "TEAMMATE_ACCEPTED", "PLAYER", playerId, "队友确认邀请时的分成方案并接受邀请");
 
         // 创建打手-队友私聊会话（编码ID：PLAYER=2e9+id）
         chatSessionService.findOrCreate(ChatParticipantId.encodePlayer(order.getPlayerId()), ChatParticipantId.encodePlayer(playerId));

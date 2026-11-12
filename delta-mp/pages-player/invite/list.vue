@@ -73,6 +73,15 @@ async function doAccept(item) {
   const orderId = getOrderId(item)
   if (orderId == null) { uni.showToast({ title: '数据异常，缺少订单信息', icon: 'none' }); return }
   if (disposed || pendingActions.value[orderId] || resolvedActions.has(String(orderId)) || item.status !== 'INVITED') return
+  const splitText = `${SPLIT_TYPE_TEXT[item.splitType] || '平分'}${item.splitType === 'CUSTOM' && item.splitAmount ? ' ¥' + item.splitAmount : ''}`
+  const confirmed = await new Promise(resolve => uni.showModal({
+    title: '确认接受邀请',
+    content: `接受后将按邀请时的分成方案履约：${splitText}。请确认已知悉该分成方案。`,
+    confirmText: '确认接受',
+    success: r => resolve(r.confirm),
+    fail: () => resolve(false)
+  }))
+  if (!confirmed || disposed) return
   pendingActions.value[orderId] = 'accept'
   try {
     await acceptInvite(orderId)
