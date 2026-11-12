@@ -55,6 +55,17 @@ test('guest lookup entry is switch-gated and lives on the mine page', async () =
   assert.match(mine, />游客订单</)
 })
 
+test('protected order pages redirect missing sessions before fetching', async () => {
+  const list = await read('pages/order/list.vue')
+  const detail = await read('pages/order/detail.vue')
+  assert.match(list, /userStore\.syncSessionFromStorage\?\.\(\)/)
+  assert.match(list, /uni\.redirectTo\(\{ url: '\/pages\/login\/index\?redirect='/)
+  assert.match(list, /error\.value = e\?\.msg/)
+  assert.match(detail, /userStore\.syncSessionFromStorage\?\.\(\)/)
+  assert.match(detail, /uni\.redirectTo\(\{ url: '\/pages\/login\/index\?redirect='/)
+  assert.match(detail, /loadError\.value = e\?\.msg/)
+})
+
 test('unauthenticated purchase entry points do not force a login redirect', async () => {
   const product = await read('pages/product/detail.vue')
   const playerCard = await read('components/PlayerListCard.vue')

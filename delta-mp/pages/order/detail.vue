@@ -134,6 +134,10 @@
       </view>
     </view>
   </view>
+  <view v-else-if="loadError" class="order-error">
+    <text>{{ loadError }}</text>
+    <button @click="loadDetail">重新加载</button>
+  </view>
 </template>
 <script setup>
 import AppImage from '@/components/AppImage.vue'
@@ -158,6 +162,7 @@ const isOrderOwner = computed(() => {
 })
 const orderId = ref(0)
 const progressList = ref([])
+const loadError = ref('')
 const refundRequests = ref([])
 const hasActiveRefund = computed(() => refundRequests.value.some(item => ['REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED'].includes(item.status)))
 const canRequestRefund = computed(() => ['PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED'].includes(order.value?.status) && !hasActiveRefund.value)
@@ -180,6 +185,11 @@ const parsedExtra = computed(() => {
 onLoad((opts) => { orderId.value = opts.id; autoReward.value=opts.reward==='1' })
 onShow(() => {
   unlockH5TabbarPageScroll()
+  userStore.syncSessionFromStorage?.()
+  if (!userStore.isLoggedIn && !userStore.isGuest) {
+    uni.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/order/detail?id=' + orderId.value) })
+    return
+  }
   loadDetail()
 })
 
@@ -191,15 +201,21 @@ function unlockH5TabbarPageScroll() {
 }
 
 async function loadDetail() {
-  const res = await getOrderDetail(orderId.value)
-  order.value = res.data
-  rewardRefresh.value++
+  loadError.value = ''
+  if (!orderId.value) { loadError.value = '订单参数无效'; return }
   try {
-    const pRes = await getOrderProgress(orderId.value)
-    progressList.value = pRes.data || []
-  } catch (e) { progressList.value = [] }
-  try { refundRequests.value = (await getCustomerRefunds(orderId.value)).data || [] }
-  catch (_) { refundRequests.value = [] }
+    const res = await getOrderDetail(orderId.value)
+    order.value = res.data
+    rewardRefresh.value++
+    try {
+      const pRes = await getOrderProgress(orderId.value)
+      progressList.value = pRes.data || []
+    } catch (e) { progressList.value = [] }
+    try { refundRequests.value = (await getCustomerRefunds(orderId.value)).data || [] }
+    catch (_) { refundRequests.value = [] }
+  } catch (e) {
+    loadError.value = e?.msg || e?.message || '订单暂时无法加载'
+  }
 }
 
 function goPay() { uni.navigateTo({ url: `/pages/order/pay?orderId=${orderId.value}&amount=${order.value.amount}` }) }
@@ -300,6 +316,8 @@ function isFull(p) {
 </script>
 <style lang="scss" scoped>
 .order-detail { background: #f7f8f9; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
+.order-error { min-height: var(--app-page-height, 100vh); padding: 120rpx 40rpx; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 24rpx; color: #73777e; font-size: 26rpx; text-align: center; }
+.order-error button { margin: 0; padding: 0 40rpx; height: 72rpx; line-height: 72rpx; border-radius: 999rpx; background: #17191c; color: #fff; font-size: 25rpx; }
 .status-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 28rpx 32rpx; background: #fff;

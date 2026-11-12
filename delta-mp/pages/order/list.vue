@@ -3,6 +3,7 @@
     <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
       <OrderCard v-for="o in orders" :key="o.id" :order="o" :owner-actions="canUseOwnerActions(o)" />
       <view v-if="loading" class="loading-tip">加载中...</view>
+      <view v-if="error && !loading" class="loading-tip error-tip" @click="loadData">{{ error }} · 点击重试</view>
       <EmptyState v-if="!loading && orders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
       <view class="order-list-bottom-space"></view>
     </scroll-view>
@@ -20,7 +21,13 @@ const orders = ref([])
 const pageNum = ref(1)
 const loading = ref(false)
 const finished = ref(false)
+const error = ref('')
 onShow(() => {
+  userStore.syncSessionFromStorage?.()
+  if (!userStore.isLoggedIn && !userStore.isGuest) {
+    uni.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/order/list') })
+    return
+  }
   refresh()
 })
 
@@ -30,11 +37,17 @@ function canUseOwnerActions(order) {
 }
 async function loadData() {
   loading.value = true
-  const res = await getOrderList({ pageNum: pageNum.value, pageSize: 10 }, { loading: false })
-  const list = res.data?.records || []
-  if (list.length < 10) finished.value = true
-  orders.value = pageNum.value === 1 ? list : [...orders.value, ...list]
-  loading.value = false
+  error.value = ''
+  try {
+    const res = await getOrderList({ pageNum: pageNum.value, pageSize: 10 }, { loading: false })
+    const list = res.data?.records || []
+    if (list.length < 10) finished.value = true
+    orders.value = pageNum.value === 1 ? list : [...orders.value, ...list]
+  } catch (e) {
+    error.value = e?.msg || e?.message || '订单暂时无法加载'
+  } finally {
+    loading.value = false
+  }
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 </script>
@@ -61,6 +74,7 @@ function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; 
   font-size: 24rpx;
   color: #73777e;
 }
+.error-tip { color: #c94f59; cursor: pointer; }
 .order-list-bottom-space {
   height: calc(140rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
 }
