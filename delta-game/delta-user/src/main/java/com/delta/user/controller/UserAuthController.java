@@ -154,6 +154,7 @@ public class UserAuthController {
         resp.setNickname(user.getNickname());
         resp.setAvatar(user.getAvatar());
         resp.setPasswordSetupRequired(false);
+        resp.setPhoneBound(user.getPhone()!=null&&!user.getPhone().isBlank());
         return resp;
     }
 

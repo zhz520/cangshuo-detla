@@ -9,5 +9,6 @@ public class LoginResponse {
     private String nickname;
     private String avatar;
     private Boolean passwordSetupRequired;
+    private Boolean phoneBound;
     private String setupToken;
 }

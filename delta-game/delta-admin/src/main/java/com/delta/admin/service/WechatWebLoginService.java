@@ -78,6 +78,7 @@ public class WechatWebLoginService {
         response.setNickname(user.getNickname());
         response.setAvatar(user.getAvatar());
         response.setPasswordSetupRequired(false);
+        response.setPhoneBound(user.getPhone() != null && !user.getPhone().isBlank());
         return response;
     }
 
