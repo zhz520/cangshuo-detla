@@ -47,7 +47,9 @@ test('home prioritizes products and presents recent purchases as a floating tick
   assert.match(home, /v-if="categories.length"/)
   assert.match(home, /<RecentPurchaseTicker/)
   assert.match(home, /getPurchaseFeed\(/)
-  assert.match(mine, /class="benefit-card"/)
+  assert.match(mine, /class="service-panel"/)
+  assert.match(mine, /class="more-card"/)
+  assert.doesNotMatch(mine, /WorkbenchEntry/)
   assert.match(mine, /\/pages\/membership\/index/)
   assert.match(mine, /\/pages\/coupons\/index/)
   assert.match(mine, /\/pages\/invites\/index/)
@@ -58,10 +60,11 @@ test('home prioritizes products and presents recent purchases as a floating tick
   assert.match(display, /options\?\.tab === 'feed'/)
 })
 
-test('mine page groups account and help sections and reflects player application state', async () => {
+test('mine page keeps a compact service layout and reflects player application state', async () => {
   const mine = await read('pages/mine/index.vue')
-  assert.match(mine, />账号与安全</)
-  assert.match(mine, />帮助与协议</)
+  assert.match(mine, />更多服务</)
+  assert.match(mine, /class="legal-links"/)
+  assert.doesNotMatch(mine, /section-card/)
   assert.match(mine, /getPlayerApplicationStatus\(\)/)
   assert.match(mine, /playerStatus\.value==='ACTIVE'/)
   assert.match(mine, /playerStatus\.value==='PENDING'/)

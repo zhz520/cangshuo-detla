@@ -21,8 +21,7 @@
         </view>
       </view>
 
-      <WorkbenchEntry v-if="userStore.isLoggedIn" />
-      <view class="quick-panel" :class="{ 'guest-quick-panel': !userStore.isLoggedIn }">
+      <view class="service-panel">
         <view class="quick-item" @click="goOrders">
           <image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" />
           <text>订单</text>
@@ -30,6 +29,22 @@
         <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/wallet/index')">
           <image class="quick-icon" src="/static/icons/钞票.svg" mode="aspectFit" />
           <text>钱包</text>
+        </view>
+        <view class="quick-item" @click="goAccount('/pages/coupons/index')">
+          <image class="quick-icon" src="/static/icons/理财.svg" mode="aspectFit" />
+          <text>优惠券</text>
+        </view>
+        <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/membership/index')">
+          <image class="quick-icon" src="/static/icons/会员.svg" mode="aspectFit" />
+          <text>会员等级</text>
+        </view>
+        <view class="quick-item" @click="go('/pages/display/index?tab=rank')">
+          <image class="quick-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
+          <text>消费排行</text>
+        </view>
+        <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/invites/index')">
+          <image class="quick-icon" src="/static/icons/分享.svg" mode="aspectFit" />
+          <text>邀请好友</text>
         </view>
         <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/message/index')">
           <view class="quick-icon-wrap">
@@ -44,71 +59,46 @@
         </view>
       </view>
 
-      <view class="benefit-card">
-        <view class="card-heading">
-          <text class="section-title">会员与权益</text>
-          <text class="card-caption">优惠、成长与社区互动</text>
-        </view>
-        <view class="benefit-grid">
-          <view class="benefit-item" @click="go('/pages/display/index?tab=rank')">
-            <view class="benefit-icon"><image src="/static/icons/攻略.svg" mode="aspectFit" /></view>
-            <view class="benefit-copy"><text class="benefit-title">消费排行</text><text class="benefit-desc">本月活跃玩家榜单</text></view>
-            <text class="benefit-arrow">›</text>
+      <view class="more-card">
+        <view class="more-heading">更多服务</view>
+        <view v-if="userStore.isLoggedIn" class="player-row" @click="goPlayer">
+          <image class="more-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
+          <view class="player-copy">
+            <text class="more-title">{{ playerEntry.title }}</text>
+            <text class="more-desc">{{ playerEntry.desc }}</text>
           </view>
-          <view class="benefit-item" @click="goAccount('/pages/membership/index')">
-            <view class="benefit-icon"><image src="/static/icons/会员.svg" mode="aspectFit" /></view>
-            <view class="benefit-copy"><text class="benefit-title">会员等级</text><text class="benefit-desc">查看折扣与升级进度</text></view>
-            <text class="benefit-arrow">›</text>
+          <text class="member-action">{{ playerEntry.action }}</text>
+        </view>
+        <view class="more-grid">
+          <view v-if="identityAvailable && userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/identity')">
+            <image class="more-icon" src="/static/icons/安全认证.svg" mode="aspectFit" />
+            <text>实名认证</text><text class="identity-state">{{ identityLabel }}</text>
           </view>
-          <view class="benefit-item" @click="goAccount('/pages/coupons/index')">
-            <view class="benefit-icon"><image src="/static/icons/理财.svg" mode="aspectFit" /></view>
-            <view class="benefit-copy"><text class="benefit-title">优惠券</text><text class="benefit-desc">领取与查看可用优惠</text></view>
-            <text class="benefit-arrow">›</text>
+          <view v-if="userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/library')">
+            <image class="more-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" />
+            <text>收藏与关注</text>
           </view>
-          <view class="benefit-item" @click="goAccount('/pages/invites/index')">
-            <view class="benefit-icon"><image src="/static/icons/分享.svg" mode="aspectFit" /></view>
-            <view class="benefit-copy"><text class="benefit-title">邀请好友</text><text class="benefit-desc">分享链接获得奖励</text></view>
-            <text class="benefit-arrow">›</text>
+          <view class="more-item" @click="go('/pages/complaint/list')">
+            <image class="more-icon" src="/static/icons/警示.svg" mode="aspectFit" />
+            <text>投诉工单</text>
+          </view>
+          <view v-if="siteStore.guestCheckoutEnabled" class="more-item" @click="go('/pages/order/lookup')">
+            <image class="more-icon" src="/static/icons/订单.svg" mode="aspectFit" />
+            <text>游客订单</text>
+          </view>
+          <view v-if="officialWechat.isEnabled('user')" class="more-item" @click="go('/pages/wechat/binding')">
+            <image class="more-icon" src="/static/icons/提示.svg" mode="aspectFit" />
+            <text>公众号通知</text>
+          </view>
+          <view v-if="userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/privacy-center')">
+            <image class="more-icon" src="/static/icons/安全认证.svg" mode="aspectFit" />
+            <text>隐私与注销</text>
           </view>
         </view>
-      </view>
-
-      <view class="settle-card" @click="goPlayer">
-        <view class="settle-icon-box">
-          <image class="settle-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
-        </view>
-        <view class="settle-info">
-          <text class="settle-title">{{ playerEntry.title }}</text>
-          <text class="settle-desc">{{ playerEntry.desc }}</text>
-        </view>
-        <text class="settle-action">{{ playerEntry.action }}</text>
-      </view>
-
-      <view v-if="userStore.isLoggedIn" class="section-card">
-        <text class="section-title">账号与安全</text>
-        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/library')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit"/><text>收藏与关注</text><text class="arrow">></text></view>
-        <view v-if="identityAvailable && userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/identity')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>实名认证</text><text class="identity-state">{{ identityLabel }}</text><text class="arrow">></text></view>
-        <view v-if="officialWechat.isEnabled('user')" class="menu-item" @click="go('/pages/wechat/binding')"><image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit"/><text>公众号消息通知</text><text class="arrow">></text></view>
-        <view v-if="userStore.isLoggedIn" class="menu-item" @click="go('/pages/mine/privacy-center')"><image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit"/><text>隐私与账号注销</text><text class="arrow">></text></view>
-      </view>
-
-      <view class="section-card">
-        <text class="section-title">帮助与协议</text>
-        <view v-if="siteStore.guestCheckoutEnabled" class="menu-item guest-order-menu" @click="go('/pages/order/lookup')">
-          <image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" />
-          <text>{{ userStore.isLoggedIn ? '游客订单查询与绑定' : '游客订单查询' }}</text><text class="guest-order-tag">{{ userStore.isLoggedIn ? '绑定历史订单' : '无需登录' }}</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" @click="go('/pages/complaint/list')">
-          <image class="menu-icon" src="/static/icons/警示.svg" mode="aspectFit" />
-          <text>我的投诉工单</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" @click="go('/pages/agreement/user')">
-          <image class="menu-icon" src="/static/icons/暂无权限.svg" mode="aspectFit" />
-          <text>用户协议</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" @click="go('/pages/agreement/privacy')">
-          <image class="menu-icon" src="/static/icons/安全认证.svg" mode="aspectFit" />
-          <text>隐私政策</text><text class="arrow">></text>
+        <view class="legal-links">
+          <text @click="go('/pages/agreement/user')">用户协议</text>
+          <text class="legal-dot">·</text>
+          <text @click="go('/pages/agreement/privacy')">隐私政策</text>
         </view>
       </view>
 
@@ -121,7 +111,6 @@
   </view>
 </template>
 <script setup>
-import WorkbenchEntry from '@/components/WorkbenchEntry.vue'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
@@ -263,10 +252,10 @@ async function goCustomerService() {
 
 .profile-card {
   margin: 24rpx 24rpx 0;
-  padding: 30rpx;
+  padding: 24rpx;
   background: linear-gradient(135deg, #ffffff, #f8f8f9);
   border: 1rpx solid rgba(23, 25, 28, 0.14);
-  border-radius: 24rpx;
+  border-radius: 20rpx;
   box-shadow: 0 12rpx 34rpx rgba(23, 25, 28, 0.04);
   position: relative;
   z-index: 1;
@@ -276,12 +265,12 @@ async function goCustomerService() {
   align-items: center;
 }
 .avatar {
-  width: 128rpx;
-  height: 128rpx;
+  width: 104rpx;
+  height: 104rpx;
   border-radius: 50%;
   background: #ffffff;
   border: 4rpx solid rgba(23, 25, 28, 0.14);
-  margin-right: 24rpx;
+  margin-right: 20rpx;
   flex-shrink: 0;
 }
 .profile-info {
@@ -291,15 +280,15 @@ async function goCustomerService() {
 }
 .name {
   display: block;
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 800;
   color: #17191c;
   line-height: 1.25;
 }
 .phone {
   display: block;
-  margin-top: 10rpx;
-  font-size: 24rpx;
+  margin-top: 6rpx;
+  font-size: 22rpx;
   color: #73777e;
   line-height: 1.35;
 }
@@ -310,30 +299,25 @@ async function goCustomerService() {
   margin-left: 12rpx;
 }
 
-.quick-panel {
+.service-panel {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10rpx;
-  margin: 22rpx 24rpx 0;
-  padding: 24rpx 10rpx;
+  gap: 18rpx 8rpx;
+  margin: 18rpx 24rpx 0;
+  padding: 20rpx 8rpx 16rpx;
   background: #ffffff;
-  border-radius: 22rpx;
+  border-radius: 20rpx;
   box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
   position: relative;
   z-index: 1;
-}
-.quick-panel.guest-quick-panel {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding-left: 24rpx;
-  padding-right: 24rpx;
 }
 .quick-item {
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12rpx;
-  font-size: 24rpx;
+  gap: 8rpx;
+  font-size: 22rpx;
   color: #41464e;
   font-weight: 600;
 }
@@ -341,8 +325,8 @@ async function goCustomerService() {
   position: relative;
 }
 .quick-icon {
-  width: 54rpx;
-  height: 54rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 .quick-badge {
   position: absolute;
@@ -359,149 +343,53 @@ async function goCustomerService() {
   text-align: center;
 }
 
-.benefit-card {
-  margin: 22rpx 24rpx 0;
+.more-card {
+  margin: 18rpx 24rpx 0;
   background: #ffffff;
-  border-radius: 22rpx;
+  border-radius: 20rpx;
   box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
   overflow: hidden;
   position: relative;
   z-index: 1;
 }
-.card-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16rpx;
-  padding: 22rpx 24rpx 14rpx;
-  .section-title { padding: 0; }
+.more-heading {
+  display: block;
+  padding: 20rpx 22rpx 12rpx;
+  font-size: 23rpx;
+  color: #858a92;
+  font-weight: 700;
 }
-.card-caption { font-size: 21rpx; color: #9a9fa7; }
-.benefit-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1rpx solid #f4f5f6;
-}
-.benefit-item {
-  min-width: 0;
+.player-row {
   display: flex;
   align-items: center;
   gap: 14rpx;
-  padding: 20rpx 18rpx;
+  padding: 18rpx 22rpx;
   border-bottom: 1rpx solid #f4f5f6;
+  background: #fafbfc;
+  &:active { background: #f4f6f8; }
+}
+.more-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; filter: grayscale(1); opacity: 0.72; }
+.player-copy { flex: 1; min-width: 0; display: grid; gap: 4rpx; }
+.more-title { font-size: 27rpx; font-weight: 700; color: #17191c; }
+.more-desc { font-size: 21rpx; color: #858a92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-action { flex-shrink: 0; padding: 7rpx 18rpx; border-radius: 999rpx; background: #17191c; color: #fff; font-size: 22rpx; font-weight: 700; }
+.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.more-item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 18rpx 20rpx;
+  border-bottom: 1rpx solid #f4f5f6;
+  font-size: 24rpx;
+  color: #41464e;
   &:nth-child(odd) { border-right: 1rpx solid #f4f5f6; }
   &:active { background: #fafbfc; }
+  > text:first-of-type { flex: 1; min-width: 0; }
 }
-.benefit-icon {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 18rpx;
-  background: #f4f5f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  image { width: 36rpx; height: 36rpx; filter: grayscale(1); opacity: 0.72; }
-}
-.benefit-copy { flex: 1; min-width: 0; display: grid; gap: 4rpx; }
-.benefit-title { font-size: 26rpx; font-weight: 700; color: #17191c; }
-.benefit-desc { font-size: 21rpx; color: #858a92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.benefit-arrow { flex: none; color: #b9bdc4; font-size: 30rpx; }
-
-.settle-card {
-  display: flex;
-  align-items: center;
-  margin: 22rpx 24rpx 0;
-  padding: 26rpx 24rpx;
-  background: linear-gradient(135deg, #17191c, #30343a);
-  border: 1rpx solid rgba(23, 25, 28, 0.16);
-  border-radius: 22rpx;
-  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
-  position: relative;
-  z-index: 1;
-}
-.settle-icon-box {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 18rpx;
-  background: rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 20rpx;
-  flex-shrink: 0;
-}
-.settle-icon {
-  width: 44rpx;
-  height: 44rpx;
-  filter: brightness(0) invert(1);
-}
-.settle-info {
-  flex: 1;
-  min-width: 0;
-}
-.settle-title {
-  display: block;
-  font-size: 28rpx;
-  color: #ffffff;
-  font-weight: 800;
-}
-.settle-desc {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  color: #c4c7cc;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.settle-action {
-  margin-left: 18rpx;
-  padding: 10rpx 22rpx;
-  color: #17191c;
-  background: #ffffff;
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.section-card {
-  margin: 22rpx 24rpx 0;
-  padding-top: 8rpx;
-  background: #ffffff;
-  border-radius: 22rpx;
-  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-.section-title {
-  display: block;
-  padding: 22rpx 24rpx 10rpx;
-  font-size: 24rpx;
-  color: #73777e;
-  font-weight: 700;
-}
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 30rpx 24rpx;
-  border-bottom: 1rpx solid #f4f5f6;
-  font-size: 28rpx;
-  color: #41464e;
-  .menu-icon { width: 40rpx; height: 40rpx; margin-right: 16rpx; flex-shrink: 0; }
-  text { flex: 1; }
-  .badge {
-    min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx;
-    font-size: 20rpx; color: #fff; background: #d44955; border-radius: 32rpx;
-    text-align: center; margin-right: 8rpx; flex-shrink: 0;
-  }
-  .identity-state { flex: none; margin-right: 8rpx; font-size: 24rpx; color: #7b879a; }
-  .guest-order-tag { flex: none; margin-right: 8rpx; padding: 4rpx 10rpx; border-radius: 999rpx; background: #f1f2f4; color: #73777e; font-size: 20rpx; }
-  .arrow { color: #b9bdc4; flex: none; }
-  &:last-child { border-bottom: none; }
-}
+.identity-state { flex: none; font-size: 20rpx; color: #858a92; }
+.legal-links { display: flex; justify-content: center; align-items: center; gap: 10rpx; padding: 20rpx; font-size: 21rpx; color: #9a9fa7; }
+.legal-dot { color: #c4c7cc; }
 .logout {
   margin: 40rpx 24rpx;
   height: 88rpx;

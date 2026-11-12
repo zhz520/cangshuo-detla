@@ -52,8 +52,7 @@ test('guest lookup entry is switch-gated and lives on the mine page', async () =
   const mine = await read('pages/mine/index.vue')
   assert.doesNotMatch(home, /guest-order-entry|goGuestLookup/)
   assert.match(mine, /siteStore\.guestCheckoutEnabled/)
-  assert.match(mine, /游客订单查询与绑定/)
-  assert.match(mine, /游客订单查询/)
+  assert.match(mine, />游客订单</)
 })
 
 test('unauthenticated purchase entry points do not force a login redirect', async () => {
