@@ -107,6 +107,24 @@
         "多个运营收件人与去重",
         "失败自动重试和发送记录"
       ]
+    },
+    {
+      "id": "theme_neumorphism",
+      "name": "柔光拟态主题",
+      "description": "为网页端提供柔光拟态视觉主题；购买后由客户后台启用，授权到期自动回退默认主题。",
+      "paid": true,
+      "priceCents": 0,
+      "termDays": 365,
+      "minVersion": "1.15.0",
+      "dependencies": [
+        "core_platform"
+      ],
+      "entryPath": "/platform/themes",
+      "capabilities": [
+        "客户 H5 与打手 H5 主题切换",
+        "后台主题商店预览与启用",
+        "授权失效自动回退默认主题"
+      ]
     }
   ],
   "releaseNotes": [

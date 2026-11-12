@@ -12,6 +12,7 @@ import router from './router'
 import App from './App.vue'
 import './style.css'
 import './styles/responsive.css'
+import './styles/neumorphism.css'
 import { installViewport } from './utils/responsive'
 import { installClientPlatform } from './utils/client-platform'
 

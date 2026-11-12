@@ -53,6 +53,11 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
     }
 
     @Override
+    public void evictCache(String key) {
+        if (key != null && !key.isBlank()) redisService.deleteObject(CACHE_PREFIX + key);
+    }
+
+    @Override
     public List<RechargePackage> getRechargePackages(boolean activeOnly) {
         String json = getConfigValue(RECHARGE_PACKAGES_KEY);
         List<RechargePackage> packages;

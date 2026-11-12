@@ -15,6 +15,9 @@ public interface SysConfigService extends IService<SysConfig> {
     /** 获取配置值，不存在返回默认值 */
     String getConfigValue(String key, String defaultValue);
 
+    /** Clears the short-lived config cache after a validated domain-specific update. */
+    void evictCache(String key);
+
     /** 获取余额充值套餐，activeOnly=true 时只返回启用套餐。 */
     List<RechargePackage> getRechargePackages(boolean activeOnly);
 

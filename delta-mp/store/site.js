@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getSiteConfig } from '@/api/config'
+import { getSiteConfig, getThemeConfig } from '@/api/config'
 
 export const useSiteStore = defineStore('site', () => {
   const siteName = ref('三角洲')
@@ -33,6 +33,7 @@ export const useSiteStore = defineStore('site', () => {
   const customerServiceHomeIconVisible = ref(true)
   /** 管理员与客服后台站点，客户 H5 只负责把旧工作人员入口安全转交过去。 */
   const staffWebUrl = ref('')
+  const themeId = ref('default')
   const externalCustomerServiceEnabled = computed(() =>
     customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
   )
@@ -112,6 +113,17 @@ export const useSiteStore = defineStore('site', () => {
     return pendingConfigRequest
   }
 
+  async function fetchThemeConfig() {
+    try {
+      const res = await getThemeConfig()
+      const id = String(res.data?.id || 'default')
+      themeId.value = ['default', 'neumorphism'].includes(id) ? id : 'default'
+    } catch (e) {
+      themeId.value = 'default'
+    }
+    return themeId.value
+  }
+
   function hasShownNoticePopupThisSession() {
     return noticePopupShownThisSession
   }
@@ -120,5 +132,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, externalCustomerServiceEnabled, fullName, fetchSiteConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, themeId, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

@@ -17,16 +17,27 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { loadingFeedback } from '@/utils/loading-feedback'
 import { useSiteStore } from '@/stores/site'
+import { getPublicTheme } from '@/api/platform'
 const siteStore = useSiteStore()
 const route = useRoute()
 const router = useRouter()
 const progressVisible = ref(false)
 const busy = computed(() => Boolean(loadingFeedback.destination) || loadingFeedback.requests > 0)
 let progressTimer
+async function applyTheme() {
+  try {
+    const response = await getPublicTheme()
+    const themeId = response.data?.id === 'neumorphism' ? 'neumorphism' : 'default'
+    if (themeId === 'neumorphism') document.documentElement.setAttribute('data-theme', 'neumorphism')
+    else document.documentElement.removeAttribute('data-theme')
+  } catch (_) {
+    document.documentElement.removeAttribute('data-theme')
+  }
+}
 watch(busy, value => {
   clearTimeout(progressTimer)
   if (value) progressTimer = setTimeout(() => { progressVisible.value = true }, 160)
@@ -38,6 +49,7 @@ watch(() => [route.meta.title, siteStore.adminTitle], ([title, brand]) => {
 onUnmounted(() => {
   clearTimeout(progressTimer)
 })
+onMounted(applyTheme)
 
 function retryNavigation() {
   const target = loadingFeedback.routeError?.path

@@ -62,6 +62,10 @@
 - [小程序AppID与商户密钥获取.html](小程序AppID与商户密钥获取.html)
 - [h5-and-mp-weixin-switch.html](h5-and-mp-weixin-switch.html)
 
+## 产品功能规划
+
+- [主题商店与运营功能全量实施方案-2026-11-12.md](主题商店与运营功能全量实施方案-2026-11-12.md)：主题商店与拟态主题、网页登录与计费实名、会员、优惠券、邀请奖励、消费排行、购买动态及逐租户开关；首轮主题商店已在独立分支落地。
+
 ## 安全与专项方案
 
 - [1.12.4-shared-async-tenant-context修复记录.md](1.12.4-shared-async-tenant-context修复记录.md)

@@ -1,0 +1,119 @@
+/* First paid web theme, shared by PC and the staff H5 shell. */
+html[data-theme='neumorphism'] {
+  --el-color-primary: #26313d;
+  --el-color-primary-light-3: #53606d;
+  --el-color-primary-light-5: #7f8994;
+  --el-color-primary-light-7: #c7cdd4;
+  --el-color-primary-light-8: #dce1e6;
+  --el-color-primary-light-9: #e9edf2;
+  --el-text-color-primary: #26313d;
+  --el-text-color-regular: #4d5965;
+  --el-text-color-secondary: #66717d;
+  --el-border-color: #d4dae1;
+  --el-border-color-light: #dce1e6;
+  --el-border-color-lighter: #e4e8ed;
+  --el-fill-color-light: #e9edf2;
+  --el-bg-color: #e9edf2;
+  --el-bg-color-page: #e9edf2;
+  --app-bg: #e9edf2;
+  --app-surface: #e9edf2;
+  --app-surface-soft: #e4e9ee;
+  --app-border: #d4dae1;
+  --app-border-soft: #dce1e6;
+  --app-text: #26313d;
+  --app-text-regular: #4d5965;
+  --app-text-muted: #66717d;
+  --app-primary: #26313d;
+  --app-primary-soft: #e0e5ea;
+  --app-shadow: 8px 8px 20px rgba(165, 173, 183, 0.32), -8px -8px 20px rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme='neumorphism'] body,
+html[data-theme='neumorphism'] #app,
+html[data-theme='neumorphism'] .layout-container,
+html[data-theme='neumorphism'] .layout-body,
+html[data-theme='neumorphism'] .layout-main {
+  background: var(--app-bg) !important;
+  color: var(--app-text) !important;
+}
+
+html[data-theme='neumorphism'] .layout-aside,
+html[data-theme='neumorphism'] .layout-header,
+html[data-theme='neumorphism'] .h5-header {
+  background: #e9edf2 !important;
+  border-color: transparent !important;
+  box-shadow: 0 7px 18px rgba(165, 173, 183, 0.25) !important;
+}
+
+html[data-theme='neumorphism'] .layout-aside {
+  box-shadow: 7px 0 18px rgba(165, 173, 183, 0.3) !important;
+}
+
+html[data-theme='neumorphism'] .el-card,
+html[data-theme='neumorphism'] .el-dialog,
+html[data-theme='neumorphism'] .el-dropdown-menu,
+html[data-theme='neumorphism'] .el-select__popper,
+html[data-theme='neumorphism'] .el-picker__popper {
+  background: #e9edf2 !important;
+  border: 0 !important;
+  box-shadow: 8px 8px 20px rgba(165, 173, 183, 0.38), -8px -8px 20px rgba(255, 255, 255, 0.78) !important;
+}
+
+html[data-theme='neumorphism'] .el-table,
+html[data-theme='neumorphism'] .el-table tr,
+html[data-theme='neumorphism'] .el-table th.el-table__cell,
+html[data-theme='neumorphism'] .el-table td.el-table__cell {
+  background: #e9edf2 !important;
+  color: var(--app-text) !important;
+  border-color: #dce1e6 !important;
+}
+
+html[data-theme='neumorphism'] .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: #e3e8ee !important;
+}
+
+html[data-theme='neumorphism'] .el-input__wrapper,
+html[data-theme='neumorphism'] .el-textarea__inner,
+html[data-theme='neumorphism'] .el-select__wrapper {
+  background: #e9edf2 !important;
+  border: 0 !important;
+  box-shadow: inset 4px 4px 9px rgba(165, 173, 183, 0.36), inset -4px -4px 9px rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme='neumorphism'] .el-button:not(.is-text):not(.is-link):not(.el-button--primary):not(.el-button--danger) {
+  background: #e9edf2 !important;
+  color: var(--app-text) !important;
+  border: 0 !important;
+  box-shadow: 5px 5px 12px rgba(165, 173, 183, 0.35), -5px -5px 12px rgba(255, 255, 255, 0.78) !important;
+}
+
+html[data-theme='neumorphism'] .el-button--primary {
+  background: #26313d !important;
+  border-color: #26313d !important;
+  color: #fff !important;
+  box-shadow: 7px 7px 16px rgba(165, 173, 183, 0.38) !important;
+}
+
+html[data-theme='neumorphism'] .el-menu,
+html[data-theme='neumorphism'] .el-menu-item,
+html[data-theme='neumorphism'] .el-sub-menu__title {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+html[data-theme='neumorphism'] .el-menu-item.is-active,
+html[data-theme='neumorphism'] .el-sub-menu.is-active > .el-sub-menu__title {
+  background: #e9edf2 !important;
+  box-shadow: inset 4px 4px 9px rgba(165, 173, 183, 0.28), inset -4px -4px 9px rgba(255, 255, 255, 0.72) !important;
+}
+
+html[data-theme='neumorphism'] .h5-bottom-nav,
+html[data-theme='neumorphism'] .h5-account-drawer {
+  background: #e9edf2 !important;
+  border-color: transparent !important;
+  box-shadow: 0 -7px 18px rgba(165, 173, 183, 0.28) !important;
+}
+
+html[data-theme='neumorphism'] .el-loading-mask {
+  background-color: rgba(233, 237, 242, 0.72) !important;
+}

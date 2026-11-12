@@ -1,0 +1,131 @@
+/* First paid web theme: soft surfaces, restrained depth and clear primary actions. */
+html[data-theme='neumorphism'] {
+  --neo-canvas: #e9edf2;
+  --neo-surface: #e9edf2;
+  --neo-ink: #26313d;
+  --neo-muted: #66717d;
+  --neo-accent: #26313d;
+  --neo-shadow: 10rpx 10rpx 22rpx rgba(165, 173, 183, 0.5), -10rpx -10rpx 22rpx rgba(255, 255, 255, 0.9);
+  --neo-shadow-soft: 6rpx 6rpx 14rpx rgba(165, 173, 183, 0.38), -6rpx -6rpx 14rpx rgba(255, 255, 255, 0.78);
+  --neo-inset: inset 4rpx 4rpx 10rpx rgba(165, 173, 183, 0.36), inset -4rpx -4rpx 10rpx rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme='neumorphism'] body,
+html[data-theme='neumorphism'] #app,
+html[data-theme='neumorphism'] uni-page-body,
+html[data-theme='neumorphism'] page {
+  background: var(--neo-canvas) !important;
+  color: var(--neo-ink) !important;
+}
+
+html[data-theme='neumorphism'] .product-card,
+html[data-theme='neumorphism'] .card,
+html[data-theme='neumorphism'] .info-card,
+html[data-theme='neumorphism'] .form-card,
+html[data-theme='neumorphism'] .balance-card,
+html[data-theme='neumorphism'] .deposit-card,
+html[data-theme='neumorphism'] .order-card-wrap,
+html[data-theme='neumorphism'] .player-card,
+html[data-theme='neumorphism'] .invite-card,
+html[data-theme='neumorphism'] .review-card,
+html[data-theme='neumorphism'] .card-msg,
+html[data-theme='neumorphism'] .session-item,
+html[data-theme='neumorphism'] .mine-card,
+html[data-theme='neumorphism'] .stat-card,
+html[data-theme='neumorphism'] .coupon-card {
+  background: var(--neo-surface) !important;
+  border: 0 !important;
+  border-radius: 24rpx !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+html[data-theme='neumorphism'] .product-card .info,
+html[data-theme='neumorphism'] .product-card .info .name,
+html[data-theme='neumorphism'] .product-card .info .bottom .price,
+html[data-theme='neumorphism'] .card .card-title,
+html[data-theme='neumorphism'] .order-card-wrap .title {
+  color: var(--neo-ink) !important;
+}
+
+html[data-theme='neumorphism'] .product-card .info .subtitle,
+html[data-theme='neumorphism'] .product-card .info .bottom .sales,
+html[data-theme='neumorphism'] .card .muted,
+html[data-theme='neumorphism'] .order-card-wrap .meta {
+  color: var(--neo-muted) !important;
+}
+
+html[data-theme='neumorphism'] .tabs,
+html[data-theme='neumorphism'] .tabbar-item,
+html[data-theme='neumorphism'] .menu-item,
+html[data-theme='neumorphism'] .quick-item {
+  background: var(--neo-surface) !important;
+  border: 0 !important;
+  box-shadow: var(--neo-shadow-soft) !important;
+}
+
+html[data-theme='neumorphism'] .tab.active,
+html[data-theme='neumorphism'] .tabbar-item.active {
+  color: var(--neo-ink) !important;
+  box-shadow: var(--neo-inset) !important;
+}
+
+html[data-theme='neumorphism'] .custom-tabbar {
+  background: var(--neo-canvas) !important;
+  border-top: 0 !important;
+  box-shadow: 0 -8rpx 18rpx rgba(165, 173, 183, 0.3) !important;
+}
+
+html[data-theme='neumorphism'] .btn,
+html[data-theme='neumorphism'] .login-btn,
+html[data-theme='neumorphism'] .submit-btn,
+html[data-theme='neumorphism'] .invite-btn,
+html[data-theme='neumorphism'] .btn-accept,
+html[data-theme='neumorphism'] .deposit-button,
+html[data-theme='neumorphism'] .search-btn,
+html[data-theme='neumorphism'] .switch-btn {
+  background: var(--neo-accent) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 8rpx 8rpx 16rpx rgba(165, 173, 183, 0.45) !important;
+}
+
+html[data-theme='neumorphism'] .btn-ghost,
+html[data-theme='neumorphism'] .btn-warn,
+html[data-theme='neumorphism'] .btn-reject {
+  background: var(--neo-surface) !important;
+  color: var(--neo-ink) !important;
+  border: 0 !important;
+  box-shadow: var(--neo-shadow-soft) !important;
+}
+
+html[data-theme='neumorphism'] input,
+html[data-theme='neumorphism'] textarea,
+html[data-theme='neumorphism'] .uni-input-input,
+html[data-theme='neumorphism'] .search-input {
+  background: var(--neo-surface) !important;
+  color: var(--neo-ink) !important;
+  border: 0 !important;
+  box-shadow: var(--neo-inset) !important;
+}
+
+html[data-theme='neumorphism'] uni-page-head .uni-page-head {
+  background: var(--neo-canvas) !important;
+  color: var(--neo-ink) !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 6rpx 14rpx rgba(165, 173, 183, 0.28) !important;
+}
+
+html[data-theme='neumorphism'] .empty-image {
+  filter: none;
+}
+
+html[data-theme='neumorphism'] :focus-visible {
+  outline-color: var(--neo-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='neumorphism'] * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

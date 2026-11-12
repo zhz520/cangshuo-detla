@@ -1,6 +1,6 @@
 export function permissionFor(path) {
   if (/^\/product(?:\/|$)/.test(path)) return 'product.manage'
-  if (['/platform/features', '/platform/updates'].includes(path)) return 'system.manage'
+  if (['/platform/features', '/platform/themes', '/platform/updates'].includes(path)) return 'system.manage'
   if (/^\/system(?:\/|$)/.test(path)) return 'system.manage'
   if (/^\/order(?:\/|$)/.test(path)) return 'order.read'
   if (path === '/player' || path === '/player-level') return 'player.manage'

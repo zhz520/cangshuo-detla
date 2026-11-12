@@ -15,6 +15,14 @@ import { installViewportAdapter } from '@/utils/viewport'
 
 let foreground = true
 
+function applyTheme(themeId) {
+  // #ifdef H5
+  const root = document.documentElement
+  if (themeId === 'neumorphism') root.setAttribute('data-theme', 'neumorphism')
+  else root.removeAttribute('data-theme')
+  // #endif
+}
+
 function shouldConnectChat() {
   const role = clientStorage.get('app_role') || 'user'
   const token = getTokenByRole(role)
@@ -48,6 +56,9 @@ onLaunch(() => {
   useRemindStore()
 
   siteStore.fetchSiteConfig()
+  // #ifdef H5
+  siteStore.fetchThemeConfig().then(applyTheme)
+  // #endif
   appStore.restoreRole()
   watch(() => [appStore.role, userStore.token], () => { if (foreground) syncRemindPolling() })
 
@@ -84,6 +95,9 @@ onHide(() => { foreground = false; useRemindStore().stopPolling(); useChatStore(
 @import '@/styles/monochrome.scss';
 @import '@/styles/responsive.scss';
 @import '@/styles/experience.scss';
+/* #ifdef H5 */
+@import '@/styles/neumorphism.scss';
+/* #endif */
 
 page, view, text, image, scroll-view, textarea, input { box-sizing: border-box; }
 
