@@ -7,8 +7,8 @@ export const getOrderQuote = (params) => get('/order/quote', params, { loading: 
 /** 订单列表 */
 export const getOrderList = (params, opts = {}) => get('/order/my', params, opts)
 
-/** 订单详情 */
-export const getOrderDetail = (id) => get(`/order/${id}`)
+/** 订单详情；轮询时可传入 { loading:false, silent:true } */
+export const getOrderDetail = (id, opts = {}) => get(`/order/${id}`, {}, opts)
 
 /** 订单进度 */
 export const getOrderProgress = (id) => get(`/order/${id}/progress`)

@@ -10,7 +10,7 @@
         <view v-else class="qr-placeholder">{{ qrError || '二维码生成中…' }}</view>
       </view>
       <text class="qr-tip">请使用微信扫一扫完成支付</text>
-      <text class="qr-hint">支付完成后返回本页面刷新状态</text>
+      <text class="qr-hint">{{ hint || '支付完成后请返回本页面刷新状态' }}</text>
       <view class="qr-actions">
         <view class="qr-button secondary" @click="copyLink">复制支付链接</view>
         <view class="qr-button primary" @click="close">关闭</view>
@@ -26,7 +26,8 @@ import QRCode from 'qrcode'
 const props = defineProps({
   visible: { type: Boolean, default: false },
   url: { type: String, default: '' },
-  title: { type: String, default: '微信扫码支付' }
+  title: { type: String, default: '微信扫码支付' },
+  hint: { type: String, default: '' }
 })
 const emit = defineEmits(['update:visible', 'closed'])
 const qrImage = ref('')

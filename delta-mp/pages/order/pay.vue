@@ -23,7 +23,8 @@
     </view>
     <view v-if="userStore.isGuest && !canUseWechatPay" class="guest-pay-tip">当前未启用可用的微信支付方式，请回到订单联系客服处理。</view>
     <view class="btn-pay" :class="{ disabled: !canPay }" @click="handlePay">确认支付</view>
-    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="订单支付二维码" />
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="订单支付二维码"
+      hint="支付完成后会自动跳转，请稍候" @closed="stopQrPolling" />
   </view>
 </template>
 <script setup>
@@ -50,6 +51,9 @@ const walletBalance = ref('0.00')
 const countdown = ref(0)
 const expired = ref(false)
 let timer = null
+let qrPollTimer = null
+let qrPollBusy = false
+let qrPollErrors = 0
 
 const formatCountdown = computed(() => {
   const m = Math.floor(countdown.value / 60)
@@ -125,6 +129,43 @@ function startCountdown() {
   }, 1000)
 }
 
+function stopQrPolling() {
+  if (qrPollTimer) clearInterval(qrPollTimer)
+  qrPollTimer = null
+  qrPollBusy = false
+  qrPollErrors = 0
+}
+
+async function pollQrPayment() {
+  if (!qrVisible.value || qrPollBusy) return
+  qrPollBusy = true
+  try {
+    const response = await getOrderDetail(orderId.value, { loading: false, silent: true })
+    const status = response.data?.status
+    if (status && status !== 'PENDING_PAYMENT') {
+      stopQrPolling()
+      qrVisible.value = false
+      if (status === 'CANCELLED') {
+        handleOrderNotPending(status)
+      } else {
+        uni.showToast({ title: '支付成功', icon: 'success', duration: 900 })
+        setTimeout(() => uni.redirectTo({ url: `/pages/order/detail?id=${orderId.value}` }), 900)
+      }
+    }
+  } catch (_) {
+    qrPollErrors++
+    if (qrPollErrors >= 5) stopQrPolling()
+  } finally {
+    qrPollBusy = false
+  }
+}
+
+function startQrPolling() {
+  stopQrPolling()
+  pollQrPayment()
+  qrPollTimer = setInterval(pollQrPayment, 2000)
+}
+
 function handleOrderNotPending(status) {
   const msg = status === 'PAID' ? '该订单已支付' : status === 'CANCELLED' ? '订单已取消' : '订单状态已变更'
   uni.showModal({
@@ -144,7 +185,7 @@ function handleAlreadyPaid() {
   })
 }
 
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onUnmounted(() => { if (timer) clearInterval(timer); stopQrPolling() })
 
 async function handlePay() {
   if (expired.value) return uni.showToast({ title: '订单已超时', icon: 'none' })
@@ -173,6 +214,7 @@ async function handlePay() {
         if (!res.data?.authorizeUrl) return uni.showToast({ title: '未获取到微信支付地址', icon: 'none' })
         paymentQrUrl.value = res.data.authorizeUrl
         qrVisible.value = true
+        startQrPolling()
         return
       }
       if (channel === 'OFFICIAL') {
