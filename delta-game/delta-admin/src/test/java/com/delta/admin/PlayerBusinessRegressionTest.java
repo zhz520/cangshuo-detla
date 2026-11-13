@@ -129,6 +129,23 @@ class PlayerBusinessRegressionTest {
                 .andExpect(jsonPath("$.code").value(409));
     }
 
+    @Test void singlePlayerOrderCanAddOneOptionalTeammateAndStillStart() throws Exception {
+        jdbc.update("UPDATE \u0060order\u0060 SET status='ACCEPTED',player_id=1,required_player_count=1 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":2,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=2",String.class)).isEqualTo("INVITED");
+        mvc.perform(post("/player/order/200/accept-invite").with(player(2))).andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=2",String.class)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200",String.class)).isEqualTo("ACCEPTED");
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":3,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(409));
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200",String.class)).isEqualTo("IN_PROGRESS");
+    }
+
     @Test void frozenPlayerCannotAcceptATeammateInvitation() throws Exception {
         invitation("WAITING_TEAMMATE");
         jdbc.update("UPDATE player SET status='FROZEN' WHERE id=2");

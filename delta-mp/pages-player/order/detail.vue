@@ -74,7 +74,7 @@
       <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="goProgress">提交进度</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn btn-success" @click="doComplete">完成服务</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="openReplaceModal">换人</view>
-      <view v-if="['IN_PROGRESS'].includes(order.status) && order.playerId" class="btn" @click="goInvite">邀请队友</view>
+      <view v-if="['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS'].includes(order.status) && order.playerId" class="btn" @click="goInvite">邀请队友</view>
       <view v-if="['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status)" class="btn-ghost" @click="goChat">聊天</view>
     </view>
     <!-- 完成服务弹窗 -->

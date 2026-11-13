@@ -248,10 +248,11 @@ public class PlayerOrderController {
             item.setStatus("EXPIRED");item.setRejectedAt(now);orderPlayerService.updateById(item);
         }
         int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
+        int maxTeam=Math.max(1,requiredTeam);
         long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
                 .in(OrderPlayer::getStatus,"INVITED","ACCEPTED"));
-        if(occupiedTeam>=requiredTeam)return R.fail(409,"当前订单队伍人数已满");
+        if(occupiedTeam>=maxTeam)return R.fail(409,"当前订单队伍人数已满");
 
         // 检查是否已邀请
         long existing = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
@@ -276,7 +277,7 @@ public class PlayerOrderController {
         orderPlayerService.save(op);
 
         // 如果当前是 ACCEPTED，自动转入 WAITING_TEAMMATE
-        if (OrderStatusEnum.ACCEPTED.name().equals(order.getStatus())) {
+        if (OrderStatusEnum.ACCEPTED.name().equals(order.getStatus()) && requiredTeam > 0) {
             order.setStatus(OrderStatusEnum.WAITING_TEAMMATE.name());
             order.setTeammateDeadline(now.plusHours(2));
             order.setUpdatedAt(now);
@@ -321,10 +322,11 @@ public class PlayerOrderController {
             throw new BusinessException(403, "打手未上班、未通过审核或账号已冻结，无法接单");
         }
         int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
+        int maxTeam=Math.max(1,requiredTeam);
         long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
                 .eq(OrderPlayer::getStatus,"ACCEPTED"));
-        if(occupiedTeam>=requiredTeam)throw new BusinessException(409,"当前订单队伍人数已满");
+        if(occupiedTeam>=maxTeam)throw new BusinessException(409,"当前订单队伍人数已满");
         int max = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
         if (crossModuleMapper.countActivePlayerOrders(playerId) >= max) {
             throw new BusinessException(400, "您当前进行中的订单已达上限(" + max + "单)");
@@ -589,7 +591,6 @@ public class PlayerOrderController {
 
     private void validateTeamAllocation(Order order, String splitType, BigDecimal customAmount) {
         int requiredTeam = Math.max(0, (order.getRequiredPlayerCount() == null ? 1 : order.getRequiredPlayerCount()) - 1);
-        if (requiredTeam <= 0) throw new BusinessException(409, "单人订单无需邀请队友");
         BigDecimal commissionRate = order.getCommissionRate() != null
                 ? order.getCommissionRate()
                 : new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
@@ -605,7 +606,7 @@ public class PlayerOrderController {
                 .in(OrderPlayer::getRole, "TEAMMATE", "RELAY_OUT")
                 .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
         long relayOutCount = participants.stream().filter(item -> "RELAY_OUT".equals(item.getRole())).count();
-        int sharingPeople = requiredTeam + (int) relayOutCount;
+        int sharingPeople = Math.max(1, requiredTeam) + (int) relayOutCount;
         BigDecimal reserved = participants.stream()
                 .map(item -> estimatedShare(item.getSplitType(), item.getSplitAmount(), playerTotal, sharingPeople))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
