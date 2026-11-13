@@ -4,4 +4,4 @@ WORKDIR /app
 COPY delta-admin/target/delta-admin.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Djava.net.preferIPv4Stack=true", "-jar", "/app/app.jar"]

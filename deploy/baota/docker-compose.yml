@@ -40,6 +40,8 @@ services:
     platform: linux/amd64
     container_name: delta-backend
     restart: unless-stopped
+    environment:
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
     security_opt: ["no-new-privileges:true"]
     env_file: /www/delta/.env
     depends_on:
