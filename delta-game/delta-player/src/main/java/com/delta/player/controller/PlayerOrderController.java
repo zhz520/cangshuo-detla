@@ -62,6 +62,7 @@ public class PlayerOrderController {
         response.setHeader("Cache-Control","no-store, private");response.setHeader("Pragma","no-cache");
         Long id=SecurityUtils.getUserId();Player p=playerService.getById(id);
         if(p==null || !"ACTIVE".equals(p.getStatus())) throw new BusinessException(403,"打手账号状态不允许接单");
+        if(!Integer.valueOf(1).equals(p.getIsOnline())) throw new BusinessException(400,"当前处于休息中，请先开启接单状态后再接单");
         Order o=orderService.getById(orderId);
         if(o==null || !("PAID".equals(o.getStatus())&&o.getPlayerId()==null || "ASSIGNED".equals(o.getStatus())&&id.equals(o.getPlayerId()))
                 || o.getDesignatedPlayerId()!=null&&!id.equals(o.getDesignatedPlayerId())) throw new BusinessException(409,"订单已被抢或当前不可接单");

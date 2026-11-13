@@ -17,6 +17,7 @@
 <script setup>
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
+import { usePlayerStore } from '@/store/player'
 import { ref, onBeforeUnmount } from 'vue'
 import { getAcceptChallenge, acceptOrder } from '@/api/player'
 const emit=defineEmits(['accepted'])
@@ -25,7 +26,16 @@ let orderId=null,device='',nextRefresh=0,timer=null,generation=0
 function deviceId(){if(!device){device=clientStorage.get('grab_device_id');if(!device){device=`device-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;clientStorage.set('grab_device_id',device)}}return device}
 function close(){if(busy.value)return;visible.value=false;generation++;clearInterval(timer);timer=null}
 function tick(){retryIn.value=Math.max(0,Math.ceil((nextRefresh-Date.now())/1000))}
-async function open(id){if(busy.value||visible.value)return;orderId=id;nextRefresh=0;retryIn.value=0;error.value='';challenge.value={};code.value='';required.value=false;visible.value=true;await refresh()}
+async function open(id){
+  if(busy.value||visible.value)return
+  const playerStore=usePlayerStore()
+  try{await playerStore.fetchProfile({force:true})}catch(_){}
+  if(playerStore.playerInfo&&Number(playerStore.playerInfo.isOnline)!==1){
+    uni.showModal({title:'当前处于休息中',content:'请先开启接单状态后再接单。',confirmText:'去开启',success:res=>{if(res.confirm)uni.navigateTo({url:'/pages-player/mine/index'})}})
+    return
+  }
+  orderId=id;nextRefresh=0;retryIn.value=0;error.value='';challenge.value={};code.value='';required.value=false;visible.value=true;await refresh()
+}
 async function refresh(){
   if(busy.value||Date.now()<nextRefresh)return
   const run=++generation;busy.value=true;error.value='';code.value=''
@@ -37,7 +47,7 @@ async function submit(){
   if(busy.value)return
   busy.value=true;error.value=''
   try{await acceptOrder(orderId,{captchaId:challenge.value.captchaId,captchaCode:code.value,deviceId:deviceId()});visible.value=false;clearInterval(timer);emit('accepted');uni.showToast({title:'接单成功'})}
-  catch(e){error.value=e?.msg||'接单失败，请刷新后重试';code.value='';challenge.value={};required.value=true;if(e?.code===409){visible.value=false;emit('accepted')}else{const run=generation;const delay=Math.max(0,nextRefresh-Date.now());setTimeout(()=>{if(visible.value&&run===generation)refresh()},delay+50)}}
+  catch(e){const message=e?.msg||'接单失败，请刷新后重试';error.value=message;code.value='';challenge.value={};const rest=/休息|上班|接单状态/.test(message);if(e?.code===409&&!rest){visible.value=false;emit('accepted')}else if(required.value){const run=generation;const delay=Math.max(0,nextRefresh-Date.now());setTimeout(()=>{if(visible.value&&run===generation)refresh()},delay+50)}}
   finally{busy.value=false}
 }
 onBeforeUnmount(()=>{generation++;clearInterval(timer);visible.value=false})

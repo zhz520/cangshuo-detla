@@ -238,6 +238,23 @@ class PlayerDirectoryIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=5",Integer.class)).isEqualTo(2);
     }
 
+    @Test void levelCaptchaExemptionSurvivesUnrelatedSaveAndExplicitValueWins() throws Exception {
+        jdbc.update("UPDATE player_level SET grab_captcha_required=0 WHERE id=1");
+        String base="{\"name\":\"高级打手\",\"sortOrder\":20,\"status\":1,\"priceIncreaseRate\":0,\"withdrawDepositAmount\":0";
+        mvc.perform(put("/admin/player-level/1").with(role("ADMIN",1)).contentType("application/json")
+                        .content(base+"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT grab_captcha_required FROM player_level WHERE id=1",Integer.class)).isZero();
+        mvc.perform(put("/admin/player-level/1").with(role("ADMIN",1)).contentType("application/json")
+                        .content(base+",\"grabCaptchaRequired\":1}"))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT grab_captcha_required FROM player_level WHERE id=1",Integer.class)).isEqualTo(1);
+        mvc.perform(put("/admin/player-level/1").with(role("ADMIN",1)).contentType("application/json")
+                        .content(base+",\"grabCaptchaRequired\":0}"))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT grab_captcha_required FROM player_level WHERE id=1",Integer.class)).isZero();
+    }
+
     @Test void onlyAdminCanConfigurePriceAndPlayerCannotOverrideIt() throws Exception {
         String level="{\"name\":\"金牌打手\",\"sortOrder\":10,\"status\":1,\"priceIncreaseRate\":10}";
         mvc.perform(put("/admin/player-level/2").with(role("CS",1)).contentType("application/json").content(level))

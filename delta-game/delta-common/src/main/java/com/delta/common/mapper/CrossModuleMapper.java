@@ -26,6 +26,9 @@ public interface CrossModuleMapper {
     @Select("SELECT level FROM player WHERE id=#{id} AND deleted=0")
     Integer selectPlayerLevel(@Param("id") Long id);
 
+    @Select("SELECT is_online FROM player WHERE id=#{id} AND deleted=0")
+    Integer selectPlayerOnline(@Param("id") Long id);
+
     @Select("SELECT id FROM player WHERE id=#{id} AND status='ACTIVE' AND deleted=0 AND is_online=1 FOR UPDATE")
     Long lockActivePlayer(@Param("id") Long id);
 

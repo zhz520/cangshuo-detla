@@ -251,6 +251,20 @@ class RewardGrabIntegrationTest {
         mvc.perform(post("/player/order/201/accept").with(role("PLAYER",2)).contentType("application/json").content("{}")).andExpect(jsonPath("$.code").value(200));
         verify(verification,times(1)).verifyGrab(anyLong(),anyLong(),any(),any(),any(),any(),any());
     }
+
+    @Test void offlinePlayerGetsRestMessageInsteadOfApprovalOrFreezeError() throws Exception {
+        jdbc.update("UPDATE player SET grab_captcha_override=0 WHERE id=1");
+        jdbc.update("UPDATE player SET is_online=0 WHERE id=1");
+        String message="当前处于休息中，请先开启接单状态后再接单";
+        mvc.perform(get("/player/order/200/accept-challenge").with(role("PLAYER",1)))
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.msg").value(message));
+        mvc.perform(post("/player/order/200/accept").with(role("PLAYER",1)).contentType("application/json").content("{}"))
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.msg").value(message));
+        assertThat(number("SELECT COUNT(*) FROM \u0060order\u0060 WHERE id=200 AND player_id IS NULL")).isEqualTo(1);
+        verify(verification,never()).verifyGrab(anyLong(),anyLong(),any(),any(),any(),any(),any());
+    }
     private boolean accept(long order,long player){try{orders.acceptOrder(order,player);return true;}catch(com.delta.common.exception.BusinessException e){return false;}}
     @Test void parallelGrabHasOneWinnerAndOnePrimaryParticipation() throws Exception {
         jdbc.update("UPDATE player SET grab_captcha_override=0");

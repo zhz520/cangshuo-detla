@@ -269,7 +269,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 throw new BusinessException(409,"订单已被抢或当前状态不允许接单");
             if(order.getDesignatedPlayerId()!=null && !playerId.equals(order.getDesignatedPlayerId()))
                 throw new BusinessException(403,"该订单已指定其他打手");
-            if(crossModuleMapper.lockActivePlayer(playerId)==null) throw new BusinessException(403,"打手未通过审核或账号已冻结，无法接单");
+            String playerStatus=crossModuleMapper.selectPlayerStatus(playerId);
+            if(!"ACTIVE".equals(playerStatus)) throw new BusinessException(403,"打手未通过审核或账号已冻结，无法接单");
+            if(!Integer.valueOf(1).equals(crossModuleMapper.selectPlayerOnline(playerId)))
+                throw new BusinessException(400,"当前处于休息中，请先开启接单状态后再接单");
+            if(crossModuleMapper.lockActivePlayer(playerId)==null) {
+                if(!"ACTIVE".equals(crossModuleMapper.selectPlayerStatus(playerId)))
+                    throw new BusinessException(403,"打手未通过审核或账号已冻结，无法接单");
+                if(!Integer.valueOf(1).equals(crossModuleMapper.selectPlayerOnline(playerId)))
+                    throw new BusinessException(400,"当前处于休息中，请先开启接单状态后再接单");
+                throw new BusinessException(403,"打手账号状态已变化，请刷新后重试");
+            }
             requirePlayerLevel(order,playerId);
             int max=Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player","5"));
             int active=crossModuleMapper.countActivePlayerOrders(playerId);

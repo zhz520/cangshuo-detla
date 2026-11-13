@@ -19,7 +19,13 @@
         <el-form-item label="涨价比例"><el-input-number v-model="form.priceIncreaseRate" :min="0" :max="100" :precision="2" /><span style="margin-left:8px">%</span><div class="tip" style="width:100%;margin:8px 0 0">商品100元，涨价10%后为110元；0表示不涨价。</div></el-form-item>
         <el-form-item label="提现押金"><el-input-number v-model="form.withdrawDepositAmount" :min="0" :max="1000000" :precision="2" /><span style="margin-left:8px">元</span><div class="tip" style="width:100%;margin:8px 0 0">仅在“注册免押金、提现前补交”模式下生效；0表示该等级提现也无需押金。</div></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" :max="99999" :precision="0" /></el-form-item>
-        <el-form-item label="抢单验证"><el-switch v-model="form.grabCaptchaRequired" :active-value="1" :inactive-value="0" /></el-form-item>
+        <el-form-item label="抢单验证">
+          <el-radio-group v-model="form.grabCaptchaRequired">
+            <el-radio :value="0">免验证</el-radio>
+            <el-radio :value="1">需要图形验证码</el-radio>
+          </el-radio-group>
+          <div class="tip" style="width:100%;margin:8px 0 0">免验证后，该等级打手接单不再弹出图形验证码；打手管理里的个人设置优先于等级设置。</div>
+        </el-form-item>
         <el-form-item label="启用"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="visible=false">取消</el-button><el-button type="primary" :loading="saving" @click="save">保存</el-button></template>
@@ -30,11 +36,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { playerLevelList, playerLevelCreate, playerLevelUpdate, playerLevelDelete } from '@/api/business'
-const list = ref([]), loading = ref(false), visible = ref(false), saving = ref(false)
+const list = ref([]), loading = ref(false), visible = ref(false), saving = ref(false), original = ref(null)
 const form = reactive({ id:null, name:'', sortOrder:10, status:1, grabCaptchaRequired:1, priceIncreaseRate:0, withdrawDepositAmount:0 })
 onMounted(load)
 async function load() { loading.value=true; try { list.value=(await playerLevelList()).data||[] } finally { loading.value=false } }
 function edit(row) {
+  original.value = row ? { ...row } : null
   Object.assign(form, row ? { id:row.id, name:row.name, sortOrder:row.sortOrder, status:row.status, grabCaptchaRequired:row.grabCaptchaRequired??1, priceIncreaseRate:Number(row.priceIncreaseRate||0), withdrawDepositAmount:Number(row.withdrawDepositAmount||0) } : { id:null, name:'', sortOrder:10, status:1, grabCaptchaRequired:1, priceIncreaseRate:0, withdrawDepositAmount:0 })
   visible.value=true
 }
@@ -44,6 +51,7 @@ async function save() {
   saving.value=true
   try {
     const data={name:form.name.trim(),sortOrder:form.sortOrder,status:form.status,grabCaptchaRequired:form.grabCaptchaRequired,priceIncreaseRate:form.priceIncreaseRate,withdrawDepositAmount:form.withdrawDepositAmount}
+    if(form.id&&original.value&&Number(form.grabCaptchaRequired)===Number(original.value.grabCaptchaRequired)) delete data.grabCaptchaRequired
     if(form.id) await playerLevelUpdate(form.id,data); else await playerLevelCreate(data)
     ElMessage.success('已保存');visible.value=false;load()
   } finally { saving.value=false }
