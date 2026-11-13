@@ -4,6 +4,7 @@ import com.delta.admin.config.SwaggerConfig;
 import com.delta.common.file.controller.ImageThumbnailController;
 import com.delta.common.tenant.TenantProperties;
 import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.Resource;
@@ -15,13 +16,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.resource.CachingResourceResolver;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
+import org.springframework.web.servlet.resource.ResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import javax.imageio.ImageIO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.awt.image.BufferedImage;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -29,7 +33,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Historical /file/ URLs are only served when the shared deployment has exactly one active tenant. */
+/** Historical /file/ URLs resolve inside the host-selected tenant; tenant-scoped paths stay isolated. */
 class LegacyFileCompatibilityTest {
     private static final String DATE = "2026/11/10";
     private static final String NAME = "a".repeat(32) + ".png";
@@ -45,34 +49,48 @@ class LegacyFileCompatibilityTest {
     void oneActiveTenantServesLegacyThumbnailAndStaticFile() throws Exception {
         TenantProperties properties = properties("tenant-a");
         TenantRegistry registry = new TenantRegistry(properties);
-        Path source = uploads.resolve(DATE).resolve(NAME);
+        Path source = uploads.resolve("tenant-a").resolve(DATE).resolve(NAME);
         writePng(source);
 
-        var response = controller(properties, registry).thumbnail(320, "2026", "11", "10", NAME);
-
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody().exists()).isTrue();
-        assertThat(response.getHeaders().getContentType()).isNotNull();
-        assertThat(staticResolver(properties, registry, uploads)
-                .resolveResource(new MockHttpServletRequest("GET", "/file/" + DATE + "/" + NAME),
-                        DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
-                .isNotNull();
+        try (var ignored = TenantContext.open("tenant-a")) {
+            var response = controller(properties, registry).thumbnail(320, "2026", "11", "10", NAME);
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody().exists()).isTrue();
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/" + DATE + "/" + NAME),
+                            DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNotNull();
+        }
     }
 
     @Test
-    void multipleActiveTenantsRejectLegacyThumbnailAndStaticFile() throws Exception {
+    void legacyPathsResolveInsideCurrentTenantWhenSeveralTenantsAreActive() throws Exception {
         TenantProperties properties = properties("tenant-a", "tenant-b");
         TenantRegistry registry = new TenantRegistry(properties);
-        Path source = uploads.resolve(DATE).resolve(NAME);
+        Path source = uploads.resolve("tenant-a").resolve(DATE).resolve(NAME);
         writePng(source);
 
-        assertThatThrownBy(() -> controller(properties, registry).thumbnail(320, "2026", "11", "10", NAME))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
-        assertThat(staticResolver(properties, registry, uploads)
-                .resolveResource(new MockHttpServletRequest("GET", "/file/" + DATE + "/" + NAME),
-                        DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
-                .isNull();
+        try (var ignored = TenantContext.open("tenant-a")) {
+            assertThat(controller(properties, registry).thumbnail(320, "2026", "11", "10", NAME)
+                    .getStatusCode().value()).isEqualTo(200);
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/" + DATE + "/" + NAME),
+                            DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNotNull();
+        }
+        try (var ignored = TenantContext.open("tenant-b")) {
+            // The tenant exists but does not own tenant-a's file. The request
+            // must resolve inside tenant-b and return 404, not fall back to
+            // the shared upload root.
+            Files.createDirectories(uploads.resolve("tenant-b"));
+            assertThatThrownBy(() -> controller(properties, registry).thumbnail(320, "2026", "11", "10", NAME))
+                    .isInstanceOfSatisfying(ResponseStatusException.class,
+                            error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/" + DATE + "/" + NAME),
+                            DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNull();
+        }
     }
 
     @Test
@@ -82,19 +100,22 @@ class LegacyFileCompatibilityTest {
         Path source = uploads.resolve("tenant-a").resolve(DATE).resolve(NAME);
         writePng(source);
 
-        var response = controller(properties, registry).tenantThumbnail(320, "tenant-a", "2026", "11", "10", NAME);
-
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody().exists()).isTrue();
-        assertThat(response.getHeaders().getContentType()).isNotNull();
-        assertThat(staticResolver(properties, registry, uploads)
-                .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-a/" + DATE + "/" + NAME),
-                        "tenant-a/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
-                .isNotNull();
-        assertThat(staticResolver(properties, registry, uploads)
-                .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-b/" + DATE + "/" + NAME),
-                        "tenant-b/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
-                .isNull();
+        try (var ignored = TenantContext.open("tenant-a")) {
+            var response = controller(properties, registry).tenantThumbnail(320, "tenant-a", "2026", "11", "10", NAME);
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody().exists()).isTrue();
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-a/" + DATE + "/" + NAME),
+                            "tenant-a/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNotNull();
+            assertThatThrownBy(() -> controller(properties, registry).tenantThumbnail(320, "tenant-b", "2026", "11", "10", NAME))
+                    .isInstanceOfSatisfying(ResponseStatusException.class,
+                            error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-b/" + DATE + "/" + NAME),
+                            "tenant-b/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNull();
+        }
     }
 
     @Test
@@ -104,14 +125,54 @@ class LegacyFileCompatibilityTest {
         TenantRegistry registry = new TenantRegistry(properties);
         writePng(uploads.resolve("tenant-b").resolve(DATE).resolve(NAME));
 
-        assertThatThrownBy(() -> controller(properties, registry)
-                .tenantThumbnail(320, "tenant-b", "2026", "11", "10", NAME))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
-        assertThat(staticResolver(properties, registry, uploads)
-                .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-b/" + DATE + "/" + NAME),
-                        "tenant-b/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
-                .isNull();
+        try (var ignored = TenantContext.open("tenant-b")) {
+            assertThatThrownBy(() -> controller(properties, registry)
+                    .tenantThumbnail(320, "tenant-b", "2026", "11", "10", NAME))
+                    .isInstanceOfSatisfying(ResponseStatusException.class,
+                            error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
+            assertThat(staticResolver(properties, registry, uploads)
+                    .resolveResource(new MockHttpServletRequest("GET", "/file/tenant-b/" + DATE + "/" + NAME),
+                            "tenant-b/" + DATE + "/" + NAME, List.of(uploadLocation()), NO_CHAIN))
+                    .isNull();
+        }
+    }
+
+    @Test
+    void missingTenantUploadDirectoryReturnsNotFound() {
+        TenantProperties properties = properties("tenant-a");
+        TenantRegistry registry = new TenantRegistry(properties);
+
+        try (var ignored = TenantContext.open("tenant-a")) {
+            assertThatThrownBy(() -> controller(properties, registry)
+                    .thumbnail(320, "2026", "11", "10", NAME))
+                    .isInstanceOfSatisfying(ResponseStatusException.class,
+                            error -> assertThat(error.getStatusCode().value()).isEqualTo(404));
+        }
+    }
+
+    @Test
+    void sharedStaticResourcesNeverUsePathOnlyCacheAcrossTenants() throws Exception {
+        TenantProperties properties = properties("tenant-a", "tenant-b");
+        TenantRegistry registry = new TenantRegistry(properties);
+        String history = DATE + "/" + NAME;
+        Path a = uploads.resolve("tenant-a").resolve(history);
+        Path b = uploads.resolve("tenant-b").resolve(history);
+        Files.createDirectories(a.getParent());
+        Files.createDirectories(b.getParent());
+        Files.writeString(a, "tenant-a-image");
+        Files.writeString(b, "tenant-b-image");
+        ResourceHttpRequestHandler handler = fileHandler(properties, registry, uploads);
+
+        assertThat(handler.getResourceResolvers())
+                .noneMatch(CachingResourceResolver.class::isInstance);
+        try (var ignored = TenantContext.open("tenant-a")) {
+            assertThat(read(resolve(handler, history)))
+                    .isEqualTo("tenant-a-image");
+        }
+        try (var ignored = TenantContext.open("tenant-b")) {
+            assertThat(read(resolve(handler, history)))
+                    .isEqualTo("tenant-b-image");
+        }
     }
 
     private static TenantProperties properties(String... activeTenants) {
@@ -139,6 +200,14 @@ class LegacyFileCompatibilityTest {
 
     private PathResourceResolver staticResolver(TenantProperties properties, TenantRegistry registry, Path root)
             throws Exception {
+        return fileHandler(properties, registry, root).getResourceResolvers().stream()
+                .filter(PathResourceResolver.class::isInstance)
+                .map(PathResourceResolver.class::cast)
+                .findFirst().orElseThrow();
+    }
+
+    private ResourceHttpRequestHandler fileHandler(TenantProperties properties, TenantRegistry registry, Path root)
+            throws Exception {
         SwaggerConfig config = new SwaggerConfig();
         ReflectionTestUtils.setField(config, "uploadPath", root.toString());
         ReflectionTestUtils.setField(config, "tenantProperties", properties);
@@ -156,10 +225,30 @@ class LegacyFileCompatibilityTest {
                 })
                 .findFirst().orElseThrow();
         ResourceHttpRequestHandler handler = ReflectionTestUtils.invokeMethod(fileRegistration, "getRequestHandler");
-        return handler.getResourceResolvers().stream()
-                .filter(PathResourceResolver.class::isInstance)
-                .map(PathResourceResolver.class::cast)
-                .findFirst().orElseThrow();
+        return handler;
+    }
+
+    private Resource resolve(ResourceHttpRequestHandler handler, String path) throws Exception {
+        List<ResourceResolver> resolvers = handler.getResourceResolvers();
+        return new ResourceResolverChain() {
+            private int index;
+
+            @Override public Resource resolveResource(HttpServletRequest request, String requestPath,
+                    List<? extends Resource> locations) {
+                if (index >= resolvers.size()) return null;
+                return resolvers.get(index++).resolveResource(request, requestPath, locations, this);
+            }
+
+            @Override public String resolveUrlPath(String resourcePath, List<? extends Resource> locations) {
+                return null;
+            }
+        }.resolveResource(new MockHttpServletRequest("GET", "/file/" + path), path, List.of(uploadLocation()));
+    }
+
+    private static String read(Resource resource) throws Exception {
+        try (var input = resource.getInputStream()) {
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     private static void writePng(Path target) throws Exception {

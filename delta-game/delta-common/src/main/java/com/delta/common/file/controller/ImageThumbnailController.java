@@ -36,9 +36,11 @@ public class ImageThumbnailController {
     @GetMapping("/file/thumbnail/{width}/{year}/{month}/{day}/{filename:.+}")
     public ResponseEntity<FileSystemResource> thumbnail(@PathVariable int width, @PathVariable String year,
             @PathVariable String month, @PathVariable String day, @PathVariable String filename) throws Exception {
-        if(sharedMode() && (tenantRegistry==null||tenantRegistry.activeTenants().size()!=1))
+        if(!sharedMode()) return thumbnailFor(null,width,year,month,day,filename);
+        String current = TenantContext.currentIdOrNull();
+        if(current==null || tenantRegistry==null || tenantRegistry.findById(current).filter(t->t.active()).isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return thumbnailFor(null,width,year,month,day,filename);
+        return thumbnailFor(current,width,year,month,day,filename);
     }
 
     @GetMapping("/file/thumbnail/{width}/{tenant}/{year}/{month}/{day}/{filename:.+}")
@@ -46,7 +48,8 @@ public class ImageThumbnailController {
             @PathVariable String year,@PathVariable String month,@PathVariable String day,@PathVariable String filename) throws Exception {
         if(!sharedMode())throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         String id=TenantIds.requireContext(tenant);
-        if(tenantRegistry==null||tenantRegistry.findById(id).filter(t->t.active()).isEmpty())
+        String current = TenantContext.currentIdOrNull();
+        if(current==null || !current.equals(id) || tenantRegistry==null || tenantRegistry.findById(id).filter(t->t.active()).isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return thumbnailFor(id,width,year,month,day,filename);
     }
@@ -56,7 +59,9 @@ public class ImageThumbnailController {
         if (!Set.of(160, 320, 640, 1080).contains(width)
                 || !relative.matches("\\d{4}/\\d{2}/\\d{2}/[a-fA-F0-9-]{32,36}\\.(?i:png|jpg|jpeg|gif)"))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        Path root = (tenantId==null?Paths.get(uploadPath):Paths.get(uploadPath,tenantId)).toRealPath();
+        Path rootPath = tenantId==null?Paths.get(uploadPath):Paths.get(uploadPath,tenantId);
+        if (!Files.isDirectory(rootPath)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        Path root = rootPath.toRealPath();
         Path source = root.resolve(relative).normalize();
         if (!Files.isRegularFile(source) || !source.toRealPath().startsWith(root)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(

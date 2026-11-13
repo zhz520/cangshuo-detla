@@ -11,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import com.delta.common.tenant.TenantProperties;
 import com.delta.common.tenant.TenantRegistry;
+import com.delta.common.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.regex.Pattern;
 
@@ -47,17 +48,27 @@ public class SwaggerConfig implements WebMvcConfigurer {
                 .addResourceLocations(location)
                 .setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(365))
                         .cachePublic().immutable().staleWhileRevalidate(java.time.Duration.ofDays(7)))
-                .resourceChain(true).addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
+                // Resource paths are resolved against the request tenant. Do not
+                // enable Spring's path-only resource cache: the same historical
+                // URL exists under several tenants and must never cross hosts.
+                .resourceChain(false).addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
                     @Override protected org.springframework.core.io.Resource getResource(String resourcePath,org.springframework.core.io.Resource location) throws java.io.IOException {
                         if(tenantProperties!=null&&tenantProperties.isEnabled()){
+                            String current=TenantContext.currentIdOrNull();
                             var matcher=TENANT_FILE.matcher(resourcePath);
-                            if(matcher.matches() && tenantRegistry!=null
-                                    && tenantRegistry.findById(matcher.group(1)).filter(t->t.active()).isPresent())return super.getResource(resourcePath,location);
-                            // During a one-tenant pilot, the historical upload root is
-                            // still the only source of existing image URLs. Do not
-                            // permit a shared root once multiple active tenants exist.
-                            if(tenantRegistry!=null&&tenantRegistry.activeTenants().size()==1
-                                    &&FILE_NAME.matcher(resourcePath).matches())return super.getResource(resourcePath,location);
+                            if(matcher.matches()){
+                                String pathTenant=matcher.group(1);
+                                if(current!=null && current.equals(pathTenant) && tenantRegistry!=null
+                                        && tenantRegistry.findById(pathTenant).filter(t->t.active()).isPresent())
+                                    return super.getResource(resourcePath,location);
+                                return null;
+                            }
+                            // Historical URLs omit the tenant segment. Resolve them
+                            // inside the host-selected tenant instead of exposing a shared root.
+                            if(current!=null && tenantRegistry!=null
+                                    && tenantRegistry.findById(current).filter(t->t.active()).isPresent()
+                                    && FILE_NAME.matcher(resourcePath).matches())
+                                return super.getResource(current+"/"+resourcePath,location);
                             return null;
                         }else if(!FILE_NAME.matcher(resourcePath).matches())return null;
                         return super.getResource(resourcePath,location);
