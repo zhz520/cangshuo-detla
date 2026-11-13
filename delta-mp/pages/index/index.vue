@@ -9,6 +9,12 @@
       </view>
       <view class="search-bar-placeholder" />
 
+      <view v-if="isNeo" class="neo-home-head">
+        <text class="neo-home-kicker">PLAY BEYOND LIMITS</text>
+        <text class="neo-home-title">{{ siteStore.siteName }}</text>
+        <text class="neo-home-sub">{{ siteStore.subtitle }}</text>
+      </view>
+
       <!-- 轮播图 -->
       <swiper v-if="banners.length" class="banner" :style="{height: bannerHeight + 'rpx'}" @change="onBannerChange" :autoplay="true" :interval="4000" circular indicator-dots>
         <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
@@ -72,6 +78,7 @@
 
       <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
       <view class="section">
+        <text v-if="isNeo" class="neo-section-title">为你推荐</text>
         <view class="section-header">
           <scroll-view scroll-x class="recommend-tabs" :show-scrollbar="false" scroll-with-animation>
             <view
@@ -161,6 +168,7 @@ import { useChatStore } from '@/store/chat'
 import { useSiteStore } from '@/store/site'
 const userStore = useUserStore()
 const siteStore = useSiteStore()
+const isNeo = computed(() => siteStore.themeId === 'neumorphism')
 
 // 分享给好友
 onShareAppMessage(() => ({

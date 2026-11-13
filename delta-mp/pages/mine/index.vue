@@ -21,41 +21,51 @@
         </view>
       </view>
 
-      <view class="service-panel">
-        <view class="quick-item" @click="goOrders">
-          <image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" />
-          <text>订单</text>
-        </view>
-        <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/wallet/index')">
-          <image class="quick-icon" src="/static/icons/钞票.svg" mode="aspectFit" />
-          <text>钱包</text>
-        </view>
-        <view class="quick-item" @click="goAccount('/pages/coupons/index')">
-          <image class="quick-icon" src="/static/icons/理财.svg" mode="aspectFit" />
-          <text>优惠券</text>
-        </view>
-        <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/membership/index')">
-          <image class="quick-icon" src="/static/icons/会员.svg" mode="aspectFit" />
-          <text>会员等级</text>
-        </view>
-        <view class="quick-item" @click="go('/pages/display/index?tab=rank')">
-          <image class="quick-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
-          <text>消费排行</text>
-        </view>
-        <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/invites/index')">
-          <image class="quick-icon" src="/static/icons/分享.svg" mode="aspectFit" />
-          <text>邀请好友</text>
-        </view>
-        <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/message/index')">
-          <view class="quick-icon-wrap">
-            <image class="quick-icon" src="/static/icons/提示.svg" mode="aspectFit" />
-            <view v-if="systemUnread > 0" class="quick-badge">{{ systemUnread > 99 ? '99+' : systemUnread }}</view>
+      <view class="service-panel" :class="{ 'neo-panel': isNeo }">
+        <view class="quick-group">
+          <text v-if="isNeo" class="quick-group-title">我的服务</text>
+          <view class="quick-grid">
+            <view class="quick-item" @click="goOrders">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" /></view>
+              <text>订单</text>
+            </view>
+            <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/wallet/index')">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/钞票.svg" mode="aspectFit" /></view>
+              <text>钱包</text>
+            </view>
+            <view class="quick-item" @click="goAccount('/pages/coupons/index')">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/理财.svg" mode="aspectFit" /></view>
+              <text>优惠券</text>
+            </view>
+            <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/membership/index')">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/会员.svg" mode="aspectFit" /></view>
+              <text>会员等级</text>
+            </view>
           </view>
-          <text>通知</text>
         </view>
-        <view class="quick-item" @click="goCustomerService">
-          <image class="quick-icon" src="/static/icons/客服.svg" mode="aspectFit" />
-          <text>客服</text>
+        <view class="quick-group">
+          <text v-if="isNeo" class="quick-group-title">发现与帮助</text>
+          <view class="quick-grid">
+            <view class="quick-item" @click="go('/pages/display/index?tab=rank')">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/攻略.svg" mode="aspectFit" /></view>
+              <text>消费排行</text>
+            </view>
+            <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/invites/index')">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/分享.svg" mode="aspectFit" /></view>
+              <text>邀请好友</text>
+            </view>
+            <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/message/index')">
+              <view class="quick-icon-wrap">
+                <image class="quick-icon" src="/static/icons/提示.svg" mode="aspectFit" />
+                <view v-if="systemUnread > 0" class="quick-badge">{{ systemUnread > 99 ? '99+' : systemUnread }}</view>
+              </view>
+              <text>通知</text>
+            </view>
+            <view class="quick-item" @click="goCustomerService">
+              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/客服.svg" mode="aspectFit" /></view>
+              <text>客服</text>
+            </view>
+          </view>
         </view>
       </view>
 
@@ -129,6 +139,7 @@ import CustomTabBar from '@/components/CustomTabBar.vue'
 import TechSupportFooter from '@/components/TechSupportFooter.vue'
 const userStore = useUserStore()
 const siteStore = useSiteStore()
+const isNeo = computed(() => siteStore.themeId === 'neumorphism')
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const officialWechat = useOfficialWechatStore()
@@ -311,6 +322,8 @@ async function goCustomerService() {
   position: relative;
   z-index: 1;
 }
+.quick-group,
+.quick-grid { display: contents; }
 .quick-item {
   min-width: 0;
   display: flex;

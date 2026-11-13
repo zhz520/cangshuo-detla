@@ -1,147 +1,280 @@
-/* First paid web theme, shared by PC and the staff H5 shell. */
+/* Paid soft-tactile theme; activation follows the authorized public theme response. */
 html[data-theme='neumorphism'] {
-  --el-color-primary: #587bd4;
-  --el-color-primary-light-3: #7b98e0;
-  --el-color-primary-light-5: #9db3e9;
-  --el-color-primary-light-7: #c2d0f2;
-  --el-color-primary-light-8: #d5dff7;
-  --el-color-primary-light-9: #e5ebf4;
-  --el-text-color-primary: #263449;
-  --el-text-color-regular: #45536b;
-  --el-text-color-secondary: #8894a7;
-  --el-border-color: #dbe2ed;
-  --el-border-color-light: #e2e8f2;
-  --el-border-color-lighter: #e5ebf4;
-  --el-fill-color-light: #e5ebf4;
-  --el-bg-color: #eef2f9;
-  --el-bg-color-page: #e5ebf4;
-  --app-bg: #e5ebf4;
-  --app-surface: #eef2f9;
-  --app-surface-soft: #e4eaf3;
-  --app-border: #dbe2ed;
-  --app-border-soft: #e2e8f2;
+  --app-bg: #e9eef5;
+  --app-surface: #edf1f7;
+  --app-surface-soft: #e5ebf4;
+  --app-border: #d6dfeb;
+  --app-border-soft: #dfe6f0;
   --app-text: #263449;
   --app-text-regular: #45536b;
   --app-text-muted: #8894a7;
   --app-primary: #587bd4;
   --app-primary-soft: #dce5f8;
-  --app-shadow: 8px 8px 20px rgba(150, 163, 183, 0.33), -8px -8px 20px rgba(255, 255, 255, 0.95);
+  --app-shadow: 8px 8px 20px rgba(150, 163, 183, .28), -8px -8px 20px rgba(255, 255, 255, .9);
+  --neu-shadow-small: 4px 4px 10px rgba(150, 163, 183, .25), -4px -4px 10px rgba(255, 255, 255, .9);
+  --neu-shadow-inset: inset 4px 4px 9px rgba(150, 163, 183, .22), inset -4px -4px 9px rgba(255, 255, 255, .9);
+  --neu-primary-gradient: linear-gradient(145deg, #6888da, #4b70c9);
+  --el-color-primary: #587bd4;
+  --el-color-primary-light-3: #829ce0;
+  --el-color-primary-light-5: #afc0ec;
+  --el-color-primary-light-7: #cdd9f2;
+  --el-color-primary-light-8: #dce5f8;
+  --el-color-primary-light-9: #e5ecfa;
+  --el-color-primary-dark-2: #4768be;
+  --el-text-color-primary: #263449;
+  --el-text-color-regular: #45536b;
+  --el-text-color-secondary: #8894a7;
+  --el-text-color-placeholder: #8894a7;
+  --el-text-color-disabled: #9da8b8;
+  --el-border-color: #d6dfeb;
+  --el-border-color-light: #dfe6f0;
+  --el-border-color-lighter: #e3e9f2;
+  --el-border-color-extra-light: #e5ebf4;
+  --el-border-color-dark: #bccadd;
+  --el-fill-color: #e5ebf4;
+  --el-fill-color-light: #e5ebf4;
+  --el-fill-color-lighter: #e8edf5;
+  --el-fill-color-extra-light: #edf1f7;
+  --el-fill-color-blank: #edf1f7;
+  --el-fill-color-disabled: #e3e9f2;
+  --el-bg-color: #edf1f7;
+  --el-bg-color-page: #e9eef5;
+  --el-bg-color-overlay: #edf1f7;
+  --el-mask-color: rgba(233, 238, 245, .88);
+  --el-box-shadow-light: var(--neu-shadow-small);
+  --el-border-radius-base: 12px;
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
-html[data-theme='neumorphism'] body,
-html[data-theme='neumorphism'] #app,
-html[data-theme='neumorphism'] .layout-container,
-html[data-theme='neumorphism'] .layout-body,
-html[data-theme='neumorphism'] .layout-main {
-  background:
-    radial-gradient(circle at 9% 16%, #f9fbfe 0%, transparent 37%),
-    radial-gradient(circle at 88% 81%, #cfdcee 0%, transparent 40%),
-    var(--app-bg) !important;
-  background-attachment: fixed !important;
-  color: var(--app-text) !important;
+/* :root keeps lazy-loaded scoped page styles from restoring the default palette. */
+html:root[data-theme='neumorphism'] body,
+html:root[data-theme='neumorphism'] #app,
+html:root[data-theme='neumorphism'] :is(.layout-container, .layout-body, .h5-shell, .login-container) {
+  color: var(--app-text);
+  background: var(--app-bg);
+}
+html:root[data-theme='neumorphism'] :is(.layout-main, .login-container) {
+  background: radial-gradient(circle at 9% 16%, rgba(255, 255, 255, .45), transparent 34%), var(--app-bg);
+}
+html:root[data-theme='neumorphism'] :is(.layout-aside, .layout-header, .h5-header, .h5-bottom-nav) {
+  background: var(--app-bg);
+  border-color: var(--app-border-soft);
+  color: var(--app-text);
+  box-shadow: var(--neu-shadow-small);
+}
+html:root[data-theme='neumorphism'] .layout-aside { border-right: 1px solid var(--app-border-soft); }
+html:root[data-theme='neumorphism'] :is(.compact-navigation-drawer, .compact-menu-shell, .admin-navigation) { background: var(--app-bg); color: var(--app-text); }
+html:root[data-theme='neumorphism'] .admin-navigation .logo { color: var(--app-text); border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .admin-navigation .logo-mark {
+  background: var(--app-surface);
+  color: var(--app-primary);
+  box-shadow: var(--neu-shadow-small);
+  border-radius: 12px;
+}
+html:root[data-theme='neumorphism'] :is(.admin-navigation, .navigation-popup) .el-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--app-text-regular);
+  --el-menu-hover-bg-color: var(--app-primary-soft);
+  --el-menu-active-color: var(--app-primary);
+  background: transparent;
+  border-color: var(--app-border-soft);
+  scrollbar-color: #b4c2d6 transparent;
+}
+html:root[data-theme='neumorphism'] :is(.admin-navigation, .navigation-popup) :is(.el-menu-item, .el-sub-menu__title) { color: var(--app-text-regular); background: transparent; border-radius: 12px; }
+html:root[data-theme='neumorphism'] :is(.admin-navigation, .navigation-popup) :is(.el-menu-item:hover, .el-sub-menu__title:hover) { color: var(--app-primary); background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] :is(.admin-navigation, .navigation-popup) :is(.el-menu-item.is-active, .el-sub-menu.is-active > .el-sub-menu__title) {
+  color: var(--app-primary);
+  background: var(--app-surface);
+  box-shadow: var(--neu-shadow-inset);
+  font-weight: 700;
+}
+html:root[data-theme='neumorphism'] .admin-navigation .el-menu-item-group__title { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] .admin-navigation .el-menu--collapse .el-menu-item-group + .el-menu-item-group { border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] :is(.layout-header .collapse-btn, .layout-header .chat-notify, .layout-header .user-info, .h5-back, .h5-account, .navigation-close) {
+  color: var(--app-primary);
+  border-color: var(--app-border-soft);
+  background: var(--app-surface);
+  box-shadow: var(--neu-shadow-small);
+  border-radius: 12px;
+}
+html:root[data-theme='neumorphism'] :is(.layout-header .collapse-btn, .layout-header .chat-notify, .navigation-close):hover { background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] .layout-header .role-tag { color: var(--app-primary); background: var(--app-primary-soft); border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] :is(.h5-heading h1, .layout-header .mobile-page-title, .layout-header .user-info) { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .h5-heading span { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] .h5-account-badge { border-color: var(--app-bg); }
+html:root[data-theme='neumorphism'] .h5-bottom-nav button { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] .h5-bottom-nav button.active { color: var(--app-primary); background: var(--app-surface); box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .mobile-account { background: var(--app-bg); }
+html:root[data-theme='neumorphism'] :is(.mobile-account-head, .mobile-account-list button) { background: var(--app-surface); color: var(--app-text); border-color: var(--app-border-soft); box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .mobile-account-head strong { color: var(--app-text); }
+html:root[data-theme='neumorphism'] :is(.mobile-account-head span, .mobile-account-list small, .mobile-account-foot) { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] :is(.mobile-account-head button, .mobile-account-list b) { color: var(--app-primary); background: transparent; }
+html:root[data-theme='neumorphism'] .staff-avatar { background: var(--neu-primary-gradient); }
+
+/* Element Plus surfaces include poppers teleported outside the routed page. */
+html:root[data-theme='neumorphism'] :is(.el-card, .el-dialog, .el-drawer, .el-message-box, .el-popper.is-light, .navigation-popup, .el-dropdown-menu) {
+  background: var(--app-surface);
+  border-color: var(--app-border-soft);
+  color: var(--app-text);
+  border-radius: 18px;
+  box-shadow: var(--app-shadow);
+}
+html:root[data-theme='neumorphism'] .el-card { --el-card-border-radius: 18px; }
+html:root[data-theme='neumorphism'] .el-card.is-hover-shadow:hover { box-shadow: var(--app-shadow); }
+html:root[data-theme='neumorphism'] :is(.el-card__header, .el-dialog__header, .el-dialog__footer, .el-drawer__header) { background: var(--app-surface); color: var(--app-text); border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] :is(.el-dialog__body, .el-drawer__body) { color: var(--app-text-regular); }
+html:root[data-theme='neumorphism'] :is(.el-dialog__title, .el-message-box__title) { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .el-popper.is-light .el-popper__arrow::before { background: var(--app-surface); border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .el-loading-mask { background: rgba(233, 238, 245, .82); }
+html:root[data-theme='neumorphism'] .el-overlay { background-color: rgba(38, 52, 73, .36); }
+
+html:root[data-theme='neumorphism'] :is(.el-input__wrapper, .el-select__wrapper, .el-textarea__inner) { background: var(--app-surface); border-radius: 12px; border-color: transparent; box-shadow: var(--neu-shadow-inset) !important; }
+html:root[data-theme='neumorphism'] :is(.el-input__wrapper:hover, .el-select__wrapper:hover, .el-textarea__inner:hover) { box-shadow: var(--neu-shadow-inset), 0 0 0 1px var(--el-color-primary-light-5) !important; }
+html:root[data-theme='neumorphism'] :is(.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus, .el-range-editor.is-active) { border-color: var(--app-primary); box-shadow: var(--neu-shadow-inset), 0 0 0 2px var(--el-color-primary-light-5) !important; }
+html:root[data-theme='neumorphism'] .el-form-item.is-error :is(.el-input__wrapper, .el-select__wrapper, .el-textarea__inner) { box-shadow: var(--neu-shadow-inset), 0 0 0 1px var(--el-color-danger) !important; }
+html:root[data-theme='neumorphism'] :is(.el-input.is-disabled .el-input__wrapper, .el-select__wrapper.is-disabled, .el-textarea.is-disabled .el-textarea__inner) { background: var(--el-fill-color-disabled); box-shadow: inset 2px 2px 5px rgba(150, 163, 183, .18) !important; }
+html:root[data-theme='neumorphism'] :is(.el-input__inner, .el-textarea__inner, .el-range-input) { color: var(--app-text); }
+html:root[data-theme='neumorphism'] :is(.el-input__inner, .el-textarea__inner)::placeholder { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] :is(.el-input-group__append, .el-input-group__prepend, .el-input-number__increase, .el-input-number__decrease) { color: var(--app-primary); background: var(--app-surface-soft); border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] .el-button { border-radius: 12px; }
+html:root[data-theme='neumorphism'] .el-button:not(.el-button--primary, .el-button--success, .el-button--warning, .el-button--danger, .el-button--info):not(.is-text):not(.is-link):not(.is-disabled) {
+  --el-button-bg-color: var(--app-surface);
+  --el-button-border-color: var(--app-border-soft);
+  --el-button-text-color: var(--app-text-regular);
+  --el-button-hover-bg-color: var(--app-primary-soft);
+  --el-button-hover-border-color: var(--el-color-primary-light-5);
+  --el-button-hover-text-color: var(--app-primary);
+  --el-button-active-bg-color: var(--app-surface-soft);
+  --el-button-active-border-color: var(--app-primary);
+  --el-button-active-text-color: var(--app-primary);
+  box-shadow: var(--neu-shadow-small);
+}
+html:root[data-theme='neumorphism'] .el-button--primary {
+  --el-button-bg-color: var(--app-primary);
+  --el-button-border-color: var(--app-primary);
+  --el-button-hover-bg-color: #6888da;
+  --el-button-hover-border-color: #6888da;
+  --el-button-active-bg-color: #4768be;
+  --el-button-active-border-color: #4768be;
+  --el-button-disabled-bg-color: #afc0ec;
+  --el-button-disabled-border-color: #afc0ec;
+}
+html:root[data-theme='neumorphism'] .el-button--primary:not(.is-text):not(.is-link):not(.is-plain):not(.is-disabled) { color: #fff; background: var(--neu-primary-gradient); box-shadow: 4px 4px 10px rgba(88, 123, 212, .27), -3px -3px 8px rgba(255, 255, 255, .8); }
+html:root[data-theme='neumorphism'] .el-button--primary:not(.is-text):not(.is-link):not(.is-plain):not(.is-disabled):hover { background: linear-gradient(145deg, #7897e2, #587bd4); }
+html:root[data-theme='neumorphism'] .el-button:not(.is-link):not(.is-text):not(.is-disabled):active { box-shadow: var(--neu-shadow-inset); }
+html:root[data-theme='neumorphism'] .el-button--primary.is-plain { color: var(--app-primary); background: var(--app-primary-soft); border-color: var(--el-color-primary-light-5); }
+html:root[data-theme='neumorphism'] .el-button--primary:is(.is-text, .is-link):not(.is-disabled) { color: var(--app-primary); background: transparent; box-shadow: none; }
+html:root[data-theme='neumorphism'] .el-button--primary.is-text:not(.is-disabled):hover { background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] .el-button.is-disabled { box-shadow: none; }
+html:root[data-theme='neumorphism'] .el-button--primary.is-disabled { color: #f3f6fc; background: #afc0ec; border-color: #afc0ec; }
+html:root[data-theme='neumorphism'] .el-button--primary:is(.is-text, .is-link).is-disabled { color: #9daed4; background: transparent; border-color: transparent; }
+html:root[data-theme='neumorphism'] .el-switch.is-checked .el-switch__core { background: var(--app-primary); border-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .el-radio-button__original-radio:checked:not(:disabled) + .el-radio-button__inner { background: var(--app-primary); border-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .el-tabs__active-bar { background: var(--app-primary); }
+html:root[data-theme='neumorphism'] .el-tabs__nav-wrap::after { background: var(--app-border); }
+html:root[data-theme='neumorphism'] :is(.el-checkbox__input:not(.is-disabled) .el-checkbox__inner, .el-radio__input:not(.is-disabled) .el-radio__inner, .el-upload-dragger, .el-upload--picture-card) { background-color: var(--app-surface); border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] .el-checkbox__input:is(.is-checked, .is-indeterminate):not(.is-disabled) .el-checkbox__inner,
+html:root[data-theme='neumorphism'] .el-radio__input.is-checked:not(.is-disabled) .el-radio__inner { background: var(--app-primary); border-color: var(--app-primary); }
+
+html:root[data-theme='neumorphism'] .el-table {
+  --el-table-bg-color: var(--app-surface);
+  --el-table-tr-bg-color: var(--app-surface);
+  --el-table-header-bg-color: var(--app-surface-soft);
+  --el-table-header-text-color: var(--app-text-regular);
+  --el-table-border-color: var(--app-border-soft);
+  --el-table-row-hover-bg-color: var(--app-primary-soft);
+  --el-table-current-row-bg-color: var(--app-primary-soft);
+  --el-table-fixed-left-column: var(--app-surface);
+  --el-table-fixed-right-column: var(--app-surface);
+  color: var(--app-text-regular);
+  border-radius: 14px;
+  background: var(--app-surface);
+}
+html:root[data-theme='neumorphism'] .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell { background: var(--app-surface-soft); }
+html:root[data-theme='neumorphism'] .el-table .el-table__body tr:is(:hover, .hover-row, .current-row) > td.el-table__cell { background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] .el-table__footer-wrapper td.el-table__cell { background: var(--app-surface-soft); }
+html:root[data-theme='neumorphism'] .el-descriptions { --el-descriptions-table-border: 1px solid var(--app-border); }
+html:root[data-theme='neumorphism'] :is(.el-descriptions__body, .el-descriptions__content.el-descriptions__cell.is-bordered-content) { background: var(--app-surface); color: var(--app-text-regular); }
+html:root[data-theme='neumorphism'] .el-descriptions__label.el-descriptions__cell.is-bordered-label { background: var(--app-surface-soft); color: var(--app-text-regular); }
+html:root[data-theme='neumorphism'] .el-pagination { --el-pagination-button-bg-color: var(--app-surface); --el-pagination-hover-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .el-pagination.is-background :is(.btn-next, .btn-prev, .el-pager li) { background: var(--app-surface); box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .el-pagination.is-background .el-pager li.is-active { background: var(--app-primary); color: #fff; }
+html:root[data-theme='neumorphism'] .el-pagination.is-background :is(.btn-next:disabled, .btn-prev:disabled, .el-pager li.is-disabled) { box-shadow: none; }
+
+/* Custom page surfaces; other leaf pages share the card, table and form rules. */
+html:root[data-theme='neumorphism'] :is(.login-box, .analytics-panel, .mobile-card, .workbench-card, .binding-header, .status-card, .binding-guide, .form-section, .layout-option, .template-editor, .notification-guide, .event-card, .field-type-guide, .field-table-wrap) { background: var(--app-surface); border-color: var(--app-border-soft); border-radius: 18px; box-shadow: var(--app-shadow); color: var(--app-text); }
+html:root[data-theme='neumorphism'] :is(.metric-card, .presence-card, .summary-grid > div, .workbench-card .metrics div, .proof-empty, .event-editor, .final-example) { background: var(--app-surface); border-color: var(--app-border-soft); border-radius: 14px; box-shadow: var(--neu-shadow-inset); }
+html:root[data-theme='neumorphism'] .stat-card .el-card__body { background: var(--app-surface); }
+html:root[data-theme='neumorphism'] :is(.stat-icon, .tool-icon, .product-grid .tool-icon, .guide-mark, .cat-icon-placeholder, .workbench-card .categories button) { background: var(--app-surface); color: var(--app-primary); box-shadow: var(--neu-shadow-small); border-color: var(--app-border-soft); border-radius: 14px; }
+html:root[data-theme='neumorphism'] :is(.dashboard-title, .stat-value, .analytics-heading h3, .metric-card > strong, .presence-card strong, .card-heading strong, .funnel-copy strong, .login-title, .platform-page h2, .platform-page h3, .section-title strong) { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .text-primary { color: var(--app-primary) !important; }
+html:root[data-theme='neumorphism'] .dashboard-title::before,
+html:root[data-theme='neumorphism'] :is(.bar, .bar.bar-purple, .bar-track i, .funnel-track i, .rank-top, .mobile-hero, .batch-action-bar) { background: var(--neu-primary-gradient); }
+html:root[data-theme='neumorphism'] :is(.bar-wrapper, .bar-track, .funnel-track) { background: var(--app-surface-soft); box-shadow: var(--neu-shadow-inset); }
+html:root[data-theme='neumorphism'] .workbench-card { border-top-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] :is(.batch-count, .status-grid button, .config-group-item, .cat-item, .qr-item) { color: var(--app-text-regular); background: var(--app-surface); border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .batch-summary small { color: #e5ecfa; }
+html:root[data-theme='neumorphism'] :is(.status-grid button:active, .config-group-item:hover, .cat-item:hover, .qr-item:hover) { color: var(--app-primary); background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] :is(.config-group-item.active, .cat-item.active, .layout-option.selected, .theme-card.active) { color: var(--app-primary); border-color: var(--el-color-primary-light-5); box-shadow: var(--neu-shadow-inset); background: var(--app-surface); }
+html:root[data-theme='neumorphism'] .config-group-count { background: var(--app-surface-soft); color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] .config-group-item.active .config-group-count { background: var(--app-primary-soft); color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .cat-check { color: var(--app-primary); }
+html:root[data-theme='neumorphism'] :is(.form-section .section-title, .rich-text-editor .toolbar, .guide-table th, .guide-table .source-group-row td) { background: var(--app-surface-soft); border-color: var(--app-border); color: var(--app-text-regular); }
+html:root[data-theme='neumorphism'] :is(.editor-content, .toolbar-field select, .toolbar-field input[type='color'], .platform-content pre, .json-example, .platform-preview pre, .generated-json pre, .final-preview, .key-explain) { color: var(--app-text); background: var(--app-surface); border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] :is(.rich-text-editor, .guide-table td, .guide-table th, .proof-image, .team-member, .binding-actions) { border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .binding-actions { background: var(--app-surface); box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .login-container .login-btn { background: var(--neu-primary-gradient); box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .captcha-image { background: var(--app-surface-soft); color: var(--app-text-muted); border-color: var(--app-border); }
+html:root[data-theme='neumorphism'] .login-container :is(.el-input__prefix .el-icon, .login-switch a) { color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .error-page h1 { color: #b8c8e2; text-shadow: 3px 3px 6px #fff; }
+html:root[data-theme='neumorphism'] .error-page p { color: var(--app-text-regular); }
+
+/* Conversation panels keep incoming and outgoing contrast. */
+html:root[data-theme='neumorphism'] .chat-service { background: var(--app-surface); border-color: var(--app-border-soft); border-radius: 18px; box-shadow: var(--app-shadow); }
+html:root[data-theme='neumorphism'] .chat-service :is(.session-panel, .panel-header, .chat-header, .chat-input, .quick-reply-bar, .qr-header, .session-item) { border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .chat-service :is(.chat-messages, .quick-reply-bar, .product-gallery) { background: var(--app-bg); }
+html:root[data-theme='neumorphism'] .chat-service .session-item:hover { background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] .chat-service .session-item.active { background: var(--app-primary-soft); border-left-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] .chat-service .session-name { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .msg-bubble { background: var(--app-surface); color: var(--app-text); box-shadow: var(--neu-shadow-small); border-radius: 14px; }
+html:root[data-theme='neumorphism'] :is(.msg-bubble.self, .msg-row.self .msg-bubble) { background: var(--app-primary-soft); color: var(--app-text); }
+html:root[data-theme='neumorphism'] .msg-bubble.self .card-name { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .msg-bubble.self .card-price { color: var(--el-color-warning); }
+html:root[data-theme='neumorphism'] .msg-bubble.self .card-sub { color: var(--app-text-regular); }
+html:root[data-theme='neumorphism'] :is(.qr-item) { background: var(--app-surface); border-color: var(--app-border); }
+
+/* Theme-only layout corrections preserve the default shell's existing rules. */
+html:root[data-theme='neumorphism'] :is(.card-header, .player-header, .user-header, .detail-header, .summary-head) { flex-wrap: wrap; gap: 12px; }
+html:root[data-theme='neumorphism'] :is(.card-header, .toolbar, .player-header, .user-header) > * { min-width: 0; }
+html:root[data-theme='neumorphism'] .layout-page-frame > * { min-width: 0; max-width: 100%; }
+html:root[data-theme='neumorphism'] :is(.el-dialog, .el-message-box) { max-width: calc(100vw - 32px); }
+html:root[data-theme='neumorphism'] :is(.el-dialog__body, .el-drawer__body) { overflow-wrap: anywhere; }
+html:root[data-theme='neumorphism'] :is(.el-dialog__footer, .el-message-box__btns) .el-button { margin-bottom: 4px; }
+
+@media (max-width: 1024px) {
+  html:root[data-theme='neumorphism'] :is(.analytics-panel, .workbench-card, .binding-header, .mobile-card) { box-shadow: var(--neu-shadow-small); }
+  html:root[data-theme='neumorphism'] .el-card__header :is(.toolbar, .header, .header-actions, .header-right, .toolbar > div) { flex-wrap: wrap; gap: 10px; min-width: 0; }
+  html:root[data-theme='neumorphism'] .layout-page-frame .el-row > .el-col { min-width: 0; }
+}
+@media (max-width: 768px) {
+  html:root[data-theme='neumorphism'] .mobile-card-table.el-table { background: transparent; border-radius: 0; }
+  html:root[data-theme='neumorphism'] .mobile-card-table .el-table__body tbody tr { background: var(--app-surface) !important; border-color: var(--app-border-soft); box-shadow: var(--neu-shadow-small); }
+  html:root[data-theme='neumorphism'] .mobile-card-table .el-table__body tbody td .cell { color: var(--app-text-regular); }
+  html:root[data-theme='neumorphism'] .mobile-card-table .el-table__body tbody td::before { color: var(--app-text-muted); }
+  html:root[data-theme='neumorphism'] :is(.card-header, .player-header, .user-header, .detail-header) { align-items: flex-start; }
+  html:root[data-theme='neumorphism'] .el-dialog__footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  html:root[data-theme='neumorphism'] .el-dialog__footer .el-button + .el-button { margin-left: 0; }
+  html:root[data-theme='neumorphism'] :is(.notification-guide .guide-table tr, .template-editor) { background: var(--app-surface); border-color: var(--app-border-soft); }
 }
 
-html[data-theme='neumorphism'] .layout-aside,
-html[data-theme='neumorphism'] .layout-header,
-html[data-theme='neumorphism'] .h5-header {
-  background: #e5ebf4 !important;
-  border-color: transparent !important;
-  box-shadow: 0 7px 18px rgba(150, 163, 183, 0.22) !important;
-}
-
-html[data-theme='neumorphism'] .layout-aside {
-  box-shadow: 7px 0 18px rgba(150, 163, 183, 0.25) !important;
-}
-
-html[data-theme='neumorphism'] .admin-navigation {
-  background: transparent !important;
-  color: var(--app-text) !important;
-}
-
-html[data-theme='neumorphism'] .admin-navigation .logo {
-  color: var(--app-text) !important;
-}
-
-html[data-theme='neumorphism'] .admin-navigation .el-menu-item,
-html[data-theme='neumorphism'] .admin-navigation .el-sub-menu__title {
-  color: var(--app-text-regular) !important;
-}
-
-html[data-theme='neumorphism'] .admin-navigation .el-menu-item.is-active,
-html[data-theme='neumorphism'] .admin-navigation .el-sub-menu.is-active > .el-sub-menu__title {
-  color: #3f62b9 !important;
-}
-
-html[data-theme='neumorphism'] .admin-navigation .el-menu-item-group__title {
-  color: var(--app-text-muted) !important;
-}
-
-html[data-theme='neumorphism'] .el-card,
-html[data-theme='neumorphism'] .el-dialog,
-html[data-theme='neumorphism'] .el-dropdown-menu,
-html[data-theme='neumorphism'] .el-select__popper,
-html[data-theme='neumorphism'] .el-picker__popper {
-  background: #eef2f9 !important;
-  border: 0 !important;
-  box-shadow: 8px 8px 20px rgba(150, 163, 183, 0.33), -8px -8px 20px rgba(255, 255, 255, 0.95) !important;
-}
-
-html[data-theme='neumorphism'] .el-table,
-html[data-theme='neumorphism'] .el-table tr,
-html[data-theme='neumorphism'] .el-table th.el-table__cell,
-html[data-theme='neumorphism'] .el-table td.el-table__cell {
-  background: #eef2f9 !important;
-  color: var(--app-text) !important;
-  border-color: #e2e8f2 !important;
-}
-
-html[data-theme='neumorphism'] .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
-  background: #e7edf6 !important;
-}
-
-html[data-theme='neumorphism'] .el-input__wrapper,
-html[data-theme='neumorphism'] .el-textarea__inner,
-html[data-theme='neumorphism'] .el-select__wrapper {
-  background: #eef2f9 !important;
-  border: 0 !important;
-  box-shadow: inset 4px 4px 9px rgba(155, 169, 190, 0.24), inset -4px -4px 9px rgba(255, 255, 255, 0.94) !important;
-}
-
-html[data-theme='neumorphism'] .el-button:not(.is-text):not(.is-link):not(.el-button--primary):not(.el-button--danger) {
-  background: #eef2f9 !important;
-  color: var(--app-text) !important;
-  border: 0 !important;
-  box-shadow: 5px 5px 12px rgba(153, 166, 184, 0.23), -5px -5px 12px rgba(255, 255, 255, 0.95) !important;
-}
-
-html[data-theme='neumorphism'] .el-button--primary {
-  background: linear-gradient(145deg, #6888da, #4b70c9) !important;
-  border-color: #4b70c9 !important;
-  color: #fff !important;
-  box-shadow: 7px 7px 16px rgba(120, 140, 180, 0.32), -6px -6px 16px rgba(255, 255, 255, 0.9) !important;
-}
-
-html[data-theme='neumorphism'] .el-menu,
-html[data-theme='neumorphism'] .el-menu-item,
-html[data-theme='neumorphism'] .el-sub-menu__title {
-  background: transparent !important;
-  border: 0 !important;
-}
-
-html[data-theme='neumorphism'] .el-menu-item.is-active,
-html[data-theme='neumorphism'] .el-sub-menu.is-active > .el-sub-menu__title {
-  background: #eef2f9 !important;
-  color: #3f62b9 !important;
-  box-shadow: inset 4px 4px 9px rgba(155, 169, 190, 0.24), inset -4px -4px 9px rgba(255, 255, 255, 0.94) !important;
-}
-
-html[data-theme='neumorphism'] .h5-bottom-nav,
-html[data-theme='neumorphism'] .h5-account-drawer {
-  background: #eef2f9 !important;
-  border-color: transparent !important;
-  box-shadow: 0 -7px 18px rgba(150, 163, 183, 0.22) !important;
-}
-
-html[data-theme='neumorphism'] .el-loading-mask {
-  background-color: rgba(233, 238, 245, 0.72) !important;
-}
+/* Dialog content is teleported, so target its real classes as well as page roots. */
+html:root[data-theme='neumorphism'] :is(.balance-info, .order-people, .product-gallery, .picker-card-cover, .proof-image, .notification-guide .guide-role, .event-heading code, .event-head code) { background: var(--app-surface-soft); border-color: var(--app-border-soft); }
+html:root[data-theme='neumorphism'] .picker-card { background: var(--app-surface); border-color: var(--app-border-soft); border-radius: 14px; box-shadow: var(--neu-shadow-small); }
+html:root[data-theme='neumorphism'] .picker-card:hover { border-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] :is(.product-title, .picker-card-name, .person-name, .progress-content, .balance-text) { color: var(--app-text); }
+html:root[data-theme='neumorphism'] .order-progress-section .section-title { color: var(--app-text); border-left-color: var(--app-primary); }
+html:root[data-theme='neumorphism'] :is(.rank:not(.rank-top), .notification-guide .guide-role) { color: var(--app-primary); background: var(--app-primary-soft); }
+html:root[data-theme='neumorphism'] .rank-top { color: #fff; }
+html:root[data-theme='neumorphism'] .proof-empty { color: var(--app-text-muted); }
+html:root[data-theme='neumorphism'] .mobile-account-list button.danger span { color: var(--el-color-danger); }

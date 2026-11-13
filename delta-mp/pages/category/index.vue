@@ -1,8 +1,8 @@
 <template>
   <view class="category-page tab-page">
-    <view class="category-body">
+    <view class="category-body" :class="{ 'neo-body': isNeo }">
       <!-- 左侧父级分类 -->
-      <scroll-view scroll-y class="side" :show-scrollbar="false">
+      <scroll-view v-if="!isNeo" scroll-y class="side" :show-scrollbar="false">
         <view
           v-for="c in parentCategories"
           :key="c.id"
@@ -15,8 +15,25 @@
       </scroll-view>
       <!-- 右侧内容 -->
       <scroll-view scroll-y class="main" :show-scrollbar="false" @scrolltolower="loadMoreProducts">
+        <view v-if="isNeo" class="neo-category-head">
+          <text class="neo-kicker">商品分类</text>
+          <text class="neo-sub">按你的目标挑选合适的服务</text>
+          <view class="neo-tile-grid">
+            <view
+              v-for="c in parentCategories"
+              :key="'neo-' + c.id"
+              class="neo-tile"
+              :class="{ active: selectedParentId === c.id }"
+              @click="selectParent(c)"
+            >
+              <view class="neo-tile-mark">{{ (c.name || '').slice(0, 1) }}</view>
+              <text class="neo-tile-name">{{ c.name }}</text>
+              <text class="neo-tile-desc">{{ (c.children || []).length }} 项服务</text>
+            </view>
+          </view>
+        </view>
         <!-- 子分类标签 -->
-        <scroll-view scroll-x class="children-wrap" :show-scrollbar="false">
+        <scroll-view v-if="currentChildren.length" scroll-x class="children-wrap" :show-scrollbar="false">
           <view class="children-inner">
             <view
               class="child-tag"
@@ -68,10 +85,13 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import ProductSortPicker from '@/components/ProductSortPicker.vue'
+import { useSiteStore } from '@/store/site'
 import { productSortParams } from '@/utils/product-sort'
 import { getCategoryTree } from '@/api/category'
 import { getProductList } from '@/api/product'
 const categoryTree = ref([])
+const siteStore = useSiteStore()
+const isNeo = computed(() => siteStore.themeId === 'neumorphism')
 const selectedParentId = ref(0)
 const selectedChildId = ref(0)
 const loading = ref(false)

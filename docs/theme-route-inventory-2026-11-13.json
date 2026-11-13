@@ -1,0 +1,3841 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-13T14:53:01.647Z",
+  "classification": "SYNTHETIC ISOLATED LOCAL VISUAL AUDIT — NOT BUSINESS ACCEPTANCE",
+  "worktree": "D:\\CodexData\\temp\\delta-full-review",
+  "git": {
+    "branch": "codex/fix-live-audit",
+    "head": "f88e87fdc59f237f8b377a66c4c55e176f451947",
+    "status": [
+      "?? deploy/qa/theme-route-fixtures.mjs",
+      "?? deploy/qa/theme-route-inventory.mjs",
+      "?? node-compile-cache/"
+    ]
+  },
+  "sourceHashes": {
+    "delta-mp/pages.json": "2691af2cc225da62b95d218b7a59c3791dea339f11e334014b104aff089a95b5",
+    "delta-admin-ui/src/router/index.js": "fb7aee344366acaf13ec437b56b5eea06ac3096a4de4b0ad722d318f100edadb",
+    "delta-admin-ui/src/utils/h5-route.js": "62d5ff8cc88cde1bc496b3f5d0279608245fb4fdd877533dfb0a4a3802a4bfef",
+    "docs/VIBE_CODING.md": "ea43e1155d6e69eb8611aa02afc7b807fd3ece9e5d9cbf46c91927e328e71e9c",
+    "docs/development-conventions.md": "94ba868b832bce4489ebbf8a962b3c83745a89ca48f87bd50f60b9212913d5ae",
+    "docs/客户实例与授权中心关系.md": "0e90fd79d03f9d7b3972ec07c188ab77dc7410cf0d49a3bfeeb13b78cba030bb",
+    "docs/项目结构说明.md": "4859960d905bc1ea5baa092e5ecc388f2988cd303da43316c3ffa1f7572ab36e",
+    "docs/AI协作自检与防回归清单.md": "c41a73530764bfe45d13c4ba476c999c7e292265c78805695521a79bd72c1ffa"
+  },
+  "derivation": {
+    "customer": "pages.json main pages plus every subpackage; includes staff transfer entry",
+    "admin": "Static AST of desktopRoutes; actual buildH5Routes helper; explicit H5 login/403/404 declarations; inherited metadata and role requirements retained"
+  },
+  "counts": {
+    "customerRegistered": 56,
+    "customerMain": 36,
+    "player": 19,
+    "staffTransfer": 1,
+    "adminPcLeaves": 54,
+    "adminH5Leaves": 54,
+    "adminPcFunctionPages": 52
+  },
+  "themes": [
+    "default",
+    "neumorphism"
+  ],
+  "profiles": [
+    {
+      "id": "customer-mobile",
+      "app": "customer",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "mobile": true
+    },
+    {
+      "id": "customer-small",
+      "app": "customer",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "mobile": true
+    },
+    {
+      "id": "admin-pc-wide",
+      "app": "admin",
+      "variant": "pc",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "id": "admin-pc-narrow",
+      "app": "admin",
+      "variant": "pc",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "id": "admin-h5-mobile",
+      "app": "admin",
+      "variant": "h5",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "mobile": true
+    },
+    {
+      "id": "admin-h5-wide",
+      "app": "admin",
+      "variant": "h5",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ],
+  "routes": {
+    "customer": [
+      {
+        "id": "customer:pages/index/index",
+        "app": "customer",
+        "path": "/pages/index/index",
+        "group": "pages",
+        "title": "首页",
+        "samplePath": "/#/pages/index/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/index/index.vue"
+      },
+      {
+        "id": "customer:pages/mine/privacy-center",
+        "app": "customer",
+        "path": "/pages/mine/privacy-center",
+        "group": "pages",
+        "title": "隐私与账号",
+        "samplePath": "/#/pages/mine/privacy-center",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/mine/privacy-center.vue"
+      },
+      {
+        "id": "customer:pages/mine/identity",
+        "app": "customer",
+        "path": "/pages/mine/identity",
+        "group": "pages",
+        "title": "实名认证",
+        "samplePath": "/#/pages/mine/identity",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/mine/identity.vue"
+      },
+      {
+        "id": "customer:pages/mine/library",
+        "app": "customer",
+        "path": "/pages/mine/library",
+        "group": "pages",
+        "title": "收藏与关注",
+        "samplePath": "/#/pages/mine/library",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/mine/library.vue"
+      },
+      {
+        "id": "customer:pages/wechat/binding",
+        "app": "customer",
+        "path": "/pages/wechat/binding",
+        "group": "pages",
+        "title": "公众号通知",
+        "samplePath": "/#/pages/wechat/binding",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/wechat/binding.vue"
+      },
+      {
+        "id": "customer:pages/maintenance/index",
+        "app": "customer",
+        "path": "/pages/maintenance/index",
+        "group": "pages",
+        "title": "服务维护",
+        "samplePath": "/#/pages/maintenance/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/maintenance/index.vue"
+      },
+      {
+        "id": "customer:pages/players/index",
+        "app": "customer",
+        "path": "/pages/players/index",
+        "group": "pages",
+        "title": "打手",
+        "samplePath": "/#/pages/players/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/players/index.vue"
+      },
+      {
+        "id": "customer:pages/players/detail",
+        "app": "customer",
+        "path": "/pages/players/detail",
+        "group": "pages",
+        "title": "打手主页",
+        "samplePath": "/#/pages/players/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/players/detail.vue"
+      },
+      {
+        "id": "customer:pages/category/index",
+        "app": "customer",
+        "path": "/pages/category/index",
+        "group": "pages",
+        "title": "分类",
+        "samplePath": "/#/pages/category/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/category/index.vue"
+      },
+      {
+        "id": "customer:pages/product/list",
+        "app": "customer",
+        "path": "/pages/product/list",
+        "group": "pages",
+        "title": "商品列表",
+        "samplePath": "/#/pages/product/list",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/product/list.vue"
+      },
+      {
+        "id": "customer:pages/product/detail",
+        "app": "customer",
+        "path": "/pages/product/detail",
+        "group": "pages",
+        "title": "商品详情",
+        "samplePath": "/#/pages/product/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/product/detail.vue"
+      },
+      {
+        "id": "customer:pages/order/create",
+        "app": "customer",
+        "path": "/pages/order/create",
+        "group": "pages",
+        "title": "确认订单",
+        "samplePath": "/#/pages/order/create?productId=900001&productName=%E5%90%88%E6%88%90%E6%B5%8B%E8%AF%95%E6%9C%8D%E5%8A%A1",
+        "query": {
+          "productId": "900001",
+          "productName": "合成测试服务"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/order/create.vue"
+      },
+      {
+        "id": "customer:pages/order/lookup",
+        "app": "customer",
+        "path": "/pages/order/lookup",
+        "group": "pages",
+        "title": "游客订单查询",
+        "samplePath": "/#/pages/order/lookup",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/order/lookup.vue"
+      },
+      {
+        "id": "customer:pages/order/pay",
+        "app": "customer",
+        "path": "/pages/order/pay",
+        "group": "pages",
+        "title": "订单支付",
+        "samplePath": "/#/pages/order/pay?orderId=900002&amount=88.00",
+        "query": {
+          "orderId": "900002",
+          "amount": "88.00"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/order/pay.vue"
+      },
+      {
+        "id": "customer:pages/order/list",
+        "app": "customer",
+        "path": "/pages/order/list",
+        "group": "pages",
+        "title": "我的订单",
+        "samplePath": "/#/pages/order/list",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/order/list.vue"
+      },
+      {
+        "id": "customer:pages/order/detail",
+        "app": "customer",
+        "path": "/pages/order/detail",
+        "group": "pages",
+        "title": "订单详情",
+        "samplePath": "/#/pages/order/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/order/detail.vue"
+      },
+      {
+        "id": "customer:pages/review/create",
+        "app": "customer",
+        "path": "/pages/review/create",
+        "group": "pages",
+        "title": "评价",
+        "samplePath": "/#/pages/review/create?orderId=900001",
+        "query": {
+          "orderId": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/review/create.vue"
+      },
+      {
+        "id": "customer:pages/complaint/create",
+        "app": "customer",
+        "path": "/pages/complaint/create",
+        "group": "pages",
+        "title": "发起投诉",
+        "samplePath": "/#/pages/complaint/create?orderId=900001",
+        "query": {
+          "orderId": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/complaint/create.vue"
+      },
+      {
+        "id": "customer:pages/complaint/detail",
+        "app": "customer",
+        "path": "/pages/complaint/detail",
+        "group": "pages",
+        "title": "投诉详情",
+        "samplePath": "/#/pages/complaint/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/complaint/detail.vue"
+      },
+      {
+        "id": "customer:pages/complaint/list",
+        "app": "customer",
+        "path": "/pages/complaint/list",
+        "group": "pages",
+        "title": "我的投诉工单",
+        "samplePath": "/#/pages/complaint/list",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/complaint/list.vue"
+      },
+      {
+        "id": "customer:pages/wallet/index",
+        "app": "customer",
+        "path": "/pages/wallet/index",
+        "group": "pages",
+        "title": "我的钱包",
+        "samplePath": "/#/pages/wallet/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/wallet/index.vue"
+      },
+      {
+        "id": "customer:pages/wallet/recharge",
+        "app": "customer",
+        "path": "/pages/wallet/recharge",
+        "group": "pages",
+        "title": "余额充值",
+        "samplePath": "/#/pages/wallet/recharge",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/wallet/recharge.vue"
+      },
+      {
+        "id": "customer:pages/mine/index",
+        "app": "customer",
+        "path": "/pages/mine/index",
+        "group": "pages",
+        "title": "我的",
+        "samplePath": "/#/pages/mine/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/mine/index.vue"
+      },
+      {
+        "id": "customer:pages/mine/profile",
+        "app": "customer",
+        "path": "/pages/mine/profile",
+        "group": "pages",
+        "title": "编辑资料",
+        "samplePath": "/#/pages/mine/profile",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/mine/profile.vue"
+      },
+      {
+        "id": "customer:pages/chat/list",
+        "app": "customer",
+        "path": "/pages/chat/list",
+        "group": "pages",
+        "title": "消息",
+        "samplePath": "/#/pages/chat/list",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/chat/list.vue"
+      },
+      {
+        "id": "customer:pages/chat/room",
+        "app": "customer",
+        "path": "/pages/chat/room",
+        "group": "pages",
+        "title": "聊天",
+        "samplePath": "/#/pages/chat/room?sessionId=900001&name=%E5%90%88%E6%88%90%E6%B5%8B%E8%AF%95%E4%BC%9A%E8%AF%9D",
+        "query": {
+          "sessionId": "900001",
+          "name": "合成测试会话"
+        },
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/chat/room.vue"
+      },
+      {
+        "id": "customer:pages/workbench/index",
+        "app": "customer",
+        "path": "/pages/workbench/index",
+        "group": "pages",
+        "title": "待办中心",
+        "samplePath": "/#/pages/workbench/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/workbench/index.vue"
+      },
+      {
+        "id": "customer:pages/message/index",
+        "app": "customer",
+        "path": "/pages/message/index",
+        "group": "pages",
+        "title": "系统通知",
+        "samplePath": "/#/pages/message/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/message/index.vue"
+      },
+      {
+        "id": "customer:pages/agreement/user",
+        "app": "customer",
+        "path": "/pages/agreement/user",
+        "group": "pages",
+        "title": "用户协议",
+        "samplePath": "/#/pages/agreement/user",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/agreement/user.vue"
+      },
+      {
+        "id": "customer:pages/agreement/privacy",
+        "app": "customer",
+        "path": "/pages/agreement/privacy",
+        "group": "pages",
+        "title": "隐私政策",
+        "samplePath": "/#/pages/agreement/privacy",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/agreement/privacy.vue"
+      },
+      {
+        "id": "customer:pages/login/index",
+        "app": "customer",
+        "path": "/pages/login/index",
+        "group": "pages",
+        "title": "登录",
+        "samplePath": "/#/pages/login/index",
+        "query": {},
+        "fixtureAuth": "anonymous",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/login/index.vue"
+      },
+      {
+        "id": "customer:pages/login/bind-phone",
+        "app": "customer",
+        "path": "/pages/login/bind-phone",
+        "group": "pages",
+        "title": "绑定手机号",
+        "samplePath": "/#/pages/login/bind-phone",
+        "query": {},
+        "fixtureAuth": "anonymous",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/login/bind-phone.vue"
+      },
+      {
+        "id": "customer:pages/display/index",
+        "app": "customer",
+        "path": "/pages/display/index",
+        "group": "pages",
+        "title": "消费排行",
+        "samplePath": "/#/pages/display/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/display/index.vue"
+      },
+      {
+        "id": "customer:pages/membership/index",
+        "app": "customer",
+        "path": "/pages/membership/index",
+        "group": "pages",
+        "title": "会员中心",
+        "samplePath": "/#/pages/membership/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/membership/index.vue"
+      },
+      {
+        "id": "customer:pages/coupons/index",
+        "app": "customer",
+        "path": "/pages/coupons/index",
+        "group": "pages",
+        "title": "优惠券",
+        "samplePath": "/#/pages/coupons/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/coupons/index.vue"
+      },
+      {
+        "id": "customer:pages/invites/index",
+        "app": "customer",
+        "path": "/pages/invites/index",
+        "group": "pages",
+        "title": "邀请好友",
+        "samplePath": "/#/pages/invites/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages/invites/index.vue"
+      },
+      {
+        "id": "customer:pages-player/profile/introduction",
+        "app": "customer",
+        "path": "/pages-player/profile/introduction",
+        "group": "pages-player",
+        "title": "我的主页管理",
+        "samplePath": "/#/pages-player/profile/introduction",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/profile/introduction.vue"
+      },
+      {
+        "id": "customer:pages-player/apply/index",
+        "app": "customer",
+        "path": "/pages-player/apply/index",
+        "group": "pages-player",
+        "title": "申请入驻",
+        "samplePath": "/#/pages-player/apply/index",
+        "query": {},
+        "fixtureAuth": "user",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/apply/index.vue"
+      },
+      {
+        "id": "customer:pages-player/hall/index",
+        "app": "customer",
+        "path": "/pages-player/hall/index",
+        "group": "pages-player",
+        "title": "接单大厅",
+        "samplePath": "/#/pages-player/hall/index",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/hall/index.vue"
+      },
+      {
+        "id": "customer:pages-player/order/list",
+        "app": "customer",
+        "path": "/pages-player/order/list",
+        "group": "pages-player",
+        "title": "我的订单",
+        "samplePath": "/#/pages-player/order/list",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/order/list.vue"
+      },
+      {
+        "id": "customer:pages-player/order/detail",
+        "app": "customer",
+        "path": "/pages-player/order/detail",
+        "group": "pages-player",
+        "title": "订单详情",
+        "samplePath": "/#/pages-player/order/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/order/detail.vue"
+      },
+      {
+        "id": "customer:pages-player/order/progress",
+        "app": "customer",
+        "path": "/pages-player/order/progress",
+        "group": "pages-player",
+        "title": "提交进度",
+        "samplePath": "/#/pages-player/order/progress?orderId=900001",
+        "query": {
+          "orderId": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/order/progress.vue"
+      },
+      {
+        "id": "customer:pages-player/invite/list",
+        "app": "customer",
+        "path": "/pages-player/invite/list",
+        "group": "pages-player",
+        "title": "邀请列表",
+        "samplePath": "/#/pages-player/invite/list?orderId=900001",
+        "query": {
+          "orderId": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/invite/list.vue"
+      },
+      {
+        "id": "customer:pages-player/invite/teammate",
+        "app": "customer",
+        "path": "/pages-player/invite/teammate",
+        "group": "pages-player",
+        "title": "邀请队友",
+        "samplePath": "/#/pages-player/invite/teammate?orderId=900001",
+        "query": {
+          "orderId": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/invite/teammate.vue"
+      },
+      {
+        "id": "customer:pages-player/chat/list",
+        "app": "customer",
+        "path": "/pages-player/chat/list",
+        "group": "pages-player",
+        "title": "消息",
+        "samplePath": "/#/pages-player/chat/list",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/chat/list.vue"
+      },
+      {
+        "id": "customer:pages-player/chat/room",
+        "app": "customer",
+        "path": "/pages-player/chat/room",
+        "group": "pages-player",
+        "title": "聊天",
+        "samplePath": "/#/pages-player/chat/room?sessionId=900001&name=%E5%90%88%E6%88%90%E6%B5%8B%E8%AF%95%E4%BC%9A%E8%AF%9D",
+        "query": {
+          "sessionId": "900001",
+          "name": "合成测试会话"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/chat/room.vue"
+      },
+      {
+        "id": "customer:pages-player/earnings/index",
+        "app": "customer",
+        "path": "/pages-player/earnings/index",
+        "group": "pages-player",
+        "title": "我的收益",
+        "samplePath": "/#/pages-player/earnings/index",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/earnings/index.vue"
+      },
+      {
+        "id": "customer:pages-player/earnings/detail",
+        "app": "customer",
+        "path": "/pages-player/earnings/detail",
+        "group": "pages-player",
+        "title": "收益明细",
+        "samplePath": "/#/pages-player/earnings/detail",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/earnings/detail.vue"
+      },
+      {
+        "id": "customer:pages-player/withdraw/index",
+        "app": "customer",
+        "path": "/pages-player/withdraw/index",
+        "group": "pages-player",
+        "title": "提现",
+        "samplePath": "/#/pages-player/withdraw/index",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/withdraw/index.vue"
+      },
+      {
+        "id": "customer:pages-player/withdraw/list",
+        "app": "customer",
+        "path": "/pages-player/withdraw/list",
+        "group": "pages-player",
+        "title": "提现记录",
+        "samplePath": "/#/pages-player/withdraw/list",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/withdraw/list.vue"
+      },
+      {
+        "id": "customer:pages-player/withdraw/detail",
+        "app": "customer",
+        "path": "/pages-player/withdraw/detail",
+        "group": "pages-player",
+        "title": "提现详情",
+        "samplePath": "/#/pages-player/withdraw/detail?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/withdraw/detail.vue"
+      },
+      {
+        "id": "customer:pages-player/account/list",
+        "app": "customer",
+        "path": "/pages-player/account/list",
+        "group": "pages-player",
+        "title": "提现账户",
+        "samplePath": "/#/pages-player/account/list",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/account/list.vue"
+      },
+      {
+        "id": "customer:pages-player/account/edit",
+        "app": "customer",
+        "path": "/pages-player/account/edit",
+        "group": "pages-player",
+        "title": "编辑账户",
+        "samplePath": "/#/pages-player/account/edit?id=900001",
+        "query": {
+          "id": "900001"
+        },
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/account/edit.vue"
+      },
+      {
+        "id": "customer:pages-player/review/list",
+        "app": "customer",
+        "path": "/pages-player/review/list",
+        "group": "pages-player",
+        "title": "我的评价",
+        "samplePath": "/#/pages-player/review/list",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/review/list.vue"
+      },
+      {
+        "id": "customer:pages-player/mine/index",
+        "app": "customer",
+        "path": "/pages-player/mine/index",
+        "group": "pages-player",
+        "title": "接单员中心",
+        "samplePath": "/#/pages-player/mine/index",
+        "query": {},
+        "fixtureAuth": "player",
+        "purpose": "function-page",
+        "component": "delta-mp/pages-player/mine/index.vue"
+      },
+      {
+        "id": "customer:pages-cs/login/index",
+        "app": "customer",
+        "path": "/pages-cs/login/index",
+        "group": "pages-cs",
+        "title": "工作人员入口",
+        "samplePath": "/#/pages-cs/login/index",
+        "query": {},
+        "fixtureAuth": "anonymous",
+        "purpose": "staff-transfer-unconfigured-fixture",
+        "component": "delta-mp/pages-cs/login/index.vue"
+      }
+    ],
+    "admin": [
+      {
+        "id": "pc:/login",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/login",
+        "samplePath": "/login",
+        "title": "登录",
+        "component": "@/views/login/index.vue",
+        "name": "Login",
+        "meta": {
+          "title": "登录"
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "anonymous",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/dashboard",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/dashboard",
+        "samplePath": "/dashboard",
+        "title": "仪表盘",
+        "component": "@/views/dashboard/index.vue",
+        "name": "Dashboard",
+        "meta": {
+          "title": "仪表盘",
+          "icon": "Odometer",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/wechat-binding",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/wechat-binding",
+        "samplePath": "/wechat-binding",
+        "title": "公众号消息通知",
+        "component": "@/views/wechat/Binding.vue",
+        "name": "WechatBinding",
+        "meta": {
+          "title": "公众号消息通知",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/403",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/403",
+        "samplePath": "/403",
+        "title": "无权限",
+        "component": "@/views/error/403.vue",
+        "name": "Forbidden",
+        "meta": {
+          "title": "无权限",
+          "errorPage": true,
+          "hidden": true
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "admin",
+        "purpose": "intentional-403"
+      },
+      {
+        "id": "pc:/:pathMatch(.*)*",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/:pathMatch(.*)*",
+        "samplePath": "/__qa_missing_route__",
+        "title": "页面不存在",
+        "component": "@/views/error/404.vue",
+        "name": "NotFound",
+        "meta": {
+          "title": "页面不存在",
+          "errorPage": true,
+          "hidden": true
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "admin",
+        "purpose": "intentional-404"
+      },
+      {
+        "id": "pc:/product/list",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/list",
+        "samplePath": "/product/list",
+        "title": "商品列表",
+        "component": "@/views/product/ProductList.vue",
+        "name": "ProductList",
+        "meta": {
+          "title": "商品列表",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/product/category",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/category",
+        "samplePath": "/product/category",
+        "title": "分类管理",
+        "component": "@/views/product/CategoryList.vue",
+        "name": "CategoryList",
+        "meta": {
+          "title": "分类管理",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/product/recommend-category",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/recommend-category",
+        "samplePath": "/product/recommend-category",
+        "title": "热门分类管理",
+        "component": "@/views/product/RecommendCategoryList.vue",
+        "name": "RecommendCategoryList",
+        "meta": {
+          "title": "热门分类管理",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/product/form-fields",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/form-fields",
+        "samplePath": "/product/form-fields",
+        "title": "下单字段配置",
+        "component": "@/views/product/CategoryFieldList.vue",
+        "name": "CategoryFieldList",
+        "meta": {
+          "title": "下单字段配置",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/product/create",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/create",
+        "samplePath": "/product/create",
+        "title": "新增商品",
+        "component": "@/views/product/ProductForm.vue",
+        "name": "ProductCreate",
+        "meta": {
+          "title": "新增商品",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "hidden": true,
+          "activeMenu": "/product/list"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/product/edit/:id",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/product/edit/:id",
+        "samplePath": "/product/edit/900001",
+        "title": "编辑商品",
+        "component": "@/views/product/ProductForm.vue",
+        "name": "ProductEdit",
+        "meta": {
+          "title": "编辑商品",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "hidden": true,
+          "activeMenu": "/product/list"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/order/list",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/order/list",
+        "samplePath": "/order/list",
+        "title": "订单列表",
+        "component": "@/views/order/OrderList.vue",
+        "name": "OrderList",
+        "meta": {
+          "title": "订单列表",
+          "icon": "List",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/user/list",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/user/list",
+        "samplePath": "/user/list",
+        "title": "用户列表",
+        "component": "@/views/user/UserList.vue",
+        "name": "UserList",
+        "meta": {
+          "title": "用户列表",
+          "icon": "User",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/user/spending-rank",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/user/spending-rank",
+        "samplePath": "/user/spending-rank",
+        "title": "消费榜单",
+        "component": "@/views/user/SpendingRank.vue",
+        "name": "SpendingRank",
+        "meta": {
+          "title": "消费榜单",
+          "icon": "User",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/user/identity-review",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/user/identity-review",
+        "samplePath": "/user/identity-review",
+        "title": "实名认证审核",
+        "component": "@/views/user/IdentityReview.vue",
+        "name": "IdentityReview",
+        "meta": {
+          "title": "实名认证审核",
+          "icon": "User",
+          "roles": [
+            "admin"
+          ],
+          "permission": "user.manage",
+          "feature": "identity_verification"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/player",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/player",
+        "samplePath": "/player",
+        "title": "打手管理",
+        "component": "@/views/player/PlayerList.vue",
+        "name": "PlayerList",
+        "meta": {
+          "title": "打手管理",
+          "icon": "Avatar",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/player-level",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/player-level",
+        "samplePath": "/player-level",
+        "title": "打手等级分类",
+        "component": "@/views/player/PlayerLevels.vue",
+        "name": "PlayerLevels",
+        "meta": {
+          "title": "打手等级分类",
+          "icon": "Medal",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/rewards",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/rewards",
+        "samplePath": "/rewards",
+        "title": "打赏记录",
+        "component": "@/views/player/RewardList.vue",
+        "name": "RewardList",
+        "meta": {
+          "title": "打赏记录",
+          "icon": "Wallet",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/invitations",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/invitations",
+        "samplePath": "/invitations",
+        "title": "入驻邀请",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "title": "入驻邀请",
+          "icon": "Link",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "invitations",
+          "permission": "player.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/material-review",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/material-review",
+        "samplePath": "/material-review",
+        "title": "主页素材审核",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "title": "主页素材审核",
+          "icon": "Picture",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "revisions",
+          "permission": "media.review"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/staff-shifts",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/staff-shifts",
+        "samplePath": "/staff-shifts",
+        "title": "上下班管理",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "title": "上下班管理",
+          "icon": "Clock",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "shifts"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/privacy-requests",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/privacy-requests",
+        "samplePath": "/privacy-requests",
+        "title": "隐私与注销申请",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "title": "隐私与注销申请",
+          "icon": "Lock",
+          "roles": [
+            "admin"
+          ],
+          "governance": "privacy",
+          "permission": "user.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/settlements",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/settlements",
+        "samplePath": "/settlements",
+        "title": "自动分账台账",
+        "component": "@/views/statistics/SettlementLedger.vue",
+        "name": null,
+        "meta": {
+          "title": "自动分账台账",
+          "icon": "Tickets",
+          "roles": [
+            "admin"
+          ],
+          "permission": "finance.read"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/marketing/coupons",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/marketing/coupons",
+        "samplePath": "/marketing/coupons",
+        "title": "优惠券管理",
+        "component": "@/views/marketing/Coupons.vue",
+        "name": "MarketingCoupons",
+        "meta": {
+          "title": "优惠券管理",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/marketing/invites",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/marketing/invites",
+        "samplePath": "/marketing/invites",
+        "title": "邀请奖励",
+        "component": "@/views/marketing/Invites.vue",
+        "name": "MarketingInvites",
+        "meta": {
+          "title": "邀请奖励",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/marketing/membership",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/marketing/membership",
+        "samplePath": "/marketing/membership",
+        "title": "会员等级",
+        "component": "@/views/marketing/MembershipLevels.vue",
+        "name": "MarketingMembership",
+        "meta": {
+          "title": "会员等级",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/statistics/income-daily",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/statistics/income-daily",
+        "samplePath": "/statistics/income-daily",
+        "title": "收益日报",
+        "component": "@/views/statistics/IncomeDaily.vue",
+        "name": "IncomeDaily",
+        "meta": {
+          "title": "收益日报",
+          "icon": "DataAnalysis",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/complaint",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/complaint",
+        "samplePath": "/complaint",
+        "title": "投诉处理",
+        "component": "@/views/complaint/ComplaintList.vue",
+        "name": "ComplaintList",
+        "meta": {
+          "title": "投诉处理",
+          "icon": "Warning",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/refund",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/refund",
+        "samplePath": "/refund",
+        "title": "退款审批",
+        "component": "@/views/refund/RefundList.vue",
+        "name": "RefundList",
+        "meta": {
+          "title": "退款审批",
+          "icon": "Money",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/replace",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/replace",
+        "samplePath": "/replace",
+        "title": "换人申请",
+        "component": "@/views/replace/ReplaceList.vue",
+        "name": "ReplaceList",
+        "meta": {
+          "title": "换人申请",
+          "icon": "Switch",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/relay",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/relay",
+        "samplePath": "/relay",
+        "title": "接力审核",
+        "component": "@/views/relay/RelayList.vue",
+        "name": "RelayList",
+        "meta": {
+          "title": "接力审核",
+          "icon": "ArrowRight",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/fulfillment-review",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/fulfillment-review",
+        "samplePath": "/fulfillment-review",
+        "title": "履约审核",
+        "component": "@/views/review/FulfillmentReview.vue",
+        "name": "FulfillmentReview",
+        "meta": {
+          "title": "履约审核",
+          "icon": "CircleCheck",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/withdraw",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/withdraw",
+        "samplePath": "/withdraw",
+        "title": "提现管理",
+        "component": "@/views/withdraw/WithdrawList.vue",
+        "name": "WithdrawList",
+        "meta": {
+          "title": "提现管理",
+          "icon": "Wallet",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/chat/service",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/chat/service",
+        "samplePath": "/chat/service",
+        "title": "在线回复",
+        "component": "@/views/chat/ChatService.vue",
+        "name": "ChatService",
+        "meta": {
+          "title": "在线回复",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/chat/quick-reply",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/chat/quick-reply",
+        "samplePath": "/chat/quick-reply",
+        "title": "快捷回复",
+        "component": "@/views/system/QuickReplyList.vue",
+        "name": "ChatQuickReply",
+        "meta": {
+          "title": "快捷回复",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/chat/record",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/chat/record",
+        "samplePath": "/chat/record",
+        "title": "聊天记录",
+        "component": "@/views/chat/ChatRecordList.vue",
+        "name": "ChatRecordList",
+        "meta": {
+          "title": "聊天记录",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/chat/record/:id",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/chat/record/:id",
+        "samplePath": "/chat/record/900001",
+        "title": "聊天记录详情",
+        "component": "@/views/chat/ChatRecordDetail.vue",
+        "name": "ChatRecordDetail",
+        "meta": {
+          "title": "聊天记录详情",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true,
+          "activeMenu": "/chat/record"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/platform/features",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/platform/features",
+        "samplePath": "/platform/features",
+        "title": "功能商城",
+        "component": "@/views/platform/FeatureMarket.vue",
+        "name": "FeatureMarket",
+        "meta": {
+          "title": "功能商城",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/platform/themes",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/platform/themes",
+        "samplePath": "/platform/themes",
+        "title": "主题商店",
+        "component": "@/views/platform/ThemeStore.vue",
+        "name": "ThemeStore",
+        "meta": {
+          "title": "主题商店",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/platform/updates",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/platform/updates",
+        "samplePath": "/platform/updates",
+        "title": "系统更新",
+        "component": "@/views/platform/SystemUpdates.vue",
+        "name": "SystemUpdates",
+        "meta": {
+          "title": "系统更新",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/platform/income-analysis",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/platform/income-analysis",
+        "samplePath": "/platform/income-analysis",
+        "title": "收益对比分析",
+        "component": "@/views/platform/IncomeAnalysis.vue",
+        "name": "IncomeAnalysis",
+        "meta": {
+          "title": "收益对比分析",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "permission": "finance.read",
+          "feature": "advanced_income_reports"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/wechat-notices",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/wechat-notices",
+        "samplePath": "/system/wechat-notices",
+        "title": "通知记录",
+        "component": "@/views/system/WechatNotices.vue",
+        "name": null,
+        "meta": {
+          "title": "通知记录",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/email-notifications",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/email-notifications",
+        "samplePath": "/system/email-notifications",
+        "title": "邮件通知",
+        "component": "@/views/system/EmailNotifications.vue",
+        "name": "EmailNotifications",
+        "meta": {
+          "title": "邮件通知",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage",
+          "feature": "email_notifications"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/roles",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/roles",
+        "samplePath": "/system/roles",
+        "title": "角色与权限",
+        "component": "@/views/system/StaffRoles.vue",
+        "name": null,
+        "meta": {
+          "title": "角色与权限",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/admin",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/admin",
+        "samplePath": "/system/admin",
+        "title": "管理员管理",
+        "component": "@/views/system/AdminList.vue",
+        "name": "AdminManage",
+        "meta": {
+          "title": "管理员管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/notice",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/notice",
+        "samplePath": "/system/notice",
+        "title": "公告管理",
+        "component": "@/views/system/NoticeList.vue",
+        "name": "NoticeManage",
+        "meta": {
+          "title": "公告管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/banner",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/banner",
+        "samplePath": "/system/banner",
+        "title": "轮播图管理",
+        "component": "@/views/system/BannerList.vue",
+        "name": "BannerManage",
+        "meta": {
+          "title": "轮播图管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/reward-grab",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/reward-grab",
+        "samplePath": "/system/reward-grab",
+        "title": "打赏与抢单设置",
+        "component": "@/views/system/RewardGrabSettings.vue",
+        "name": "RewardGrabSettings",
+        "meta": {
+          "title": "打赏与抢单设置",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/content",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/content",
+        "samplePath": "/system/content",
+        "title": "内容页面",
+        "component": "@/views/system/ContentSettings.vue",
+        "name": "ContentSettings",
+        "meta": {
+          "title": "内容页面",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/player-layout",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/player-layout",
+        "samplePath": "/system/player-layout",
+        "title": "打手列表布局",
+        "component": "@/views/system/PlayerLayoutSettings.vue",
+        "name": "PlayerLayoutSettings",
+        "meta": {
+          "title": "打手列表布局",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage",
+          "feature": "player_directory_layouts"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/config",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/config",
+        "samplePath": "/system/config",
+        "title": "系统配置",
+        "component": "@/views/system/SysConfig.vue",
+        "name": "SysConfig",
+        "meta": {
+          "title": "系统配置",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/recharge-packages",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/recharge-packages",
+        "samplePath": "/system/recharge-packages",
+        "title": "余额充值套餐",
+        "component": "@/views/system/RechargePackage.vue",
+        "name": "RechargePackages",
+        "meta": {
+          "title": "余额充值套餐",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/operation-log",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/operation-log",
+        "samplePath": "/system/operation-log",
+        "title": "操作日志",
+        "component": "@/views/system/OperationLog.vue",
+        "name": "OperationLog",
+        "meta": {
+          "title": "操作日志",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "pc:/system/sensitive-words",
+        "app": "admin",
+        "variant": "pc",
+        "path": "/system/sensitive-words",
+        "samplePath": "/system/sensitive-words",
+        "title": "敏感词管理",
+        "component": "@/views/system/SensitiveWordList.vue",
+        "name": "SensitiveWordList",
+        "meta": {
+          "title": "敏感词管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/dashboard",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/dashboard",
+        "samplePath": "/h5/dashboard",
+        "title": "仪表盘",
+        "component": "@/views/dashboard/index.vue",
+        "name": "H5Dashboard",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "仪表盘",
+          "icon": "Odometer",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/wechat-binding",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/wechat-binding",
+        "samplePath": "/h5/wechat-binding",
+        "title": "公众号消息通知",
+        "component": "@/views/wechat/Binding.vue",
+        "name": "H5WechatBinding",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "公众号消息通知",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/403",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/403",
+        "samplePath": "/h5/403",
+        "title": "无权限",
+        "component": "@/views/error/403.vue",
+        "name": "H5Forbidden",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "无权限",
+          "hidden": true
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "admin",
+        "purpose": "intentional-403"
+      },
+      {
+        "id": "h5:/h5/:pathMatch(.*)*",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/:pathMatch(.*)*",
+        "samplePath": "/h5/__qa_missing_route__",
+        "title": "页面不存在",
+        "component": "@/views/error/404.vue",
+        "name": "H5NotFound",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "页面不存在",
+          "hidden": true
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "admin",
+        "purpose": "intentional-404"
+      },
+      {
+        "id": "h5:/h5/product/list",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/list",
+        "samplePath": "/h5/product/list",
+        "title": "商品列表",
+        "component": "@/views/product/ProductList.vue",
+        "name": "H5ProductList",
+        "meta": {
+          "title": "商品列表",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/product/category",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/category",
+        "samplePath": "/h5/product/category",
+        "title": "分类管理",
+        "component": "@/views/product/CategoryList.vue",
+        "name": "H5CategoryList",
+        "meta": {
+          "title": "分类管理",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/product/recommend-category",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/recommend-category",
+        "samplePath": "/h5/product/recommend-category",
+        "title": "热门分类管理",
+        "component": "@/views/product/RecommendCategoryList.vue",
+        "name": "H5RecommendCategoryList",
+        "meta": {
+          "title": "热门分类管理",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/product/form-fields",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/form-fields",
+        "samplePath": "/h5/product/form-fields",
+        "title": "下单字段配置",
+        "component": "@/views/product/CategoryFieldList.vue",
+        "name": "H5CategoryFieldList",
+        "meta": {
+          "title": "下单字段配置",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/product/create",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/create",
+        "samplePath": "/h5/product/create",
+        "title": "新增商品",
+        "component": "@/views/product/ProductForm.vue",
+        "name": "H5ProductCreate",
+        "meta": {
+          "title": "新增商品",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "hidden": true,
+          "activeMenu": "/product/list"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/product/edit/:id",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/product/edit/:id",
+        "samplePath": "/h5/product/edit/900001",
+        "title": "编辑商品",
+        "component": "@/views/product/ProductForm.vue",
+        "name": "H5ProductEdit",
+        "meta": {
+          "title": "编辑商品",
+          "icon": "Goods",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "hidden": true,
+          "activeMenu": "/product/list"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/order/list",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/order/list",
+        "samplePath": "/h5/order/list",
+        "title": "订单列表",
+        "component": "@/views/order/OrderList.vue",
+        "name": "H5OrderList",
+        "meta": {
+          "title": "订单列表",
+          "icon": "List",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/user/list",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/user/list",
+        "samplePath": "/h5/user/list",
+        "title": "用户列表",
+        "component": "@/views/user/UserList.vue",
+        "name": "H5UserList",
+        "meta": {
+          "title": "用户列表",
+          "icon": "User",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/user/spending-rank",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/user/spending-rank",
+        "samplePath": "/h5/user/spending-rank",
+        "title": "消费榜单",
+        "component": "@/views/user/SpendingRank.vue",
+        "name": "H5SpendingRank",
+        "meta": {
+          "title": "消费榜单",
+          "icon": "User",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/user/identity-review",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/user/identity-review",
+        "samplePath": "/h5/user/identity-review",
+        "title": "实名认证审核",
+        "component": "@/views/user/IdentityReview.vue",
+        "name": "H5IdentityReview",
+        "meta": {
+          "title": "实名认证审核",
+          "icon": "User",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "user.manage",
+          "feature": "identity_verification"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/player",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/player",
+        "samplePath": "/h5/player",
+        "title": "打手管理",
+        "component": "@/views/player/PlayerList.vue",
+        "name": "H5PlayerList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "打手管理",
+          "icon": "Avatar",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/player-level",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/player-level",
+        "samplePath": "/h5/player-level",
+        "title": "打手等级分类",
+        "component": "@/views/player/PlayerLevels.vue",
+        "name": "H5PlayerLevels",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "打手等级分类",
+          "icon": "Medal",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/rewards",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/rewards",
+        "samplePath": "/h5/rewards",
+        "title": "打赏记录",
+        "component": "@/views/player/RewardList.vue",
+        "name": "H5RewardList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "打赏记录",
+          "icon": "Wallet",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/invitations",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/invitations",
+        "samplePath": "/h5/invitations",
+        "title": "入驻邀请",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "入驻邀请",
+          "icon": "Link",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "invitations",
+          "permission": "player.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/material-review",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/material-review",
+        "samplePath": "/h5/material-review",
+        "title": "主页素材审核",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "主页素材审核",
+          "icon": "Picture",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "revisions",
+          "permission": "media.review"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/staff-shifts",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/staff-shifts",
+        "samplePath": "/h5/staff-shifts",
+        "title": "上下班管理",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "上下班管理",
+          "icon": "Clock",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "governance": "shifts"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/privacy-requests",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/privacy-requests",
+        "samplePath": "/h5/privacy-requests",
+        "title": "隐私与注销申请",
+        "component": "@/views/player/Governance.vue",
+        "name": null,
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "隐私与注销申请",
+          "icon": "Lock",
+          "roles": [
+            "admin"
+          ],
+          "governance": "privacy",
+          "permission": "user.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/settlements",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/settlements",
+        "samplePath": "/h5/settlements",
+        "title": "自动分账台账",
+        "component": "@/views/statistics/SettlementLedger.vue",
+        "name": null,
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "自动分账台账",
+          "icon": "Tickets",
+          "roles": [
+            "admin"
+          ],
+          "permission": "finance.read"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/marketing/coupons",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/marketing/coupons",
+        "samplePath": "/h5/marketing/coupons",
+        "title": "优惠券管理",
+        "component": "@/views/marketing/Coupons.vue",
+        "name": "H5MarketingCoupons",
+        "meta": {
+          "title": "优惠券管理",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/marketing/invites",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/marketing/invites",
+        "samplePath": "/h5/marketing/invites",
+        "title": "邀请奖励",
+        "component": "@/views/marketing/Invites.vue",
+        "name": "H5MarketingInvites",
+        "meta": {
+          "title": "邀请奖励",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/marketing/membership",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/marketing/membership",
+        "samplePath": "/h5/marketing/membership",
+        "title": "会员等级",
+        "component": "@/views/marketing/MembershipLevels.vue",
+        "name": "H5MarketingMembership",
+        "meta": {
+          "title": "会员等级",
+          "icon": "Present",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/statistics/income-daily",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/statistics/income-daily",
+        "samplePath": "/h5/statistics/income-daily",
+        "title": "收益日报",
+        "component": "@/views/statistics/IncomeDaily.vue",
+        "name": "H5IncomeDaily",
+        "meta": {
+          "title": "收益日报",
+          "icon": "DataAnalysis",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/complaint",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/complaint",
+        "samplePath": "/h5/complaint",
+        "title": "投诉处理",
+        "component": "@/views/complaint/ComplaintList.vue",
+        "name": "H5ComplaintList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "投诉处理",
+          "icon": "Warning",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/refund",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/refund",
+        "samplePath": "/h5/refund",
+        "title": "退款审批",
+        "component": "@/views/refund/RefundList.vue",
+        "name": "H5RefundList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "退款审批",
+          "icon": "Money",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/replace",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/replace",
+        "samplePath": "/h5/replace",
+        "title": "换人申请",
+        "component": "@/views/replace/ReplaceList.vue",
+        "name": "H5ReplaceList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "换人申请",
+          "icon": "Switch",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/relay",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/relay",
+        "samplePath": "/h5/relay",
+        "title": "接力审核",
+        "component": "@/views/relay/RelayList.vue",
+        "name": "H5RelayList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "接力审核",
+          "icon": "ArrowRight",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "hidden": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/fulfillment-review",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/fulfillment-review",
+        "samplePath": "/h5/fulfillment-review",
+        "title": "履约审核",
+        "component": "@/views/review/FulfillmentReview.vue",
+        "name": "H5FulfillmentReview",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "履约审核",
+          "icon": "CircleCheck",
+          "roles": [
+            "admin",
+            "cs"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/withdraw",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/withdraw",
+        "samplePath": "/h5/withdraw",
+        "title": "提现管理",
+        "component": "@/views/withdraw/WithdrawList.vue",
+        "name": "H5WithdrawList",
+        "meta": {
+          "mobileAlias": true,
+          "h5Alias": true,
+          "title": "提现管理",
+          "icon": "Wallet",
+          "roles": [
+            "admin"
+          ]
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/chat/service",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/chat/service",
+        "samplePath": "/h5/chat/service",
+        "title": "在线回复",
+        "component": "@/views/chat/ChatService.vue",
+        "name": "H5ChatService",
+        "meta": {
+          "title": "在线回复",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/chat/quick-reply",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/chat/quick-reply",
+        "samplePath": "/h5/chat/quick-reply",
+        "title": "快捷回复",
+        "component": "@/views/system/QuickReplyList.vue",
+        "name": "H5ChatQuickReply",
+        "meta": {
+          "title": "快捷回复",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/chat/record",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/chat/record",
+        "samplePath": "/h5/chat/record",
+        "title": "聊天记录",
+        "component": "@/views/chat/ChatRecordList.vue",
+        "name": "H5ChatRecordList",
+        "meta": {
+          "title": "聊天记录",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/chat/record/:id",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/chat/record/:id",
+        "samplePath": "/h5/chat/record/900001",
+        "title": "聊天记录详情",
+        "component": "@/views/chat/ChatRecordDetail.vue",
+        "name": "H5ChatRecordDetail",
+        "meta": {
+          "title": "聊天记录详情",
+          "icon": "ChatDotRound",
+          "roles": [
+            "admin",
+            "cs"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "hidden": true,
+          "activeMenu": "/chat/record"
+        },
+        "roleRequirements": [
+          [
+            "admin",
+            "cs"
+          ],
+          [
+            "admin",
+            "cs"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/platform/features",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/platform/features",
+        "samplePath": "/h5/platform/features",
+        "title": "功能商城",
+        "component": "@/views/platform/FeatureMarket.vue",
+        "name": "H5FeatureMarket",
+        "meta": {
+          "title": "功能商城",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/platform/themes",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/platform/themes",
+        "samplePath": "/h5/platform/themes",
+        "title": "主题商店",
+        "component": "@/views/platform/ThemeStore.vue",
+        "name": "H5ThemeStore",
+        "meta": {
+          "title": "主题商店",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/platform/updates",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/platform/updates",
+        "samplePath": "/h5/platform/updates",
+        "title": "系统更新",
+        "component": "@/views/platform/SystemUpdates.vue",
+        "name": "H5SystemUpdates",
+        "meta": {
+          "title": "系统更新",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/platform/income-analysis",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/platform/income-analysis",
+        "samplePath": "/h5/platform/income-analysis",
+        "title": "收益对比分析",
+        "component": "@/views/platform/IncomeAnalysis.vue",
+        "name": "H5IncomeAnalysis",
+        "meta": {
+          "title": "收益对比分析",
+          "icon": "Box",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "finance.read",
+          "feature": "advanced_income_reports"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/wechat-notices",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/wechat-notices",
+        "samplePath": "/h5/system/wechat-notices",
+        "title": "通知记录",
+        "component": "@/views/system/WechatNotices.vue",
+        "name": null,
+        "meta": {
+          "title": "通知记录",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/email-notifications",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/email-notifications",
+        "samplePath": "/h5/system/email-notifications",
+        "title": "邮件通知",
+        "component": "@/views/system/EmailNotifications.vue",
+        "name": "H5EmailNotifications",
+        "meta": {
+          "title": "邮件通知",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage",
+          "feature": "email_notifications"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/roles",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/roles",
+        "samplePath": "/h5/system/roles",
+        "title": "角色与权限",
+        "component": "@/views/system/StaffRoles.vue",
+        "name": null,
+        "meta": {
+          "title": "角色与权限",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/admin",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/admin",
+        "samplePath": "/h5/system/admin",
+        "title": "管理员管理",
+        "component": "@/views/system/AdminList.vue",
+        "name": "H5AdminManage",
+        "meta": {
+          "title": "管理员管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/notice",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/notice",
+        "samplePath": "/h5/system/notice",
+        "title": "公告管理",
+        "component": "@/views/system/NoticeList.vue",
+        "name": "H5NoticeManage",
+        "meta": {
+          "title": "公告管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/banner",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/banner",
+        "samplePath": "/h5/system/banner",
+        "title": "轮播图管理",
+        "component": "@/views/system/BannerList.vue",
+        "name": "H5BannerManage",
+        "meta": {
+          "title": "轮播图管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/reward-grab",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/reward-grab",
+        "samplePath": "/h5/system/reward-grab",
+        "title": "打赏与抢单设置",
+        "component": "@/views/system/RewardGrabSettings.vue",
+        "name": "H5RewardGrabSettings",
+        "meta": {
+          "title": "打赏与抢单设置",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/content",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/content",
+        "samplePath": "/h5/system/content",
+        "title": "内容页面",
+        "component": "@/views/system/ContentSettings.vue",
+        "name": "H5ContentSettings",
+        "meta": {
+          "title": "内容页面",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/player-layout",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/player-layout",
+        "samplePath": "/h5/system/player-layout",
+        "title": "打手列表布局",
+        "component": "@/views/system/PlayerLayoutSettings.vue",
+        "name": "H5PlayerLayoutSettings",
+        "meta": {
+          "title": "打手列表布局",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage",
+          "feature": "player_directory_layouts"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/config",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/config",
+        "samplePath": "/h5/system/config",
+        "title": "系统配置",
+        "component": "@/views/system/SysConfig.vue",
+        "name": "H5SysConfig",
+        "meta": {
+          "title": "系统配置",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/recharge-packages",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/recharge-packages",
+        "samplePath": "/h5/system/recharge-packages",
+        "title": "余额充值套餐",
+        "component": "@/views/system/RechargePackage.vue",
+        "name": "H5RechargePackages",
+        "meta": {
+          "title": "余额充值套餐",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/operation-log",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/operation-log",
+        "samplePath": "/h5/system/operation-log",
+        "title": "操作日志",
+        "component": "@/views/system/OperationLog.vue",
+        "name": "H5OperationLog",
+        "meta": {
+          "title": "操作日志",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/system/sensitive-words",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/system/sensitive-words",
+        "samplePath": "/h5/system/sensitive-words",
+        "title": "敏感词管理",
+        "component": "@/views/system/SensitiveWordList.vue",
+        "name": "H5SensitiveWordList",
+        "meta": {
+          "title": "敏感词管理",
+          "icon": "Setting",
+          "roles": [
+            "admin"
+          ],
+          "mobileAlias": true,
+          "h5Alias": true,
+          "permission": "system.manage"
+        },
+        "roleRequirements": [
+          [
+            "admin"
+          ],
+          [
+            "admin"
+          ]
+        ],
+        "fixtureAuth": "admin",
+        "purpose": "function-page"
+      },
+      {
+        "id": "h5:/h5/login",
+        "app": "admin",
+        "variant": "h5",
+        "path": "/h5/login",
+        "samplePath": "/h5/login",
+        "title": "登录",
+        "component": "@/views/login/index.vue",
+        "name": "H5Login",
+        "meta": {
+          "title": "登录",
+          "h5": true
+        },
+        "roleRequirements": [],
+        "fixtureAuth": "anonymous",
+        "purpose": "function-page"
+      }
+    ]
+  },
+  "limitations": [
+    "Inventory presence never constitutes rendering or business acceptance.",
+    "Fixtures use generated identities and records; list-empty states and seeded details are explicitly recorded per request.",
+    "No real login, payment, SMS, upload, settlement, authorization, upgrade, or production operation is exercised.",
+    "Closed dialogs, every status/data combination, actual iOS/Android/WeChat/QQ, mini-program builds, and subjective visual acceptance need separate validation.",
+    "Staff transfer fixture leaves staff_web_url empty; staff business pages are audited through the separate admin router."
+  ]
+}

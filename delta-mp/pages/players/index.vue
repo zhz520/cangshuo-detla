@@ -1,5 +1,10 @@
 <template>
   <view class="directory-page tab-page">
+    <view v-if="siteStore.themeId === 'neumorphism'" class="neo-directory-head">
+      <text class="neo-hero-kicker">TEAM / COMMUNITY</text>
+      <text class="neo-hero-title">{{ siteStore.siteName }}</text>
+      <text class="neo-hero-sub">找一位默契的队友，开始这一单</text>
+    </view>
     <view class="search-bar">
       <input v-model="keyword" maxlength="50" placeholder="搜索打手昵称" confirm-type="search" @confirm="refresh" />
       <text @click="refresh">搜索</text>
