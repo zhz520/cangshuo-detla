@@ -2,8 +2,8 @@
    Palette and depth follow the 2026-11 reference: misty canvas, raised panels,
    inset fields and a single muted-blue accent. Tenant branding stays in site config. */
 html[data-theme='neumorphism'] {
-  --neo-canvas: #e9eef5;
-  --neo-surface: #edf1f7;
+  --neo-canvas: #e5ebf4;
+  --neo-surface: #eef2f9;
   --neo-sunken: #e4eaf3;
   --neo-ink: #263449;
   --neo-ink-soft: #56657c;
@@ -26,7 +26,7 @@ html[data-theme='neumorphism'] body,
 html[data-theme='neumorphism'] page {
   background:
     radial-gradient(circle at 9% 16%, #f9fbfe 0%, transparent 37%),
-    radial-gradient(circle at 88% 81%, #d8e3f2 0%, transparent 40%),
+    radial-gradient(circle at 88% 81%, #cfdcee 0%, transparent 42%),
     var(--neo-canvas) !important;
   background-attachment: fixed !important;
   color: var(--neo-ink) !important;
@@ -621,12 +621,24 @@ html[data-theme='neumorphism'] .quick-item {
 }
 
 html[data-theme='neumorphism'] .quick-item .quick-icon {
-  width: 64rpx !important;
-  height: 64rpx !important;
-  padding: 14rpx !important;
-  border-radius: 22rpx !important;
-  background: var(--neo-surface) !important;
-  box-shadow: var(--neo-shadow-soft) !important;
+  width: 88rpx !important;
+  height: 88rpx !important;
+  padding: 20rpx !important;
+  border-radius: 26rpx !important;
+  background: #f4f7fc !important;
+  box-shadow: 8rpx 8rpx 18rpx rgba(150, 163, 183, 0.2), -8rpx -8rpx 18rpx #ffffff !important;
+  filter: invert(42%) sepia(45%) saturate(1200%) hue-rotate(205deg) brightness(96%) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme='neumorphism'] .quick-item .quick-icon-wrap .quick-icon {
+  filter: invert(42%) sepia(45%) saturate(1200%) hue-rotate(205deg) brightness(96%) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme='neumorphism'] .more-icon {
+  filter: invert(45%) sepia(20%) saturate(600%) hue-rotate(190deg) brightness(1.05) !important;
+  opacity: 0.75 !important;
 }
 
 html[data-theme='neumorphism'] .more-card {
@@ -839,5 +851,20 @@ html[data-theme='neumorphism'] :focus-visible {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Every route shares the same canvas; page roots never paint their own white sheet. */
+html[data-theme='neumorphism'] uni-page-body > uni-view:first-child {
+  background: transparent !important;
+}
+
+html[data-theme='neumorphism'] .tabbar-icon .icon-img {
+  filter: invert(40%) sepia(12%) saturate(450%) hue-rotate(190deg) brightness(1.25) !important;
+  opacity: 0.72;
+}
+
+html[data-theme='neumorphism'] .tabbar-item.active .icon-img {
+  filter: invert(42%) sepia(45%) saturate(1200%) hue-rotate(205deg) brightness(96%) !important;
+  opacity: 1;
 }
 
