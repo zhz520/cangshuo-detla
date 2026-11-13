@@ -23,6 +23,8 @@ jobs:
           persist-credentials: false
       - name: Protect Actions storage
         run: python deploy/qa/check_ci_storage.py
+      - name: Validate collaboration rules
+        run: python deploy/qa/check_collaboration_rules.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '22'
