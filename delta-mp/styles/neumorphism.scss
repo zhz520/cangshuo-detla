@@ -858,6 +858,25 @@ html[data-theme='neumorphism'] uni-page-body > uni-view:first-child {
   background: transparent !important;
 }
 
+html[data-theme='neumorphism'] uni-page-body > uni-view,
+html[data-theme='neumorphism'] uni-page-body > uni-view > uni-view:first-child {
+  background: transparent !important;
+}
+
+html[data-theme='neumorphism'] .complaint-detail,
+html[data-theme='neumorphism'] .create-order,
+html[data-theme='neumorphism'] .wallet-page,
+html[data-theme='neumorphism'] .msg-list {
+  background: transparent !important;
+}
+
+html[data-theme='neumorphism'] .create-order .section {
+  background: var(--neo-surface) !important;
+  border: 0 !important;
+  border-radius: var(--neo-radius) !important;
+  box-shadow: var(--neo-shadow-soft) !important;
+}
+
 html[data-theme='neumorphism'] .tabbar-icon .icon-img {
   filter: invert(40%) sepia(12%) saturate(450%) hue-rotate(190deg) brightness(1.25) !important;
   opacity: 0.72;
