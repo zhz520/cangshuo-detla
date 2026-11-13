@@ -1,9 +1,9 @@
 # Delta 生态 Vibe Coding 规则
 
 最后更新：2026-11-13（Asia/Shanghai）
-文档版本：2026-11-13.4
+文档版本：2026-11-13.5
 
-读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-13.4”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
+读取回执：每次新会话第一次实质性回复必须包含一行“已读取 VIBE_CODING.md v2026-11-13.5”。如果本次没有读取，不要开始改代码，先补读。修改本文件时必须同步提升文档版本。
 
 适用范围：
 
@@ -144,7 +144,7 @@ flowchart TB
 - 1.12.3 修复共享租户 license 使用全局客户编号的问题；JAX/742 的 1.12.3 授权上报已验证。
 - 本地授权数据库只是开发初始化数据，不能用来判断生产客户、项目、实例和权益。
 - 系统 PATH 中没有 Maven，默认 Java 为 25；正式构建使用缓存 Maven 3.9.11 和 Temurin JDK 17（临时目录）。不要用 Java 25 代替项目要求的 Java 17。
-- 共享后端必须设置 `JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true`。当前容器没有 IPv6 出口，而微信支付 SDK 会优先解析 `api.mch.weixin.qq.com` 的 IPv6 地址；2026-11-13 曾因此出现 `Network is unreachable` 和公众号支付失败，详见 `docs/微信支付IPv4出口修复记录-2026-11-13.md`。
+- 共享后端必须设置 `JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true`。当前容器没有 IPv6 出口，而微信支付 SDK 会优先解析 `api.mch.weixin.qq.com` 的 IPv6 地址；2026-11-13 曾因此出现 `Network is unreachable` 和公众号支付失败。静态 H5 容器必须保留 `/api/pay/wx/official/callback` 的专用 CSP location，允许支付页内联脚本；详见 `docs/微信支付IPv4出口修复记录-2026-11-13.md`。
 
 ## 4. 版本号规则
 
