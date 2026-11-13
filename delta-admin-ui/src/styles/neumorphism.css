@@ -53,6 +53,29 @@ html[data-theme='neumorphism'] .layout-aside {
   box-shadow: 7px 0 18px rgba(150, 163, 183, 0.25) !important;
 }
 
+html[data-theme='neumorphism'] .admin-navigation {
+  background: transparent !important;
+  color: var(--app-text) !important;
+}
+
+html[data-theme='neumorphism'] .admin-navigation .logo {
+  color: var(--app-text) !important;
+}
+
+html[data-theme='neumorphism'] .admin-navigation .el-menu-item,
+html[data-theme='neumorphism'] .admin-navigation .el-sub-menu__title {
+  color: var(--app-text-regular) !important;
+}
+
+html[data-theme='neumorphism'] .admin-navigation .el-menu-item.is-active,
+html[data-theme='neumorphism'] .admin-navigation .el-sub-menu.is-active > .el-sub-menu__title {
+  color: #3f62b9 !important;
+}
+
+html[data-theme='neumorphism'] .admin-navigation .el-menu-item-group__title {
+  color: var(--app-text-muted) !important;
+}
+
 html[data-theme='neumorphism'] .el-card,
 html[data-theme='neumorphism'] .el-dialog,
 html[data-theme='neumorphism'] .el-dropdown-menu,
