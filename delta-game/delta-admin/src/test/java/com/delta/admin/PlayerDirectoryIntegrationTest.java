@@ -210,6 +210,7 @@ class PlayerDirectoryIntegrationTest {
 
     @Test void approvingApplicationAssignsOnlyAnEnabledLevelAndCannotRepeat() throws Exception {
         jdbc.update("INSERT INTO player(id,nickname,level,status) VALUES(4,'待审打手',1,'PENDING'),(5,'待审打手二',1,'PENDING')");
+        jdbc.update("UPDATE player SET reject_reason='补充材料前的旧原因' WHERE id IN (4,5)");
         mvc.perform(put("/admin/player/4/approve").param("levelId","3").with(role("ADMIN",1)))
                 .andExpect(jsonPath("$.code").value(409));
         assertThat(jdbc.queryForObject("SELECT status FROM player WHERE id=4",String.class)).isEqualTo("PENDING");
@@ -217,11 +218,24 @@ class PlayerDirectoryIntegrationTest {
                 .andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=4",Integer.class)).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT status FROM player WHERE id=4",String.class)).isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("SELECT reject_reason FROM player WHERE id=4",String.class)).isEmpty();
         mvc.perform(put("/admin/player/4/approve").param("levelId","1").with(role("ADMIN",1)))
                 .andExpect(jsonPath("$.code").value(409));
         mvc.perform(put("/admin/player/5/approve").with(role("ADMIN",1)))
                 .andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=5",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT reject_reason FROM player WHERE id=5",String.class)).isEmpty();
+    }
+
+    @Test void batchApprovalClearsRejectionWithoutViolatingProductionNonNullConstraint() throws Exception {
+        jdbc.update("INSERT INTO player(id,nickname,level,status,reject_reason) VALUES(4,'待审甲',1,'PENDING','旧原因'),(5,'待审乙',2,'PENDING','旧原因')");
+        mvc.perform(post("/admin/player/batch/approve").with(role("ADMIN",1))
+                        .contentType("application/json").content("{\"ids\":[4,5]}"))
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.success").value(2))
+                .andExpect(jsonPath("$.data.failed").value(0));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM player WHERE id IN (4,5) AND status='ACTIVE' AND reject_reason=''",Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=5",Integer.class)).isEqualTo(2);
     }
 
     @Test void onlyAdminCanConfigurePriceAndPlayerCannotOverrideIt() throws Exception {

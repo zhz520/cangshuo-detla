@@ -111,7 +111,7 @@ public class AdminPlayerController {
                 .eq(Player::getId, id)
                 .eq(Player::getStatus, "PENDING")
                 .set(Player::getStatus, "ACTIVE")
-                .set(Player::getRejectReason, null)
+                .set(Player::getRejectReason, "")
                 .set(levelId != null, Player::getLevel, levelId));
         if (!updated) throw new BusinessException(409, "申请状态已变更，请刷新后重试");
         eventPublisher.publishEvent(new BusinessEvent(this, "PLAYER_APPROVED",
