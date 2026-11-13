@@ -96,6 +96,10 @@
         <view class="product-grid">
           <ProductCard v-for="p in recommendProducts" :key="p.id" :product="p" />
         </view>
+        <view v-if="isNeo && !recommendProducts.length" class="neo-recommend-empty" @click="goCategoryPage">
+          <text>暂时没有推荐商品</text>
+          <text class="neo-recommend-link">去分类页看看 ›</text>
+        </view>
       </view>
 
       <view class="tab-page-bottom-spacer" :class="{ 'ticker-spacer': purchaseFeedEnabled && purchaseFeed.length }" />
@@ -316,6 +320,10 @@ async function loadRecommendProducts() {
 
 function goSearch() {
   uni.navigateTo({ url: '/pages/product/list?focus=1' })
+}
+
+function goCategoryPage() {
+  uni.switchTab({ url: '/pages/category/index' })
 }
 
 function onBannerClick(item) {

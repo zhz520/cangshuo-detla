@@ -126,10 +126,41 @@ html[data-theme='neumorphism'] .category-grid .category-item {
   border-radius: 26rpx !important;
   background: var(--neo-surface) !important;
   box-shadow: var(--neo-shadow-soft) !important;
+  padding: 18rpx 8rpx !important;
 }
 
 html[data-theme='neumorphism'] .category-grid .category-icon {
+  width: 76rpx !important;
+  height: 76rpx !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   filter: invert(45%) sepia(38%) saturate(1100%) hue-rotate(202deg) brightness(94%) !important;
+}
+
+html[data-theme='neumorphism'] .category-grid {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 24rpx !important;
+  margin: 16rpx 0 0 !important;
+  gap: 16rpx !important;
+}
+
+html[data-theme='neumorphism'] .neo-recommend-empty {
+  margin: 18rpx 0 8rpx !important;
+  padding: 34rpx 24rpx !important;
+  border-radius: 28rpx !important;
+  background: var(--neo-surface) !important;
+  box-shadow: var(--neo-shadow-soft) !important;
+  text-align: center !important;
+  color: var(--neo-muted) !important;
+  font-size: 24rpx !important;
+}
+
+html[data-theme='neumorphism'] .neo-recommend-empty .neo-recommend-link {
+  display: block !important;
+  margin-top: 10rpx !important;
+  color: var(--neo-accent) !important;
+  font-weight: 700 !important;
 }
 
 html[data-theme='neumorphism'] .card,
