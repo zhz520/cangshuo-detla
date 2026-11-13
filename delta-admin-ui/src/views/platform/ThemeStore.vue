@@ -191,12 +191,13 @@ onMounted(load)
 .preview-bottom { margin-top: 18px; display: grid; gap: 8px; }
 .preview-line { height: 8px; width: 62%; border-radius: 8px; background: #e2e5e9; }
 .preview-line.wide { width: 82%; }
-.preview-neumorphism { background: #e9edf2; border-color: #e9edf2; }
-.preview-neumorphism .preview-sidebar { background: #e9edf2; box-shadow: inset 6px 0 12px #c7ccd3; }
+.preview-neumorphism { background: #e9eef5; border-color: #e9eef5; }
+.preview-neumorphism .preview-sidebar { background: #e9eef5; box-shadow: inset 6px 0 12px #c9d3e2; }
 .preview-neumorphism .preview-block,
 .preview-neumorphism .preview-top,
-.preview-neumorphism .preview-line { background: #e9edf2; border: 0; box-shadow: 5px 5px 10px #c5cbd2, -5px -5px 10px #ffffff; }
-.preview-neumorphism .preview-content { background: #e9edf2; }
+.preview-neumorphism .preview-line { background: #edf1f7; border: 0; box-shadow: 5px 5px 10px rgba(150, 163, 183, 0.35), -5px -5px 10px #ffffff; }
+.preview-neumorphism .preview-line.wide { background: linear-gradient(90deg, #6888da, #4b70c9); box-shadow: 4px 4px 9px rgba(120, 140, 180, 0.3); }
+.preview-neumorphism .preview-content { background: #e9eef5; }
 .theme-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .theme-title-row h3 { margin: 0; font-size: 17px; }
 .theme-description { color: #555b63; line-height: 1.7; min-height: 48px; }
