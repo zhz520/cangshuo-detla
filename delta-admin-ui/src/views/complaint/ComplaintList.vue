@@ -120,8 +120,8 @@
       <el-form label-width="90px">
         <el-form-item label="仲裁结果">
           <el-radio-group v-model="resolveForm.result">
-            <el-radio value="FULL_REFUND">全额退款</el-radio>
-            <el-radio value="PARTIAL_REFUND">部分退款</el-radio>
+            <el-radio v-if="can('order.refund')" value="FULL_REFUND">全额退款</el-radio>
+            <el-radio value="PARTIAL_REFUND" disabled>部分退款（暂未开放）</el-radio>
             <el-radio value="REDO">重新服务</el-radio>
             <el-radio value="REJECT">驳回投诉</el-radio>
           </el-radio-group>
@@ -133,7 +133,7 @@
           <el-radio-group v-model="resolveForm.playerPenalty">
             <el-radio value="NONE">无</el-radio>
             <el-radio value="WARNING">警告</el-radio>
-            <el-radio value="FREEZE">冻结账号</el-radio>
+            <el-radio v-if="can('player.manage')" value="FREEZE">冻结账号</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="处理说明"><el-input v-model="resolveForm.resultReason" type="textarea" :rows="3" placeholder="请输入处理说明" /></el-form-item>
@@ -200,6 +200,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
+import { can } from '@/utils/staff-permissions'
 import { csComplaintList, csComplaintProcess, csComplaintResolve, csComplaintCreate, csUserList, csOrderList, csComplaintDetail } from '@/api/business'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
@@ -235,7 +236,7 @@ async function showDetail(row) {
 // 仲裁
 const resolveVisible = ref(false), resolveId = ref(null)
 const resolveForm = reactive({ result: 'FULL_REFUND', resultReason: '', refundAmount: 0, playerPenalty: 'NONE' })
-function openResolveDialog(row) { resolveId.value = row.id; Object.assign(resolveForm, { result: 'FULL_REFUND', resultReason: '', refundAmount: 0, playerPenalty: 'NONE' }); resolveVisible.value = true }
+function openResolveDialog(row) { resolveId.value = row.id; Object.assign(resolveForm, { result: can('order.refund') ? 'FULL_REFUND' : 'REDO', resultReason: '', refundAmount: 0, playerPenalty: 'NONE' }); resolveVisible.value = true }
 async function handleResolve() {
   if (!resolveForm.resultReason) return ElMessage.warning('请输入处理说明')
   submitting.value = true

@@ -84,7 +84,7 @@
         </el-descriptions-item>
       </el-descriptions>
       <div v-if="detail" class="detail-actions">
-        <el-button v-if="detail.status === 'COMPLETED'" type="primary" :loading="confirmLoading" @click="handleConfirm(detail)">结单</el-button>
+        <el-button v-if="can('order.manage') && detail.status === 'COMPLETED'" type="primary" :loading="confirmLoading" @click="handleConfirm(detail)">结单</el-button>
       </div>
       <div v-if="progressList.length" class="progress-section">
         <h4 style="margin:20px 0 12px;color:#303133">订单进度</h4>
@@ -204,9 +204,12 @@ async function showDetail(id) {
   try {
     const detailFn = isAdmin ? adminOrderDetail : csOrderDetail
     const progressFn = isAdmin ? adminOrderProgress : csOrderProgress
-    const [detailRes, progressRes] = await Promise.all([detailFn(id), progressFn(id)])
+    const detailRes = await detailFn(id)
     detail.value = detailRes.data
-    progressList.value = progressRes.data || []
+    try { progressList.value = (await progressFn(id)).data || [] }
+    catch (_) { progressList.value = []; ElMessage.warning('订单进度加载失败，可稍后重试') }
+  } catch (_) {
+    ElMessage.error('订单详情加载失败，请稍后重试')
   } finally { detailLoading.value = false }
 }
 async function handleConfirm(row) {
@@ -226,7 +229,7 @@ async function handleConfirm(row) {
 const assignVisible = ref(false), assignOrderId = ref(null), assignMode = ref('assign')
 const playerSearch = ref(''), playerList = ref([]), playerLoading = ref(false)
 function canAssign(row) {
-  return (row.status === 'PAID' && !row.playerId) || row.status === 'ASSIGNED'
+  return can('order.manage') && ((row.status === 'PAID' && !row.playerId) || row.status === 'ASSIGNED')
 }
 function openAssignDialog(row) {
   assignOrderId.value = row.id

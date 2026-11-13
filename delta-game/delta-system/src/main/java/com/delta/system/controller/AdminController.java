@@ -7,6 +7,7 @@ import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.security.utils.AdminRolePolicy;
+import com.delta.common.security.utils.SecurityUtils;
 import com.delta.system.entity.Admin;
 import com.delta.system.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -73,6 +74,18 @@ public class AdminController {
     @OpLog(module = "system", operation = "删除管理员")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        if (id.equals(SecurityUtils.getUserId())) return R.fail(409, "不能删除当前登录账号");
+        Admin target = adminService.getById(id);
+        if (target == null) return R.fail(404, "管理员不存在");
+        try {
+            if ("ADMIN".equals(AdminRolePolicy.normalize(target.getRole()))) {
+                long activeAdmins = adminService.count(new LambdaQueryWrapper<Admin>()
+                        .eq(Admin::getRole, "ADMIN").eq(Admin::getStatus, 1));
+                if (activeAdmins <= 1) return R.fail(409, "至少保留一个启用中的管理员");
+            }
+        } catch (BusinessException invalidRole) {
+            return R.fail(409, "管理员角色数据异常，请先修正角色");
+        }
         adminService.removeById(id);
         return R.ok();
     }

@@ -98,7 +98,7 @@ import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { csRelayList, csRelayApprove, csRelayReject, csPlayerList } from '@/api/business'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 
 const { isCompact } = useResponsive()
@@ -158,6 +158,7 @@ async function fetchPlayers() {
 
 async function confirmApprove(newPlayerId) {
   if (!approveRow.value) return
+  try { await ElMessageBox.confirm('通过后将把订单转给所选打手并按约定分成履约，确认继续？', '确认通过接力', { type: 'warning' }) } catch (_) { return }
   try {
     await csRelayApprove(approveRow.value.id, newPlayerId)
     ElMessage.success('已通过，已指定接力打手')

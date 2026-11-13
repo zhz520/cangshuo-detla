@@ -28,10 +28,11 @@ public class OrderPayTimeoutListener extends KeyExpirationEventMessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String expiredKey = message.toString();
-        if (!expiredKey.startsWith(KEY_PREFIX)) {
+        int prefixIndex = expiredKey.indexOf(KEY_PREFIX);
+        if (prefixIndex < 0) {
             return;
         }
-        String orderIdStr = expiredKey.substring(KEY_PREFIX.length());
+        String orderIdStr = expiredKey.substring(prefixIndex + KEY_PREFIX.length());
         try {
             Long orderId = Long.parseLong(orderIdStr);
             int updated = scheduledTaskMapper.cancelSingleExpiredOrder(orderId);

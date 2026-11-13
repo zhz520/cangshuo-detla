@@ -5,10 +5,11 @@ import request from '@/utils/request'
 import {getToken} from '@/utils/auth'
 import {can} from '@/utils/staff-permissions'
 import {ElMessage} from 'element-plus'
-const date=new Date(),today=date.toISOString().slice(0,10);date.setDate(1)
-const range=ref([date.toISOString().slice(0,10),today]),rows=ref([]),busy=ref(false),exporting=ref(false)
+const now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1)
+const localDate=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`
+const range=ref([localDate(first),localDate(now)]),rows=ref([]),busy=ref(false),exporting=ref(false)
 const columns=[{key:'amount',name:'订单金额'},{key:'club_amount',name:'俱乐部净抽成'},{key:'player_amount',name:'打手总分成'},{key:'cs_amount',name:'客服提成'},{key:'refund_amount',name:'实际退款'},{key:'club_refund',name:'俱乐部冲正'},{key:'player_refund',name:'打手冲正'},{key:'cs_refund',name:'客服冲正'},{key:'pending_recovery',name:'待追回款'}]
-async function load(){if(!range.value?.length)return;busy.value=true;try{rows.value=(await request.get('/admin/settlements',{params:{from:range.value[0],to:range.value[1]}})).data}finally{busy.value=false}}
+async function load(){if(!range.value?.length){rows.value=[];return}busy.value=true;try{rows.value=(await request.get('/admin/settlements',{params:{from:range.value[0],to:range.value[1]}})).data}finally{busy.value=false}}
 async function download(){if(!range.value?.length)return;exporting.value=true;try{const response=await fetch((import.meta.env.VITE_API_BASE_URL||'/api')+'/admin/settlements/export?'+new URLSearchParams({from:range.value[0],to:range.value[1]}),{headers:{Authorization:'Bearer '+getToken()}});if(!response.ok||!response.headers.get('content-type')?.includes('spreadsheetml')){let result;try{result=await response.json()}catch{}throw new Error(result?.msg||'导出失败')}const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download='订单分账对账.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){ElMessage.error(e.message)}finally{exporting.value=false}}
 onMounted(load)
 </script>

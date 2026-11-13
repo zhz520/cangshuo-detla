@@ -35,6 +35,7 @@ public class CsDashboardController {
     private final PlayerService playerService;
     private final StatsMapper statsMapper;
     private final JdbcTemplate jdbc;
+    private final com.delta.common.security.service.StaffPermissions staffPermissions;
 
     @GetMapping
     public R<Map<String, Object>> dashboard() {
@@ -75,8 +76,14 @@ public class CsDashboardController {
         result.put("todayComplaints", todayComplaints);
 
         // 4b. 今日成交额
-        result.put("todayAmount", statsMapper.sumOrderAmountByDateRange(todayStart, todayEnd));
-        result.put("collectedAmount", result.get("todayAmount"));
+        boolean canFinance = staffPermissions.allowed("finance.read");
+        if (canFinance) {
+            result.put("todayAmount", statsMapper.sumOrderAmountByDateRange(todayStart, todayEnd));
+            result.put("collectedAmount", result.get("todayAmount"));
+        } else {
+            result.put("todayAmount", null);
+            result.put("collectedAmount", null);
+        }
 
         long onlinePlayers = playerService.count(new LambdaQueryWrapper<Player>()
                 .eq(Player::getStatus, "ACTIVE").eq(Player::getIsOnline, 1));
@@ -95,7 +102,7 @@ public class CsDashboardController {
         }
 
         // 5. 待审核提现
-        result.put("pendingWithdraws", statsMapper.countPendingWithdraws());
+        result.put("pendingWithdraws", canFinance ? statsMapper.countPendingWithdraws() : null);
 
         // 6. 进行中订单
         long inProgress = orderService.count(new LambdaQueryWrapper<Order>()

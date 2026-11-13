@@ -271,7 +271,7 @@ import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
@@ -401,13 +401,13 @@ async function handleFreeze() {
   freezeSubmitting.value = true
   try {
     if (isAdmin) await adminPlayerFreeze(freezeRow.value.id, { frozenUntil })
-    else await csPlayerFreeze(freezeRow.value.id)
+    else await csPlayerFreeze(freezeRow.value.id, { frozenUntil })
     ElMessage.success('已冻结'); freezeVisible.value = false; fetchData()
   } finally { freezeSubmitting.value = false }
 }
 async function handleUnfreeze(id) {
   if (isAdmin) await adminPlayerUnfreeze(id)
-  else await adminPlayerUpdateStatus(id, 'ACTIVE')
+  else await csPlayerUnfreeze(id)
   ElMessage.success('已解冻'); fetchData()
 }
 async function handleDelete(row) {
@@ -518,6 +518,7 @@ function openEditDialog(row) {
 }
 async function handleEditSave() {
   if (!editForm.id) return
+  if (!String(editForm.nickname || '').trim()) return ElMessage.warning('请输入昵称')
   editSaving.value = true
   try {
     if (isAdmin) {

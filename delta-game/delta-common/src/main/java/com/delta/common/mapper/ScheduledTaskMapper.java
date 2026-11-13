@@ -51,14 +51,20 @@ public interface ScheduledTaskMapper {
 
     // ========== OrderAutoCompleteTask ==========
 
-    @Select("SELECT id FROM `order` WHERE status = 'COMPLETED' AND auto_confirm_deadline < NOW()")
+    @Select("SELECT o.id FROM `order` o WHERE o.status = 'COMPLETED' AND o.auto_confirm_deadline < NOW() " +
+            "AND NOT EXISTS (SELECT 1 FROM refund_request r WHERE r.order_id=o.id AND r.status IN " +
+            "('REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED'))")
     List<Long> selectAutoConfirmOrderIds();
 
-    @Select("SELECT id, user_id FROM `order` WHERE status = 'COMPLETED' AND auto_confirm_deadline < NOW()")
+    @Select("SELECT o.id,o.user_id FROM `order` o WHERE o.status = 'COMPLETED' AND o.auto_confirm_deadline < NOW() " +
+            "AND NOT EXISTS (SELECT 1 FROM refund_request r WHERE r.order_id=o.id AND r.status IN " +
+            "('REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED'))")
     List<Map<String, Object>> selectAutoConfirmOrderInfos();
 
-    @Update("UPDATE `order` SET status = 'CONFIRMED', confirm_time = NOW(), updated_at = NOW() " +
-            "WHERE status = 'COMPLETED' AND auto_confirm_deadline < NOW()")
+    @Update("UPDATE `order` o SET o.status = 'CONFIRMED', o.confirm_time = NOW(), o.updated_at = NOW() " +
+            "WHERE o.status = 'COMPLETED' AND o.auto_confirm_deadline < NOW() " +
+            "AND NOT EXISTS (SELECT 1 FROM refund_request r WHERE r.order_id=o.id AND r.status IN " +
+            "('REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED'))")
     int confirmExpiredOrders();
 
     // ========== TeammateInviteTimeoutTask ==========

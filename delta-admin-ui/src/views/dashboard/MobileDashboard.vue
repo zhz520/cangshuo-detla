@@ -33,7 +33,7 @@
         <button type="button" class="plain-action" @click="openTasks('')">全部 ›</button>
       </div>
       <div class="status-grid" :class="`count-${statusTiles.length}`">
-        <button v-for="item in statusTiles" :key="item.key" type="button" :class="{ alert: item.alert }" @click="item.kind ? openTasks(item.kind) : go(item.route)">
+        <button v-for="item in statusTiles" :key="item.key" type="button" :class="{ alert: item.alert }" @click="item.kind !== undefined ? openTasks(item.kind) : go(item.route)">
           <strong>{{ item.count }}</strong>
           <span>{{ item.label }}</span>
           <i v-if="item.alert" />
@@ -210,7 +210,7 @@ const statusTiles = computed(() => {
     { key: 'progress', label: '服务中', count: firstNumber(props.stats.inProgress), route: '/order/list?status=IN_PROGRESS', allowed: can('order.read') },
     { key: 'refund', label: '退款审批', count: firstNumber(category('REFUND').pending, props.stats.pendingRefunds), kind: 'REFUND', alert: firstNumber(category('REFUND').urgent) > 0, allowed: can('order.refund') },
     { key: 'complaint', label: '投诉处理', count: firstNumber(props.stats.pendingComplaints, category('COMPLAINT').pending), route: '/complaint', alert: firstNumber(category('COMPLAINT').urgent) > 0, allowed: can('order.manage') },
-    { key: 'withdraw', label: '提现审核', count: firstNumber(props.stats.pendingWithdraws, category('WITHDRAW').pending), route: '/withdraw', allowed: can('withdraw.review') },
+    { key: 'withdraw', label: '提现审核', count: firstNumber(props.stats.pendingWithdraws, category('WITHDRAW').pending), route: '/withdraw', allowed: props.isAdmin && can('withdraw.review') },
     { key: 'audit', label: '待审核', count: ['ENROLLMENT', 'MATERIAL', 'IDENTITY', 'PRIVACY', 'RELAY', 'REPLACE'].reduce((sum, kind) => sum + firstNumber(category(kind).pending), 0), kind: '', allowed: can('player.manage') || can('media.review') || can('user.manage') }
   ]
   return definitions.filter(item => item.allowed).slice(0, 4)

@@ -167,7 +167,11 @@ const form = reactive({ fieldLabel: '', fieldKey: '', fieldType: 'TEXT', options
 const rules = {
   fieldLabel: [{ required: true, message: '请输入字段名称', trigger: 'blur' }],
   fieldKey: [{ required: true, message: '请输入字段Key', trigger: 'blur' }],
-  fieldType: [{ required: true, message: '请选择类型', trigger: 'change' }]
+  fieldType: [{ required: true, message: '请选择类型', trigger: 'change' }],
+  options: [{ validator: (_rule, value, callback) => {
+    if (form.fieldType === 'SELECT' && !String(value || '').trim()) callback(new Error('请填写下拉选项'))
+    else callback()
+  }, trigger: 'blur' }]
 }
 
 function openDialog(row) {

@@ -19,6 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CsMonitorController {
     private final StatsMapper statsMapper;
+    private final com.delta.common.security.service.StaffPermissions staffPermissions;
 
     /** 实时监控数据 */
     @GetMapping("/realtime")
@@ -40,7 +41,8 @@ public class CsMonitorController {
         data.put("todayCompleted", statsMapper.countCompletedOrdersByDate(today));
         data.put("todayComplaints", statsMapper.countComplaintsByDate(today));
         data.put("todayResolvedComplaints", statsMapper.countResolvedComplaintsByDate(today));
-        data.put("todayIncome", statsMapper.sumOrderAmountByDate(today));
+        data.put("todayIncome", staffPermissions.allowed("finance.read")
+                ? statsMapper.sumOrderAmountByDate(today) : null);
         return R.ok(data);
     }
 }

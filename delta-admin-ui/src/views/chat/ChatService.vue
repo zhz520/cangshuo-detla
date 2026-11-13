@@ -466,8 +466,7 @@ async function sendText() {
   if (!inputText.value.trim() || !currentSession.value) return
   sending.value = true
   try {
-    sendViaWs('TEXT', inputText.value.trim())
-    inputText.value = ''
+    if (sendViaWs('TEXT', inputText.value.trim())) inputText.value = ''
   } finally {
     sending.value = false
   }

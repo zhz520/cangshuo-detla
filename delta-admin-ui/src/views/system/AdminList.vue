@@ -36,9 +36,10 @@
         <el-table-column label="操作" width="180" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-            <el-popconfirm title="确认删除该管理员？" @confirm="handleDelete(row.id)">
+            <el-popconfirm v-if="row.id !== userStore.adminId" title="确认删除该管理员？" @confirm="handleDelete(row.id)">
               <template #reference><el-button link type="danger">删除</el-button></template>
             </el-popconfirm>
+            <span v-else class="current-admin">当前账号</span>
           </template>
         </el-table-column>
       </el-table>
@@ -78,6 +79,8 @@
 import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted } from 'vue'
 import { getAdminList, addAdmin, updateAdmin, deleteAdmin } from '@/api/system'
+import { useUserStore } from '@/stores/user'
+const userStore = useUserStore()
 import { formatDateTime } from '@/utils'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'

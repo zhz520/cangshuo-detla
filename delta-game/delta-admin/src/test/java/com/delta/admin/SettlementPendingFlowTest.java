@@ -33,7 +33,9 @@ class SettlementPendingFlowTest {
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY, amount DECIMAL(12,2), status VARCHAR(20), settled INT, player_id BIGINT, order_no VARCHAR(40), product_name VARCHAR(100), commission_rate DECIMAL(5,4))");
         jdbc.execute("CREATE TABLE order_finance_snapshot(order_id BIGINT PRIMARY KEY, cs_rate DECIMAL(5,4), cs_id BIGINT)");
         jdbc.execute("CREATE TABLE order_settlement_ledger(order_id BIGINT PRIMARY KEY, amount DECIMAL(12,2), club_amount DECIMAL(12,2), player_amount DECIMAL(12,2), cs_amount DECIMAL(12,2), cs_id BIGINT)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         jdbc.execute("CREATE TABLE player_income_settlement(id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id BIGINT, player_id BIGINT, role VARCHAR(20), amount DECIMAL(12,2), reversed_amount DECIMAL(12,2), status VARCHAR(20), release_at TIMESTAMP, released_at TIMESTAMP, attempts INT, last_error VARCHAR(255), next_attempt_at TIMESTAMP, remark VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         jdbc.update("INSERT INTO `order` VALUES(100,100,'CONFIRMED',0,1,'ORDER100','护航',0.2)");
 
         Order order = new Order();
@@ -66,6 +68,7 @@ class SettlementPendingFlowTest {
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY, amount DECIMAL(12,2), status VARCHAR(20), settled INT, player_id BIGINT, order_no VARCHAR(40), product_name VARCHAR(100), commission_rate DECIMAL(5,4))");
         jdbc.execute("CREATE TABLE player_wallet(id BIGINT PRIMARY KEY, player_id BIGINT, balance DECIMAL(12,2), pending_income DECIMAL(12,2), frozen_amount DECIMAL(12,2), total_income DECIMAL(12,2))");
         jdbc.execute("CREATE TABLE player_income_settlement(id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id BIGINT, player_id BIGINT, role VARCHAR(20), amount DECIMAL(12,2), reversed_amount DECIMAL(12,2), status VARCHAR(20), release_at TIMESTAMP, released_at TIMESTAMP, attempts INT, last_error VARCHAR(255), next_attempt_at TIMESTAMP, remark VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         jdbc.execute("CREATE TABLE complaint(id BIGINT PRIMARY KEY, order_id BIGINT, status VARCHAR(20))");
         jdbc.update("INSERT INTO `order` VALUES(100,100,'CONFIRMED',1,1,'ORDER100','护航',0.2)");
         jdbc.update("INSERT INTO player_wallet VALUES(1,1,0,80,0,0)");
@@ -97,8 +100,10 @@ class SettlementPendingFlowTest {
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY, amount DECIMAL(12,2), status VARCHAR(20), settled INT)");
         jdbc.execute("CREATE TABLE payment(order_id BIGINT, status VARCHAR(20), refund_amount DECIMAL(12,2))");
         jdbc.execute("CREATE TABLE player_income_settlement(id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id BIGINT, player_id BIGINT, role VARCHAR(20), amount DECIMAL(12,2), reversed_amount DECIMAL(12,2), status VARCHAR(20), release_at TIMESTAMP, released_at TIMESTAMP, attempts INT, last_error VARCHAR(255), next_attempt_at TIMESTAMP, remark VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         jdbc.execute("CREATE TABLE player_refund_recovery(order_id BIGINT,player_id BIGINT,refund_share DECIMAL(12,2),recovered DECIMAL(12,2),remaining DECIMAL(12,2),updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(order_id,player_id))");
         jdbc.execute("CREATE TABLE order_settlement_ledger(order_id BIGINT PRIMARY KEY,amount DECIMAL(12,2),club_amount DECIMAL(12,2),player_amount DECIMAL(12,2),cs_amount DECIMAL(12,2),cs_id BIGINT)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         jdbc.execute("CREATE TABLE order_settlement_refund(order_id BIGINT PRIMARY KEY,refund_amount DECIMAL(12,2),club_refund DECIMAL(12,2),player_refund DECIMAL(12,2),cs_refund DECIMAL(12,2),updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO `order` VALUES(100,100,'CONFIRMED',1)");
         jdbc.update("INSERT INTO payment VALUES(100,'REFUNDED',40)");

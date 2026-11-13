@@ -55,6 +55,14 @@ public class SettlementEventListener {
         }
         if (Integer.valueOf(1).equals(order.getSettled())) return;
         if (!java.util.Set.of("CONFIRMED", "REVIEWED").contains(order.getStatus())) return;
+        Long activeRefunds = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM refund_request WHERE order_id=? AND status IN "
+                        + "('REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED')",
+                Long.class, orderId);
+        if (activeRefunds != null && activeRefunds > 0) {
+            log.warn("结算跳过: 订单存在进行中的退款申请, orderId={}", orderId);
+            return;
+        }
 
         BigDecimal commissionRate = order.getCommissionRate();
         if (commissionRate == null) commissionRate = new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));

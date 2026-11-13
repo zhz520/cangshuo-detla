@@ -72,15 +72,17 @@ class OrderRefundWorkflowTest {
 
     @Test
     void customerRequestIsIdempotentAndCsCannotFinalApprove() {
-        RefundCreateRequest input = input("req-1", "50.00", "客户申请部分退款");
+        assertThatThrownBy(() -> service.requestByCustomer(100L, 7L, "USER", input("req-partial", "50.00", "部分退款")))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(409))
+                .hasMessageContaining("部分退款");
+        RefundCreateRequest input = input("req-1", "100.00", "客户申请整单退款");
         RefundRequest first = service.requestByCustomer(100L, 7L, "USER", input);
         RefundRequest repeated = service.requestByCustomer(100L, 7L, "USER", input);
 
         assertThat(first.getId()).isEqualTo(repeated.getId());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refund_request WHERE order_id=100", Long.class)).isEqualTo(1L);
         assertThat(first.getStatus()).isEqualTo(RefundStatus.REQUESTED);
-        assertThat(first.getAmount()).isEqualByComparingTo("50.00");
-
+        assertThat(first.getAmount()).isEqualByComparingTo("100.00");
         service.submitPreliminaryReview(first.getId(), 2L, "CS", review("APPROVE", "资料完整"));
         assertThatThrownBy(() -> service.approve(first.getId(), 2L, "CS", new RefundDecisionRequest()))
                 .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(403))
@@ -179,7 +181,7 @@ class OrderRefundWorkflowTest {
         jdbc.update("INSERT INTO complaint(id,status) VALUES(55,'PROCESSING')");
 
         RefundRequest request = service.createReviewedForComplaint(
-                100L, 2L, new BigDecimal("50.00"), "投诉仲裁申请退款", 55L);
+                100L, 2L, new BigDecimal("100.00"), "投诉仲裁申请整单退款", 55L);
         jdbc.update("UPDATE `order` SET status='ARBITRATED' WHERE id=100");
 
         RefundRequest rejected = service.reject(request.getId(), 1L, "ADMIN", decision("凭证不足，不予退款"));

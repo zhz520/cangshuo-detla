@@ -127,6 +127,8 @@ public class OrderRefundWorkflowService {
         Money.positive(amount);
         if (amount.compareTo(orderAmount) > 0) throw new BusinessException(400, "退款金额不能超过订单金额");
         if (amount.compareTo(paymentAmount) > 0) throw new BusinessException(400, "退款金额不能超过实付金额");
+        if (input.getAmount() != null && amount.compareTo(paymentAmount) < 0)
+            throw new BusinessException(409, "暂不支持部分退款，请按实付金额申请整单退款");
         String reason = requestedReason;
 
         LocalDateTime now = LocalDateTime.now();

@@ -44,6 +44,7 @@ class SettlementRelayTest {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
         }
         jdbc.execute("CREATE TABLE IF NOT EXISTS player_income_settlement(id BIGINT AUTO_INCREMENT PRIMARY KEY,order_id BIGINT,player_id BIGINT,role VARCHAR(20),amount DECIMAL(12,2),reversed_amount DECIMAL(12,2) DEFAULT 0,status VARCHAR(20),release_at TIMESTAMP,released_at TIMESTAMP,attempts INT DEFAULT 0,last_error VARCHAR(255),next_attempt_at TIMESTAMP,remark VARCHAR(255),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        jdbc.execute("CREATE TABLE IF NOT EXISTS refund_request(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32))");
         OrderService orders=mock(OrderService.class);
         SettlementRecoveryService recovery=mock(SettlementRecoveryService.class);
         OrderPlayerService participants=mock(OrderPlayerService.class);

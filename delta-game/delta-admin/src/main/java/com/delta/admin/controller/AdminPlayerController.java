@@ -294,6 +294,7 @@ public class AdminPlayerController {
     @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> updatePlayer(@PathVariable Long id, @Valid @RequestBody PlayerAdminUpdateRequest body) {
         if(playerService.getById(id)==null) return R.fail(404,"打手不存在");
+        if(body.getNickname()!=null && body.getNickname().trim().isEmpty()) return R.fail(400,"昵称不能为空");
         if(body.getLevel()!=null&&levelService.getById(body.getLevel())==null) return R.fail(400,"等级分类不存在");
         Player p = new Player();
         p.setId(id);

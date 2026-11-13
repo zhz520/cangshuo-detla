@@ -107,6 +107,14 @@ public class PendingIncomeReleaseTask {
             postpone(settlementId, null);
             return;
         }
+        Long activeRefunds = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM refund_request WHERE order_id=? AND status IN "
+                        + "('REQUESTED','CS_REVIEWING','CS_REVIEWED','ADMIN_APPROVED','PROCESSING','FAILED')",
+                Long.class, orderId);
+        if (activeRefunds != null && activeRefunds > 0) {
+            postpone(settlementId, null);
+            return;
+        }
 
         PlayerWallet wallet = wallets.getByPlayerId(playerId);
         if (wallet == null) throw new BusinessException(409, "打手钱包不存在");

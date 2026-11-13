@@ -27,6 +27,8 @@ public class AdminCategoryFieldController {
     @OpLog(module = "product", operation = "新增下单字段")
     @PostMapping
     public R<Void> add(@RequestBody CategoryFormField field) {
+        String invalid = validate(field);
+        if (invalid != null) return R.fail(400, invalid);
         categoryFormFieldService.save(field);
         return R.ok();
     }
@@ -34,8 +36,20 @@ public class AdminCategoryFieldController {
     @OpLog(module = "product", operation = "编辑下单字段")
     @PutMapping
     public R<Void> update(@RequestBody CategoryFormField field) {
+        String invalid = validate(field);
+        if (invalid != null) return R.fail(400, invalid);
         categoryFormFieldService.updateById(field);
         return R.ok();
+    }
+
+    private String validate(CategoryFormField field) {
+        if (field == null) return "下单字段不能为空";
+        if ("SELECT".equalsIgnoreCase(field.getFieldType())) {
+            String options = field.getOptions() == null ? "" : field.getOptions().trim();
+            if (options.isEmpty() || java.util.Arrays.stream(options.split(",")).noneMatch(value -> !value.trim().isEmpty()))
+                return "下拉选择字段至少需要一个选项";
+        }
+        return null;
     }
 
     @OpLog(module = "product", operation = "删除下单字段")

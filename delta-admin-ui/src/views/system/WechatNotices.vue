@@ -24,7 +24,7 @@
       <el-table-column prop="created_at" label="创建时间" min-width="180"/>
       <el-table-column v-if="active==='sms'" prop="sent_at" label="发送时间" min-width="180"/>
       <el-table-column label="操作" width="90">
-        <template #default="{row}"><el-button v-if="['RETRY','FAILED','DELIVERY_UNKNOWN'].includes(row.status)" link @click="retry(row.id)">{{ row.status==='DELIVERY_UNKNOWN' ? '确认重发' : '重试' }}</el-button></template>
+        <template #default="{row}"><el-button v-if="['RETRY','FAILED','DELIVERY_UNKNOWN'].includes(row.status)" link @click="confirmRetry(row)">{{ row.status==='DELIVERY_UNKNOWN' ? '确认重发' : '重试' }}</el-button></template>
       </el-table-column>
     </el-table>
   </el-card>
@@ -32,6 +32,7 @@
 
 <script setup>
 import {computed,ref,onMounted} from 'vue'
+import { ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureError} from '@/utils/platform-feature-visibility'
 const active=ref('wechat'),rows=ref([]),busy=ref(false)
@@ -44,6 +45,12 @@ async function load(){
   finally{busy.value=false}
 }
 async function retry(id){await request.post(`/admin/${active.value==='wechat'?'wechat':'sms'}/notifications/${id}/retry`);await load()}
+async function confirmRetry(row){
+  if(row.status==='DELIVERY_UNKNOWN'){
+    try{await ElMessageBox.confirm('该记录投递结果未知，渠道可能已经送达。再次发送可能造成重复通知，确认继续？','确认重发',{type:'warning',confirmButtonText:'确认重发',cancelButtonText:'取消'})}catch(_){return}
+  }
+  await retry(row.id)
+}
 onMounted(async()=>{
   await loadPlatformFeatureVisibility()
   if(!officialEnabled.value)active.value='sms'

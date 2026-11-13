@@ -81,8 +81,11 @@ export function csPlayerTransactions(id, params) {
 export function csPlayerAudit(id, status, rejectReason) {
   return request({ url: `/cs/player/${id}/audit`, method: 'put', data: { status, rejectReason } })
 }
-export function csPlayerFreeze(id) {
-  return request({ url: `/cs/player/${id}/freeze`, method: 'put' })
+export function csPlayerFreeze(id, data) {
+  return request({ url: `/cs/player/${id}/freeze`, method: 'put', data })
+}
+export function csPlayerUnfreeze(id) {
+  return request({ url: `/cs/player/${id}/unfreeze`, method: 'put' })
 }
 export function csPlayerUpdateNickname(id, nickname) {
   return request({ url: `/cs/player/${id}/nickname`, method: 'put', data: { nickname } })

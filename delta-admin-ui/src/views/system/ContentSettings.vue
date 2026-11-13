@@ -85,7 +85,10 @@ function openPreset(item) {
 function openEdit(row) { Object.assign(form, { id: row.id, configKey: row.configKey, configValue: row.configValue || '', remark: row.remark || keyLabel(row.configKey) }); visible.value = true }
 async function save() {
   await formRef.value?.validate()
-  if (!form.configValue || !form.configValue.replace(/<[^>]*>/g, '').trim()) return ElMessage.warning('页面内容不能为空')
+  const content = String(form.configValue || '').trim()
+  const hasVisibleContent = content.replace(/<[^>]*>/g, '').trim().length > 0
+  const hasMedia = /<(img|hr|table)\b/i.test(content)
+  if (!content || (!hasVisibleContent && !hasMedia)) return ElMessage.warning('页面内容不能为空')
   saving.value = true
   try {
     const payload = { id: form.id, configKey: form.configKey, configValue: form.configValue, remark: form.remark.trim() }

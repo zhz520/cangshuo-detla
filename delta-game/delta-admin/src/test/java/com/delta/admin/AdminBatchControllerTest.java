@@ -15,7 +15,11 @@ import com.delta.system.service.FeatureAuditService;
 import com.delta.user.service.UserService;
 import com.delta.user.service.WalletService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.context.ApplicationEventPublisher;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 import java.util.List;
 
@@ -24,6 +28,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class AdminBatchControllerTest {
+    @BeforeAll
+    static void initLambdaMetadata() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), Player.class);
+    }
     @Test
     void playerBatchActionsRejectInvalidSourceStatuses() {
         PlayerService players = mock(PlayerService.class);
@@ -48,6 +56,8 @@ class AdminBatchControllerTest {
         PlayerService players = mock(PlayerService.class);
         PlayerGovernanceService governance = mock(PlayerGovernanceService.class);
         doThrow(new BusinessException(409, "媒体资料未通过")).when(governance).checkApplication(1L);
+        when(players.update(any())).thenReturn(true);
+        when(players.update(any(), any())).thenReturn(true);
         var controller = playerController(players, governance);
 
         var result = controller.batchApprove(new AdminPlayerController.BatchIdsRequest(List.of(1L, 2L))).getData();
@@ -56,7 +66,8 @@ class AdminBatchControllerTest {
         assertThat(result.failed()).isEqualTo(1);
         assertThat(result.failedIds()).containsExactly(1L);
         assertThat(result.messages().get(0)).contains("媒体资料未通过");
-        verify(players).updateById(argThat(player -> player.getId().equals(2L) && "ACTIVE".equals(player.getStatus())));
+        verify(players).update(any());
+        verify(players, never()).updateById(any(Player.class));
     }
 
     @Test

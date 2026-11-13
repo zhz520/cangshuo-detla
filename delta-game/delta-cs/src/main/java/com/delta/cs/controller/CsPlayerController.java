@@ -133,13 +133,36 @@ public class CsPlayerController {
         p.setIsOnline(0);
         playerService.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Player>().eq(Player::getId,id).set(Player::getFrozenUntil,null));
         // 支持冻结时长（小时），0 或不传表示永久冻结
-        if (body != null && body.get("hours") != null) {
+        if (body != null && body.get("frozenUntil") != null) {
+            try {
+                LocalDateTime until = LocalDateTime.parse(body.get("frozenUntil").toString(),
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                if (!until.isAfter(LocalDateTime.now())) return R.fail(400, "解冻时间必须晚于当前时间");
+                p.setFrozenUntil(until);
+            } catch (java.time.format.DateTimeParseException error) {
+                return R.fail(400, "解冻时间格式不正确");
+            }
+        } else if (body != null && body.get("hours") != null) {
             int hours = Integer.parseInt(body.get("hours").toString());
             if (hours > 0) {
                 p.setFrozenUntil(LocalDateTime.now().plusHours(hours));
             }
         }
         playerService.updateById(p);
+        return R.ok();
+    }
+
+    @OpLog(module = "player", operation = "解冻打手")
+    @PutMapping("/{id}/unfreeze")
+    public R<Void> unfreeze(@PathVariable Long id) {
+        Player existing = playerService.getById(id);
+        if (existing == null) return R.fail(404, "打手不存在");
+        if (!"FROZEN".equals(existing.getStatus())) return R.fail(409, "仅已冻结打手可解冻");
+        playerService.update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Player>()
+                .eq(Player::getId, id)
+                .set(Player::getStatus, "ACTIVE")
+                .set(Player::getIsOnline, 0)
+                .set(Player::getFrozenUntil, null));
         return R.ok();
     }
 

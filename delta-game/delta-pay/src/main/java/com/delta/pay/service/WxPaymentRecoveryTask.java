@@ -33,7 +33,6 @@ public class WxPaymentRecoveryTask {
     }
 
     private void recoverForTenant() {
-        if(!configuration.isEnabled()) return;
         var clients=configuration.getClients();if(clients==null || !redis.tryLock("task:wx-payment-recovery",5,TimeUnit.MINUTES)) return;
         try {
             long closeHours=24;
