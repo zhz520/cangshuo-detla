@@ -10,9 +10,11 @@
       </view>
       <view class="info-row"><text class="label">真实姓名</text><text class="value">{{ player.realName }}</text></view>
       <view class="info-row"><text class="label">手机号</text><text class="value">{{ player.phone }}</text></view>
-      <view class="info-row"><text class="label">复燃电竞ID</text><text class="value">{{ player.gameLevel }}</text></view>
+      <view class="info-row"><text class="label">游戏ID/段位</text><text class="value">{{ player.gameLevel }}</text></view>
       <view class="info-row"><text class="label">擅长服务</text><text class="value">{{ player.serviceTypes }}</text></view>
       <view v-if="player.skillTags && player.skillTags.length" class="info-row"><text class="label">技能标签</text><text class="value">{{ Array.isArray(player.skillTags) ? player.skillTags.join(', ') : player.skillTags }}</text></view>
+      <view class="info-row"><text class="label">提交时间</text><text class="value">{{ player.createdAt }}</text></view>
+      <view v-if="player.depositPaymentNo" class="info-row"><text class="label">押金订单号</text><text class="value">{{ player.depositPaymentNo }}</text></view>
     </view>
     <!-- 证明图片 -->
     <view class="card" v-if="player.proofImages">
@@ -22,11 +24,11 @@
       </view>
     </view>
     <!-- 审核操作 -->
-    <view v-if="player.status==='PENDING' || player.status==='FROZEN'" class="card">
+    <view v-if="player.status==='PENDING'" class="card">
       <text class="card-title">审核操作</text>
       <view class="form-item">
         <text class="label">审核意见</text>
-        <textarea v-model="auditRemark" placeholder="请输入审核意见（可选）" class="textarea" />
+        <textarea v-model="auditRemark" placeholder="通过可不填；驳回必须填写原因" maxlength="255" class="textarea" />
       </view>
       <view class="btn-group">
         <view class="btn-approve" @click="doAudit('ACTIVE')">通过</view>
@@ -45,6 +47,7 @@ const STATUS_TEXT = { PENDING: '待审核', ACTIVE: '已激活', FROZEN: '已冻
 const player = ref(null)
 const playerId = ref('')
 const auditRemark = ref('')
+const submitting = ref(false)
 
 onLoad(async (opts) => {
   playerId.value = opts.id
@@ -53,14 +56,19 @@ onLoad(async (opts) => {
 })
 
 async function doAudit(status) {
+  if (submitting.value) return
+  const remark = auditRemark.value.trim()
+  if (status === 'REJECTED' && !remark) return uni.showToast({ title: '请填写驳回原因', icon: 'none' })
   const action = status === 'ACTIVE' ? '通过' : '拒绝'
   uni.showModal({ title: '确认', content: `确定${action}该接单员申请？`, success: async (r) => {
     if (r.confirm) {
+      submitting.value = true
       try {
-        await auditCsPlayer(playerId.value, { status, rejectReason: auditRemark.value })
+        await auditCsPlayer(playerId.value, { status, rejectReason: remark })
         uni.showToast({ title: `已${action}` })
         setTimeout(() => uni.navigateBack(), 1500)
       } catch (e) {}
+      finally { submitting.value = false }
     }
   }})
 }

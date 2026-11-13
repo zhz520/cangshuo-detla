@@ -208,6 +208,22 @@ class PlayerDirectoryIntegrationTest {
         mvc.perform(put("/admin/player/1").with(role("ADMIN",1)).contentType("application/json").content("{\"level\":1}")).andExpect(jsonPath("$.code").value(200));
     }
 
+    @Test void approvingApplicationAssignsOnlyAnEnabledLevelAndCannotRepeat() throws Exception {
+        jdbc.update("INSERT INTO player(id,nickname,level,status) VALUES(4,'待审打手',1,'PENDING'),(5,'待审打手二',1,'PENDING')");
+        mvc.perform(put("/admin/player/4/approve").param("levelId","3").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT status FROM player WHERE id=4",String.class)).isEqualTo("PENDING");
+        mvc.perform(put("/admin/player/4/approve").param("levelId","2").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=4",Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT status FROM player WHERE id=4",String.class)).isEqualTo("ACTIVE");
+        mvc.perform(put("/admin/player/4/approve").param("levelId","1").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(409));
+        mvc.perform(put("/admin/player/5/approve").with(role("ADMIN",1)))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT level FROM player WHERE id=5",Integer.class)).isEqualTo(1);
+    }
+
     @Test void onlyAdminCanConfigurePriceAndPlayerCannotOverrideIt() throws Exception {
         String level="{\"name\":\"金牌打手\",\"sortOrder\":10,\"status\":1,\"priceIncreaseRate\":10}";
         mvc.perform(put("/admin/player-level/2").with(role("CS",1)).contentType("application/json").content(level))

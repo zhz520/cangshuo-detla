@@ -51,8 +51,8 @@
             <el-button link type="info" @click="showPlayerOrders(row)">订单</el-button>
             <el-button v-if="isAdmin" link type="primary" @click="showPlayerReviews(row)">评价</el-button>
             <template v-if="row.status === 'PENDING'">
-              <el-button link type="success" @click="handleApprove(row.id)">通过</el-button>
-              <el-button link type="danger" @click="openRejectDialog(row.id)">驳回</el-button>
+              <el-button link type="success" @click="handleApprove(row)">通过</el-button>
+              <el-button link type="danger" @click="openRejectDialog(row)">驳回</el-button>
             </template>
             <el-button v-if="row.isOnline===1" link @click="setOffline(row)">下班</el-button>
             <el-button v-if="row.status === 'ACTIVE'" link type="warning" @click="openFreezeDialog(row)">冻结</el-button>
@@ -76,9 +76,31 @@
       <template #footer><el-button @click="batchLevelVisible = false">取消</el-button><el-button type="primary" :loading="batchBusy" :disabled="!batchLevelId || batchBusy" @click="batchLevel">确认调整</el-button></template>
     </el-dialog>
     <!-- 驳回弹窗 -->
-    <el-dialog v-model="rejectDialogVisible" title="驳回原因" width="400px">
-      <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请输入驳回原因" />
+    <el-dialog v-model="rejectDialogVisible" title="驳回入驻申请" width="min(420px, 94vw)">
+      <p class="dialog-tip">驳回「{{ rejectName }}」的入驻申请，原因会通过站内通知发送给申请人。</p>
+      <el-input v-model="rejectReason" type="textarea" :rows="3" maxlength="255" show-word-limit placeholder="请输入驳回原因，例如：证明截图不清晰，请重新上传" />
       <template #footer><el-button @click="rejectDialogVisible = false">取消</el-button><el-button type="primary" @click="handleReject">确定驳回</el-button></template>
+    </el-dialog>
+    <el-dialog v-model="approveVisible" title="通过入驻审核" width="min(520px, 94vw)" destroy-on-close>
+      <p class="dialog-tip">请再次核对申请资料，通过后该打手可立即接单。</p>
+      <el-descriptions v-if="approveRow" :column="1" border size="small">
+        <el-descriptions-item label="接单名">{{ approveRow.nickname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="真实姓名">{{ approveRow.realName || '未填写' }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ approveRow.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="游戏ID/段位">{{ approveRow.gameLevel || '未填写' }}</el-descriptions-item>
+        <el-descriptions-item label="擅长服务">{{ approveRow.serviceTypes || '未填写' }}</el-descriptions-item>
+      </el-descriptions>
+      <el-form v-if="isAdmin" label-width="88px" style="margin-top:16px">
+        <el-form-item label="分配等级">
+          <el-select v-model="approveLevelId" clearable placeholder="不选择则保持当前等级" style="width:100%">
+            <el-option v-for="level in levelOptions.filter(item => item.status !== 0)" :key="level.id" :label="level.name" :value="level.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="approveVisible = false">取消</el-button>
+        <el-button type="primary" :loading="approveSubmitting" @click="confirmApprove">确认通过</el-button>
+      </template>
     </el-dialog>
     <!-- 打手详情弹窗（精简版） -->
     <el-dialog v-model="detailVisible" title="打手详情" width="980px" destroy-on-close>
@@ -96,20 +118,36 @@
             </div>
           </div>
         </div>
-        <el-descriptions :column="isNarrow ? 1 : 2" border size="small" style="margin-top:16px">
+        <el-alert v-if="detailData.status === 'PENDING'" type="warning" :closable="false" show-icon
+          title="待审核入驻申请" description="请核对真实姓名、手机号、擅长服务和证明截图后再通过或驳回。" style="margin-top:12px" />
+        <el-divider content-position="left">入驻申请资料</el-divider>
+        <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
+          <el-descriptions-item label="真实姓名">{{ detailData.realName || '未填写' }}</el-descriptions-item>
           <el-descriptions-item label="手机号">{{ detailData.phone || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="等级">{{ levelLabel(detailData.level) }}</el-descriptions-item>
+          <el-descriptions-item label="游戏ID/段位">{{ detailData.gameLevel || '未填写' }}</el-descriptions-item>
+          <el-descriptions-item label="擅长服务">{{ detailData.serviceTypes || '未填写' }}</el-descriptions-item>
+          <el-descriptions-item label="技能标签" :span="2">{{ skillTagsText }}</el-descriptions-item>
           <el-descriptions-item label="个人简介" :span="2"><span class="introduction-text">{{ detailData.introduction || '暂未填写' }}</span></el-descriptions-item>
-          <el-descriptions-item label="余额">¥{{ detailData.balance || 0 }}</el-descriptions-item>
-          <el-descriptions-item label="完成订单">{{ detailData.completedOrders || 0 }}</el-descriptions-item>
-          <el-descriptions-item label="评分">{{ detailData.avgRating || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="注册时间" :span="2">{{ detailData.createdAt }}</el-descriptions-item>
-          <el-descriptions-item v-if="detailData.depositPaymentNo" label="押金订单号" :span="2">
-            {{ detailData.depositPaymentNo }}
-          </el-descriptions-item>
+          <el-descriptions-item label="提交时间">{{ detailData.createdAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="押金订单号">{{ detailData.depositPaymentNo || '未缴纳 / 无需缴纳' }}</el-descriptions-item>
           <el-descriptions-item v-if="detailData.rejectReason" label="驳回原因" :span="2">
             {{ detailData.rejectReason }}
           </el-descriptions-item>
+        </el-descriptions>
+        <div class="proof-section">
+          <div class="proof-title">证明截图<span v-if="proofImages.length" class="proof-count">（{{ proofImages.length }} 张，点击可放大）</span></div>
+          <div v-if="proofImages.length" class="proof-list">
+            <el-image v-for="(img, idx) in proofImages" :key="img + idx" :src="thumbnailUrl(img, 320)"
+              :preview-src-list="proofImages" :initial-index="idx" preview-teleported fit="cover" class="proof-image" />
+          </div>
+          <div v-else class="proof-empty">{{ detailData.status === 'PENDING' ? '该申请未上传证明截图，请联系申请人补充资料' : '未上传证明截图' }}</div>
+        </div>
+        <el-divider content-position="left">账户概况</el-divider>
+        <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
+          <el-descriptions-item label="等级">{{ levelLabel(detailData.level) }}</el-descriptions-item>
+          <el-descriptions-item label="余额">¥{{ detailData.balance || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="完成订单">{{ detailData.completedOrders || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="评分">{{ detailData.avgRating || '-' }}</el-descriptions-item>
         </el-descriptions>
         <GrabVerificationStats v-if="isAdmin" :player-id="detailData.id" />
         <el-divider content-position="left">金额变化详情</el-divider>
@@ -304,17 +342,45 @@ async function batchUnfreeze() {
   try { await ElMessageBox.confirm('确认批量解冻已选的 '+selectedIds.value.length+' 个打手？解冻后打手需要自行重新上班。', '批量解冻打手', { type: 'warning', confirmButtonText: '确认解冻' }) } catch (_) { return }
   await runBatch(ids => adminPlayerBatchUnfreeze(ids), '批量解冻打手')
 }
-async function handleApprove(id) {
-  if (isAdmin) await adminPlayerApprove(id)
-  else await csPlayerAudit(id, 'ACTIVE', '')
-  ElMessage.success('已通过'); fetchData()
+const approveVisible = ref(false), approveRow = ref(null), approveLevelId = ref(null), approveSubmitting = ref(false)
+function handleApprove(row) {
+  if (!row || row.status !== 'PENDING') return
+  approveRow.value = row
+  approveLevelId.value = null
+  approveVisible.value = true
 }
-const rejectDialogVisible = ref(false), rejectId = ref(null), rejectReason = ref('')
-function openRejectDialog(id) { rejectId.value = id; rejectReason.value = ''; rejectDialogVisible.value = true }
+async function confirmApprove() {
+  if (!approveRow.value || approveSubmitting.value) return
+  const row = approveRow.value
+  const name = row.nickname || row.realName || ('ID ' + row.id)
+  approveSubmitting.value = true
+  try {
+    if (isAdmin) await adminPlayerApprove(row.id, approveLevelId.value ?? undefined)
+    else await csPlayerAudit(row.id, 'ACTIVE', '')
+    ElMessage.success(`已通过「${name}」的入驻申请`)
+    approveVisible.value = false
+    await fetchData()
+    if (detailVisible.value && detailData.value?.id === row.id) await showDetail(row.id)
+  } finally {
+    approveSubmitting.value = false
+  }
+}
+const rejectDialogVisible = ref(false), rejectId = ref(null), rejectReason = ref(''), rejectName = ref('')
+function openRejectDialog(row) {
+  if (!row || row.status !== 'PENDING') return
+  rejectId.value = row.id
+  rejectName.value = row.nickname || row.realName || ('ID ' + row.id)
+  rejectReason.value = ''
+  rejectDialogVisible.value = true
+}
 async function handleReject() {
+  if (!rejectReason.value.trim()) return ElMessage.warning('请填写驳回原因')
   if (isAdmin) await adminPlayerReject(rejectId.value, rejectReason.value)
   else await csPlayerAudit(rejectId.value, 'REJECTED', rejectReason.value)
-  ElMessage.success('已驳回'); rejectDialogVisible.value = false; fetchData()
+  ElMessage.success(`已驳回「${rejectName.value}」的入驻申请`)
+  rejectDialogVisible.value = false
+  await fetchData()
+  if (detailVisible.value && detailData.value?.id === rejectId.value) await showDetail(rejectId.value)
 }
 // 冻结弹窗
 const freezeVisible = ref(false), freezeRow = ref(null), freezeDuration = ref(7), freezeCustomDate = ref(''), freezeSubmitting = ref(false)
@@ -359,6 +425,23 @@ async function handleDelete(row) {
   await fetchData()
 }
 const detailVisible = ref(false), detailData = ref(null), detailLoading = ref(false)
+const proofImages = computed(() => {
+  const raw = detailData.value?.proofImages
+  if (!raw) return []
+  const list = Array.isArray(raw) ? raw : String(raw).split(',')
+  return list.map(item => String(item || '').trim()).filter(Boolean)
+})
+const skillTagsText = computed(() => {
+  const raw = detailData.value?.skillTags
+  if (!raw) return '未填写'
+  if (Array.isArray(raw)) return raw.filter(Boolean).join('、') || '未填写'
+  const text = String(raw).trim()
+  try {
+    const parsed = JSON.parse(text)
+    if (Array.isArray(parsed)) return parsed.filter(Boolean).join('、') || '未填写'
+  } catch (_) { /* 普通文本 */ }
+  return text.split(/[,，]/).map(item => item.trim()).filter(Boolean).join('、') || '未填写'
+})
 const transactionLoading = ref(false)
 const playerTransactions = ref([])
 const transactionTotal = ref(0)
@@ -541,6 +624,26 @@ watch(() => route.query.taskId, id => {
   padding: 4px 0;
 }
 .introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.proof-section { margin-top: 16px; }
+.proof-title { font-size: 13px; color: #606266; margin-bottom: 10px; }
+.proof-count { color: #909399; font-size: 12px; }
+.proof-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.proof-image {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  border: 1px solid #e6e7e9;
+  background: #f7f8f9;
+  cursor: zoom-in;
+}
+.proof-empty {
+  padding: 14px 16px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
+  color: #909399;
+  font-size: 13px;
+  background: #fafafa;
+}
 .player-detail-header {
   display: flex;
   align-items: center;

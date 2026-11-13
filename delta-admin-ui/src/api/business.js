@@ -38,8 +38,8 @@ export function adminPlayerDetail(id) {
 export function adminPlayerTransactions(id, params) {
   return request({ url: `/admin/player/${id}/transactions`, method: 'get', params })
 }
-export function adminPlayerApprove(id) {
-  return request({ url: `/admin/player/${id}/approve`, method: 'put' })
+export function adminPlayerApprove(id, levelId) {
+  return request({ url: `/admin/player/${id}/approve`, method: 'put', params: levelId == null ? undefined : { levelId } })
 }
 export function adminPlayerReject(id, reason) {
   return request({ url: `/admin/player/${id}/reject`, method: 'put', params: { reason } })

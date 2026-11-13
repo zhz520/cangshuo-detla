@@ -1,6 +1,7 @@
 package com.delta.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.BatchIds;
@@ -93,15 +94,28 @@ public class AdminPlayerController {
 
     @OpLog(module = "player", operation = "审核通过")
     @PutMapping("/{id}/approve")
-    public R<Void> approve(@PathVariable Long id) {
+    public R<Void> approve(@PathVariable Long id, @RequestParam(required = false) Integer levelId) {
+        approveApplication(id, levelId);
+        return R.ok();
+    }
+
+    private void approveApplication(Long id, Integer levelId) {
         governance.checkApplication(id);
-        Player p = new Player();
-        p.setId(id);
-        p.setStatus("ACTIVE");
-        playerService.updateById(p);
+        if (levelId != null) {
+            var level = levelService.getById(levelId);
+            if (level == null || !Integer.valueOf(1).equals(level.getStatus())) {
+                throw new BusinessException(409, "请选择有效且启用的打手等级");
+            }
+        }
+        boolean updated = playerService.update(new LambdaUpdateWrapper<Player>()
+                .eq(Player::getId, id)
+                .eq(Player::getStatus, "PENDING")
+                .set(Player::getStatus, "ACTIVE")
+                .set(Player::getRejectReason, null)
+                .set(levelId != null, Player::getLevel, levelId));
+        if (!updated) throw new BusinessException(409, "申请状态已变更，请刷新后重试");
         eventPublisher.publishEvent(new BusinessEvent(this, "PLAYER_APPROVED",
                 "PLAYER", id, null, "您的入驻申请已通过审核"));
-        return R.ok();
     }
 
     @OpLog(module = "player", operation = "审核驳回")
@@ -163,7 +177,7 @@ public class AdminPlayerController {
         var messages = new ArrayList<String>();
         for (Long id : ids) {
             try {
-                approve(id);
+                approveApplication(id, null);
                 success++;
             } catch (BusinessException error) {
                 failedIds.add(id);
