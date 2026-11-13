@@ -1,31 +1,31 @@
 /* First paid web theme, shared by PC and the staff H5 shell. */
 html[data-theme='neumorphism'] {
-  --el-color-primary: #26313d;
-  --el-color-primary-light-3: #53606d;
-  --el-color-primary-light-5: #7f8994;
-  --el-color-primary-light-7: #c7cdd4;
-  --el-color-primary-light-8: #dce1e6;
-  --el-color-primary-light-9: #e9edf2;
-  --el-text-color-primary: #26313d;
-  --el-text-color-regular: #4d5965;
-  --el-text-color-secondary: #66717d;
-  --el-border-color: #d4dae1;
-  --el-border-color-light: #dce1e6;
-  --el-border-color-lighter: #e4e8ed;
-  --el-fill-color-light: #e9edf2;
-  --el-bg-color: #e9edf2;
-  --el-bg-color-page: #e9edf2;
-  --app-bg: #e9edf2;
-  --app-surface: #e9edf2;
-  --app-surface-soft: #e4e9ee;
-  --app-border: #d4dae1;
-  --app-border-soft: #dce1e6;
-  --app-text: #26313d;
-  --app-text-regular: #4d5965;
-  --app-text-muted: #66717d;
-  --app-primary: #26313d;
-  --app-primary-soft: #e0e5ea;
-  --app-shadow: 8px 8px 20px rgba(165, 173, 183, 0.32), -8px -8px 20px rgba(255, 255, 255, 0.72);
+  --el-color-primary: #587bd4;
+  --el-color-primary-light-3: #7b98e0;
+  --el-color-primary-light-5: #9db3e9;
+  --el-color-primary-light-7: #c2d0f2;
+  --el-color-primary-light-8: #d5dff7;
+  --el-color-primary-light-9: #e9eef5;
+  --el-text-color-primary: #263449;
+  --el-text-color-regular: #45536b;
+  --el-text-color-secondary: #8894a7;
+  --el-border-color: #dbe2ed;
+  --el-border-color-light: #e2e8f2;
+  --el-border-color-lighter: #e9eef5;
+  --el-fill-color-light: #e9eef5;
+  --el-bg-color: #edf1f7;
+  --el-bg-color-page: #e9eef5;
+  --app-bg: #e9eef5;
+  --app-surface: #edf1f7;
+  --app-surface-soft: #e4eaf3;
+  --app-border: #dbe2ed;
+  --app-border-soft: #e2e8f2;
+  --app-text: #263449;
+  --app-text-regular: #45536b;
+  --app-text-muted: #8894a7;
+  --app-primary: #587bd4;
+  --app-primary-soft: #dce5f8;
+  --app-shadow: 8px 8px 20px rgba(150, 163, 183, 0.33), -8px -8px 20px rgba(255, 255, 255, 0.95);
 }
 
 html[data-theme='neumorphism'] body,
@@ -33,20 +33,24 @@ html[data-theme='neumorphism'] #app,
 html[data-theme='neumorphism'] .layout-container,
 html[data-theme='neumorphism'] .layout-body,
 html[data-theme='neumorphism'] .layout-main {
-  background: var(--app-bg) !important;
+  background:
+    radial-gradient(circle at 9% 16%, #f9fbfe 0%, transparent 37%),
+    radial-gradient(circle at 88% 81%, #d8e3f2 0%, transparent 40%),
+    var(--app-bg) !important;
+  background-attachment: fixed !important;
   color: var(--app-text) !important;
 }
 
 html[data-theme='neumorphism'] .layout-aside,
 html[data-theme='neumorphism'] .layout-header,
 html[data-theme='neumorphism'] .h5-header {
-  background: #e9edf2 !important;
+  background: #e9eef5 !important;
   border-color: transparent !important;
-  box-shadow: 0 7px 18px rgba(165, 173, 183, 0.25) !important;
+  box-shadow: 0 7px 18px rgba(150, 163, 183, 0.22) !important;
 }
 
 html[data-theme='neumorphism'] .layout-aside {
-  box-shadow: 7px 0 18px rgba(165, 173, 183, 0.3) !important;
+  box-shadow: 7px 0 18px rgba(150, 163, 183, 0.25) !important;
 }
 
 html[data-theme='neumorphism'] .el-card,
@@ -54,44 +58,44 @@ html[data-theme='neumorphism'] .el-dialog,
 html[data-theme='neumorphism'] .el-dropdown-menu,
 html[data-theme='neumorphism'] .el-select__popper,
 html[data-theme='neumorphism'] .el-picker__popper {
-  background: #e9edf2 !important;
+  background: #edf1f7 !important;
   border: 0 !important;
-  box-shadow: 8px 8px 20px rgba(165, 173, 183, 0.38), -8px -8px 20px rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 8px 8px 20px rgba(150, 163, 183, 0.33), -8px -8px 20px rgba(255, 255, 255, 0.95) !important;
 }
 
 html[data-theme='neumorphism'] .el-table,
 html[data-theme='neumorphism'] .el-table tr,
 html[data-theme='neumorphism'] .el-table th.el-table__cell,
 html[data-theme='neumorphism'] .el-table td.el-table__cell {
-  background: #e9edf2 !important;
+  background: #edf1f7 !important;
   color: var(--app-text) !important;
-  border-color: #dce1e6 !important;
+  border-color: #e2e8f2 !important;
 }
 
 html[data-theme='neumorphism'] .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
-  background: #e3e8ee !important;
+  background: #e7edf6 !important;
 }
 
 html[data-theme='neumorphism'] .el-input__wrapper,
 html[data-theme='neumorphism'] .el-textarea__inner,
 html[data-theme='neumorphism'] .el-select__wrapper {
-  background: #e9edf2 !important;
+  background: #edf1f7 !important;
   border: 0 !important;
-  box-shadow: inset 4px 4px 9px rgba(165, 173, 183, 0.36), inset -4px -4px 9px rgba(255, 255, 255, 0.8) !important;
+  box-shadow: inset 4px 4px 9px rgba(155, 169, 190, 0.24), inset -4px -4px 9px rgba(255, 255, 255, 0.94) !important;
 }
 
 html[data-theme='neumorphism'] .el-button:not(.is-text):not(.is-link):not(.el-button--primary):not(.el-button--danger) {
-  background: #e9edf2 !important;
+  background: #edf1f7 !important;
   color: var(--app-text) !important;
   border: 0 !important;
-  box-shadow: 5px 5px 12px rgba(165, 173, 183, 0.35), -5px -5px 12px rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 5px 5px 12px rgba(153, 166, 184, 0.23), -5px -5px 12px rgba(255, 255, 255, 0.95) !important;
 }
 
 html[data-theme='neumorphism'] .el-button--primary {
-  background: #26313d !important;
-  border-color: #26313d !important;
+  background: linear-gradient(145deg, #6888da, #4b70c9) !important;
+  border-color: #4b70c9 !important;
   color: #fff !important;
-  box-shadow: 7px 7px 16px rgba(165, 173, 183, 0.38) !important;
+  box-shadow: 7px 7px 16px rgba(120, 140, 180, 0.32), -6px -6px 16px rgba(255, 255, 255, 0.9) !important;
 }
 
 html[data-theme='neumorphism'] .el-menu,
@@ -103,17 +107,18 @@ html[data-theme='neumorphism'] .el-sub-menu__title {
 
 html[data-theme='neumorphism'] .el-menu-item.is-active,
 html[data-theme='neumorphism'] .el-sub-menu.is-active > .el-sub-menu__title {
-  background: #e9edf2 !important;
-  box-shadow: inset 4px 4px 9px rgba(165, 173, 183, 0.28), inset -4px -4px 9px rgba(255, 255, 255, 0.72) !important;
+  background: #edf1f7 !important;
+  color: #3f62b9 !important;
+  box-shadow: inset 4px 4px 9px rgba(155, 169, 190, 0.24), inset -4px -4px 9px rgba(255, 255, 255, 0.94) !important;
 }
 
 html[data-theme='neumorphism'] .h5-bottom-nav,
 html[data-theme='neumorphism'] .h5-account-drawer {
-  background: #e9edf2 !important;
+  background: #edf1f7 !important;
   border-color: transparent !important;
-  box-shadow: 0 -7px 18px rgba(165, 173, 183, 0.28) !important;
+  box-shadow: 0 -7px 18px rgba(150, 163, 183, 0.22) !important;
 }
 
 html[data-theme='neumorphism'] .el-loading-mask {
-  background-color: rgba(233, 237, 242, 0.72) !important;
+  background-color: rgba(233, 238, 245, 0.72) !important;
 }
