@@ -40,7 +40,7 @@ async function refresh(){
   if(busy.value||Date.now()<nextRefresh)return
   const run=++generation;busy.value=true;error.value='';code.value=''
   try{const {data}=await getAcceptChallenge(orderId,deviceId());if(run!==generation)return;challenge.value=data;required.value=data.required;nextRefresh=Date.now()+Number(data.refreshSeconds||10)*1000;tick();clearInterval(timer);timer=setInterval(tick,1000)}
-  catch(e){if(run!==generation)return;challenge.value={};required.value=true;error.value=e?.msg||'验证码加载失败';nextRefresh=Date.now()+10000;tick();clearInterval(timer);timer=setInterval(tick,1000);if(e?.code===409)visible.value=false}
+  catch(e){if(run!==generation)return;const message=e?.msg||'验证码加载失败';if(/休息|上班|接单状态/.test(message)){challenge.value={};required.value=false;error.value='';visible.value=false;busy.value=false;uni.showModal({title:'当前处于休息中',content:'请先开启接单状态后再接单。',confirmText:'去开启',success:res=>{if(res.confirm)uni.navigateTo({url:'/pages-player/mine/index'})}});return}challenge.value={};required.value=true;error.value=message;nextRefresh=Date.now()+10000;tick();clearInterval(timer);timer=setInterval(tick,1000);if(e?.code===409)visible.value=false}
   finally{busy.value=false}
 }
 async function submit(){
