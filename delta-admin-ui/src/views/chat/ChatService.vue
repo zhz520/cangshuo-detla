@@ -19,7 +19,7 @@
           @keydown.space.prevent="selectSession(s)"
         >
           <div class="session-row">
-            <el-avatar :src="thumbnailUrl(s.avatar,160)" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
+            <el-avatar :src="thumbnailUrl(s.avatar || '/static/images/delta-default-avatar.png',160)" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
             <div class="session-body">
               <div class="session-top">
                 <span class="session-name">{{ s.targetName || '用户 #' + s.id }}</span>
@@ -43,9 +43,20 @@
           <el-button v-if="isCompact" plain size="small" aria-label="返回会话列表" @click="mobileChatOpen = false">返回会话</el-button>
           <span class="chat-title">{{ currentSession.targetName || '用户 #' + currentSession.id }}</span>
           <el-tag size="small">{{ typeMap[currentSession.type] || currentSession.type }}</el-tag>
+          <el-tag v-if="currentSession.status === 'CLOSED'" size="small" type="info">
+            已结束{{ currentSession.rating ? ' · ' + currentSession.rating + ' 星' : '' }}
+          </el-tag>
           <span v-if="currentSession.orderId && currentSession.orderId !== 0" class="order-link">
             关联订单: {{ currentSession.orderId }}
           </span>
+          <el-button
+            v-if="currentSession.status !== 'CLOSED'"
+            class="close-session-button"
+            plain
+            size="small"
+            type="danger"
+            @click="closeCurrentSession"
+          >结束会话</el-button>
         </div>
 
         <div class="chat-messages" ref="msgContainer">
@@ -114,9 +125,9 @@
             aria-label="回复内容"
             enterkeyhint="send"
             @keydown.enter="handleComposerEnter"
-            :disabled="sending"
+            :disabled="sending || currentSession?.status === 'CLOSED'"
           />
-          <el-button type="primary" @click="sendText" :loading="sending">发送</el-button>
+          <el-button type="primary" @click="sendText" :loading="sending" :disabled="currentSession?.status === 'CLOSED'">发送</el-button>
           </div>
           <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange" />
         </div>
@@ -365,6 +376,31 @@ async function fetchSessions() {
     const res = await csChatSessionList({ pageNum: 1, pageSize: 100, type: 'USER_CS' })
     sessions.value = res.data?.records || res.data || []
   } catch { sessions.value = [] }
+}
+
+async function closeCurrentSession() {
+  if (!currentSession.value || currentSession.value.status === 'CLOSED') return
+  try {
+    await ElMessageBox.confirm('结束后用户仍可查看历史消息，并可对本次客服服务评分。确定结束当前会话？', '结束客服会话', {
+      type: 'warning',
+      confirmButtonText: '结束会话',
+      cancelButtonText: '取消'
+    })
+  } catch (_) {
+    return
+  }
+  try {
+    await request({
+      url: '/common/chat/session/' + currentSession.value.id + '/close',
+      method: 'post',
+      params: { chatRole: 'CS' }
+    })
+    currentSession.value.status = 'CLOSED'
+    ElMessage.success('会话已结束，用户可进行评分')
+    fetchSessions()
+  } catch (_) {
+    ElMessage.error('结束会话失败，请重试')
+  }
 }
 
 // ===== 聊天消息 =====
@@ -871,6 +907,7 @@ onUnmounted(() => {
   font-weight: 500;
 }
 .order-link { font-size: 13px; color: #73777e; }
+.close-session-button { margin-left: auto; }
 .chat-messages {
   flex: 1;
   min-height: 0;

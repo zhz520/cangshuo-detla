@@ -8,6 +8,7 @@ import com.delta.common.domain.R;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderProgress;
@@ -37,11 +38,13 @@ public class CsReplaceController {
     private final OrderProgressService orderProgressService;
     private final ApplicationEventPublisher eventPublisher;
     private final CrossModuleMapper crossModuleMapper;
+    private final CsRoutingService csRouting;
 
     @GetMapping("/list")
     public R<Page<PlayerReplaceRequest>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                                @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<PlayerReplaceRequest> w = new LambdaQueryWrapper<PlayerReplaceRequest>()
+                .apply("order_id IN (SELECT id FROM `order` WHERE cs_id = {0} OR cs_id IS NULL)", SecurityUtils.getUserId())
                 .eq(taskId != null, PlayerReplaceRequest::getId, taskId)
                 .eq(status != null && !status.isEmpty(), PlayerReplaceRequest::getStatus, status)
                 .orderByDesc(PlayerReplaceRequest::getCreatedAt);
@@ -74,6 +77,7 @@ public class CsReplaceController {
 
         Order order = orderService.getById(req.getOrderId());
         if (order == null) return R.fail("订单不存在");
+        csRouting.assertCsCanHandleOrder(order.getId(), operatorId);
         if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail(409,"订单状态已变化，不能换人");
         String remark=body==null?null:body.get("remark");
         if(remark!=null&&remark.length()>500)return R.fail(400,"处理备注不能超过500字");
@@ -141,6 +145,7 @@ public class CsReplaceController {
         PlayerReplaceRequest req = replaceRequestService.getOne(new LambdaQueryWrapper<PlayerReplaceRequest>()
                 .eq(PlayerReplaceRequest::getId,id).last("FOR UPDATE"));
         if (req == null) return R.fail("申请不存在");
+        csRouting.assertCsCanHandleOrder(req.getOrderId(), SecurityUtils.getUserId());
         if (!"PENDING".equals(req.getStatus())) return R.fail("该申请已处理");
         String remark = body == null ? null : body.get("remark");
         if(remark!=null&&remark.length()>500)return R.fail(400,"处理备注不能超过500字");

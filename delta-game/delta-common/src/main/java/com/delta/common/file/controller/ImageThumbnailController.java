@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /** Derivatives of already-public upload images. Never fetch remote URLs or arbitrary paths. */
 @RestController
@@ -72,7 +73,10 @@ public class ImageThumbnailController {
         Path jpg = cache.resolve(digest + ".jpg"), png = cache.resolve(digest + ".png");
         Path result = Files.isRegularFile(jpg) ? jpg : Files.isRegularFile(png) ? png : null;
         if (result == null) {
-            if (!workers.tryAcquire()) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
+            // A product grid often requests several thumbnails at once. Queue the
+            // first render briefly instead of surfacing 429 for a normal page load.
+            if (!workers.tryAcquire(10, TimeUnit.SECONDS))
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE);
             Path temp = null;
             try (var input = ImageIO.createImageInputStream(source.toFile())) {
                 var readers = ImageIO.getImageReaders(input);

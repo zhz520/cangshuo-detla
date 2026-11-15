@@ -61,18 +61,18 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
-.membership-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f8f9; box-sizing: border-box; }
-.hero { padding: 44rpx 32rpx; border-radius: 24rpx; background: #17191c; color: #fff; }
+.membership-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f7f7; box-sizing: border-box; }
+.hero { padding: 44rpx 32rpx; border-radius: 24rpx; background: #111111; color: #fff; }
 .eyebrow { font-size: 20rpx; letter-spacing: 3rpx; opacity: .65; }
 .tier { display: block; margin-top: 18rpx; font-size: 44rpx; font-weight: 700; }
 .spend { display: block; margin-top: 12rpx; font-size: 25rpx; opacity: .72; }
 .card { margin-top: 22rpx; padding: 28rpx; border-radius: 20rpx; background: #fff; }
-.row { display: flex; justify-content: space-between; padding: 16rpx 0; font-size: 26rpx; color: #17191c; }
-.label { color: #73777e; }
+.row { display: flex; justify-content: space-between; padding: 16rpx 0; font-size: 26rpx; color: #111111; }
+.label { color: #777777; }
 .value { font-weight: 600; }
 .progress-track { height: 12rpx; margin-top: 20rpx; border-radius: 12rpx; background: #eceef0; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 12rpx; background: #17191c; }
-.progress-text { display: block; margin-top: 12rpx; font-size: 23rpx; color: #73777e; }
-.hint { margin-top: 24rpx; padding: 22rpx; font-size: 23rpx; line-height: 1.7; color: #73777e; }
-.empty { padding: 180rpx 0; text-align: center; color: #73777e; font-size: 25rpx; }
+.progress-fill { height: 100%; border-radius: 12rpx; background: #111111; }
+.progress-text { display: block; margin-top: 12rpx; font-size: 23rpx; color: #777777; }
+.hint { margin-top: 24rpx; padding: 22rpx; font-size: 23rpx; line-height: 1.7; color: #777777; }
+.empty { padding: 180rpx 0; text-align: center; color: #777777; font-size: 25rpx; }
 </style>

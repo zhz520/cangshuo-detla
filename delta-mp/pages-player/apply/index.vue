@@ -160,8 +160,8 @@ async function reopenPayment() { if (submitting.value) return; pendingDepositNo.
 </script>
 <style lang="scss" scoped>
 .apply-page { padding:24rpx; background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.form-item { background: #f4f5f6; padding:24rpx; border-radius:12rpx; margin-bottom:20rpx; .label { font-size:26rpx; color: #666b73; margin-bottom:12rpx; display:block; } input { height:72rpx; background: rgba(0,0,0,0.05); border-radius:8rpx; padding:0 24rpx; font-size:28rpx; } }
-.deposit-tip { font-size:24rpx; color:#73777e; margin-top:16rpx; margin-bottom:8rpx; }
-.upload-tip { display:block; font-size:22rpx; line-height:1.7; color:#858992; margin-top:12rpx; }
-.btn { height:88rpx; line-height:88rpx; text-align:center; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; &.disabled { opacity:0.7; } }
+.form-item { background: #f7f7f7; padding:24rpx; border-radius:12rpx; margin-bottom:20rpx; .label { font-size:26rpx; color: #777777; margin-bottom:12rpx; display:block; } input { height:72rpx; background: rgba(0,0,0,0.05); border-radius:8rpx; padding:0 24rpx; font-size:28rpx; } }
+.deposit-tip { font-size:24rpx; color:#777777; margin-top:16rpx; margin-bottom:8rpx; }
+.upload-tip { display:block; font-size:22rpx; line-height:1.7; color:#aaaaaa; margin-top:12rpx; }
+.btn { height:88rpx; line-height:88rpx; text-align:center; background: #171717; color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; &.disabled { opacity:0.7; } }
 </style>

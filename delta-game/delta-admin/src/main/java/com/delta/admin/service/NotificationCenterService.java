@@ -91,7 +91,7 @@ public class NotificationCenterService {
         if(ORDER_EVENTS.contains(eventType)&&"ORDER_PAID".equals(eventType))addNewOrderPlayers(recipients,order);
         if(REFUND_EVENTS.contains(eventType)||COMPLAINT_EVENTS.contains(eventType)||STAFF_REVIEW_EVENTS.contains(eventType)
                 ||WITHDRAW_EVENTS.contains(eventType)||ORDER_EVENTS.contains(eventType)){
-            addStaff(recipients,group);
+            addStaff(recipients,group,order);
         }
 
         String orderText=orderSummary(order,eventType);
@@ -153,12 +153,14 @@ public class NotificationCenterService {
         }
     }
 
-    private void addStaff(Map<String,Recipient> recipients,String group){
+    private void addStaff(Map<String,Recipient> recipients,String group,Map<String,Object> order){
+        Long owner = order == null || order.get("cs_id") == null ? null : ((Number) order.get("cs_id")).longValue();
         for(Map<String,Object> staff:jdbc.queryForList(
                 "SELECT a.id,a.role,a.phone,COALESCE(s.online,0) AS shift_online FROM admin a " +
                         "LEFT JOIN staff_shift s ON s.admin_id=a.id WHERE a.status=1 AND a.deleted=0")){
             String role=com.delta.common.security.utils.AdminRolePolicy.effectiveRole(String.valueOf(staff.get("role")));
             if("CS".equals(role)&&((Number)staff.get("shift_online")).intValue()!=1)continue;
+            if("CS".equals(role)&&owner!=null&&!owner.equals(((Number)staff.get("id")).longValue()))continue;
             if(!permissionFor(role,number(staff.get("id")),group))continue;
             add(recipients,role,number(staff.get("id")),staff.get("phone")==null?null:String.valueOf(staff.get("phone")));
         }
@@ -207,7 +209,7 @@ public class NotificationCenterService {
 
     private Map<String,Object> order(Long id){
         List<Map<String,Object>> rows=jdbc.queryForList(
-                "SELECT o.id,o.order_no,o.user_id,o.player_id,o.designated_player_id,o.product_name,o.amount,o.status,u.nickname AS customer_name,p.nickname AS player_name FROM `order` o LEFT JOIN `user` u ON u.id=o.user_id LEFT JOIN player p ON p.id=o.player_id WHERE o.id=?",id);
+                "SELECT o.id,o.order_no,o.user_id,o.player_id,o.designated_player_id,o.product_name,o.amount,o.status,o.cs_id,u.nickname AS customer_name,p.nickname AS player_name FROM `order` o LEFT JOIN `user` u ON u.id=o.user_id LEFT JOIN player p ON p.id=o.player_id WHERE o.id=?",id);
         return rows.isEmpty()?null:rows.get(0);
     }
 

@@ -5,6 +5,7 @@ import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.pay.refund.OrderRefundWorkflowService;
 import com.delta.pay.refund.CustomerRefundView;
 import com.delta.pay.refund.RefundCreateRequest;
@@ -26,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RefundController {
     private final OrderRefundWorkflowService refunds;
+    private final CsRoutingService csRouting;
 
     @PostMapping("/order/{orderId}/refunds")
     public R<CustomerRefundView> requestByCustomer(@PathVariable Long orderId,
@@ -45,6 +47,7 @@ public class RefundController {
     @PreAuthorize("hasAnyRole('ADMIN','CS') and @staffPermissions.allowed('order.refund')")
     public R<RefundRequest> createByStaff(@PathVariable Long orderId,
                                            @RequestBody RefundCreateRequest request) {
+        assertCsOrder(orderId);
         return R.ok(refunds.createByStaff(orderId, SecurityUtils.getUserId(),
                 SecurityUtils.getUserType(), request));
     }
@@ -54,18 +57,22 @@ public class RefundController {
     public R<Page<RefundRequest>> csList(PageQuery query,
                                          @RequestParam(required = false) String status,
                                          @RequestParam(required = false) String orderNo) {
-        return R.ok(refunds.page(query.getPageNum(), query.getPageSize(), status, orderNo));
+        return R.ok(refunds.page(query.getPageNum(), query.getPageSize(), status, orderNo,
+                "CS".equals(SecurityUtils.getUserType()) ? SecurityUtils.getUserId() : null));
     }
 
     @GetMapping("/cs/refunds/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','CS') and @staffPermissions.allowed('order.refund')")
     public R<RefundRequest> csDetail(@PathVariable Long id) {
-        return R.ok(refunds.getRequired(id));
+        RefundRequest request = refunds.getRequired(id);
+        assertCsOrder(request.getOrderId());
+        return R.ok(request);
     }
 
     @GetMapping("/cs/refunds/{id}/audit")
     @PreAuthorize("hasAnyRole('ADMIN','CS') and @staffPermissions.allowed('order.refund')")
     public R<List<java.util.Map<String, Object>>> audit(@PathVariable Long id) {
+        assertCsOrder(refunds.getRequired(id).getOrderId());
         return R.ok(refunds.auditTrail(id));
     }
 
@@ -73,6 +80,7 @@ public class RefundController {
     @PostMapping("/cs/refunds/{id}/review/start")
     @PreAuthorize("hasAnyRole('ADMIN','CS') and @staffPermissions.allowed('order.refund')")
     public R<RefundRequest> startReview(@PathVariable Long id) {
+        assertCsOrder(refunds.getRequired(id).getOrderId());
         return R.ok(refunds.startReview(id, SecurityUtils.getUserId(), SecurityUtils.getUserType()));
     }
 
@@ -80,6 +88,7 @@ public class RefundController {
     @PostMapping("/cs/refunds/{id}/review")
     @PreAuthorize("hasAnyRole('ADMIN','CS') and @staffPermissions.allowed('order.refund')")
     public R<RefundRequest> submitReview(@PathVariable Long id, @RequestBody RefundReviewRequest review) {
+        assertCsOrder(refunds.getRequired(id).getOrderId());
         return R.ok(refunds.submitPreliminaryReview(id, SecurityUtils.getUserId(),
                 SecurityUtils.getUserType(), review));
     }
@@ -89,7 +98,7 @@ public class RefundController {
     public R<Page<RefundRequest>> adminList(PageQuery query,
                                             @RequestParam(required = false) String status,
                                             @RequestParam(required = false) String orderNo) {
-        return R.ok(refunds.page(query.getPageNum(), query.getPageSize(), status, orderNo));
+        return R.ok(refunds.page(query.getPageNum(), query.getPageSize(), status, orderNo, null));
     }
 
     @GetMapping("/admin/refunds/{id}")
@@ -117,5 +126,11 @@ public class RefundController {
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('order.refund')")
     public R<RefundRequest> retry(@PathVariable Long id) {
         return R.ok(refunds.retry(id, SecurityUtils.getUserId(), SecurityUtils.getUserType()));
+    }
+
+    private void assertCsOrder(Long orderId) {
+        if ("CS".equals(SecurityUtils.getUserType())) {
+            csRouting.assertCsCanHandleOrder(orderId, SecurityUtils.getUserId());
+        }
     }
 }

@@ -32,9 +32,9 @@ async function submit() {
 </script>
 <style lang="scss" scoped>
 .review-page { padding:24rpx; background:#ffffff; min-height:var(--app-page-height, 100vh); }
-.rating-area { display:flex; align-items:center; gap:20rpx; margin-bottom:24rpx; background:#ffffff; border:1rpx solid #eeeff1; padding:24rpx; border-radius:16rpx; color:#17191c; }
+.rating-area { display:flex; align-items:center; gap:20rpx; margin-bottom:24rpx; background:#ffffff; border:1rpx solid #eeeeee; padding:24rpx; border-radius:16rpx; color:#111111; }
 .stars { display:flex; gap:8rpx; }
-.star { font-size:48rpx; color:#b9bdc4; &.active { color:#996b30; } }
-textarea { width:100%; height:240rpx; background:#f7f8f9; border:1rpx solid #eeeff1; border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; color:#17191c; }
-.btn { height:88rpx; line-height:88rpx; text-align:center; background:linear-gradient(135deg, #17191c, #30343a); color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
+.star { font-size:48rpx; color:#aaaaaa; &.active { color:#996b30; } }
+textarea { width:100%; height:240rpx; background:#f7f7f7; border:1rpx solid #eeeeee; border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; color:#111111; }
+.btn { height:88rpx; line-height:88rpx; text-align:center; background:#171717; color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
 </style>

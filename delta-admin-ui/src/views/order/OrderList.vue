@@ -9,28 +9,39 @@
             <el-option v-for="(v, k) in orderStatusMap" :key="k" :label="v" :value="k" />
           </el-select>
         </el-form-item>
-        <el-form-item><el-button type="primary" :loading="loading" @click="searchOrders">查询</el-button><el-button @click="query.orderNo='';query.status='';searchOrders()">重置</el-button></el-form-item>
+        <el-form-item v-if="isAdmin">
+          <el-select v-model="query.csId" placeholder="归属客服" clearable>
+            <el-option label="公共池（未分配）" :value="0" />
+            <el-option v-for="s in csStaff" :key="s.id" :label="s.nickname || s.username" :value="s.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item><el-button type="primary" :loading="loading" @click="searchOrders">查询</el-button><el-button @click="resetSearch">重置</el-button></el-form-item>
       </el-form>
       <LoadFeedback :error="loadError" label="订单" @retry="fetchData" />
       <el-table :data="list" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="productName" label="商品" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="userNickname" label="用户" width="120">
+        <el-table-column prop="id" label="ID" width="64" />
+        <el-table-column prop="orderNo" label="订单号" width="160" show-overflow-tooltip />
+        <el-table-column prop="productName" label="商品" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="userNickname" label="用户" width="90" show-overflow-tooltip>
           <template #default="{ row }">{{ row.userNickname || ('ID: ' + row.userId) }}</template>
         </el-table-column>
-        <el-table-column prop="userPhone" label="客户手机号" width="135">
+        <el-table-column prop="userPhone" label="客户手机号" width="120">
           <template #default="{ row }">{{ row.userPhone || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="playerName" label="打手" width="120">
+        <el-table-column prop="playerName" label="打手" width="90" show-overflow-tooltip>
           <template #default="{ row }">{{ row.playerName || (row.playerId ? 'ID: ' + row.playerId : '未指派') }}</template>
         </el-table-column>
-        <el-table-column prop="amount" label="金额" width="100"><template #default="{ row }">¥{{ row.amount }}</template></el-table-column>
-        <el-table-column prop="status" label="状态" width="110">
+        <el-table-column label="归属客服" width="110">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.csId ? 'success' : 'info'">{{ row.csName || '公共池' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="amount" label="金额" width="90"><template #default="{ row }">¥{{ row.amount }}</template></el-table-column>
+        <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }"><el-tag :type="orderTagType(row.status)" size="small">{{ orderStatusLabel(row.status) }}</el-tag></template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="下单时间" width="170" />
-        <el-table-column label="操作" width="220" :fixed="isCompact ? false : 'right'">
+        <el-table-column prop="createdAt" label="下单时间" width="145" show-overflow-tooltip />
+        <el-table-column label="操作" width="170" :fixed="isCompact ? false : 'right'">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
             <el-button v-if="canAssign(row)" link type="warning" @click="openAssignDialog(row)">{{ row.status === 'ASSIGNED' ? '重新指派' : '指派' }}</el-button>
@@ -56,6 +67,13 @@
         <el-descriptions-item label="用户">{{ detail.userNickname || ('ID: ' + detail.userId) }}</el-descriptions-item>
         <el-descriptions-item label="客户手机号">{{ detail.userPhone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="打手">{{ detail.playerName || (detail.playerId ? 'ID: ' + detail.playerId : '未指派') }}</el-descriptions-item>
+        <el-descriptions-item label="归属客服">
+          <el-select v-if="isAdmin" v-model="detailCsId" size="small" style="width:150px" @change="saveCsAssignment">
+            <el-option label="公共池（未分配）" :value="0" />
+            <el-option v-for="s in csStaff" :key="s.id" :label="s.nickname || s.username" :value="s.id" />
+          </el-select>
+          <span v-else>{{ detail.csName || '公共池' }}</span>
+        </el-descriptions-item>
         <el-descriptions-item v-if="detail.teammates?.length" label="协同打手" :span="2">
           <div class="team-summary">需要 {{ detail.requiredPlayerCount || (detail.teammates.length + 1) }} 人队，已记录 {{ detail.teammates.length }} 名队友</div>
           <div v-for="member in detail.teammates" :key="member.id" class="team-member">
@@ -141,7 +159,8 @@ import { useResponsive } from '@/utils/responsive'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useLoadTask } from '@/composables/useLoadTask'
 import LoadFeedback from '@/components/LoadFeedback.vue'
-import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'
+import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminOrderReassignCs, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'
+import { csRoutingStaff } from '@/api/cs-routing'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
@@ -187,7 +206,9 @@ function parsedExtraFields(order) {
     return Object.entries(obj).map(([key, value]) => ({ key, value }))
   } catch { return [] }
 }
-const query = reactive({ pageNum: 1, pageSize: 10, orderNo: '', status: '' })
+const query = reactive({ pageNum: 1, pageSize: 10, orderNo: '', status: '', csId: null })
+const csStaff = ref([])
+const detailCsId = ref(0)
 const { data: result, loading, error: loadError, run: loadOrders } = useLoadTask(async params => {
   const fn = isAdmin ? adminOrderList : csOrderList
   return (await fn(params, { silent: true })).data || {}
@@ -196,6 +217,7 @@ const list = computed(() => result.value.records || [])
 const total = computed(() => Number(result.value.total || 0))
 function fetchData() { return loadOrders({ ...query }) }
 function searchOrders() { query.pageNum = 1; return fetchData() }
+function resetSearch() { query.orderNo = ''; query.status = ''; query.csId = null; searchOrders() }
 // 详情
 const detailVisible = ref(false), detail = ref(null), detailLoading = ref(false), progressList = ref([])
 const confirmLoading = ref(false)
@@ -206,11 +228,27 @@ async function showDetail(id) {
     const progressFn = isAdmin ? adminOrderProgress : csOrderProgress
     const detailRes = await detailFn(id)
     detail.value = detailRes.data
+    detailCsId.value = detail.value?.csId || 0
     try { progressList.value = (await progressFn(id)).data || [] }
     catch (_) { progressList.value = []; ElMessage.warning('订单进度加载失败，可稍后重试') }
   } catch (_) {
     ElMessage.error('订单详情加载失败，请稍后重试')
   } finally { detailLoading.value = false }
+}
+async function loadCsStaff() {
+  if (!isAdmin) return
+  try { csStaff.value = (await csRoutingStaff()).data || [] } catch (_) { csStaff.value = [] }
+}
+async function saveCsAssignment(value) {
+  if (!detail.value?.id) return
+  try {
+    await adminOrderReassignCs(detail.value.id, value || null)
+    ElMessage.success('归属客服已更新')
+    await showDetail(detail.value.id)
+    fetchData()
+  } catch (_) {
+    detailCsId.value = detail.value?.csId || 0
+  }
 }
 async function handleConfirm(row) {
   await ElMessageBox.confirm('确定手动结单？订单将变为已确认状态。', '结单确认', { type: 'warning' })
@@ -265,6 +303,7 @@ async function handleRefund(row) {
   fetchData()
 }
 const route = useRoute()
+onMounted(loadCsStaff)
 watch(() => route.query, queryParams => {
   query.orderNo = typeof queryParams.orderNo === 'string' ? queryParams.orderNo.slice(0, 32) : ''
   query.status = queryParams.status === 'PAID' ? 'PAID' : ''

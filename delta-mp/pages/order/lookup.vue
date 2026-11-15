@@ -75,15 +75,15 @@ function openLogin() {
 </script>
 
 <style lang="scss" scoped>
-.lookup-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f4f5f6; box-sizing: border-box; }
+.lookup-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f7f7; box-sizing: border-box; }
 .lookup-card { padding: 34rpx 28rpx; background: #fff; border: 1rpx solid #e7e9ed; border-radius: 20rpx; box-shadow: 0 12rpx 36rpx rgba(20, 28, 40, .05); }
-.title { display: block; color: #17191c; font-size: 38rpx; font-weight: 700; }
-.subtitle, .hint { display: block; color: #73777e; font-size: 25rpx; line-height: 1.7; }
+.title { display: block; color: #111111; font-size: 38rpx; font-weight: 700; }
+.subtitle, .hint { display: block; color: #777777; font-size: 25rpx; line-height: 1.7; }
 .subtitle { margin-top: 12rpx; }
 .field { margin-top: 28rpx; }
 .label { display: block; margin-bottom: 12rpx; color: #34383e; font-size: 27rpx; font-weight: 600; }
-input { height: 84rpx; padding: 0 24rpx; box-sizing: border-box; border: 1rpx solid #e2e5e9; border-radius: 14rpx; background: #f8f9fa; color: #17191c; font-size: 28rpx; }
-.button { height: 88rpx; margin-top: 32rpx; border-radius: 999rpx; background: #17191c; color: #fff; font-size: 30rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
+input { height: 84rpx; padding: 0 24rpx; box-sizing: border-box; border: 1rpx solid #e2e5e9; border-radius: 14rpx; background: #f8f9fa; color: #111111; font-size: 28rpx; }
+.button { height: 88rpx; margin-top: 32rpx; border-radius: 999rpx; background: #111111; color: #fff; font-size: 30rpx; font-weight: 700; line-height: 88rpx; text-align: center; }
 .button.disabled { opacity: .55; }
 .hint { margin-top: 22rpx; }
 .login-link { margin-top: 28rpx; color: #4a5568; font-size: 26rpx; text-align: center; }

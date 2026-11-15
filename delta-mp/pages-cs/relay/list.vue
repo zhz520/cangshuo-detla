@@ -46,7 +46,7 @@
         </view>
         <scroll-view scroll-y class="player-list" @scrolltolower="loadMoreApprovePlayers">
           <view v-for="p in approvePlayers" :key="p.id" class="player-card" :class="{ full: isFull(p) }" @click="selectPlayer(p)">
-            <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+            <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
             <view class="info">
               <text class="name">{{ p.nickname }}</text>
               <view class="tags">

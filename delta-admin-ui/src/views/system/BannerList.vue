@@ -4,7 +4,8 @@
       <template #header><div class="card-header"><span>轮播图管理</span><el-button type="primary" @click="openDialog()">新增</el-button></div></template>
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="120"><template #default="{ row }"><el-image lazy :src="thumbnailUrl(row.imageUrl,320)" style="width:80px;height:60px" fit="contain" :preview-src-list="[row.imageUrl]" preview-teleported /></template></el-table-column>
+        <el-table-column label="图片（2:1）" width="130"><template #default="{ row }"><el-image lazy :src="thumbnailUrl(row.imageUrl,320)" style="width:96px;height:48px;border-radius:6px" fit="contain" :preview-src-list="[row.imageUrl]" preview-teleported /></template></el-table-column>
+        <el-table-column prop="title" label="主标题" min-width="130" show-overflow-tooltip />
         <el-table-column label="点击行为"><template #default="{ row }">{{ !row.linkValue || row.linkType === 'none' ? '放大图片' : row.linkType === 'product' ? '跳转商品' : '跳转链接' }}</template></el-table-column>
         <el-table-column prop="linkValue" label="跳转地址 / 商品ID" show-overflow-tooltip />
         <el-table-column prop="sortOrder" label="排序" width="80" />
@@ -20,7 +21,15 @@
     </el-card>
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑' : '新增'" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="图片" prop="imageUrl"><ImageUpload v-model="form.imageUrl" /></el-form-item>
+        <el-form-item label="图片" prop="imageUrl">
+          <div class="upload-field">
+            <ImageUpload v-model="form.imageUrl" />
+            <div class="link-tip">推荐 2:1（如 1200×600），主体居中；文字安全区距边缘至少 8%，避免不同屏幕被裁掉。</div>
+          </div>
+        </el-form-item>
+        <el-form-item label="主标题"><el-input v-model="form.title" maxlength="100" placeholder="例如：站点服务商城，留空则不显示文字" /></el-form-item>
+        <el-form-item label="副标题"><el-input v-model="form.subtitle" maxlength="200" placeholder="例如：护航 · 陪玩 · 训练 · 挑战" /></el-form-item>
+        <el-form-item label="按钮文字"><el-input v-model="form.buttonText" maxlength="30" placeholder="例如：立即体验；留空不显示按钮" /></el-form-item>
         <el-form-item label="点击行为"><el-select v-model="form.linkType"><el-option label="放大图片" value="none" /><el-option label="跳转链接" value="url" /><el-option label="跳转商品" value="product" /></el-select></el-form-item>
         <el-form-item v-if="form.linkType !== 'none'" :label="form.linkType === 'product' ? '商品ID' : '链接'" prop="linkValue"><el-input v-model="form.linkValue" :placeholder="form.linkType === 'product' ? '填写商品ID' : 'https://网址 或 /pages/站内页面路径'" /><div class="link-tip">不填写跳转地址时，点击轮播图会放大图片。</div></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" /></el-form-item>
@@ -49,7 +58,7 @@ const rules = { imageUrl: [{ required: true, message: '请上传图片', trigger
 }, trigger: 'blur' }] }
 async function fetchData() { loading.value = true; try { const res = await getBannerList(query); list.value = res.data.records; total.value = Number(res.data.total) } finally { loading.value = false } }
 const dialogVisible = ref(false), editingId = ref(null), submitting = ref(false), formRef = ref(null)
-const defaultForm = { imageUrl: '', linkType: 'none', linkValue: '', sortOrder: 0, status: 1 }
+const defaultForm = { imageUrl: '', title: '', subtitle: '', buttonText: '', linkType: 'none', linkValue: '', sortOrder: 0, status: 1 }
 const form = reactive({ ...defaultForm })
 function openDialog(row) { editingId.value = row?.id || null; Object.assign(form, defaultForm, row || {}); if (!form.linkType) form.linkType = form.linkValue ? 'url' : 'none'; dialogVisible.value = true }
 async function handleSubmit() { const valid = await formRef.value.validate().catch(() => false); if (!valid) return; submitting.value = true; try { const payload = { ...form, linkValue: form.linkType === 'none' ? '' : String(form.linkValue || '').trim() }; editingId.value ? await updateBanner({ ...payload, id: editingId.value }) : await addBanner(payload); ElMessage.success('操作成功'); dialogVisible.value = false; fetchData() } finally { submitting.value = false } }

@@ -6,7 +6,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card">
-        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ p.nickname }}</text>
           <view class="tags">
@@ -131,34 +131,34 @@ async function confirmInvite() {
 <style lang="scss" scoped>
 .invite-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
 .search-bar { display: flex; gap: 16rpx; padding: 16rpx 24rpx; background: #fff;
-  .search-input { flex: 1; background: #e6e7e9; padding: 16rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; }
-  .search-btn { padding: 16rpx 32rpx; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; }
+  .search-input { flex: 1; background: #eeeeee; padding: 16rpx 24rpx; border-radius: 999rpx; font-size: 26rpx; }
+  .search-btn { padding: 16rpx 32rpx; background: #171717; color: #ffffff; font-weight:bold; border-radius: 999rpx; font-size: 26rpx; }
 }
 .list { height: calc(var(--app-page-height, 100vh) - 120rpx); box-sizing: border-box; padding: 20rpx 24rpx calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
 .player-card { display: flex; align-items: center; gap: 16rpx; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; margin-bottom: 16rpx;
   .avatar { width: 80rpx; height: 80rpx; border-radius: 50%; }
-  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .tags { display: flex; gap: 8rpx; margin-top: 8rpx; flex-wrap: wrap; } .tag { font-size: 22rpx; color: #666b73; background: #e6e7e9; padding: 4rpx 12rpx; border-radius: 4rpx; &.tag-warn { color: #d44955; background: rgba(201, 79, 89, 0.1); } } }
-  .invite-btn { margin: 0; line-height: 1.6; padding: 12rpx 24rpx; background: #17191c; color: #fff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; &::after { border: 0; } &[disabled] { opacity: .5; } }
+  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .tags { display: flex; gap: 8rpx; margin-top: 8rpx; flex-wrap: wrap; } .tag { font-size: 22rpx; color: #777777; background: #eeeeee; padding: 4rpx 12rpx; border-radius: 4rpx; &.tag-warn { color: #d44955; background: rgba(201, 79, 89, 0.1); } } }
+  .invite-btn { margin: 0; line-height: 1.6; padding: 12rpx 24rpx; background: #111111; color: #fff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; &::after { border: 0; } &[disabled] { opacity: .5; } }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
 /* 分成弹窗 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-box { width: 85%; max-height: 85vh; overflow-y: auto; box-sizing: border-box; background: #fff; border-radius: 24rpx; padding: 40rpx 32rpx; border: 1rpx solid #e6e7e9; }
-.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: #17191c; }
-.modal-sub { font-size: 24rpx; color: #73777e; display: block; text-align: center; margin-top: 8rpx; }
+.modal-box { width: 85%; max-height: 85vh; overflow-y: auto; box-sizing: border-box; background: #fff; border-radius: 24rpx; padding: 40rpx 32rpx; border: 1rpx solid #eeeeee; }
+.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: #111111; }
+.modal-sub { font-size: 24rpx; color: #777777; display: block; text-align: center; margin-top: 8rpx; }
 .split-options { margin-top: 24rpx; }
-.split-opt { display: flex; justify-content: space-between; align-items: center; padding: 20rpx 24rpx; margin-bottom: 12rpx; background: #f4f5f6; border-radius: 12rpx; border: 2rpx solid transparent;
-  &.active { border-color: #17191c; background: rgba(23, 25, 28, 0.1); }
+.split-opt { display: flex; justify-content: space-between; align-items: center; padding: 20rpx 24rpx; margin-bottom: 12rpx; background: #f7f7f7; border-radius: 12rpx; border: 2rpx solid transparent;
+  &.active { border-color: #111111; background: rgba(23, 25, 28, 0.1); }
   .opt-label { font-size: 28rpx; font-weight: bold; }
-  .opt-desc { font-size: 22rpx; color: #73777e; }
+  .opt-desc { font-size: 22rpx; color: #777777; }
 }
 .custom-input-row { display: flex; align-items: center; gap: 16rpx; margin-top: 16rpx;
-  .custom-label { font-size: 26rpx; color: #666b73; white-space: nowrap; }
-  .custom-input { flex: 1; background: #e6e7e9; padding: 16rpx 24rpx; border-radius: 12rpx; font-size: 28rpx; }
+  .custom-label { font-size: 26rpx; color: #777777; white-space: nowrap; }
+  .custom-input { flex: 1; background: #eeeeee; padding: 16rpx 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
 .modal-actions button { margin: 0; line-height: 1.6; &::after { border: 0; } &[disabled] { opacity: .5; } }
 .submit-error { display: block; color: #b84b55; font-size: 24rpx; line-height: 1.6; margin-top: 20rpx; }
-.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #b9bdc4; border-radius: 999rpx; font-size: 28rpx; color: #666b73; }
-.modal-confirm { flex: 1; text-align: center; padding: 20rpx 0; background: linear-gradient(135deg, #17191c, #30343a, #30343a); border-radius: 999rpx; font-size: 28rpx; color: #ffffff; font-weight: bold; }
+.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #aaaaaa; border-radius: 999rpx; font-size: 28rpx; color: #777777; }
+.modal-confirm { flex: 1; text-align: center; padding: 20rpx 0; background: #171717; border-radius: 999rpx; font-size: 28rpx; color: #ffffff; font-weight: bold; }
 </style>

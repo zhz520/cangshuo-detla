@@ -97,4 +97,31 @@ class DatabaseCompatibilityTest {
         jdbc.update("INSERT INTO user_coupon(template_id,user_id,status,claimed_at,expires_at) VALUES(1,7,'AVAILABLE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM user_coupon", Integer.class)).isEqualTo(2);
     }
+
+    @Test
+    void keepsOnlyTheActiveChatSessionUniqueForEachParticipantPair() {
+        JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:compatibility_chat_session;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE chat_session(id BIGINT AUTO_INCREMENT PRIMARY KEY,id1 BIGINT NOT NULL,id2 BIGINT NOT NULL,status VARCHAR(20))");
+        jdbc.execute("CREATE UNIQUE INDEX uk_id1_id2 ON chat_session(id1,id2)");
+        jdbc.update("INSERT INTO chat_session(id1,id2,status) VALUES(1,2,'ACTIVE')");
+        jdbc.update("INSERT INTO chat_session(id1,id2,status) VALUES(3,4,'CLOSED')");
+
+        new DatabaseCompatibility(jdbc).ensure();
+        new DatabaseCompatibility(jdbc).ensure();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='CHAT_SESSION' AND index_name='UK_ID1_ID2'", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes WHERE table_name='CHAT_SESSION' AND index_name='UK_CHAT_SESSION_ACTIVE_PAIR'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT active_pair_slot FROM chat_session WHERE id1=1", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT active_pair_slot FROM chat_session WHERE id1=3", Integer.class)).isNull();
+
+        // These statements deliberately omit the marker, just as the old application does.
+        jdbc.update("INSERT INTO chat_session(id1,id2,status) VALUES(3,4,'ACTIVE')");
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class,
+                () -> jdbc.update("INSERT INTO chat_session(id1,id2,status) VALUES(3,4,'ACTIVE')"));
+        jdbc.update("UPDATE chat_session SET status='CLOSED' WHERE id1=3 AND status='ACTIVE'");
+        jdbc.update("INSERT INTO chat_session(id1,id2,status) VALUES(3,4,'ACTIVE')");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM chat_session WHERE id1=3", Integer.class)).isEqualTo(3);
+    }
 }

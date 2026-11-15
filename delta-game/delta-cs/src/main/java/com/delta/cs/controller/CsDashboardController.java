@@ -9,6 +9,8 @@ import com.delta.order.service.OrderService;
 import com.delta.player.entity.Player;
 import com.delta.player.service.PlayerService;
 import com.delta.common.mapper.StatsMapper;
+import com.delta.common.chat.util.ChatParticipantId;
+import com.delta.common.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,35 +42,36 @@ public class CsDashboardController {
     @GetMapping
     public R<Map<String, Object>> dashboard() {
         Map<String, Object> result = new HashMap<>();
+        Long csId = SecurityUtils.getUserId();
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
 
         // 1. 待指派订单数（PAID状态，未分配打手）
-        long pendingAssign = orderService.count(new LambdaQueryWrapper<Order>()
+        long pendingAssign = orderService.count(scopedOrders(csId)
                 .eq(Order::getStatus, "PAID")
                 .isNull(Order::getPlayerId));
         result.put("pendingAssign", pendingAssign);
 
         // 2. 待处理投诉数（PENDING状态）
-        long pendingComplaints = complaintService.count(new LambdaQueryWrapper<Complaint>()
+        long pendingComplaints = complaintService.count(scopedComplaints(csId)
                 .eq(Complaint::getStatus, "PENDING"));
         result.put("pendingComplaints", pendingComplaints);
 
         // 3. 进行中仲裁数（PROCESSING状态）
-        long processingComplaints = complaintService.count(new LambdaQueryWrapper<Complaint>()
+        long processingComplaints = complaintService.count(scopedComplaints(csId)
                 .eq(Complaint::getStatus, "PROCESSING"));
         result.put("processingComplaints", processingComplaints);
 
         // 3. 今日统计
-        long todayOrders = orderService.count(new LambdaQueryWrapper<Order>()
+        long todayOrders = orderService.count(scopedOrders(csId)
                 .between(Order::getCreatedAt, todayStart, todayEnd));
-        long todayCompleted = orderService.count(new LambdaQueryWrapper<Order>()
+        long todayCompleted = orderService.count(scopedOrders(csId)
                 .eq(Order::getStatus, "COMPLETED")
                 .between(Order::getCompleteTime, todayStart, todayEnd));
-        long todayComplaints = complaintService.count(new LambdaQueryWrapper<Complaint>()
+        long todayComplaints = complaintService.count(scopedComplaints(csId)
                 .between(Complaint::getCreatedAt, todayStart, todayEnd));
         result.put("todayOrders", todayOrders);
-        long validOrders = orderService.count(new LambdaQueryWrapper<Order>()
+        long validOrders = orderService.count(scopedOrders(csId)
                 .between(Order::getCreatedAt, todayStart, todayEnd)
                 .notIn(Order::getStatus, "PENDING_PAYMENT","CANCELLED","REFUNDING","REFUNDED"));
         result.put("validOrders", validOrders);
@@ -78,7 +81,11 @@ public class CsDashboardController {
         // 4b. 今日成交额
         boolean canFinance = staffPermissions.allowed("finance.read");
         if (canFinance) {
-            result.put("todayAmount", statsMapper.sumOrderAmountByDateRange(todayStart, todayEnd));
+            BigDecimal scopedAmount = jdbc.queryForObject(
+                    "SELECT COALESCE(SUM(amount),0) FROM `order` WHERE status NOT IN ('PENDING_PAYMENT','CANCELLED') " +
+                            "AND created_at BETWEEN ? AND ? AND (cs_id=? OR cs_id IS NULL)",
+                    BigDecimal.class, todayStart, todayEnd, csId);
+            result.put("todayAmount", scopedAmount);
             result.put("collectedAmount", result.get("todayAmount"));
         } else {
             result.put("todayAmount", null);
@@ -95,7 +102,13 @@ public class CsDashboardController {
 
         // 4d. 待回复聊天会话数（有未读消息的客服聊天会话）
         try {
-            Long pendingChatSessions = statsMapper.countPendingChatSessions();
+            long encodedCs = ChatParticipantId.encodeCs(csId);
+            Long pendingChatSessions = jdbc.queryForObject(
+                    "SELECT COUNT(DISTINCT cs.id) FROM chat_session cs " +
+                            "JOIN chat_message cm ON cm.session_id=cs.id " +
+                            "WHERE (cs.id1=? OR cs.id2=?) AND cs.status='ACTIVE' " +
+                            "AND cm.is_read=0 AND cm.sender_type!='CS'",
+                    Long.class, encodedCs, encodedCs);
             result.put("pendingChatSessions", pendingChatSessions != null ? pendingChatSessions : 0L);
         } catch (Exception e) {
             result.put("pendingChatSessions", 0L);
@@ -105,7 +118,7 @@ public class CsDashboardController {
         result.put("pendingWithdraws", canFinance ? statsMapper.countPendingWithdraws() : null);
 
         // 6. 进行中订单
-        long inProgress = orderService.count(new LambdaQueryWrapper<Order>()
+        long inProgress = orderService.count(scopedOrders(csId)
                 .eq(Order::getStatus, "IN_PROGRESS"));
         result.put("inProgress", inProgress);
 
@@ -116,12 +129,16 @@ public class CsDashboardController {
         try {
             Number visitors=jdbc.queryForObject("SELECT COUNT(DISTINCT visitor_key) FROM analytics_daily_visitor WHERE visit_date=CURRENT_DATE",Number.class);
             Number activeUsers=jdbc.queryForObject("SELECT COUNT(DISTINCT user_id) FROM analytics_daily_visitor WHERE visit_date=CURRENT_DATE AND user_id IS NOT NULL",Number.class);
-            Number pendingRefunds=jdbc.queryForObject("SELECT COUNT(*) FROM refund_request WHERE status IN ('REQUESTED','CS_REVIEWING','CS_REVIEWED','FAILED')",Number.class);
+            Number pendingRefunds=jdbc.queryForObject("SELECT COUNT(*) FROM refund_request r JOIN `order` o ON o.id=r.order_id " +
+                    "WHERE r.status IN ('REQUESTED','CS_REVIEWING','CS_REVIEWED','FAILED') AND (o.cs_id=? OR o.cs_id IS NULL)",Number.class,csId);
             Number pendingEnrollments=jdbc.queryForObject("SELECT COUNT(*) FROM player WHERE status='PENDING' AND deleted=0",Number.class);
             Number pendingMaterials=jdbc.queryForObject("SELECT COUNT(*) FROM player_homepage_revision WHERE status IN ('PENDING_SYSTEM','PENDING_REVIEW')",Number.class);
             Number pendingIdentities=jdbc.queryForObject("SELECT COUNT(*) FROM identity_verification WHERE status='PENDING'",Number.class);
             Number pendingPrivacy=jdbc.queryForObject("SELECT COUNT(*) FROM privacy_request WHERE status='PENDING'",Number.class);
-            Number pendingFulfillment=jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM order_relay_request WHERE status='PENDING')+(SELECT COUNT(*) FROM player_replace_request WHERE status='PENDING')",Number.class);
+            Number pendingFulfillment=jdbc.queryForObject(
+                    "SELECT (SELECT COUNT(*) FROM order_relay_request rr JOIN `order` o ON o.id=rr.order_id WHERE rr.status='PENDING' AND (o.cs_id=? OR o.cs_id IS NULL))" +
+                            "+(SELECT COUNT(*) FROM player_replace_request pr JOIN `order` o ON o.id=pr.order_id WHERE pr.status='PENDING' AND (o.cs_id=? OR o.cs_id IS NULL))",
+                    Number.class,csId,csId);
             Number onDutyCs=jdbc.queryForObject("SELECT COUNT(*) FROM admin a JOIN staff_shift s ON s.admin_id=a.id WHERE a.deleted=0 AND a.status=1 AND UPPER(a.role)='CS' AND s.online=1",Number.class);
             Number productCount=jdbc.queryForObject("SELECT COUNT(*) FROM product WHERE deleted=0",Number.class);
             Number categoryCount=jdbc.queryForObject("SELECT COUNT(*) FROM category WHERE deleted=0",Number.class);
@@ -151,7 +168,7 @@ public class CsDashboardController {
         }
 
         // 8. 待指派订单列表预览（取前10）
-        List<Order> pendingOrders = orderService.list(new LambdaQueryWrapper<Order>()
+        List<Order> pendingOrders = orderService.list(scopedOrders(csId)
                 .eq(Order::getStatus, "PAID")
                 .isNull(Order::getPlayerId)
                 .orderByAsc(Order::getCreatedAt)
@@ -159,5 +176,15 @@ public class CsDashboardController {
         result.put("pendingOrders", pendingOrders);
 
         return R.ok(result);
+    }
+
+    private LambdaQueryWrapper<Order> scopedOrders(Long csId) {
+        return new LambdaQueryWrapper<Order>()
+                .apply("(cs_id = {0} OR cs_id IS NULL)", csId);
+    }
+
+    private LambdaQueryWrapper<Complaint> scopedComplaints(Long csId) {
+        return new LambdaQueryWrapper<Complaint>()
+                .apply("order_id IN (SELECT id FROM `order` WHERE cs_id = {0} OR cs_id IS NULL)", csId);
     }
 }

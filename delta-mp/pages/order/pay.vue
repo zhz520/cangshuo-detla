@@ -262,18 +262,18 @@ async function handlePay() {
 }
 </script>
 <style lang="scss" scoped>
-.pay-page { padding: 40rpx 24rpx; background: #f7f8f9; min-height: var(--app-page-height, 100vh); }
+.pay-page { padding: 40rpx 24rpx; background: #f7f7f7; min-height: var(--app-page-height, 100vh); }
 .amount-area { text-align: center; padding: 60rpx 0;
-  .label { font-size: 28rpx; color: #666b73; display: block; margin-bottom: 20rpx; }
+  .label { font-size: 28rpx; color: #777777; display: block; margin-bottom: 20rpx; }
   .countdown { font-size: 26rpx; color: #996b30; display: block; margin-top: 16rpx; &.expired { color: #d44955; } }
 }
-.pay-methods { background: #ffffff; border: 1rpx solid #e6e7e9; border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
-.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid #eeeff1; gap: 16rpx;
+.pay-methods { background: #ffffff; border: 1rpx solid #eeeeee; border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
+.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid #eeeeee; gap: 16rpx;
   .method-icon { width: 40rpx; height: 40rpx; flex-shrink: 0; }
-  .method-name { font-size: 28rpx; color: #17191c; flex: 1; }
-  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } }
-  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #b9bdc4; border-radius: 50%; &.checked { border-color: #17191c; background: #17191c; } }
+  .method-name { font-size: 28rpx; color: #111111; flex: 1; }
+  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } }
+  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #aaaaaa; border-radius: 50%; &.checked { border-color: #111111; background: #111111; } }
 }
 .guest-pay-tip { margin: -30rpx 0 30rpx; padding: 18rpx 22rpx; border-radius: 12rpx; background: #fff8e8; color: #725c2d; font-size: 24rpx; line-height: 1.6; }
-.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #e6e7e9; color: #73777e; } }
+.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: #171717; color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #eeeeee; color: #777777; } }
 </style>

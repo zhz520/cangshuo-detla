@@ -15,7 +15,7 @@
       <el-table ref="tableRef" row-key="id" :data="list" v-loading="loading" stripe @selection-change="onSelectionChange">
         <el-table-column v-if="batchAllowed" type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="avatar" label="头像" width="70"><template #default="{ row }"><el-avatar :src="thumbnailUrl(row.avatar,160)" :size="36" /></template></el-table-column>
+        <el-table-column prop="avatar" label="头像" width="70"><template #default="{ row }"><el-avatar :src="thumbnailUrl(row.avatar || '/static/images/delta-default-avatar.png',160)" :size="36" /></template></el-table-column>
         <el-table-column prop="nickname" label="昵称" width="120" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column label="登录密码" width="100"><template #default="{row}"><el-tag :type="row.passwordSet?'success':'info'" size="small">{{ row.passwordSet?'已设置':'待设置' }}</el-tag></template></el-table-column>
@@ -42,7 +42,16 @@
       <el-form label-width="100px">
         <el-form-item label="手机号"><el-input v-model="userForm.phone" maxlength="11" placeholder="11位手机号" /></el-form-item>
         <el-form-item label="昵称"><el-input v-model="userForm.nickname" maxlength="64" placeholder="用户昵称" /></el-form-item>
-        <el-form-item label="头像"><ImageUpload v-model="userForm.avatar" /></el-form-item>
+        <el-form-item label="头像">
+          <div class="avatar-upload">
+            <ImageUpload v-model="userForm.avatar" />
+            <div class="default-avatar-preview">
+              <el-avatar :size="52" :src="userForm.avatar || '/static/images/delta-default-avatar.png'" />
+              <span>{{ userForm.avatar ? '当前头像预览' : '未上传时展示此 DELTA 默认头像' }}</span>
+            </div>
+            <div class="form-tip">建议 1:1 正方形（如 300×300），人物居中；未上传或加载失败时使用 DELTA 程序默认头像。</div>
+          </div>
+        </el-form-item>
         <el-form-item label="登录密码"><el-input v-model="userForm.password" type="password" show-password maxlength="32" autocomplete="new-password" :placeholder="userForm.id?'留空保持原密码，填写则重置':'选填，留空由用户首次验证后设置'" /></el-form-item>
         <el-form-item><span class="password-tip">密码须8～32位，包含字母和数字。修改手机号、密码或状态后，用户需要重新登录。</span></el-form-item>
         <el-form-item label="状态"><el-switch v-model="userForm.status" :active-value="1" :inactive-value="0" active-text="正常" inactive-text="封禁" /></el-form-item>
@@ -291,6 +300,9 @@ onMounted(fetchData)
 .user-header{display:flex;align-items:center;justify-content:space-between}.password-tip{font-size:12px;color:#858992;line-height:1.7}
 .search-form { margin-bottom: 16px; }
 .balance-text { color: #17191c; font-weight: 600; }
+.form-tip { margin-top: 6px; color: #909399; font-size: 12px; line-height: 1.5; }
+.default-avatar-preview { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: #777777; font-size: 12px; }
+.default-avatar-preview .el-avatar { background: #17191c; }
 .balance-info {
   display: flex;
   justify-content: space-between;

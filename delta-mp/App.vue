@@ -97,6 +97,7 @@ onHide(() => { foreground = false; useRemindStore().stopPolling(); useChatStore(
 @import '@/styles/monochrome.scss';
 @import '@/styles/responsive.scss';
 @import '@/styles/experience.scss';
+@import '@/styles/default-2026.scss';
 /* #ifdef H5 */
 @import '@/styles/neumorphism.scss';
 /* #endif */

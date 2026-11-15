@@ -1,0 +1,515 @@
+/* KK storefront default theme. Neumorphism keeps its own scoped data-theme skin. */
+html:root:not([data-theme='neumorphism']) {
+  --store-bg: #f7f7f7;
+  --store-surface: #ffffff;
+  --store-soft: #f7f8f9;
+  --store-text: #111111;
+  --store-regular: #777777;
+  --store-muted: #aaaaaa;
+  --store-line: #eeeeee;
+  --store-primary: #171717;
+  --store-radius: 24rpx;
+  --store-shadow: none;
+  --store-title-size: 40rpx;
+  --store-item-size: 27rpx;
+  --store-meta-size: 23rpx;
+  --store-icon-size: 42rpx;
+}
+
+html:root:not([data-theme='neumorphism']) body,
+html:root:not([data-theme='neumorphism']) uni-app,
+html:root:not([data-theme='neumorphism']) uni-page,
+html:root:not([data-theme='neumorphism']) uni-page-wrapper,
+html:root:not([data-theme='neumorphism']) uni-page-body,
+html:root:not([data-theme='neumorphism']) page {
+  background: var(--store-bg) !important;
+  color: var(--store-text);
+}
+
+html:root:not([data-theme='neumorphism']) .tab-page,
+html:root:not([data-theme='neumorphism']) .home-page,
+html:root:not([data-theme='neumorphism']) .category-page,
+html:root:not([data-theme='neumorphism']) .directory-page,
+html:root:not([data-theme='neumorphism']) .chat-list,
+html:root:not([data-theme='neumorphism']) .message-page,
+html:root:not([data-theme='neumorphism']) .mine-page,
+html:root:not([data-theme='neumorphism']) .hall-page,
+html:root:not([data-theme='neumorphism']) .player-home,
+html:root:not([data-theme='neumorphism']) .player-mine,
+html:root:not([data-theme='neumorphism']) .player-order-list,
+html:root:not([data-theme='neumorphism']) .earnings-page,
+html:root:not([data-theme='neumorphism']) .withdraw-page {
+  background: var(--store-bg) !important;
+}
+
+html:root:not([data-theme='neumorphism']) .screen-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  padding: 0;
+  border: 0;
+  flex: 0 0 64rpx;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+html:root:not([data-theme='neumorphism']) .screen-icon-btn:active {
+  background: rgba(21, 23, 26, 0.06);
+}
+html:root:not([data-theme='neumorphism']) .screen-icon-btn image {
+  width: 42rpx;
+  height: 42rpx;
+  display: block;
+  object-fit: contain;
+}
+html:root:not([data-theme='neumorphism']) .screen-dot,
+html:root:not([data-theme='neumorphism']) .screen-badge {
+  position: absolute;
+  top: 5rpx;
+  right: 4rpx;
+  min-width: 14rpx;
+  height: 14rpx;
+  border: 3rpx solid var(--store-bg);
+  border-radius: 999rpx;
+  background: #e24d4d;
+  box-sizing: content-box;
+}
+html:root:not([data-theme='neumorphism']) .screen-badge {
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 5rpx;
+  color: #fff;
+  font-size: 17rpx;
+  font-weight: 750;
+  line-height: 28rpx;
+  text-align: center;
+}
+
+html:root:not([data-theme='neumorphism']) uni-page-head .uni-page-head {
+  background: #ffffff !important;
+  border-bottom: 1rpx solid var(--store-line) !important;
+  box-shadow: none !important;
+}
+html:root:not([data-theme='neumorphism']) uni-page-head .uni-page-head__title {
+  color: var(--store-text) !important;
+  font-size: 34rpx !important;
+  font-weight: 800 !important;
+}
+html:root:not([data-theme='neumorphism']) uni-page-head .uni-page-head-btn {
+  color: var(--store-text) !important;
+}
+
+html:root:not([data-theme='neumorphism']) .page-title,
+html:root:not([data-theme='neumorphism']) .section-title,
+html:root:not([data-theme='neumorphism']) .more-heading,
+html:root:not([data-theme='neumorphism']) .card-title,
+html:root:not([data-theme='neumorphism']) .panel-title {
+  color: var(--store-text) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+html:root:not([data-theme='neumorphism']) .page-sub,
+html:root:not([data-theme='neumorphism']) .more-desc,
+html:root:not([data-theme='neumorphism']) .muted,
+html:root:not([data-theme='neumorphism']) .hint,
+html:root:not([data-theme='neumorphism']) .loading-tip,
+html:root:not([data-theme='neumorphism']) .empty-tip {
+  color: var(--store-muted) !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(
+  .card,
+  .info-card,
+  .form-card,
+  .order-card,
+  .order-card-wrap,
+  .product-card,
+  .showcase-card,
+  .mine-card,
+  .menu-item,
+  .list-item,
+  .listbox,
+  .review-card,
+  .coupon-card,
+  .wallet-card,
+  .stat-card,
+  .filter-card,
+  .detail-card,
+  .profile-card,
+  .service-panel,
+  .more-card,
+  .settings-card,
+  .form-field,
+  .field-card
+) {
+  background: var(--store-surface) !important;
+  border: 0 !important;
+  border-radius: var(--store-radius) !important;
+  box-shadow: var(--store-shadow) !important;
+}
+
+html:root:not([data-theme='neumorphism']) .product-card {
+  overflow: hidden !important;
+}
+html:root:not([data-theme='neumorphism']) .product-card .info .name {
+  color: var(--store-text) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.product-card .subtitle, .product-subtitle) {
+  color: var(--store-regular) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.price, .product-price, .detail-price, .order-amount) {
+  color: var(--store-text) !important;
+  font-weight: 850 !important;
+}
+
+html:root:not([data-theme='neumorphism']) .balance-card {
+  background: var(--store-primary) !important;
+  border: 0 !important;
+  border-radius: 26rpx !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(
+  .btn-primary,
+  .submit-btn,
+  .login-btn,
+  .btn-buy,
+  .buy-btn,
+  .pay-btn,
+  .save-btn,
+  .primary-btn,
+  .confirm-btn,
+  .accept-btn,
+  .btn-accept,
+  .review-action,
+  .member-action,
+  .action.primary,
+  .btn.primary
+) {
+  background: var(--store-primary) !important;
+  border: 0 !important;
+  border-radius: 16rpx !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+html:root:not([data-theme='neumorphism']) :is(
+  .btn-secondary,
+  .secondary-btn,
+  .ghost-btn,
+  .action.secondary,
+  .btn.secondary
+) {
+  background: #ffffff !important;
+  border: 1rpx solid var(--store-line) !important;
+  border-radius: 16rpx !important;
+  color: var(--store-text) !important;
+  font-weight: 700 !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(
+  .btn,
+  .btn-pay,
+  .btn-submit,
+  .btn-ghost,
+  .btn-warn,
+  .pay-button,
+  .submit-btn,
+  .review-action,
+  .guest-login-button,
+  .modal-btn,
+  .login-btn
+) {
+  border-radius: 16rpx !important;
+}
+html:root:not([data-theme='neumorphism']) button:not(.plain):not(.ghost):not(.secondary):not(.danger):not(.text) {
+  background: var(--store-primary) !important;
+  border: 0 !important;
+  border-radius: 16rpx !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+html:root:not([data-theme='neumorphism']) button[disabled],
+html:root:not([data-theme='neumorphism']) .disabled {
+  opacity: 0.48 !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(input, textarea, uni-input, uni-textarea) {
+  color: var(--store-text) !important;
+  caret-color: var(--store-primary);
+}
+html:root:not([data-theme='neumorphism']) :is(.form-input, .field-input, .input-box, .textarea-box) {
+  background: var(--store-soft) !important;
+  border: 1rpx solid transparent !important;
+  border-radius: 18rpx !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.form-input, .field-input, .input-box):focus-within {
+  border-color: var(--store-text) !important;
+}
+
+html:root:not([data-theme='neumorphism']) .search-bar,
+html:root:not([data-theme='neumorphism']) .search-inner {
+  color: var(--store-muted) !important;
+}
+html:root:not([data-theme='neumorphism']) .search-inner {
+  background: #ffffff !important;
+  border: 0 !important;
+  border-radius: 999rpx !important;
+  box-shadow: none !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(.uni-modal, .uni-actionsheet) {
+  border-radius: 28rpx !important;
+  background: #ffffff !important;
+  box-shadow: 0 28rpx 80rpx rgba(10, 12, 15, 0.2) !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__hd {
+  padding: 36rpx 32rpx 12rpx !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__title {
+  color: var(--store-text) !important;
+  font-size: 34rpx !important;
+  font-weight: 800 !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__bd {
+  padding: 12rpx 32rpx 30rpx !important;
+  color: var(--store-regular) !important;
+  font-size: 27rpx !important;
+  line-height: 1.65 !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__ft {
+  border-top: 1rpx solid var(--store-line) !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__btn {
+  height: 94rpx !important;
+  color: var(--store-regular) !important;
+  font-size: 29rpx !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-modal__btn_primary {
+  color: var(--store-text) !important;
+  font-weight: 800 !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-actionsheet__cell {
+  color: var(--store-text) !important;
+  font-size: 29rpx !important;
+}
+html:root:not([data-theme='neumorphism']) .uni-toast {
+  border-radius: 18rpx !important;
+  background: rgba(21, 23, 26, 0.92) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.uni-loading, .uni-loading__spinner) {
+  color: var(--store-text) !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(
+  .popup-content,
+  .notice-list-popup,
+  .sort-sheet,
+  .sheet-panel,
+  .action-sheet-panel,
+  .modal-panel,
+  .dialog-panel,
+  .theme-preview-panel
+) {
+  background: #ffffff !important;
+  border-radius: 24rpx !important;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(
+  .popup-header,
+  .notice-list-header,
+  .sheet-header
+) {
+  border-bottom: 1rpx solid var(--store-line) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.popup-title, .notice-list-title, .sheet-title) {
+  color: var(--store-text) !important;
+  font-weight: 800 !important;
+}
+html:root:not([data-theme='neumorphism']) .popup-btn {
+  background: var(--store-primary) !important;
+  border-radius: 999rpx !important;
+  color: #fff !important;
+}
+
+html:root:not([data-theme='neumorphism']) .custom-tabbar {
+  background: #ffffff !important;
+  border-top: 1rpx solid #eeeeee !important;
+  box-shadow: none;
+  backdrop-filter: none !important;
+}
+html:root:not([data-theme='neumorphism']) .custom-tabbar .tabbar-text {
+  color: #8a8f96 !important;
+  font-size: 19rpx !important;
+  font-weight: 600;
+}
+html:root:not([data-theme='neumorphism']) .custom-tabbar .tabbar-item.active .tabbar-text {
+  color: var(--store-text) !important;
+  font-weight: 800;
+}
+html:root:not([data-theme='neumorphism']) .custom-tabbar .icon-img {
+  filter: none;
+}
+
+html:root:not([data-theme='neumorphism']) :is(.empty-state, .page-state, .empty-content) {
+  color: var(--store-muted) !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(.badge, .status-badge, .unread-badge) {
+  border-radius: 999rpx !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(.wallet-page, .earnings-page, .withdraw-page, .account-page) .balance-card,
+html:root:not([data-theme='neumorphism']) .wallet-page .wallet-card {
+  border-radius: 28rpx !important;
+}
+
+html:root:not([data-theme='neumorphism']) .login-container,
+html:root:not([data-theme='neumorphism']) .auth-page {
+  background: var(--store-bg) !important;
+}
+html:root:not([data-theme='neumorphism']) .login-card {
+  background: #fff !important;
+  border: 1rpx solid var(--store-line) !important;
+  border-radius: 28rpx !important;
+  box-shadow: var(--store-shadow) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:root:not([data-theme='neumorphism']) * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* One typography and icon scale across the default theme. */
+html:root:not([data-theme='neumorphism']) .screen-title { font-size: var(--store-title-size) !important; }
+html:root:not([data-theme='neumorphism']) .screen-subtitle { font-size: 21rpx !important; }
+html:root:not([data-theme='neumorphism']) :is(.section-title, .panel-title, .more-heading, .page-title) {
+  font-size: 28rpx !important;
+  line-height: 1.35 !important;
+}
+html:root:not([data-theme='neumorphism']) :is(
+  .product-card .info .name,
+  .category-page .product-name,
+  .player-list-card .name,
+  .session-item .name,
+  .notice-card .notice-title,
+  .msg-title
+) {
+  font-size: var(--store-item-size) !important;
+  line-height: 1.35 !important;
+  font-weight: 750 !important;
+}
+html:root:not([data-theme='neumorphism']) :is(
+  .product-card .subtitle,
+  .category-page .product-subtitle,
+  .player-list-card .metrics,
+  .session-item .last-msg,
+  .notice-desc,
+  .msg-content,
+  .profile-meta,
+  .balance-label,
+  .player-desc
+) {
+  font-size: var(--store-meta-size) !important;
+  line-height: 1.45 !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.price, .product-price, .detail-price, .order-amount) {
+  font-size: 30rpx !important;
+  line-height: 1.1 !important;
+}
+html:root:not([data-theme='neumorphism']) .profile-name { font-size: 40rpx !important; }
+html:root:not([data-theme='neumorphism']) .balance-amount { font-size: 56rpx !important; }
+html:root:not([data-theme='neumorphism']) :is(.quick-item, .order-shortcut, .section-more) {
+  font-size: var(--store-meta-size) !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.recommend-tab, .level-item, .child-tag) {
+  font-size: 21rpx !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.btn, .btn-primary, .submit-btn, .btn-buy, .btn-pay, .pay-button, .login-btn, .recharge-btn) {
+  font-size: 24rpx !important;
+}
+
+html:root:not([data-theme='neumorphism']) .screen-icon-btn image {
+  width: var(--store-icon-size) !important;
+  height: var(--store-icon-size) !important;
+}
+html:root:not([data-theme='neumorphism']) .category-icon-wrap {
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html:root:not([data-theme='neumorphism']) .category-icon { max-width: 80rpx !important; max-height: 80rpx !important; }
+html:root:not([data-theme='neumorphism']) .menu-icon { width: 44rpx !important; height: 44rpx !important; }
+html:root:not([data-theme='neumorphism']) .quick-icon { width: 46rpx !important; height: 46rpx !important; }
+html:root:not([data-theme='neumorphism']) .shortcut-icon {
+  width: 44rpx !important;
+  height: 44rpx !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html:root:not([data-theme='neumorphism']) .shortcut-icon image { width: 46rpx !important; height: 46rpx !important; }
+html:root:not([data-theme='neumorphism']) .notice-icon image { width: 40rpx !important; height: 40rpx !important; }
+html:root:not([data-theme='neumorphism']) .custom-tabbar .icon-img { width: 48rpx !important; height: 48rpx !important; }
+html:root:not([data-theme='neumorphism']) :is(.go-arrow, .row-arrow) {
+  width: 40rpx !important;
+  height: 40rpx !important;
+}
+html:root:not([data-theme='neumorphism']) :is(.go-arrow, .row-arrow) image { width: 22rpx !important; height: 22rpx !important; }
+html:root:not([data-theme='neumorphism']) .btn-chat .btn-icon { width: 34rpx !important; height: 34rpx !important; }
+
+/* A focus ring is drawn on the surrounding field; the native input must not paint
+   a second rectangle that gets clipped into two vertical lines inside rounded boxes. */
+html:root:not([data-theme='neumorphism']) :is(input, textarea, .uni-input-input, .uni-textarea-textarea) {
+  outline: none !important;
+  box-shadow: none;
+  border: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+html:root:not([data-theme='neumorphism']) :is(.search-box, .search-bar, .search-inner, .form-field, .field-card):focus-within {
+  box-shadow: 0 0 0 2rpx rgba(17, 17, 17, 0.08);
+}
+html:root:not([data-theme='neumorphism']) .custom-tabbar :is(.tabbar-text) {
+  font-size: 22rpx !important;
+}
+
+/* Cards are separated by surface and spacing; no decorative outline frames. */
+html:root:not([data-theme='neumorphism']) :is(
+  .task,
+  .msg-item,
+  .product-row,
+  .library-card,
+  .profile-tabs,
+  .section-card,
+  .lookup-card,
+  .pay-methods,
+  .rating-area,
+  .overview-shortcuts,
+  .workbench-entry,
+  .state-skeleton,
+  .qr-stage,
+  .player-list-card,
+  .session-item,
+  .notice-card,
+  .panel,
+  .menu-panel,
+  .orders-panel,
+  .showcase-card
+) {
+  border: 0 !important;
+}
+
+html:root:not([data-theme='neumorphism']) :is(
+  .form-item input,
+  .form-field input,
+  .form-row input,
+  .lookup-card input
+) {
+  border: 0 !important;
+  background: #f5f6f7 !important;
+}

@@ -1,7 +1,7 @@
 <template>
   <view class="player-overview">
     <view class="overview-header">
-      <AppImage class="overview-avatar" :src="profile?.avatar || '/static/images/default-avatar.png'" :width="160" eager />
+      <AppImage class="overview-avatar" :src="profile?.avatar || '/static/images/delta-default-avatar.png'" :width="160" eager />
       <view class="overview-identity"><text class="overview-eyebrow">接单员中心</text><text class="overview-name">{{ profile?.nickname || '接单员' }}</text></view>
       <text class="overview-tag">{{ profile?.levelName || '我的工作台' }}</text>
     </view>
@@ -32,9 +32,9 @@ function money(value) { const number = Number(value); return Number.isFinite(num
 .overview-header { display: flex; align-items: center; gap: 20rpx; padding: 8rpx 0 32rpx; }
 .overview-avatar { width: 104rpx; height: 104rpx; border-radius: 32rpx; flex-shrink: 0; border: 4rpx solid #fff; }
 .overview-identity { display: flex; flex-direction: column; gap: 6rpx; min-width: 0; flex: 1; }
-.overview-eyebrow { font-size: 22rpx; color: #73777e; letter-spacing: 2rpx; }
+.overview-eyebrow { font-size: 22rpx; color: #777777; letter-spacing: 2rpx; }
 .overview-name { font-size: 36rpx; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.overview-tag { font-size: 21rpx; color: #666b73; background: #e9ecef; padding: 9rpx 15rpx; border-radius: 999rpx; max-width: 190rpx; }
+.overview-tag { font-size: 21rpx; color: #777777; background: #e9ecef; padding: 9rpx 15rpx; border-radius: 999rpx; max-width: 190rpx; }
 .overview-income { background: #202328; color: #fff; border-radius: 28rpx; padding: 30rpx; box-shadow: 0 12rpx 28rpx rgba(23,25,28,.09); }
 .income-heading { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #cbd0d7; font-size: 24rpx; }
 .income-link { font-size: 22rpx; }

@@ -336,7 +336,7 @@ public class OrderRefundWorkflowService {
                 this::map, orderId);
     }
 
-    public Page<RefundRequest> page(int pageNum, int pageSize, String status, String orderNo) {
+    public Page<RefundRequest> page(int pageNum, int pageSize, String status, String orderNo, Long csId) {
         int safePage = Math.max(1, pageNum);
         int safeSize = Math.max(1, Math.min(100, pageSize));
         StringBuilder where = new StringBuilder(" WHERE 1=1");
@@ -348,6 +348,10 @@ public class OrderRefundWorkflowService {
         if (orderNo != null && !orderNo.isBlank()) {
             where.append(" AND order_no LIKE ?");
             args.add("%" + orderNo.trim().substring(0, Math.min(64, orderNo.trim().length())) + "%");
+        }
+        if (csId != null) {
+            where.append(" AND order_id IN (SELECT id FROM `order` WHERE cs_id=? OR cs_id IS NULL)");
+            args.add(csId);
         }
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM refund_request" + where, Long.class, args.toArray());
         args.add(safeSize);

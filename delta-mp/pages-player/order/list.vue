@@ -48,9 +48,9 @@ onPullDownRefresh(async () => {
 </script>
 <style lang="scss" scoped>
 .player-order-list { width: 100%; overflow: hidden; box-sizing: border-box; background: #ffffff; position: relative; }
-.tabs { background: #f4f5f6; border-bottom:1rpx solid #f4f5f6; white-space:nowrap; }
+.tabs { background: #f7f7f7; border-bottom:1rpx solid #f7f7f7; white-space:nowrap; }
 .tabs-inner { display:inline-flex; padding:0 12rpx; }
-.tab { padding:24rpx 24rpx; font-size:26rpx; color: #666b73; flex-shrink:0; &.active { color: #17191c; border-bottom:4rpx solid rgba(23, 25, 28, 0.5); } }
+.tab { padding:24rpx 24rpx; font-size:26rpx; color: #777777; flex-shrink:0; &.active { color: #111111; border-bottom:4rpx solid rgba(23, 25, 28, 0.5); } }
 .list { height: calc(var(--app-page-height, 100vh) - 190rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
 </style>

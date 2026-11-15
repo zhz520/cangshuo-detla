@@ -101,14 +101,14 @@ onUnmounted(() => clearInterval(timer))
 </script>
 
 <style lang="scss" scoped>
-.bind-page { min-height: var(--app-page-height, 100vh); padding: 72rpx 52rpx; background: #f7f8f9; box-sizing: border-box; }
-.title { display: block; font-size: 40rpx; font-weight: 700; color: #17191c; }
-.hint { display: block; margin: 16rpx 0 38rpx; color: #73777e; line-height: 1.7; font-size: 25rpx; }
+.bind-page { min-height: var(--app-page-height, 100vh); padding: 72rpx 52rpx; background: #f7f7f7; box-sizing: border-box; }
+.title { display: block; font-size: 40rpx; font-weight: 700; color: #111111; }
+.hint { display: block; margin: 16rpx 0 38rpx; color: #777777; line-height: 1.7; font-size: 25rpx; }
 .input { width: 100%; height: 84rpx; margin-bottom: 22rpx; padding: 0 24rpx; border-radius: 12rpx; background: #fff; box-sizing: border-box; font-size: 27rpx; }
 .row { display: flex; align-items: center; gap: 12rpx; margin-bottom: 22rpx; }
 .row .input { flex: 1; min-width: 0; margin-bottom: 0; }
 .captcha { width: 180rpx; height: 84rpx; border-radius: 12rpx; background: #fff; }
-.send { width: 190rpx; height: 84rpx; line-height: 84rpx; padding: 0; border-radius: 12rpx; background: #eceef0; color: #17191c; font-size: 24rpx; }
-.primary { margin-top: 22rpx; height: 88rpx; line-height: 88rpx; text-align: center; border-radius: 12rpx; background: #17191c; color: #fff; font-size: 28rpx; }
-.skip { padding: 28rpx; text-align: center; color: #73777e; font-size: 25rpx; }
+.send { width: 190rpx; height: 84rpx; line-height: 84rpx; padding: 0; border-radius: 12rpx; background: #eceef0; color: #111111; font-size: 24rpx; }
+.primary { margin-top: 22rpx; height: 88rpx; line-height: 88rpx; text-align: center; border-radius: 12rpx; background: #111111; color: #fff; font-size: 28rpx; }
+.skip { padding: 28rpx; text-align: center; color: #777777; font-size: 25rpx; }
 </style>

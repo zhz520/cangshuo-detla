@@ -43,11 +43,19 @@ public class CategoryController {
     }
 
     @PostMapping
-    public R<Void> add(@RequestBody Category cat) { categoryService.save(cat); return R.ok(); }
+    public R<Void> add(@RequestBody Category cat) { normalize(cat); categoryService.save(cat); return R.ok(); }
 
     @PutMapping
-    public R<Void> update(@RequestBody Category cat) { categoryService.updateById(cat); return R.ok(); }
+    public R<Void> update(@RequestBody Category cat) { normalize(cat); categoryService.updateById(cat); return R.ok(); }
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) { categoryService.removeById(id); return R.ok(); }
+
+    private void normalize(Category cat) {
+        int size = cat.getIconSize() == null ? 56 : cat.getIconSize();
+        cat.setIconSize(Math.max(40, Math.min(80, size)));
+        String icon = cat.getIcon() == null ? "" : cat.getIcon().trim();
+        if (icon.length() > 500) throw new com.delta.common.exception.BusinessException(400, "分类图标地址过长");
+        cat.setIcon(icon);
+    }
 }

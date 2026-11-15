@@ -177,7 +177,7 @@ onUnmounted(() => stopParticles())
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 50% 20%, #ffffff 0%, #f5f6f7 62%, #eceef0 100%);
+  background: radial-gradient(ellipse at 50% 20%, #ffffff 0%, #f7f7f7 62%, #eceef0 100%);
   position: relative;
   overflow: auto;
 }
@@ -200,7 +200,7 @@ onUnmounted(() => stopParticles())
   flex-shrink: 0;
   padding: 44px 40px;
   background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #e6e7e9;
+  border: 1px solid #eeeeee;
   border-radius: 16px;
   box-shadow: 0 16px 56px rgba(23, 25, 28, 0.06);
   backdrop-filter: blur(12px);
@@ -209,19 +209,19 @@ onUnmounted(() => stopParticles())
   text-align: center;
   font-size: 26px;
   font-weight: 800;
-  color: #17191c;
+  color: #111111;
   margin-bottom: 4px;
   letter-spacing: 2px;
 }
 .login-subtitle {
   text-align: center;
-  color: #73777e;
+  color: #777777;
   margin-bottom: 32px;
   font-size: 14px;
 }
 .login-btn {
   width: 100%;
-  background: #17191c;
+  background: #111111;
   border: none;
   color: #ffffff;
   font-weight: bold;
@@ -240,7 +240,7 @@ onUnmounted(() => stopParticles())
   text-decoration: none;
 }
 .login-switch a:hover {
-  color: #17191c;
+  color: #111111;
   text-decoration: underline;
 }
 .captcha-row {
@@ -253,10 +253,10 @@ onUnmounted(() => stopParticles())
   height: 40px;
   padding: 0;
   overflow: hidden;
-  border: 1px solid #e6e7e9;
+  border: 1px solid #eeeeee;
   border-radius: 8px;
-  background: #f5f6f8;
-  color: #73777e;
+  background: #f7f7f7;
+  color: #777777;
   font-size: 12px;
   cursor: pointer;
   img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -264,16 +264,16 @@ onUnmounted(() => stopParticles())
 }
 :deep(.el-input__wrapper) {
   background: #fafafb;
-  border: 1px solid #e6e7e9;
+  border: 1px solid #eeeeee;
   box-shadow: none !important;
   &:hover { border-color: #b9bdc4; }
-  &.is-focus { border-color: #17191c; }
+  &.is-focus { border-color: #111111; }
 }
 :deep(.el-input__inner) {
-  color: #17191c;
-  &::placeholder { color: #73777e; }
+  color: #111111;
+  &::placeholder { color: #777777; }
 }
-:deep(.el-input__prefix .el-icon) { color: #73777e; }
+:deep(.el-input__prefix .el-icon) { color: #777777; }
 :deep(.el-form-item__error) { color: #c94f59; }
 @media (max-width: 480px) {
   .login-box { padding: 28px 22px; }

@@ -11,17 +11,6 @@
 
     <LoadFeedback :loading="loading" :error="error" label="运营分析" @retry="refresh" />
 
-    <div v-if="analytics" class="metric-grid">
-      <article v-for="card in metricCards" :key="card.key" class="metric-card">
-        <span class="metric-kicker">{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-        <div class="metric-foot">
-          <span>昨日 {{ card.previous }}</span>
-          <b :class="comparisonClass(card.comparison)">{{ comparisonText(card.comparison) }}</b>
-        </div>
-      </article>
-    </div>
-
     <div v-if="analytics" class="presence-row">
       <button type="button" class="presence-card" @click="openPlayers('ONLINE')">
         <span>在线打手</span><strong>{{ presence.onlinePlayers }}</strong><small>查看具体打手 ›</small>

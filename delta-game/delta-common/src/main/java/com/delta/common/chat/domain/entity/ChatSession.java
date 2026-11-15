@@ -20,6 +20,9 @@ public class ChatSession extends BaseEntity {
     private Long id2;        // 参与者2编码ID(较大)
     private String status;   // ACTIVE/CLOSED
     private LocalDateTime lastMessageAt;
+    private Integer rating;
+    private String ratingComment;
+    private LocalDateTime ratedAt;
 
     /** 对方编码ID（非DB字段，列表展示用） */
     @TableField(exist = false)
@@ -36,4 +39,7 @@ public class ChatSession extends BaseEntity {
     /** 未读消息数（非DB字段） */
     @TableField(exist = false)
     private Integer unreadCount;
+    /** 对方身份 USER/PLAYER/CS（非DB字段） */
+    @TableField(exist = false)
+    private String targetType;
 }

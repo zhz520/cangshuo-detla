@@ -10,7 +10,7 @@
       <PageState :loading="loading && !rows.length" :error="error" :empty="loaded && !rows.length" :empty-text="activeTab === 'favorites' ? '还没有收藏商品' : '还没有关注打手'" @retry="load">
         <template v-if="activeTab === 'favorites'">
           <view v-for="item in rows" :key="item.id" class="library-card" @click="openFavorite(item)">
-            <AppImage class="library-cover" :width="200" :src="item.coverImage || '/static/images/default-avatar.png'" mode="aspectFill" />
+            <AppImage class="library-cover" :width="200" :src="item.coverImage || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
             <view class="library-info">
               <text class="library-name">{{ item.name }}</text>
               <text v-if="item.subtitle" class="library-sub">{{ item.subtitle }}</text>
@@ -21,7 +21,7 @@
         </template>
         <template v-else>
           <view v-for="item in rows" :key="item.id" class="library-card" @click="openPlayer(item)">
-            <AppImage class="library-cover round" :width="160" :src="item.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+            <AppImage class="library-cover round" :width="160" :src="item.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
             <view class="library-info">
               <view class="library-title-row"><text class="library-name">{{ item.nickname || '打手' }}</text><text class="online-dot" :class="{ online: item.isOnline === 1 }">{{ item.isOnline === 1 ? '在线' : '离线' }}</text></view>
               <text class="library-sub">{{ item.levelName || ('Lv.' + (item.level || 1)) }} · 完成 {{ item.orderCount || 0 }} 单</text>
@@ -124,19 +124,19 @@ onShow(() => { if (!activeRequest) load() })
 .library-page { min-height: var(--app-page-height, 100vh); background: #f7f8fa; }
 .library-head { padding: 20rpx 24rpx 12rpx; background: #fff; }
 .library-tabs { display: flex; gap: 12rpx; padding: 6rpx; background: #f3f5f7; border-radius: 14rpx; }
-.library-tab { flex: 1; padding: 18rpx 0; border-radius: 10rpx; text-align: center; font-size: 27rpx; color: #73777e; }
-.library-tab.active { background: #17191c; color: #fff; font-weight: 700; }
+.library-tab { flex: 1; padding: 18rpx 0; border-radius: 10rpx; text-align: center; font-size: 27rpx; color: #777777; }
+.library-tab.active { background: #111111; color: #fff; font-weight: 700; }
 .library-list { height: calc(var(--app-page-height, 100vh) - 104rpx); box-sizing: border-box; padding: 20rpx 24rpx; }
 .library-card { display: flex; align-items: center; gap: 20rpx; padding: 22rpx; margin-bottom: 18rpx; border: 1rpx solid #edf0f2; border-radius: 18rpx; background: #fff; }
-.library-cover { width: 128rpx; height: 128rpx; border-radius: 14rpx; flex: 0 0 auto; background: #f4f5f6; }
+.library-cover { width: 128rpx; height: 128rpx; border-radius: 14rpx; flex: 0 0 auto; background: #f7f7f7; }
 .library-cover.round { width: 108rpx; height: 108rpx; border-radius: 50%; }
 .library-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .library-title-row { display: flex; align-items: center; gap: 12rpx; }
-.library-name { font-size: 29rpx; font-weight: 700; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-name { font-size: 29rpx; font-weight: 700; color: #111111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library-sub { font-size: 23rpx; color: #7b879a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library-sub.intro { max-width: 100%; }
 .library-meta { display: flex; align-items: center; gap: 16rpx; }
-.library-price { font-size: 28rpx; color: #17191c; font-weight: 700; }
+.library-price { font-size: 28rpx; color: #111111; font-weight: 700; }
 .library-status { font-size: 21rpx; color: #7b879a; }
 .online-dot { font-size: 20rpx; color: #8b919b; }
 .online-dot.online { color: #347a5b; }

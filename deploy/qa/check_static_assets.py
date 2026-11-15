@@ -24,7 +24,7 @@ def references(root):
             continue
         for match in REFERENCE.findall(text):
             ref = urllib.parse.unquote(match).split('?', 1)[0].split('#', 1)[0].lstrip('/')
-            if not ref or ref.endswith('.map') or '${' in ref or '..' in ref.split('/'):
+            if not ref or ref.endswith('/') or ref.endswith('.map') or '${' in ref or '..' in ref.split('/'):
                 continue
             found.add(ref)
     return found

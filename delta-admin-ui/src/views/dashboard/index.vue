@@ -6,14 +6,12 @@
       <h2 class="dashboard-title">{{ isAdmin ? '管理员仪表盘' : '客服工作台' }}</h2>
       <el-button :loading="loading" @click="refreshOverview">刷新概览</el-button>
     </div>
-    <WorkbenchCard />
     <LoadFeedback :loading="loading" :error="dashboardError" label="概览" @retry="fetchDashboard" />
-    <AnalyticsPanel v-if="analyticsAllowed" />
     <!-- ==================== 管理员仪表盘 ==================== -->
     <template v-if="isAdmin">
 
       <!-- 今日核心数据 -->
-      <div class="section-label">今日数据</div>
+      <div class="section-label">今日概览</div>
       <el-row :gutter="16">
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
@@ -63,81 +61,7 @@
         </el-col>
       </el-row>
 
-      <!-- 累计数据 -->
-      <div class="section-label">累计数据</div>
-      <el-row :gutter="16">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.totalUsers ?? '-' }}</div>
-              <div class="stat-label">总用户数</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.totalPlayers ?? '-' }}</div>
-              <div class="stat-label">总打手数</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.totalOrders ?? '-' }}</div>
-              <div class="stat-label">总订单数</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">¥{{ formatAmount(stats.totalAmount) }}</div>
-              <div class="stat-label">总成交额</div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 近7天订单趋势 + 订单状态分布 -->
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="14">
-          <el-card shadow="hover">
-            <template #header><span>近7天订单趋势</span></template>
-            <el-table :data="stats.orderTrend || []" stripe size="small">
-              <el-table-column prop="date" label="日期" width="120" />
-              <el-table-column prop="orders" label="订单数" width="100" />
-              <el-table-column label="成交额">
-                <template #default="{ row }">¥{{ formatAmount(row.amount) }}</template>
-              </el-table-column>
-              <el-table-column label="趋势" width="200">
-                <template #default="{ row }">
-                  <div class="bar-wrapper">
-                    <div class="bar" :style="{ width: barWidth(row.orders) }"></div>
-                  </div>
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-        <el-col :span="10">
-          <el-card shadow="hover">
-            <template #header><span>订单状态分布</span></template>
-            <el-table :data="stats.statusDistribution || []" stripe size="small">
-              <el-table-column label="状态">
-                <template #default="{ row }">
-                  <el-tag :type="orderStatusType(row.status)" size="small">{{ orderStatusLabel(row.status) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="count" label="数量" width="80" />
-              <el-table-column label="占比" width="100">
-                <template #default="{ row }">{{ statusPercent(row.count) }}%</template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-      </el-row>
+      <AnalyticsPanel v-if="analyticsAllowed" class="dashboard-analytics" />
 
       <!-- 用户统计 + 打手统计 -->
       <el-row v-if="statisticsAllowed" :gutter="16" style="margin-top: 16px">
@@ -163,11 +87,7 @@
           <el-card shadow="hover" :aria-busy="playerLoading">
             <template #header><span>打手统计</span></template>
             <LoadFeedback :loading="playerLoading" :error="playerError" label="打手统计" @retry="loadPlayerStats" />
-            <el-descriptions :column="isNarrow ? 1 : 2" border size="small">
-              <el-descriptions-item label="总打手数">{{ playerStats.totalPlayers ?? '-' }}</el-descriptions-item>
-              <el-descriptions-item label="活跃打手">{{ playerStats.activePlayers ?? '-' }}</el-descriptions-item>
-            </el-descriptions>
-            <div style="margin-top:12px;font-weight:600;font-size:13px">评分分布</div>
+            <div style="font-weight:600;font-size:13px">评分分布</div>
             <el-table :data="playerStats.ratingDistribution || []" stripe size="small" style="margin-top:8px">
               <el-table-column prop="rating_level" label="评分" width="80">
                 <template #default="{ row }">{{ row.rating_level }}★</template>
@@ -231,43 +151,6 @@
         </el-col>
       </el-row>
 
-      <!-- 概览数据 -->
-      <div class="section-label">平台概览</div>
-      <el-row :gutter="16">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">¥{{ formatAmount(stats.todayAmount) }}</div>
-              <div class="stat-label">今日成交额</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value text-warning">{{ stats.pendingWithdraws ?? '-' }}</div>
-              <div class="stat-label">待审核提现</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.totalUsers ?? '-' }}</div>
-              <div class="stat-label">总用户数</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card mini">
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.totalPlayers ?? '-' }}</div>
-              <div class="stat-label">总打手数</div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
       <!-- 待指派订单列表 -->
       <el-card shadow="hover" style="margin-top: 16px" v-if="stats.pendingOrders && stats.pendingOrders.length">
         <template #header><span>待指派订单 <el-tag type="danger" size="small">{{ stats.pendingAssign }}</el-tag></span></template>
@@ -286,13 +169,11 @@
 </template>
 
 <script setup>
-import WorkbenchCard from '@/components/WorkbenchCard.vue'
 import AnalyticsPanel from './AnalyticsPanel.vue'
 import MobileDashboard from './MobileDashboard.vue'
 import { useWorkbenchStore } from '@/stores/workbench'
 const workbench = useWorkbenchStore()
 function refreshOverview() { workbench.refresh(); fetchDashboard() }
-import { useResponsive } from '@/utils/responsive'
 import { computed, onMounted } from 'vue'
 import { useLoadTask } from '@/composables/useLoadTask'
 import LoadFeedback from '@/components/LoadFeedback.vue'
@@ -302,11 +183,9 @@ import { isH5Path } from '@/utils/h5-route'
 import { can } from '@/utils/staff-permissions'
 import { getAdminDashboard, getCsDashboard, getStatisticsUser, getStatisticsPlayer } from '@/api/dashboard'
 import {
-  List, Money, User, Avatar, Warning, Wallet, Clock, Loading,
-  EditPen, ChatDotRound, CircleCheck
+  List, Money, User, Avatar, Warning, CircleCheck
 } from '@element-plus/icons-vue'
 
-const { isNarrow } = useResponsive()
 const route = useRoute()
 const h5Shell = computed(() => isH5Path(route.path))
 
@@ -326,36 +205,6 @@ const paidUserRate = computed(() => userStats.value.paidUserRate ?? null)
 const maxUserCnt = computed(() => Math.max(...newUserTrend.value.map(r => r.cnt), 1))
 
 const { data: playerStats, loading: playerLoading, error: playerError, run: loadPlayerStats } = useLoadTask(async () => (await getStatisticsPlayer({ silent: true })).data || {}, {})
-
-// 订单状态映射
-const statusLabelMap = {
-  PENDING_PAYMENT: '待支付', PAID: '待接单', ASSIGNED: '已指派', ACCEPTED: '已接单',
-  WAITING_TEAMMATE: '组队中', IN_PROGRESS: '进行中', COMPLETED: '待确认',
-  CONFIRMED: '已完成', REVIEWED: '已评价', CANCELLED: '已取消',
-  REFUNDING: '退款中', REFUNDED: '已退款', DISPUTED: '争议中', ARBITRATED: '已仲裁'
-}
-const statusTypeMap = {
-  PENDING_PAYMENT: 'info', PAID: '', ASSIGNED: '', ACCEPTED: '',
-  WAITING_TEAMMATE: 'warning', IN_PROGRESS: 'warning', COMPLETED: 'success',
-  CONFIRMED: 'success', REVIEWED: 'success', CANCELLED: 'info',
-  REFUNDING: 'danger', REFUNDED: 'info', DISPUTED: 'danger', ARBITRATED: 'info'
-}
-function orderStatusLabel(s) { return statusLabelMap[s] || s }
-function orderStatusType(s) { return statusTypeMap[s] || '' }
-
-// 趋势柱状条宽度
-function barWidth(val) {
-  const trend = stats.value.orderTrend || []
-  const max = Math.max(...trend.map(t => Number(t.orders) || 0), 1)
-  return Math.round((Number(val) / max) * 100) + '%'
-}
-
-// 状态占比
-function statusPercent(count) {
-  const dist = stats.value.statusDistribution || []
-  const total = dist.reduce((s, r) => s + Number(r.count || 0), 0)
-  return total > 0 ? ((Number(count) / total) * 100).toFixed(1) : '0.0'
-}
 
 // 格式化金额
 function formatAmount(val) {

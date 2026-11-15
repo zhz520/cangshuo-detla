@@ -1,17 +1,27 @@
 <template>
   <view class="chat-bubble" :class="{ 'is-self': isSelf }">
-    <!-- 自己的头像：有则用图，无则显示昵称首字 -->
-    <AppImage :width="160" v-if="isSelf && selfAvatar" class="avatar" :src="selfAvatar" mode="aspectFill" />
-    <view v-else-if="isSelf" class="avatar avatar-placeholder">{{ firstChar(selfName) }}</view>
-    <!-- 对方头像：有则用图，无则显示名字首字 -->
-    <AppImage :width="160" v-else-if="avatar" class="avatar" :src="avatar" mode="aspectFill" />
-    <view v-else class="avatar avatar-placeholder">{{ firstChar(name) }}</view>
-    <view class="bubble-content" :class="{ self: isSelf }">
+    <AppImage
+      v-if="isSelf"
+      :width="160"
+      class="avatar"
+      :src="selfAvatar"
+      fallback="/static/images/delta-default-avatar.png"
+      mode="aspectFill"
+    />
+    <AppImage
+      v-else
+      :width="160"
+      class="avatar"
+      :src="avatar"
+      fallback="/static/images/delta-default-avatar.png"
+      mode="aspectFill"
+    />
+    <view class="bubble-content" :class="{ self: isSelf, 'has-card': hasCard }">
       <text v-if="msg.type === 'TEXT'" class="text-msg">{{ msg.content }}</text>
       <AppImage v-else-if="msg.type === 'IMAGE'" class="msg-image" :src="msg.content" mode="widthFix" @click="previewImage" />
       <!-- 商品卡片 -->
       <view v-else-if="msg.type === 'PRODUCT'" class="card-msg product-card" @click="goProduct(cardData)">
-        <AppImage class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFit" />
+        <AppImage class="card-cover" :src="cardData.coverImage || cardData.image" mode="aspectFit" fallback="/static/icons/图片.svg" />
         <view class="card-info">
           <text class="card-name text-ellipsis">{{ cardData.name }}</text>
           <text class="card-price">¥{{ Number(cardData.price || 0).toFixed(2) }}</text>
@@ -63,6 +73,7 @@ const cardData = computed(() => {
 })
 
 const statusText = computed(() => ORDER_STATUS_TEXT[cardData.value?.status] || cardData.value?.status || '')
+const hasCard = computed(() => props.msg.type === 'PRODUCT' || props.msg.type === 'ORDER')
 
 function previewImage() {
   uni.previewImage({ urls: [props.msg.content], current: 0 })
@@ -96,7 +107,7 @@ function goOrder(d) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #73777e, #666b73);
+    background: #777777;
     color: #fff;
     font-size: 32rpx;
     font-weight: bold;
@@ -106,15 +117,15 @@ function goOrder(d) {
     max-width: 70%;
     margin: 0 16rpx;
     padding: 20rpx 24rpx;
-    background: #e6e7e9;
-    border: 1rpx solid #f4f5f6;
+    background: #eeeeee;
+    border: 1rpx solid #f7f7f7;
     border-radius: 12rpx;
     font-size: 28rpx;
-    color: #17191c;
+    color: #111111;
     word-break: break-all;
 
     &.self {
-      background: linear-gradient(135deg, #17191c, #30343a);
+      background: #171717;
       border-color: transparent;
       color: #ffffff;
 
@@ -125,12 +136,21 @@ function goOrder(d) {
       }
       .system-msg { color: #ffffff; opacity: 0.82; }
 
-      .card-msg { background: #f4f5f6; border-color: #e6e7e9; }
-      .card-name { color: #17191c; }
-      .card-price { color: #17191c; }
-      .card-status { color: #666b73; }
-      .card-order-no { color: #666b73; }
-      .card-tag { background: #e6e7e9; color: #666b73; }
+      .card-msg { background: #ffffff !important; border-color: transparent !important; }
+      .card-name { color: #111111; }
+      .card-price { color: #111111; }
+      .card-status { color: #777777; }
+      .card-order-no { color: #777777; }
+      .card-tag { background: #eeeeee; color: #777777; }
+    }
+    &.has-card,
+    &.has-card.self {
+      max-width: 82%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      &.self { background: transparent !important; }
     }
 
     .text-msg {
@@ -145,7 +165,7 @@ function goOrder(d) {
     }
 
     .system-msg {
-      color: #73777e;
+      color: #777777;
       font-size: 24rpx;
     }
   }
@@ -155,19 +175,23 @@ function goOrder(d) {
 .card-msg {
   display: flex;
   padding: 0;
-  background: #f4f5f6;
-  border: 1rpx solid #e6e7e9;
-  border-radius: 12rpx;
+  background: #ffffff;
+  border: 0;
+  border-radius: 18rpx;
   overflow: hidden;
   position: relative;
   width: 400rpx;
   max-width: 100%;
   min-width: 0;
+  box-shadow: 0 2rpx 12rpx rgba(17, 19, 22, 0.05);
 }
 .card-cover {
-  width: 160rpx;
-  height: 160rpx;
+  width: 180rpx;
+  height: 120rpx;
   flex-shrink: 0;
+  margin: 10rpx;
+  border-radius: 14rpx;
+  overflow: hidden;
 }
 .card-info {
   flex: 1;
@@ -179,7 +203,7 @@ function goOrder(d) {
 }
 .card-name {
   font-size: 26rpx;
-  color: #17191c;
+  color: #111111;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -187,7 +211,7 @@ function goOrder(d) {
 }
 .card-price {
   font-size: 28rpx;
-  color: #17191c;
+  color: #111111;
   font-weight: bold;
   margin-top: 8rpx;
 }
@@ -199,11 +223,11 @@ function goOrder(d) {
 }
 .card-status {
   font-size: 22rpx;
-  color: #73777e;
+  color: #777777;
 }
 .card-order-no {
   font-size: 20rpx;
-  color: #73777e;
+  color: #777777;
   margin-top: 4rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -215,8 +239,8 @@ function goOrder(d) {
   right: 0;
   font-size: 18rpx;
   padding: 2rpx 12rpx;
-  background: #e6e7e9;
-  color: #17191c;
+  background: #eeeeee;
+  color: #111111;
   border-radius: 0 12rpx 0 8rpx;
 }
 </style>

@@ -9,6 +9,7 @@ import com.delta.common.enums.OrderStatusEnum;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderRelayRequest;
@@ -32,11 +33,13 @@ public class CsRelayController {
     private final OrderPlayerService orderPlayerService;
     private final CrossModuleMapper crossModuleMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final CsRoutingService csRouting;
 
     @GetMapping("/list")
     public R<Page<OrderRelayRequest>> list(PageQuery query, @RequestParam(required = false) Long taskId,
                                             @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<OrderRelayRequest> w = new LambdaQueryWrapper<OrderRelayRequest>()
+                .apply("order_id IN (SELECT id FROM `order` WHERE cs_id = {0} OR cs_id IS NULL)", SecurityUtils.getUserId())
                 .eq(taskId != null, OrderRelayRequest::getId, taskId)
                 .eq(status != null && !status.isEmpty(), OrderRelayRequest::getStatus, status)
                 .orderByDesc(OrderRelayRequest::getCreatedAt);
@@ -69,6 +72,7 @@ public class CsRelayController {
 
         Order order = orderService.getById(relay.getOrderId());
         if (order == null) return R.fail("订单不存在");
+        csRouting.assertCsCanHandleOrder(order.getId(), SecurityUtils.getUserId());
         if(!"IN_PROGRESS".equals(order.getStatus()))return R.fail(409,"当前订单状态不允许接力");
         if(!relay.getOriginalPlayerId().equals(order.getPlayerId()))return R.fail(409,"订单接单员已变化，请刷新后重试");
         if(newPlayerId.equals(relay.getOriginalPlayerId()))return R.fail(400,"不能选择原接单员接力");
@@ -118,6 +122,7 @@ public class CsRelayController {
         OrderRelayRequest relay = relayRequestService.getOne(new LambdaQueryWrapper<OrderRelayRequest>()
                 .eq(OrderRelayRequest::getId,id).last("FOR UPDATE"));
         if (relay == null) return R.fail("申请不存在");
+        csRouting.assertCsCanHandleOrder(relay.getOrderId(), SecurityUtils.getUserId());
         if (!"PENDING".equals(relay.getStatus())) return R.fail("申请已处理");
         String reason=body != null ? body.getOrDefault("reason", "") : "";
         if(reason.length()>500)return R.fail(400,"拒绝原因不能超过500字");

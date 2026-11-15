@@ -70,20 +70,20 @@ async function go(task) {
 </script>
 
 <style scoped>
-.workbench-card { background:#fff; border:1px solid #e0e3e8; border-top:3px solid #17191c; border-radius:12px; padding:clamp(12px,2.2vw,22px); margin-bottom:20px; }
+.workbench-card { background:#fff; border:1px solid #eeeeee; border-top:1px solid #eeeeee; border-radius:14px; padding:clamp(12px,2.2vw,22px); margin-bottom:20px; }
 .workbench-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
 .workbench-heading h3 { margin:0; font-size:20px; }
 .workbench-heading p, .hint { margin:6px 0; color:#626974; font-size:13px; }
 .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:14px; }
-.metrics div { border-radius:8px; padding:10px 12px; background:#f4f5f7; }
+.metrics div { border-radius:10px; padding:10px 12px; background:#f7f7f7; }
 .metrics strong { font-size:23px; display:block; }
 .metrics span { color:#59616d; font-size:12px; }
 .metrics .urgent { color:#bd343e; }
 .categories { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-.categories button { background:#fff; border:1px solid #e1e4e8; border-radius:999px; padding:6px 10px; cursor:pointer; color:inherit; }
+.categories button { background:#fff; border:1px solid #eeeeee; border-radius:10px; padding:6px 10px; cursor:pointer; color:inherit; }
 .categories i { display:inline-block; width:7px; height:7px; margin-left:5px; border-radius:50%; background:#c83e4b; }
 .preview { margin:10px 0 0; padding:0; list-style:none; }
-.preview li { display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid #eaecf0; padding:7px 0; }
+.preview li { display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid #eeeeee; padding:7px 0; }
 .preview li span { display:block; overflow-wrap:anywhere; font-size:12px; color:#626974; }
 @media(max-width:420px) { .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 </style>

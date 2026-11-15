@@ -11,6 +11,7 @@ import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.pay.refund.OrderRefundWorkflowService;
 import com.delta.pay.refund.RefundCreateRequest;
 import com.delta.pay.refund.RefundRequest;
@@ -27,6 +28,8 @@ public class CsOrderController {
     private final CrossModuleMapper crossModuleMapper;
     private final StatsMapper statsMapper;
     private final OrderRefundWorkflowService refunds;
+    private final CsRoutingService csRouting;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @GetMapping("/list")
     public R<Page<Order>> list(PageQuery query, @RequestParam(value = "status", required = false) String status,
@@ -35,6 +38,7 @@ public class CsOrderController {
                                 @RequestParam(value = "userId", required = false) Long userId,
                                 @RequestParam(value = "playerId", required = false) Long playerId) {
         LambdaQueryWrapper<Order> w = new LambdaQueryWrapper<Order>()
+                .apply("(cs_id = {0} OR cs_id IS NULL)", SecurityUtils.getUserId())
                 .eq(userId != null, Order::getUserId, userId)
                 .eq(playerId != null, Order::getPlayerId, playerId)
                 .eq(status != null && !status.isEmpty(), Order::getStatus, status)
@@ -56,14 +60,17 @@ public class CsOrderController {
                 o.setPlayerName((pNick != null && !pNick.isEmpty()) ? pNick : "接单员" + o.getPlayerId());
                 o.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(o.getPlayerId()));
             }
+            fillCs(o);
         }
         return R.ok(page);
     }
 
     @GetMapping("/{id}")
     public R<Order> detail(@PathVariable Long id) {
+        csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         Order order = orderService.getById(id);
         if (order != null) {
+            fillCs(order);
             if (order.getPlayerId() != null) {
                 order.setPlayerName(crossModuleMapper.selectPlayerNickname(order.getPlayerId()));
                 order.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(order.getPlayerId()));
@@ -77,6 +84,17 @@ public class CsOrderController {
         return R.ok(order);
     }
 
+    private void fillCs(Order order) {
+        try {
+            java.util.List<Long> rows = jdbc.queryForList("SELECT cs_id FROM `order` WHERE id=?", Long.class, order.getId());
+            if (rows != null && !rows.isEmpty()) {
+                order.setCsId(rows.get(0));
+                if (rows.get(0) != null) order.setCsName(crossModuleMapper.selectAdminNickname(rows.get(0)));
+            }
+        } catch (org.springframework.dao.DataAccessException ignored) {
+        }
+    }
+
     @GetMapping("/{id}/progress")
     public R<List<OrderProgress>> progress(@PathVariable Long id) {
         return R.ok(orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
@@ -85,6 +103,7 @@ public class CsOrderController {
 
     @PostMapping("/{id}/assign/{playerId}")
     public R<Void> assign(@PathVariable Long id, @PathVariable Long playerId) {
+        csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         orderService.assignOrder(id, playerId, "CS", SecurityUtils.getUserId());
         return R.ok();
     }
@@ -93,6 +112,7 @@ public class CsOrderController {
     @com.delta.common.annotation.OpLog(module="order",operation="创建订单退款申请")
     @PostMapping("/{id}/refund")
     public R<RefundRequest> refund(@PathVariable Long id) {
+        csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         RefundCreateRequest request = new RefundCreateRequest();
         request.setReason("客服发起订单退款申请");
         return R.ok(refunds.createByStaff(id, SecurityUtils.getUserId(), SecurityUtils.getUserType(), request));
@@ -100,6 +120,7 @@ public class CsOrderController {
 
     @PostMapping("/{id}/confirm")
     public R<Void> confirm(@PathVariable Long id) {
+        csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         orderService.manualConfirmOrder(id, SecurityUtils.getUserId(), "CS");
         return R.ok();
     }

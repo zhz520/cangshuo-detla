@@ -274,6 +274,12 @@ const desktopRoutes = [
         meta: { title: '快捷回复', roles: ['admin', 'cs'] }
       },
       {
+        path: 'routing',
+        name: 'CsRouting',
+        component: () => import('@/views/chat/CsRouting.vue'),
+        meta: { title: '客服分配', roles: ['admin'], permission: 'system.manage' }
+      },
+      {
         path: 'record',
         name: 'ChatRecordList',
         component: () => import('@/views/chat/ChatRecordList.vue'),

@@ -14,7 +14,7 @@
     <view v-if="error" class="presence-notice" @click="refresh">{{ error }} · 点击重试</view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card">
-        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <view class="name-row">
             <text class="name">{{ p.nickname || p.realName }}</text>

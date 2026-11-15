@@ -13,7 +13,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="p in players" :key="p.id" class="player-card" :class="{ full: isFull(p), offline: !isPlayerOnline(p) }">
-        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="p.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <view class="name-row">
             <text class="name">{{ p.nickname }}</text>

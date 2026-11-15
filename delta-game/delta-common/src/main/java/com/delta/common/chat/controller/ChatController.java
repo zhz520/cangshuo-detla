@@ -9,6 +9,7 @@ import com.delta.common.chat.service.ChatServiceImpl;
 import com.delta.common.domain.R;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.common.chat.util.ChatParticipantId;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -26,13 +27,17 @@ public class ChatController {
     private final JdbcTemplate jdbcTemplate;
     private final CrossModuleMapper crossModuleMapper;
     private final com.delta.common.security.service.RateLimitService limits;
+    private final CsRoutingService csRouting;
 
     /** 会话列表：id1=我的编码ID OR id2=我的编码ID */
     @GetMapping("/session/list")
     public R<?> sessionList(@RequestParam(required = false) String chatRole) {
         long myEncodedId = getMyEncodedId(chatRole);
         LambdaQueryWrapper<ChatSession> qw = new LambdaQueryWrapper<ChatSession>()
-                .eq(ChatSession::getStatus, "ACTIVE")
+                .and(q -> q.eq(ChatSession::getStatus, "ACTIVE")
+                        .or(c -> c.eq(ChatSession::getStatus, "CLOSED")
+                                .isNull(ChatSession::getRating)
+                                .apply("(id1 BETWEEN 3000000000 AND 3999999999 OR id2 BETWEEN 3000000000 AND 3999999999)")))
                 .and(q -> q.eq(ChatSession::getId1, myEncodedId).or().eq(ChatSession::getId2, myEncodedId))
                 .orderByDesc(ChatSession::getLastMessageAt);
         List<ChatSession> all = chatService.list(qw);
@@ -129,14 +134,24 @@ public class ChatController {
 
     /** 用户发起客服会话：分配在线客服 */
     @PostMapping("/session/cs")
-    public R<ChatSession> createCsSession() {
+    public R<ChatSession> createCsSession(@RequestParam(required = false) Long productId,
+                                          @RequestParam(required = false) Long orderId) {
         long userId = SecurityUtils.getUserId();
         long encodedUser = getMyEncodedId(null);
         limits.check("chat-create:"+encodedUser,10,60);
-        List<java.util.Map<String, Object>> csList = jdbcTemplate.queryForList(
-                "SELECT id FROM admin WHERE role IN ('CS','BOTH','ADMIN') AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
-        if (csList.isEmpty()) return R.fail("暂无可用客服，请稍后再试");
-        long csId = ((Number) csList.get(0).get("id")).longValue();
+        Long resolved = null;
+        if (orderId != null) resolved = csRouting.resolveForOrder(orderId);
+        if (resolved == null && productId != null) resolved = csRouting.resolveForProduct(productId);
+        if (resolved == null) resolved = csRouting.anyOnDutyCs();
+        long csId;
+        if (resolved != null) {
+            csId = resolved;
+        } else {
+            List<java.util.Map<String, Object>> csList = jdbcTemplate.queryForList(
+                    "SELECT id FROM admin WHERE role IN ('CS','BOTH','ADMIN') AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
+            if (csList.isEmpty()) return R.fail("暂无可用客服，请稍后再试");
+            csId = ((Number) csList.get(0).get("id")).longValue();
+        }
         long encodedCs = ChatParticipantId.encodeCs(csId);
         ChatSession s = chatService.findOrCreate(encodedUser, encodedCs);
         enrichSession(s, encodedUser);
@@ -149,7 +164,9 @@ public class ChatController {
         String userType = resolveChatRole(chatRole);
         long myEncodedId=getMyEncodedId(chatRole);
         limits.check("chat-http:"+myEncodedId,30,60);
-        com.delta.common.chat.util.ChatIdentity.requireMember(chatService.getById(msg.getSessionId()),myEncodedId);
+        ChatSession session = chatService.getById(msg.getSessionId());
+        com.delta.common.chat.util.ChatIdentity.requireMember(session, myEncodedId);
+        if (!"ACTIVE".equals(session.getStatus())) return R.fail(409, "会话已结束，无法继续发送消息");
         if(msg.getSenderType()!=null && !userType.equals(msg.getSenderType())) return R.fail(403,"聊天身份不匹配");
         com.delta.common.chat.util.ChatIdentity.validateMessage(msg.getType(),msg.getContent());
         msg.setId(null);
@@ -158,6 +175,51 @@ public class ChatController {
         msg.setIsRead(0);
         msg.setCreatedAt(LocalDateTime.now());
         chatService.saveMessage(msg);
+        return R.ok();
+    }
+
+    @PostMapping("/session/{id}/close")
+    public R<Void> closeSession(@PathVariable Long id, @RequestParam(required = false) String chatRole) {
+        ChatSession s = chatService.getById(id);
+        if (s == null) return R.fail("会话不存在");
+        long myEncodedId = getMyEncodedId(chatRole);
+        if (!isSessionMember(s, myEncodedId)) return R.fail(403, "无权限操作该会话");
+        limits.check("chat-close:" + myEncodedId, 6, 60);
+        if ("ACTIVE".equals(s.getStatus())) {
+            chatService.lambdaUpdate()
+                    .eq(ChatSession::getId, s.getId())
+                    .set(ChatSession::getStatus, "CLOSED")
+                    .update();
+        }
+        return R.ok();
+    }
+
+    @PostMapping("/session/{id}/rate")
+    public R<Void> rateSession(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body,
+                               @RequestParam(required = false) String chatRole) {
+        ChatSession s = chatService.getById(id);
+        if (s == null) return R.fail("会话不存在");
+        long myEncodedId = getMyEncodedId(chatRole);
+        if (!isSessionMember(s, myEncodedId)) return R.fail(403, "无权限评价该会话");
+        if (ChatParticipantId.getEntityType(myEncodedId) != 1) return R.fail(403, "只有用户可以评价客服");
+        long targetId = s.getId1().equals(myEncodedId) ? s.getId2() : s.getId1();
+        if (ChatParticipantId.getEntityType(targetId) != 3) return R.fail(400, "该会话不是客服会话");
+        if (!"CLOSED".equals(s.getStatus())) return R.fail(409, "客服结束会话后才能评价");
+        if (s.getRating() != null) return R.fail(409, "该会话已经评价过了");
+        int rating;
+        try {
+            Object value = body == null ? null : body.get("rating");
+            rating = value instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(value));
+        } catch (RuntimeException e) {
+            return R.fail(400, "评分须为1至5星");
+        }
+        if (rating < 1 || rating > 5) return R.fail(400, "评分须为1至5星");
+        String comment = body.get("comment") == null ? "" : String.valueOf(body.get("comment")).trim();
+        if (comment.length() > 500) return R.fail(400, "评价内容不能超过500字");
+        s.setRating(rating);
+        s.setRatingComment(comment);
+        s.setRatedAt(LocalDateTime.now());
+        chatService.updateById(s);
         return R.ok();
     }
 
@@ -190,6 +252,7 @@ public class ChatController {
         s.setTargetId(targetId);
         s.setTargetName(crossModuleMapper.selectNicknameByEncodedId(targetId));
         s.setAvatar(crossModuleMapper.selectAvatarByEncodedId(targetId));
+        s.setTargetType(ChatParticipantId.getEntityType(targetId) == 3 ? "CS" : ChatParticipantId.getEntityType(targetId) == 2 ? "PLAYER" : "USER");
         String lastType = crossModuleMapper.selectLastMessageType(s.getId());
         if (lastType != null) {
             switch (lastType) {

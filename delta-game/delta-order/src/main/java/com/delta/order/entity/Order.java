@@ -37,6 +37,9 @@ public class Order {
     private Integer requiredPlayerCount;
     private Long designatedPlayerId;
     private Long playerId;
+    /** 归属客服；为空表示公共池。通过兼容查询填充，避免旧库与测试夹具依赖新列。 */
+    @TableField(exist = false)
+    private Long csId;
     private String status;
     private LocalDateTime payDeadline;
     private LocalDateTime assignTime;
@@ -67,6 +70,9 @@ public class Order {
     /** 下单客户完整手机号，仅由 ADMIN/CS 订单接口填充。 */
     @TableField(exist = false)
     private String userPhone;
+    /** 归属客服昵称（非DB字段）。 */
+    @TableField(exist = false)
+    private String csName;
     /** 队友列表（非DB字段，详情展示用） */
     @TableField(exist = false)
     private List<OrderPlayer> teammates;

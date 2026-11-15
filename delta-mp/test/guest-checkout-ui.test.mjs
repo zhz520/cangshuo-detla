@@ -49,7 +49,7 @@ test('guest lookup page can query or bind without rewriting order ownership', as
 
 test('guest lookup entry is switch-gated and lives on the mine page', async () => {
   const home = await read('pages/index/index.vue')
-  const mine = await read('pages/mine/index.vue')
+  const mine = await read('pages/mine/services.vue')
   assert.doesNotMatch(home, /guest-order-entry|goGuestLookup/)
   assert.match(mine, /siteStore\.guestCheckoutEnabled/)
   assert.match(mine, />游客订单</)
@@ -90,8 +90,8 @@ test('formal login and logout clear any previous guest session', async () => {
   const list = await read('pages/order/list.vue')
   assert.match(card, /ownerActions/)
   assert.match(list, /canUseOwnerActions/)
-  const mine = await read('pages/mine/index.vue')
-  assert.match(mine, /if \(userStore\.isLoggedIn\) officialWechat\.load\('user'\)/)
+  const services = await read('pages/mine/services.vue')
+  assert.match(services, /if \(userStore\.isLoggedIn\) officialWechat\.load\('user'\)/)
 })
 
 test('the player directory tab and direct pages respect the display switch', async () => {

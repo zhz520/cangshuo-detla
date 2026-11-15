@@ -192,8 +192,8 @@ onUnmounted(() => {
   height: var(--app-viewport-height);
   min-height: 0;
   overflow: hidden;
-  background: #f5f6f7;
-  color: #17191c;
+  background: #f7f7f7;
+  color: #111111;
 }
 .h5-header {
   position: relative;
@@ -216,7 +216,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border: 1px solid #e6e8eb;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
   background: #fff;
   color: #30353b;
@@ -236,7 +236,7 @@ onUnmounted(() => {
 .h5-heading h1 {
   margin: 2px 0 0;
   overflow: hidden;
-  color: #17191c;
+  color: #111111;
   font-size: 18px;
   font-weight: 800;
   line-height: 1.25;
@@ -251,7 +251,7 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   padding: 3px;
-  border: 1px solid #e6e8eb;
+  border: 1px solid #eeeeee;
   border-radius: 50%;
   background: #f7f8f9;
 }
@@ -278,7 +278,7 @@ onUnmounted(() => {
   overflow-x: hidden;
   overflow-y: auto;
   padding: 10px calc(12px + var(--app-safe-right)) calc(78px + var(--app-safe-bottom)) calc(12px + var(--app-safe-left));
-  background: #f5f6f7;
+  background: #f7f7f7;
   overscroll-behavior-y: contain;
 }
 .h5-page-frame { width: 100%; max-width: 100%; min-width: 0; }
@@ -312,7 +312,8 @@ onUnmounted(() => {
   color: #858b93;
   cursor: pointer;
 }
-.h5-bottom-nav button.active { color: #17191c; background: #f1f2f4; }
+.h5-bottom-nav button.active { color: #111111; background: transparent; }
+.h5-bottom-nav button.active .el-icon { transform: translateY(-1px); }
 .h5-bottom-nav .el-icon { font-size: 21px; }
 .h5-bottom-nav span { font-size: 10px; font-weight: 700; }
 .h5-bottom-nav .nav-unread {
@@ -333,7 +334,7 @@ onUnmounted(() => {
 .mobile-account-head { display: flex; align-items: center; gap: 12px; padding: 18px; border: 1px solid #e8eaee; border-radius: 16px; background: #fff; }
 .mobile-account-head > div { display: grid; flex: 1; min-width: 0; gap: 5px; }
 .mobile-account-head strong { color: #20242a; font-size: 17px; }
-.mobile-account-head span { color: #8b929b; font-size: 11px; }
+.mobile-account-head span { color: #aaaaaa; font-size: 11px; }
 .mobile-account-head button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #f1f3f5; color: #737b85; font-size: 20px; }
 .mobile-account-list { display: grid; gap: 9px; margin-top: 14px; }
 .mobile-account-list button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 14px 15px; border: 1px solid #e8eaee; border-radius: 13px; background: #fff; color: #242931; text-align: left; }
@@ -343,7 +344,7 @@ onUnmounted(() => {
 .mobile-account-list button.danger span { color: #b84851; }
 .mobile-account-foot { margin: 22px 0 0; color: #a3a9b1; font-size: 10px; text-align: center; }
 
-:global(html[data-admin-shell="h5"]) { background: #f5f6f7; }
+:global(html[data-admin-shell="h5"]) { background: #f7f7f7; }
 :global(html[data-admin-shell="h5"] .h5-main .error-page) { min-height: calc(var(--app-viewport-height) - 170px); }
 :global(html[data-admin-shell="h5"] .el-overlay) { z-index: 2200; }
 :global(html[data-keyboard-open] .h5-bottom-nav) { display: none; }

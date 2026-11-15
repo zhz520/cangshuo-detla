@@ -8,7 +8,7 @@ test('player cover and cards request retina-safe thumbnail widths', async () => 
   const detail = await read('../pages/players/detail.vue')
   assert.match(detail, /<AppImage class="cover-main" :width="1080" eager[^>]+mode="aspectFill"/)
   assert.doesNotMatch(detail, /cover-backdrop/)
-  assert.match(detail, /\.cover \{ height:321rpx; overflow:hidden;/)
+  assert.match(detail, /\.cover \{ height:375rpx; overflow:hidden;/)
   assert.match(detail, /\.profile-card \{ margin:-64rpx 24rpx 0; z-index:2; \}/)
   assert.match(detail, /\.avatar \{ margin-top:-78rpx; \}/)
 

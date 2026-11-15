@@ -3,7 +3,7 @@
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="r in reviews" :key="r.id" class="review-card">
         <view class="card-top">
-          <AppImage :width="160" class="avatar" :src="r.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+          <AppImage :width="160" class="avatar" :src="r.userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
           <view class="user-info">
             <text class="name">{{ r.userNickname || '匿名用户' }}</text>
             <text class="time">{{ r.createdAt }}</text>
@@ -71,13 +71,13 @@ function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: imgs[id
 .review-card { background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
   .avatar { width: 64rpx; height: 64rpx; border-radius: 50%; }
-  .user-info { flex: 1; .name { font-size: 26rpx; font-weight: bold; display: block; } .time { font-size: 22rpx; color: #73777e; display: block; } }
-  .content { font-size: 28rpx; color: #17191c; line-height: 1.6; display: block; margin-bottom: 12rpx; }
+  .user-info { flex: 1; .name { font-size: 26rpx; font-weight: bold; display: block; } .time { font-size: 22rpx; color: #777777; display: block; } }
+  .content { font-size: 28rpx; color: #111111; line-height: 1.6; display: block; margin-bottom: 12rpx; }
   .images { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 12rpx; .img { width: 160rpx; height: 160rpx; border-radius: 8rpx; } }
-  .order-info { font-size: 22rpx; color: #73777e; padding: 12rpx 0; border-top: 1rpx solid #f4f5f6; .order-label { margin-right: 16rpx; } }
+  .order-info { font-size: 22rpx; color: #777777; padding: 12rpx 0; border-top: 1rpx solid #f7f7f7; .order-label { margin-right: 16rpx; } }
   .reply-box { background: rgba(0,0,0,0.05); padding: 16rpx; border-radius: 8rpx; margin-top: 12rpx;
-    .reply-label { font-size: 24rpx; color: #17191c; } .reply-content { font-size: 24rpx; color: #666b73; }
+    .reply-label { font-size: 24rpx; color: #111111; } .reply-content { font-size: 24rpx; color: #777777; }
   }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
 </style>

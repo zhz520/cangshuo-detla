@@ -58,10 +58,10 @@ function parseRemark(remark) {
 .detail-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
 .list { height: var(--app-page-height, 100vh); box-sizing: border-box; padding-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom)); }
 .record-item { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; margin: 20rpx 24rpx 0; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx;
-  .left { flex: 1; .desc { font-size: 28rpx; color: #17191c; display: block; } .time { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
-    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: #666b73; line-height: 1.6; } }
+  .left { flex: 1; .desc { font-size: 28rpx; color: #111111; display: block; } .time { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; }
+    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: #777777; line-height: 1.6; } }
   }
-  .amount { font-size: 30rpx; color: #17191c; font-weight: bold; &.income { color: #347a5b; } }
+  .amount { font-size: 30rpx; color: #111111; font-weight: bold; &.income { color: #347a5b; } }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
 </style>

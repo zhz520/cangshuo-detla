@@ -19,7 +19,7 @@ export const ROLE_TABS = {
   [ROLE.USER]: [
     { pagePath: '/pages/index/index', text: '首页', icon: '/static/tabbar/home.svg', iconActive: '/static/tabbar/home-active.svg' },
     { pagePath: '/pages/category/index', text: '分类', icon: '/static/tabbar/category.svg', iconActive: '/static/tabbar/category-active.svg' },
-    { pagePath: '/pages/players/index', text: '打手', icon: '/static/tabbar/player-mine.svg', iconActive: '/static/tabbar/player-mine-active.svg' },
+    { pagePath: '/pages/players/index', text: '打手', icon: '/static/tabbar/player-directory.svg', iconActive: '/static/tabbar/player-directory-active.svg' },
     { pagePath: '/pages/chat/list', text: '消息', icon: '/static/tabbar/chat.svg', iconActive: '/static/tabbar/chat-active.svg' },
     { pagePath: '/pages/mine/index', text: '我的', icon: '/static/tabbar/mine.svg', iconActive: '/static/tabbar/mine-active.svg' }
   ],

@@ -87,9 +87,9 @@ function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) 
 </script>
 <style lang="scss" scoped>
 .earnings-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); padding: 1rpx 0 calc(32rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; }
-.refresh-tip { color: #73777e; font-size: 24rpx; text-align: center; padding: 16rpx; }
+.refresh-tip { color: #777777; font-size: 24rpx; text-align: center; padding: 16rpx; }
 .reward-total { display:block;font-size:24rpx;opacity:.85;margin:-12rpx 0 28rpx; }
-.summary-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
+.summary-card { background: #171717; color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .card-label { font-size: 26rpx; opacity: 0.85; display: block; }
   .total-amount { font-size: 56rpx; font-weight: bold; display: block; margin: 16rpx 0 32rpx; }
   .wallet-split { display:flex; justify-content:space-between; gap:16rpx; font-size:23rpx; opacity:.88; margin:-18rpx 0 30rpx; }
@@ -99,10 +99,10 @@ function goWithdraw() { uni.navigateTo({ url: '/pages-player/withdraw/index' }) 
 }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20rpx; padding: 0 24rpx 24rpx;
   .stat-item { background: #fff; border: 1rpx solid #edf0f2; padding: 24rpx; border-radius: 20rpx; text-align: center;
-    .stat-num { font-size: 32rpx; font-weight: bold; color: #17191c; display: block; }
-    .stat-label { font-size: 24rpx; color: #73777e; display: block; margin-top: 8rpx; }
+    .stat-num { font-size: 32rpx; font-weight: bold; color: #111111; display: block; }
+    .stat-label { font-size: 24rpx; color: #777777; display: block; margin-top: 8rpx; }
   }
 }
 .action-list { margin: 0 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; overflow: hidden; }
-.action-row { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f4f5f6; font-size: 28rpx; .arrow { color: #b9bdc4; } }
+.action-row { display: flex; justify-content: space-between; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f7f7f7; font-size: 28rpx; .arrow { color: #aaaaaa; } }
 </style>

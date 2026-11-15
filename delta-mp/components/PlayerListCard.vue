@@ -1,18 +1,28 @@
 <template>
   <view class="player-list-card" :class="{ compact }" @click="open">
-    <view class="media">
-      <AppImage :width="320" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
-      <text class="presence" :class="{ online: online }">{{ online ? '在线接单' : '暂时离线' }}</text>
-      <text v-if="player.voiceUrl" class="voice">语音 {{ Number(player.voiceDuration || 0) }}″</text>
+    <view class="avatar-wrap">
+      <AppImage :width="320" :src="player.avatar || '/static/images/delta-default-avatar.png'" class="avatar" mode="aspectFill" />
+      <view class="presence-dot" :class="{ online }" />
     </view>
     <view class="content">
-      <view class="title-row"><text class="name">{{ player.nickname || '打手' }}</text><text class="level">{{ player.levelName || `Lv.${player.level || 1}` }}</text></view>
-      <view class="metrics"><text>★ {{ Number(player.avgRating || 0).toFixed(1) }}</text><text>{{ player.orderCount || 0 }} 单</text><text v-if="player.gameLevel">{{ player.gameLevel }}</text></view>
-      <text v-if="!compact && player.introduction" class="introduction">{{ player.introduction }}</text>
-      <view v-if="tags.length" class="tags"><text v-for="tag in tags" :key="tag">{{ tag }}</text></view>
-      <view class="actions">
-        <view class="action secondary" @click.stop="open">查看主页</view>
-        <view v-if="siteStore.orderPurchaseEnabled" class="action primary" :class="{ disabled: !online }" @click.stop="placeOrder">{{ online ? '立即点单' : '离线' }}</view>
+      <view class="title-row">
+        <text class="name">{{ player.nickname || '打手' }}</text>
+        <text v-if="player.levelName" class="level">{{ player.levelName }}</text>
+      </view>
+      <view class="metrics">
+        <text class="rating">★ {{ Number(player.avgRating || 0).toFixed(1) }}</text>
+        <text>·</text>
+        <text>{{ player.orderCount || 0 }} 单</text>
+        <text v-if="player.gameLevel">· {{ player.gameLevel }}</text>
+      </view>
+      <view v-if="tags.length" class="tags">
+        <text v-for="tag in tags" :key="tag">{{ tag }}</text>
+      </view>
+    </view>
+    <view class="action-col">
+      <text class="online-text" :class="{ online }" :aria-label="online ? '在线接单' : '暂时离线'">{{ online ? '在线' : '离线' }}</text>
+      <view v-if="siteStore.orderPurchaseEnabled" class="book-btn" :class="{ disabled: !online }" :aria-label="online ? '立即点单' : '暂时离线'" @click.stop="placeOrder">
+        {{ online ? '预约' : '离线' }}
       </view>
     </view>
   </view>
@@ -35,21 +45,143 @@ const tags = computed(() => {
     .flatMap(value => String(value).split(/[,，、|]/))
     .map(value => value.trim())
     .filter(Boolean)
-  return [...new Set(values)].slice(0, props.compact ? 2 : 4)
+  if (props.player.voiceUrl) values.push('语音介绍')
+  return [...new Set(values)].slice(0, props.compact ? 2 : 3)
 })
 function open() {
-  uni.navigateTo({ url: `/pages/players/detail?id=${props.player.id}` })
+  uni.navigateTo({ url: '/pages/players/detail?id=' + props.player.id })
 }
 function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
   if (!online.value) return uni.showToast({ title: '该打手当前离线', icon: 'none' })
-  uni.navigateTo({ url: `/pages/product/list?playerId=${props.player.id}` })
+  uni.navigateTo({ url: '/pages/product/list?playerId=' + props.player.id })
 }
 </script>
 
 <style lang="scss" scoped>
-.player-list-card{display:grid;grid-template-columns:210rpx minmax(0,1fr);gap:22rpx;padding:22rpx;border:1rpx solid #eceef1;border-radius:22rpx;background:#fff;box-shadow:0 8rpx 24rpx rgba(23,25,28,.045);box-sizing:border-box}
-.media{position:relative;height:210rpx;overflow:hidden;border-radius:18rpx;background:#f1f2f4}.media :deep(.app-image){width:100%;height:100%}.presence{position:absolute;left:10rpx;bottom:10rpx;padding:5rpx 12rpx;border-radius:999rpx;background:rgba(23,25,28,.62);color:#fff;font-size:19rpx;line-height:1.2;&.online{background:#347a5b}}.voice{position:absolute;left:10rpx;top:10rpx;padding:5rpx 10rpx;border-radius:999rpx;background:rgba(255,255,255,.9);color:#347a5b;font-size:18rpx}
-.content{min-width:0;display:flex;flex-direction:column;gap:12rpx}.title-row{display:flex;align-items:center;gap:12rpx;min-width:0}.name{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:32rpx;font-weight:800;color:#17191c}.level{flex-shrink:0;padding:4rpx 12rpx;border-radius:999rpx;background:#17191c;color:#fff;font-size:19rpx}.metrics{display:flex;flex-wrap:wrap;gap:14rpx;color:#858992;font-size:21rpx}.introduction{display:-webkit-box;overflow:hidden;color:#555b63;font-size:24rpx;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:2}.tags{display:flex;flex-wrap:wrap;gap:8rpx;text{padding:4rpx 10rpx;border-radius:999rpx;background:#f2f3f5;color:#666b73;font-size:19rpx}}.actions{display:flex;justify-content:flex-end;gap:12rpx;margin-top:auto}.action{min-width:128rpx;padding:11rpx 20rpx;border-radius:999rpx;text-align:center;font-size:23rpx;font-weight:700;&.secondary{border:1rpx solid #dfe2e6;color:#343a43;background:#fff}&.primary{background:#17191c;color:#fff}&.disabled{background:#9a9ea5}}
-.compact{grid-template-columns:140rpx minmax(0,1fr);gap:16rpx;padding:16rpx;border-radius:16rpx}.compact .media{height:140rpx;border-radius:12rpx}.compact .content{gap:7rpx}.compact .name{font-size:28rpx}.compact .metrics{font-size:20rpx}.compact .action{min-width:104rpx;padding:8rpx 14rpx;font-size:21rpx}
+.player-list-card {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 22rpx;
+  border: 0;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+.avatar-wrap {
+  position: relative;
+  width: 96rpx;
+  height: 96rpx;
+  flex-shrink: 0;
+}
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #f1f2f4;
+}
+.presence-dot {
+  position: absolute;
+  right: 2rpx;
+  bottom: 4rpx;
+  width: 18rpx;
+  height: 18rpx;
+  border: 4rpx solid #ffffff;
+  border-radius: 50%;
+  background: #b4b8be;
+  box-sizing: content-box;
+  &.online { background: #2d9a67; }
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7rpx;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 0;
+}
+.name {
+  min-width: 0;
+  overflow: hidden;
+  color: #171717;
+  font-size: 25rpx;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.level {
+  flex-shrink: 0;
+  padding: 3rpx 9rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #777777;
+  font-size: 16rpx;
+  line-height: 1.4;
+}
+.metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  color: #8a8f96;
+  font-size: 19rpx;
+  line-height: 1.35;
+}
+.rating { color: #777777; font-weight: 700; }
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7rpx;
+  text {
+    padding: 4rpx 10rpx;
+    border-radius: 999rpx;
+    background: #f5f6f7;
+    color: #777777;
+    font-size: 16rpx;
+    line-height: 1.35;
+  }
+}
+.action-col {
+  width: 84rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+.online-text {
+  color: #a6abb2;
+  font-size: 16rpx;
+  &.online { color: #2d9a67; }
+}
+.book-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 82rpx;
+  height: 44rpx;
+  border-radius: 999rpx;
+  background: #171717;
+  color: #ffffff;
+  font-size: 19rpx;
+  font-weight: 750;
+  &.disabled { background: #d7dade; color: #ffffff; }
+}
+.compact {
+  gap: 14rpx;
+  padding: 14rpx;
+  border-radius: 18rpx;
+}
+.compact .avatar-wrap,
+.compact .avatar { width: 84rpx; height: 84rpx; }
+.compact .name { font-size: 25rpx; }
+.compact .tags { display: none; }
 </style>

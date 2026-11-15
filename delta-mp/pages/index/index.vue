@@ -1,108 +1,156 @@
 <template>
   <view class="home-page tab-page">
-    <scroll-view scroll-y class="home-scroll tab-page-scroll" :show-scrollbar="false">
-      <!-- 搜索栏 -->
-      <view class="search-bar" @click="goSearch">
-        <view class="search-inner">
-          <text class="search-placeholder">搜索</text>
-        </view>
+    <ScreenHeader title="首页">
+      <view
+        v-if="siteStore.customerServiceHomeIconVisible"
+        class="screen-icon-btn"
+        role="button"
+        aria-label="在线客服"
+        @click="goCustomerService"
+      >
+        <image src="/static/icons/header-headset.svg" mode="aspectFit" />
       </view>
-      <view class="search-bar-placeholder" />
-
-      <view v-if="isNeo" class="neo-home-head">
-        <text class="neo-home-kicker">PLAY BEYOND LIMITS</text>
-        <text class="neo-home-title">{{ siteStore.siteName }}</text>
-        <text class="neo-home-sub">{{ siteStore.subtitle }}</text>
+      <view class="screen-icon-btn" role="button" aria-label="消息通知" @click="goMessages">
+        <image src="/static/icons/header-bell.svg" mode="aspectFit" />
+        <view v-if="unreadCount > 0 || hasNoticeDot" class="screen-dot" />
       </view>
+    </ScreenHeader>
 
-      <!-- 轮播图 -->
-      <swiper v-if="banners.length" class="banner" :style="{height: bannerHeight + 'rpx'}" @change="onBannerChange" :autoplay="true" :interval="4000" circular indicator-dots>
-        <swiper-item v-for="(item, index) in banners" :key="item.id" @click="onBannerClick(item)">
-          <AppImage :eager="index === 0" :width="1080" :src="item.imageUrl" mode="aspectFit" class="banner-img" @load="onBannerLoad(item.id,$event)" />
-        </swiper-item>
-      </swiper>
-
-      <!-- 公告栏 - 竖向滚动 -->
-      <view v-if="notices.length" class="notice-bar" @click="showNoticeList = true">
-        <view class="notice-label">
-          <image class="notice-label-icon" src="/static/icons/公告.svg" mode="aspectFit" />
-          <text class="notice-label-text">公告</text>
+    <scroll-view scroll-y class="home-scroll" :show-scrollbar="false">
+      <view class="home-content">
+        <view v-if="isNeo" class="neo-home-head">
+          <text class="neo-home-kicker">PLAY BEYOND LIMITS</text>
+          <text class="neo-home-title">{{ siteStore.siteName }}</text>
+          <text class="neo-home-sub">{{ siteStore.subtitle }}</text>
         </view>
-        <swiper class="notice-swiper" vertical autoplay :interval="3500" :duration="500" circular :disable-touch="true">
-          <swiper-item v-for="item in notices" :key="item.id">
-            <view class="notice-swiper-item">
-              <text class="notice-title">{{ item.title }}</text>
+
+        <swiper
+          v-if="banners.length"
+          class="hero-card hero-swiper"
+          :class="{ banner: isNeo }"
+          :autoplay="banners.length > 1"
+          :interval="4500"
+          :circular="banners.length > 1"
+          :indicator-dots="banners.length > 1"
+          indicator-color="rgba(17,17,17,.25)"
+          indicator-active-color="#171717"
+        >
+          <swiper-item v-for="(item, index) in banners" :key="item.id">
+            <view class="hero-slide" :class="{ 'hero-feature': isStorefrontBanner(item) }" @click="onBannerClick(item)">
+              <AppImage class="hero-bg" :src="item.imageUrl" :width="1080" :mode="isStorefrontBanner(item) ? 'aspectFill' : 'aspectFit'" :eager="index === 0" />
+              <view v-if="!isStorefrontBanner(item) && hasHeroText(item)" class="hero-shade" />
+              <view v-if="hasHeroText(item)" class="hero-copy" :class="{ 'hero-copy-dark': !isStorefrontBanner(item) }">
+                <text v-if="heroCopy(item).title" class="hero-title">{{ heroCopy(item).title }}</text>
+                <text v-if="heroCopy(item).subtitle" class="hero-sub">{{ heroCopy(item).subtitle }}</text>
+                <view v-if="heroCopy(item).button" class="hero-action">{{ heroCopy(item).button }} <text class="hero-arrow">›</text></view>
+              </view>
             </view>
           </swiper-item>
         </swiper>
-        <text class="notice-more">{{ notices.length }}条 ></text>
-      </view>
 
-      <!-- 公告列表弹窗 -->
-      <view class="notice-list-mask" v-if="showNoticeList" @click="showNoticeList = false">
-        <view class="notice-list-popup" @click.stop>
-          <view class="notice-list-header">
-            <text class="notice-list-title">平台公告</text>
-            <text class="notice-list-close" @click="showNoticeList = false">✕</text>
+        <view v-else-if="!isNeo" class="hero-card hero-feature" @click="goCategoryPage">
+          <AppImage class="hero-bg" :src="storefrontBanner" mode="aspectFill" eager />
+          <view class="hero-copy">
+            <text class="hero-title">{{ heroTitle }}</text>
+            <text class="hero-sub">{{ heroSubtitle }}</text>
           </view>
-          <scroll-view scroll-y class="notice-list-body">
-            <view
-              v-for="item in notices"
-              :key="item.id"
-              class="notice-list-item"
-              @click="openNoticeDetail(item); showNoticeList = false"
-            >
-              <view class="notice-list-dot"></view>
-              <view class="notice-list-info">
-                <text class="notice-list-name">{{ item.title }}</text>
-                <text class="notice-list-time">{{ formatTime(item.createTime) }}</text>
+        </view>
+
+        <view class="search-bar" @click="goSearch">
+          <view class="search-inner">
+            <image class="search-icon" src="/static/icons/header-search.svg" mode="aspectFit" />
+            <text class="search-placeholder">搜索你需要的服务</text>
+          </view>
+        </view>
+
+        <view v-if="notices.length" class="notice-bar" @click="showNoticeList = true">
+          <view class="notice-label">
+            <image class="notice-label-icon" src="/static/icons/header-megaphone.svg" mode="aspectFit" />
+            <text class="notice-label-text">公告</text>
+          </view>
+          <swiper class="notice-swiper" vertical :autoplay="notices.length > 1" :interval="3500" :duration="500" :circular="notices.length > 1" :disable-touch="true">
+            <swiper-item v-for="item in notices" :key="item.id">
+              <view class="notice-swiper-item">
+                <text class="notice-title">{{ item.title }}</text>
               </view>
-              <text class="notice-list-arrow">></text>
+            </swiper-item>
+          </swiper>
+          <text class="notice-more">{{ notices.length }}条 ›</text>
+        </view>
+
+        <view class="notice-list-mask" v-if="showNoticeList" @click="showNoticeList = false">
+          <view class="notice-list-popup" @click.stop>
+            <view class="notice-list-header">
+              <text class="notice-list-title">平台公告</text>
+              <text class="notice-list-close" @click="showNoticeList = false">✕</text>
             </view>
-          </scroll-view>
+            <scroll-view scroll-y class="notice-list-body">
+              <view
+                v-for="item in notices"
+                :key="item.id"
+                class="notice-list-item"
+                @click="openNoticeDetail(item); showNoticeList = false"
+              >
+                <view class="notice-list-dot"></view>
+                <view class="notice-list-info">
+                  <text class="notice-list-name">{{ item.title }}</text>
+                  <text v-if="item.createdAt || item.createTime" class="notice-list-time">{{ formatTime(item.createdAt || item.createTime) }}</text>
+                </view>
+                <text class="notice-list-arrow">›</text>
+              </view>
+            </scroll-view>
+          </view>
         </view>
-      </view>
 
-      <!-- 商品分类：图标 + 文字 -->
-      <view v-if="categories.length" class="category-grid">
-        <view
-          v-for="cat in categories"
-          :key="cat.id"
-          class="category-item"
-          @click="goCategory(cat.id)"
-        >
-          <AppImage :width="160" class="category-icon" :src="cat.icon || '/static/icons/分类.svg'" mode="aspectFit" />
-          <text class="category-name">{{ cat.name }}</text>
-        </view>
-      </view>
-
-      <!-- 带分类的热门推荐：默认全部，可切换护航专区/热门等 -->
-      <view class="section">
-        <text v-if="isNeo" class="neo-section-title">为你推荐</text>
-        <view class="section-header">
-          <scroll-view scroll-x class="recommend-tabs" :show-scrollbar="false" scroll-with-animation>
-            <view
-              v-for="tab in recommendTabs"
-              :key="tab.id"
-              class="recommend-tab"
-              :class="{ active: currentRecommendCategoryId === tab.id }"
-              @click="switchRecommendCategory(tab.id)"
-            >
-              {{ tab.name }}
+        <view v-if="categories.length" class="category-grid">
+          <view
+            v-for="cat in categories"
+            :key="cat.id"
+            class="category-item"
+            @click="goCategory(cat.id)"
+          >
+            <view class="category-icon-wrap">
+              <AppImage
+                :width="160"
+                class="category-icon"
+                :style="{ width: (Number(cat.iconSize) || 56) + 'rpx', height: (Number(cat.iconSize) || 56) + 'rpx' }"
+                :src="cat.icon || '/static/icons/分类.svg'"
+                mode="aspectFit"
+              />
             </view>
-          </scroll-view>
-          <ProductSortPicker class="recommend-sort" v-model="currentSort" @update:model-value="loadRecommendProducts" />
+            <text class="category-name">{{ cat.name }}</text>
+          </view>
         </view>
-        <view class="product-grid">
-          <ProductCard v-for="p in recommendProducts" :key="p.id" :product="p" />
-        </view>
-        <view v-if="isNeo && !recommendProducts.length" class="neo-recommend-empty" @click="goCategoryPage">
-          <text>暂时没有推荐商品</text>
-          <text class="neo-recommend-link">去分类页看看 ›</text>
-        </view>
-      </view>
 
-      <view class="tab-page-bottom-spacer" :class="{ 'ticker-spacer': purchaseFeedEnabled && purchaseFeed.length }" />
+        <view class="section">
+          <view class="section-header">
+            <scroll-view scroll-x class="recommend-tabs" :show-scrollbar="false" scroll-with-animation>
+              <view
+                v-for="tab in recommendTabs"
+                :key="tab.id"
+                class="recommend-tab"
+                :class="{ active: currentRecommendCategoryId === tab.id }"
+                @click="switchRecommendCategory(tab.id)"
+              >
+                {{ tab.name }}
+              </view>
+            </scroll-view>
+            <view class="section-actions">
+              <view class="section-more" @click="showHomeActions = true">更多 <view class="section-more-chevron" /></view>
+            </view>
+          </view>
+          <view class="product-grid">
+            <ProductCard v-for="p in recommendProducts" :key="p.id" :product="p" cover-mode="aspectFit" />
+          </view>
+          <PageState v-if="recommendLoading || recommendError" :loading="recommendLoading" :error="recommendError" @retry="loadRecommendProducts" />
+          <view v-else-if="!recommendProducts.length" class="recommend-empty" @click="goCategoryPage">
+            <text>暂时没有推荐商品</text>
+            <text class="recommend-empty-link">去分类页看看 ›</text>
+          </view>
+        </view>
+
+        <view class="tab-page-bottom-spacer" :class="{ 'ticker-spacer': purchaseFeedEnabled && purchaseFeed.length }" />
+      </view>
     </scroll-view>
 
     <CustomTabBar :current="0" />
@@ -113,10 +161,26 @@
       @more="goDisplay('feed')"
     />
 
-    <!-- 悬浮客服按钮 -->
-    <DraggableSupport v-if="siteStore.customerServiceHomeIconVisible" @activate="goCustomerService" />
+    <view v-if="showHomeActions" class="home-sheet-mask" @click="showHomeActions = false">
+      <view class="home-sheet" @click.stop>
+        <view class="home-sheet-head">
+          <text>商品排序</text>
+          <text class="home-sheet-close" @click="showHomeActions = false">✕</text>
+        </view>
+        <view
+          v-for="option in homeSortOptions"
+          :key="option.value"
+          class="home-sheet-option"
+          :class="{ active: currentSort === option.value }"
+          @click="chooseHomeSort(option.value)"
+        >
+          <text>{{ option.label }}</text>
+          <text v-if="currentSort === option.value" class="home-sheet-check">✓</text>
+        </view>
+        <view class="home-sheet-all" @click="goCategoryPage">查看全部商品 <text>›</text></view>
+      </view>
+    </view>
 
-    <!-- 公告弹窗 - 支持多公告叠加 -->
     <view class="notice-popup" v-if="showNoticePopup" @click="closeNoticePopup">
       <view class="popup-content" @click.stop>
         <view class="popup-header">
@@ -154,10 +218,10 @@ import { computed, ref } from 'vue'
 import { onShow, onPullDownRefresh, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import ProductCard from '@/components/ProductCard.vue'
 import CustomTabBar from '@/components/CustomTabBar.vue'
-import DraggableSupport from '@/components/DraggableSupport.vue'
-import ProductSortPicker from '@/components/ProductSortPicker.vue'
 import RecentPurchaseTicker from '@/components/RecentPurchaseTicker.vue'
-import { productSortParams } from '@/utils/product-sort'
+import ScreenHeader from '@/components/ScreenHeader.vue'
+import PageState from '@/components/PageState.vue'
+import { productSortOptions, productSortParams } from '@/utils/product-sort'
 import { productDescriptionHtml } from '@/utils/product-content'
 import { bannerAction } from '@/utils/banner'
 import { getRecommendProducts, getRecommendCategories } from '@/api/product'
@@ -169,10 +233,39 @@ import { openCustomerService } from '@/utils/customer-service'
 import { getRemind } from '@/api/message'
 import { useUserStore } from '@/store/user'
 import { useChatStore } from '@/store/chat'
+import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 const userStore = useUserStore()
 const siteStore = useSiteStore()
+const chatStore = useChatStore()
+const remindStore = useRemindStore()
 const isNeo = computed(() => siteStore.themeId === 'neumorphism')
+const unreadCount = computed(() => Number(remindStore.systemUnread || 0) + Number(chatStore.messageUnread || 0))
+const heroTitle = computed(() => siteStore.siteName || '')
+const heroSubtitle = computed(() => siteStore.subtitle || '')
+const storefrontBanner = '/static/images/home-hero-operator.jpg'
+function heroCopy(item) {
+  return {
+    title: item?.title || '',
+    subtitle: item?.subtitle || '',
+    button: item?.buttonText || ''
+  }
+}
+function hasHeroText(item) {
+  const copy = heroCopy(item)
+  return Boolean(copy.title || copy.subtitle || copy.button)
+}
+function isStorefrontBanner(item) {
+  if (isNeo.value) return false
+  if (item.imageUrl === storefrontBanner) return true
+  // #ifdef H5
+  try {
+    const url = new URL(item.imageUrl, window.location.origin)
+    return url.origin === window.location.origin && url.pathname === storefrontBanner
+  } catch {}
+  // #endif
+  return false
+}
 
 // 分享给好友
 onShareAppMessage(() => ({
@@ -184,19 +277,20 @@ onShareTimeline(() => ({
   title: siteStore.siteName + ' - ' + siteStore.subtitle
 }))
 const banners = ref([])
-const bannerHeight=ref(395),bannerIndex=ref(0),bannerRatios={}
-function resizeBanner(){const ratio=bannerRatios[banners.value[bannerIndex.value]?.id];bannerHeight.value=ratio?Math.max(160,Math.min(950,702/ratio)):395}
-function onBannerLoad(id,event){const d=event.detail||{};if(d.width>0&&d.height>0){bannerRatios[id]=d.width/d.height;resizeBanner()}}
-function onBannerChange(event){bannerIndex.value=event.detail.current;resizeBanner()}
 const categories = ref([])
 const notices = ref([])
+const hasNoticeDot = computed(() => notices.value.length > 0)
 const purchaseFeed = ref([])
 const purchaseFeedEnabled = ref(false)
 const recommendProducts = ref([])
+const recommendLoading = ref(true)
+const recommendError = ref('')
 /** 热门推荐 Tab：全部 + 接口返回的分类（护航专区推荐、热门推荐等） */
 const recommendTabs = ref([])
 const currentRecommendCategoryId = ref('')
 const currentSort = ref('default')
+const homeSortOptions = productSortOptions
+const showHomeActions = ref(false)
 let recommendRequest = 0
 const showNoticePopup = ref(false)
 const popupNotices = ref([])
@@ -216,29 +310,21 @@ function formatTime(t) {
 }
 
 async function loadData() {
-  const _t = Date.now()
-  try {
+  const config = siteStore.fetchSiteConfig()
+  const opts = { loading: false, silent: true }
+  const bannerLoad = getActiveBanners(opts).then(res => {
+    const list = res.data?.records || res.data
+    banners.value = Array.isArray(list) ? list : []
+  })
+  const noticeLoad = getActiveNotices(opts).then(async res => {
+    const list = res.data?.records || res.data
+    notices.value = Array.isArray(list) ? list : []
     // Wait for the current public setting before deciding whether a dismissed
     // notice should be shown again on this page entry.
-    await siteStore.fetchSiteConfig()
-    const opts = { loading: false }
-    const [bannerRes, noticeRes, catRes, categoriesRes] = await Promise.all([
-      getActiveBanners(opts),
-      getActiveNotices(opts),
-      getCategoryTree(opts),
-      getRecommendCategories(opts),
-    ])
-
-    // 轮播图
-    if (bannerRes.data) {
-      banners.value = bannerRes.data.records || bannerRes.data || []
-    }
-    // 公告
-    if (noticeRes.data) {
-      const list = noticeRes.data.records || noticeRes.data || []
-      notices.value = list
+    await config
+    if (notices.value.length) {
       // 筛选出需要弹窗展示的公告
-      const popupList = list.filter(n => n.popupDisplay === 1)
+      const popupList = notices.value.filter(n => n.popupDisplay === 1)
       if (popupList.length > 0) {
         const seenIds = clientStorage.get('seenNoticeIds') || []
         const unseenList = popupList.filter(n => !seenIds.includes(noticeRevision(n)))
@@ -255,29 +341,24 @@ async function loadData() {
         }
       }
     }
-    // 分类（树接口返回父级）
-    if (catRes.data) {
-      categories.value = (catRes.data || []).slice(0, 8)
+  })
+  const categoryLoad = getCategoryTree(opts).then(res => {
+    categories.value = Array.isArray(res.data) ? res.data.slice(0, 8) : []
+  })
+  const recommendLoad = getRecommendCategories(opts).then(res => {
+    if (Array.isArray(res.data)) {
+      recommendTabs.value = res.data.map(c => ({ id: String(c.id), name: c.name }))
+      if (!recommendTabs.value.some(tab => tab.id === currentRecommendCategoryId.value))
+        currentRecommendCategoryId.value = recommendTabs.value[0]?.id || ''
     }
-    // 热门推荐分类 Tab（不含"全部热门"，默认选中第一个）
-    if (categoriesRes.data && Array.isArray(categoriesRes.data)) {
-      recommendTabs.value = categoriesRes.data.map(c => ({ id: String(c.id), name: c.name }))
-      if (recommendTabs.value.length > 0 && !currentRecommendCategoryId.value) {
-        currentRecommendCategoryId.value = recommendTabs.value[0].id
-      }
-    }
-    // 推荐商品
-    await loadRecommendProducts()
-  } catch (e) {
-    console.error('load home data error', e)
-  }
-  console.log(`[HOME] loadData done ${Date.now() - _t}ms`)
+  }).catch(() => {}).then(loadRecommendProducts)
+  await Promise.allSettled([bannerLoad, noticeLoad, categoryLoad, recommendLoad])
 }
 
 onShow(() => {
   loadData()
   loadPurchaseFeed()
-  if (useUserStore().token) {
+  if (userStore.token) {
     getRemind({ loading: false }).then(res => {
       const d = res.data || {}
       useChatStore().setUnreadFromServer(d.messageUnread ?? 0)
@@ -308,14 +389,29 @@ function switchRecommendCategory(id) {
   loadRecommendProducts()
 }
 
+function chooseHomeSort(value) {
+  currentSort.value = value
+  showHomeActions.value = false
+  loadRecommendProducts()
+}
+
 async function loadRecommendProducts() {
   const request = ++recommendRequest
+  recommendLoading.value = !recommendProducts.value.length
+  recommendError.value = ''
   const params = { ...productSortParams(currentSort.value) }
   if (currentRecommendCategoryId.value) params.categoryId = currentRecommendCategoryId.value
   try {
-    const res = await getRecommendProducts(params, { loading: false })
+    const res = await getRecommendProducts(params, { loading: false, silent: true })
     if (request === recommendRequest) recommendProducts.value = res.data?.records || res.data || []
-  } catch {}
+  } catch {
+    if (request === recommendRequest) {
+      recommendProducts.value = []
+      recommendError.value = '推荐商品加载失败，请重试。'
+    }
+  } finally {
+    if (request === recommendRequest) recommendLoading.value = false
+  }
 }
 
 function goSearch() {
@@ -323,7 +419,12 @@ function goSearch() {
 }
 
 function goCategoryPage() {
+  showHomeActions.value = false
   uni.switchTab({ url: '/pages/category/index' })
+}
+
+function goMessages() {
+  uni.switchTab({ url: '/pages/chat/list' })
 }
 
 function onBannerClick(item) {
@@ -380,349 +481,417 @@ async function goCustomerService() {
 
 <style lang="scss" scoped>
 .home-page {
-  background: #f7f8f9;
+  height: var(--app-page-height, 100vh);
   min-height: var(--app-page-height, 100vh);
-  position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  background: #f7f7f7;
 }
-
+.home-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+}
+.home-content {
+  padding: 10rpx 28rpx calc(42rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
+}
 .ticker-spacer { height: 148rpx; }
 
-/* === 内容层置于背景之上 === */
-.search-bar, .banner, .notice-bar, .category-tags, .section, .notice-popup {
+.hero-card {
+  position: relative;
+  height: 338rpx;
+  overflow: hidden;
+  border-radius: 26rpx;
+  background: #f1f1f1;
+}
+.hero-swiper { width: 100%; }
+.hero-slide { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hero-feature {
+  background: #f7f7f7;
+}
+.hero-feature .hero-bg {
+  left: 0;
+  background-color: transparent;
+  filter: grayscale(1) brightness(1.55);
+  -webkit-mask-image: linear-gradient(90deg, transparent 38%, #000 75%);
+  mask-image: linear-gradient(90deg, transparent 38%, #000 75%);
+}
+.hero-copy {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  width: 66%;
+  padding: 16rpx 14rpx 16rpx 18rpx;
+  box-sizing: border-box;
 }
+.hero-copy-dark {
+  .hero-title { color: #ffffff; }
+  .hero-sub { color: rgba(255,255,255,.76); }
+  .hero-action { border-color: rgba(255,255,255,.22); background: rgba(17,17,17,.86); color: #fff; }
+}
+.hero-title {
+  display: block;
+  color: #111111;
+  font-size: 48rpx;
+  font-weight: 800;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+.hero-sub {
+  display: block;
+  margin-top: 10rpx;
+  color: #444444;
+  font-size: 25rpx;
+  line-height: 1.45;
+}
+.hero-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 24rpx;
+  min-height: 66rpx;
+  padding: 0 26rpx;
+  border-radius: 999rpx;
+  background: #171717;
+  color: #ffffff;
+  font-size: 25rpx;
+  font-weight: 650;
+}
+.hero-arrow { font-size: 28rpx; line-height: 1; }
 
 .search-bar {
-  position: relative;
-  z-index: 2;
-  padding: 24rpx 24rpx 18rpx;
-  background: transparent;
-
-  .search-inner {
-    height: 80rpx;
-    background: #ffffff;
-    border: 1rpx solid #e6e7e9;
-    border-radius: 999rpx;
-    display: flex;
-    align-items: center;
-    padding: 0 34rpx;
-    box-shadow: 0 8rpx 28rpx rgba(23, 25, 28, 0.04);
-  }
-  .search-placeholder { font-size: 28rpx; color: #666b73; }
+  margin: 20rpx 0 0;
 }
-.search-bar-placeholder { display: none; }
-
-.banner {
-  height: 395rpx;
-  margin: 0 24rpx;
-  border-radius: 16rpx;
-  overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
-
-  .banner-img { width: 100%; height: 100%; }
+.search-inner {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  height: 84rpx;
+  padding: 0 26rpx;
+  border: 0;
+  border-radius: 999rpx;
+  background: #ffffff;
+  box-shadow: none;
 }
+.search-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; opacity: 0.78; }
+.search-placeholder { color: #666666; font-size: 26rpx; }
 
 .notice-bar {
   display: flex;
   align-items: center;
-  margin: 20rpx 24rpx;
-  padding: 0 24rpx;
+  margin: 14rpx 0 0;
+  padding: 0 20rpx;
   height: 72rpx;
   background: #ffffff;
-  border-radius: 12rpx;
+  border: 0;
+  border-radius: 18rpx;
   overflow: hidden;
-  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
 }
 .notice-label {
   display: flex;
   align-items: center;
-  gap: 6rpx;
+  gap: 8rpx;
   flex-shrink: 0;
   margin-right: 16rpx;
   padding-right: 16rpx;
-  border-right: 1rpx solid #e6e7e9;
-  .notice-label-icon {
-    width: 32rpx;
-    height: 32rpx;
-    filter: brightness(0);
-  }
-  .notice-label-text { font-size: 24rpx; color: #17191c; font-weight: 600; }
+  border-right: 1rpx solid #eeeeee;
+  .notice-label-icon { width: 30rpx; height: 30rpx; filter: grayscale(1) brightness(0.3); }
+  .notice-label-text { font-size: 24rpx; color: #171717; font-weight: 750; }
 }
-.notice-swiper {
-  flex: 1;
-  height: 72rpx;
-}
-.notice-swiper-item {
-  display: flex;
-  align-items: center;
-  height: 72rpx;
-}
+.notice-swiper { flex: 1; min-width: 0; height: 100%; }
+.notice-swiper-item { display: flex; align-items: center; height: 100%; min-width: 0; }
 .notice-title {
+  min-width: 0;
   font-size: 24rpx;
-  color: #17191c;
+  color: #777777;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.notice-more {
-  flex-shrink: 0;
-  font-size: 22rpx;
-  color: #73777e;
-  margin-left: 12rpx;
-}
-/* 公告列表弹窗 */
-.notice-list-mask {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 999;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-.notice-list-popup {
-  width: 100%;
-  max-height: 70vh;
-  background: #ffffff;
-  border-radius: 32rpx 32rpx 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.notice-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 32rpx 36rpx 24rpx;
-  border-bottom: 1rpx solid #e6e7e9;
-  .notice-list-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
-  .notice-list-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
-}
-.notice-list-body {
-  height: 50vh;
-  padding: 12rpx 0;
-}
-.notice-list-item {
-  display: flex;
-  align-items: center;
-  padding: 28rpx 36rpx;
-  border-bottom: 1rpx solid #eeeff1;
-}
-.notice-list-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  background: #17191c;
-  flex-shrink: 0;
-  margin-right: 20rpx;
-}
-.notice-list-info {
-  flex: 1;
-  overflow: hidden;
-}
-.notice-list-name {
-  font-size: 28rpx;
-  color: #17191c;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.notice-list-time {
-  font-size: 22rpx;
-  color: #73777e;
-  display: block;
-  margin-top: 6rpx;
-}
-.notice-list-arrow {
-  color: #b9bdc4;
-  font-size: 26rpx;
-  flex-shrink: 0;
-  margin-left: 12rpx;
-}
+.notice-more { flex-shrink: 0; font-size: 22rpx; color: #aaaaaa; margin-left: 12rpx; }
 
-/* 商品分类：图标 + 文字网格 */
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24rpx 16rpx;
-  padding: 28rpx 24rpx;
+  gap: 24rpx 8rpx;
+  padding: 24rpx 8rpx;
   background: #ffffff;
-  margin: 20rpx 24rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
+  margin: 16rpx 0 0;
+  border: 0;
+  border-radius: 24rpx;
+  box-shadow: none;
 }
 .category-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12rpx;
-  &:active { opacity: 0.85; }
+  &:active { opacity: 0.78; }
 }
-.category-icon {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 24rpx;
-  background: #f7f8f9;
+.category-icon-wrap {
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  background: transparent;
 }
+.category-icon { width: 60rpx; height: 60rpx; }
 .category-name {
+  max-width: 100%;
+  color: #111111;
   font-size: 24rpx;
-  color: #555b63;
+  font-weight: 650;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
-.section {
-  padding: 24rpx;
-}
+.section { padding: 26rpx 0 0; }
 .section-header {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  margin-bottom: 20rpx;
+  gap: 14rpx;
   min-width: 0;
-  .section-title {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: #17191c;
-    flex-shrink: 0;
-  }
 }
-.recommend-tabs {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  height: 56rpx;
-}
-.recommend-sort {
-  flex-shrink: 0;
-  margin-left: 12rpx;
-  align-self: center;
-}
+.recommend-tabs { flex: 1; min-width: 0; white-space: nowrap; height: 64rpx; }
 .recommend-tab {
-  display: inline-block;
-  padding: 12rpx 24rpx;
+  display: inline-flex;
+  align-items: center;
+  min-height: 62rpx;
+  padding: 0 20rpx;
   font-size: 24rpx;
-  color: #666b73;
-  background: #f7f8f9;
+  color: #777777;
+  background: transparent;
   border-radius: 999rpx;
-  margin-right: 16rpx;
-
-  &.active {
-    color: #fff;
-    background: linear-gradient(135deg, #17191c, #30343a);
-  }
+  margin-right: 4rpx;
+  &.active { color: #ffffff; background: #171717; font-weight: 750; }
 }
-
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+.section-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  min-height: 62rpx;
+  padding: 0 18rpx;
+  background: #ffffff;
+  border: 0;
+  border-radius: 999rpx;
+  color: #444444;
+  font-size: 23rpx;
+  white-space: nowrap;
+}
+.section-more-chevron {
+  width: 9rpx;
+  height: 9rpx;
+  border: solid currentColor;
+  border-width: 0 2rpx 2rpx 0;
+  transform: translateY(-2rpx) rotate(45deg);
+}
 .product-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
-  overflow: hidden;
+  margin-top: 18rpx;
 }
+.recommend-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 54rpx 20rpx;
+  margin-top: 18rpx;
+  border: 1rpx dashed #dddddd;
+  border-radius: 24rpx;
+  color: #aaaaaa;
+  font-size: 23rpx;
+  background: #ffffff;
+}
+.recommend-empty-link { color: #171717; font-weight: 700; }
 
-.notice-popup {
+.home-sheet-mask {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.7);
+  inset: 0;
+  z-index: 998;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(8, 10, 13, 0.52);
+}
+.home-sheet {
+  width: 100%;
+  padding: 8rpx 28rpx calc(28rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
+  border-radius: 28rpx 28rpx 0 0;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+.home-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 4rpx 14rpx;
+  color: #111111;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+.home-sheet-close { color: #aaaaaa; font-size: 30rpx; font-weight: 400; }
+.home-sheet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 82rpx;
+  padding: 0 4rpx;
+  border-top: 1rpx solid #eeeeee;
+  color: #777777;
+  font-size: 25rpx;
+  &.active { color: #111111; font-weight: 750; }
+}
+.home-sheet-check { color: #171717; font-size: 26rpx; }
+.home-sheet-all {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  gap: 6rpx;
+  min-height: 88rpx;
+  margin-top: 10rpx;
+  border-radius: 14rpx;
+  background: #171717;
+  color: #ffffff;
+  font-size: 25rpx;
+  font-weight: 750;
+  text { font-size: 28rpx; }
+}
 
+.notice-list-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(13, 15, 18, 0.56);
+}
+.notice-list-popup {
+  width: 100%;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 30rpx 30rpx 0 0;
+}
+.notice-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 34rpx 20rpx;
+  border-bottom: 1rpx solid #eeeeee;
+  .notice-list-title { font-size: 33rpx; font-weight: 800; color: #171717; }
+  .notice-list-close { font-size: 34rpx; color: #777777; padding: 0 8rpx; }
+}
+.notice-list-body { height: 50vh; padding: 8rpx 0; }
+.notice-list-item {
+  display: flex;
+  align-items: center;
+  padding: 26rpx 34rpx;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+.notice-list-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: #171717;
+  flex-shrink: 0;
+  margin-right: 18rpx;
+}
+.notice-list-info { flex: 1; overflow: hidden; }
+.notice-list-name {
+  display: block;
+  color: #171717;
+  font-size: 27rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.notice-list-time { display: block; margin-top: 6rpx; color: #aaaaaa; font-size: 21rpx; }
+.notice-list-arrow { flex-shrink: 0; margin-left: 12rpx; color: #aaaaaa; font-size: 30rpx; }
+
+.notice-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 15, 18, 0.62);
   .popup-content {
-    width: 600rpx;
+    width: min(620rpx, calc(100% - 48rpx));
     max-height: 70vh;
-    background: #ffffff;
-    border-radius: 24rpx;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    background: #ffffff;
+    border-radius: 28rpx;
+    box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
   }
-
   .popup-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 28rpx 32rpx;
-    border-bottom: 1rpx solid #e6e7e9;
-
-    .popup-title { font-size: 32rpx; font-weight: bold; color: #17191c; }
-    .popup-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
+    border-bottom: 1rpx solid #eeeeee;
+    .popup-title { font-size: 31rpx; font-weight: 800; color: #171717; }
+    .popup-close { font-size: 34rpx; color: #777777; padding: 0 8rpx; }
   }
-
   .popup-body {
-    padding: 32rpx 32rpx 44rpx;
     min-height: 0;
     max-height: 50vh;
-
-    .popup-notice-title { font-size: 30rpx; font-weight: bold; color: #17191c; display: block; margin-bottom: 20rpx; }
+    padding: 32rpx 32rpx 44rpx;
+    .popup-notice-title { display: block; margin-bottom: 18rpx; color: #171717; font-size: 29rpx; font-weight: 800; }
   }
-
   .popup-footer {
     flex-shrink: 0;
     padding: 32rpx 32rpx calc(28rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-    border-top: 1rpx solid #e6e7e9;
+    border-top: 1rpx solid #eeeeee;
     background: #ffffff;
-    box-shadow: 0 -12rpx 30rpx rgba(23, 25, 28, 0.05);
-
-    .popup-nav {
-      display: flex;
-      justify-content: center;
-      gap: 32rpx;
-      margin-bottom: 20rpx;
-
-      .popup-nav-btn {
-        font-size: 26rpx;
-        color: #17191c;
-        padding: 8rpx 24rpx;
-        border: 1rpx solid rgba(23, 25, 28, 0.15);
-        border-radius: 999rpx;
-
-        &.disabled {
-          color: #b9bdc4;
-          border-color: #e6e7e9;
-        }
-      }
-    }
-
-    .popup-btn {
-      margin-top: 4rpx;
-      height: 76rpx;
-      line-height: 76rpx;
-      text-align: center;
-      background: linear-gradient(135deg, #17191c, #30343a);
-      color: #ffffff;
-      font-weight: bold;
+    box-shadow: 0 -6rpx 20rpx rgba(0, 0, 0, 0.03);
+    .popup-nav { display: flex; justify-content: center; gap: 28rpx; margin-bottom: 18rpx; }
+    .popup-nav-btn {
+      padding: 8rpx 22rpx;
+      border: 1rpx solid #e6e8eb;
       border-radius: 999rpx;
-      font-size: 28rpx;
+      color: #171717;
+      font-size: 24rpx;
+      &.disabled { color: #aaaaaa; border-color: #eef0f2; }
     }
-  }
-}
-.cs-float-btn {
-  position: fixed;
-  right: 24rpx;
-  bottom: 240rpx;
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #17191c, #30343a);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(23, 25, 28, 0.04);
-  z-index: 100;
-
-  .cs-icon {
-    width: 52rpx;
-    height: 52rpx;
-    filter: brightness(0) saturate(100%) invert(100%);
+    .popup-btn {
+      height: 78rpx;
+      line-height: 78rpx;
+      text-align: center;
+      border-radius: 999rpx;
+      background: #171717;
+      color: #ffffff;
+      font-size: 27rpx;
+      font-weight: 750;
+    }
   }
 }
 </style>

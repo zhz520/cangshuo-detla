@@ -13,6 +13,9 @@ public class Banner extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String imageUrl;
+    private String title;
+    private String subtitle;
+    private String buttonText;
     private String linkType;
     private String linkValue;
     private Integer sortOrder;

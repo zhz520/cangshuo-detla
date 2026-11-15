@@ -44,7 +44,7 @@ async function submit() {
 </script>
 <style lang="scss" scoped>
 .progress-page { padding:24rpx; background: #ffffff; min-height: var(--app-page-height, 100vh); }
-textarea { width:100%; height:240rpx; background: #f4f5f6; border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; }
-.btn { height:88rpx; line-height:88rpx; text-align:center; background: linear-gradient(135deg, #17191c, #30343a, #30343a); color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
+textarea { width:100%; height:240rpx; background: #f7f7f7; border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; }
+.btn { height:88rpx; line-height:88rpx; text-align:center; background: #171717; color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
 .submit-disabled { opacity: .6; pointer-events: none; }
 </style>

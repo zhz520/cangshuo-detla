@@ -63,7 +63,7 @@ public class SecurityConfig {
                         "/app/players/layout", "/app/players/{id}", "/app/players/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/order/review/product/**", "/order/review/player/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/system/maintenance/status", "/system/banner/active", "/system/notice/active",
-                        "/system/content/key/privacy_policy", "/system/content/key/user_agreement",
+                        "/system/content/key/privacy_policy", "/system/content/key/user_agreement", "/system/content/key/about_us",
                         "/system/config/site", "/system/config/theme", "/system/recharge-packages").permitAll()
                 .requestMatchers("/doc.html", "/webjars/**", "/v3/api-docs/**", "/swagger-resources/**").hasRole("ADMIN")
                 // 下单选打手：普通用户、打手、客服、管理员均可访问（复用客服指派打手接口）
