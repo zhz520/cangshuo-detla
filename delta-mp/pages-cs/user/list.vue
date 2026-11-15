@@ -5,7 +5,7 @@
     </view>
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="u in users" :key="u.id" class="user-card">
-        <AppImage :width="160" class="avatar" :src="u.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="u.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ u.nickname || u.phone }}</text>
           <text class="meta">注册：{{ u.createdAt }} | 订单：{{ u.orderCount || 0 }}</text>

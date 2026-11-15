@@ -226,12 +226,13 @@ onUnmounted(() => {
 .layout-container {
   height: var(--app-viewport-height);
   min-height: 0;
-  background: #f5f6f7;
+  background: #f7f7f7;
 }
 .layout-body { min-width: 0; min-height: 0; }
 .layout-aside {
-  background: #17191c;
-  box-shadow: 1px 0 0 rgba(23, 25, 28, 0.08);
+  background: #ffffff;
+  border-right: 1px solid #eeeeee;
+  box-shadow: none;
   transition: width 0.24s ease;
   overflow: hidden;
 }
@@ -252,18 +253,17 @@ onUnmounted(() => {
     .collapse-btn {
       width: 34px;
       height: 34px;
-      border: 1px solid #e6e7e9;
-      border-radius: 8px;
+      border: 0;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: #555b63;
-      background: #fff;
+      background: transparent;
       cursor: pointer;
       transition: all 0.18s ease;
       &:hover {
-        color: #17191c;
-        border-color: #d8dadd;
+        color: #111111;
         background: #f4f5f6;
       }
       svg {
@@ -276,7 +276,7 @@ onUnmounted(() => {
       font-weight: 500;
     }
     :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-      color: #17191c;
+      color: #111111;
       font-weight: 700;
     }
   }
@@ -292,14 +292,14 @@ onUnmounted(() => {
       justify-content: center;
       width: 34px;
       height: 34px;
-      border: 1px solid #e6e7e9;
-      border-radius: 8px;
-      background: #fff;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
       transition: background 0.2s;
       color: #555b63;
       &:hover {
-        background: #f4f5f6;
-        color: #17191c;
+        background: #f7f7f7;
+        color: #111111;
       }
       .notify-badge.task-badge { background: #8c531a; }
       .notify-badge.chat-badge { background: #315b97; }
@@ -321,8 +321,8 @@ onUnmounted(() => {
     .role-tag {
       margin-right: 4px;
       color: #555b63;
-      border-color: #e6e7e9;
-      background: #f5f6f7;
+      border: 0;
+      background: #f1f2f4;
     }
     .user-info {
       cursor: pointer;
@@ -332,9 +332,9 @@ onUnmounted(() => {
       min-height: 34px;
       padding: 0 10px 0 6px;
       border-radius: 999px;
-      color: #17191c;
-      background: #f7f8f9;
-      border: 1px solid #e6e7e9;
+      color: #111111;
+      background: #f4f5f6;
+      border: 0;
     }
   }
 }
@@ -344,7 +344,7 @@ onUnmounted(() => {
   overflow: auto;
   background:
     linear-gradient(180deg, rgba(245, 246, 247, 0.82) 0%, rgba(245, 246, 247, 0) 210px),
-    #f5f6f7;
+    #f7f7f7;
   padding: 22px 24px 28px;
 }
 .layout-page-frame { width:100%; min-width:0; max-width:100%; }
@@ -401,7 +401,7 @@ onUnmounted(() => {
 .mobile-account-head { display:flex; align-items:center; gap:12px; padding:18px; border:1px solid #e8eaee; border-radius:16px; background:#fff; }
 .mobile-account-head > div { display:grid; flex:1; min-width:0; gap:5px; }
 .mobile-account-head strong { color:#20242a; font-size:17px; }
-.mobile-account-head span { color:#8b929b; font-size:11px; }
+.mobile-account-head span { color:#aaaaaa; font-size:11px; }
 .mobile-account-head button { width:32px; height:32px; border:0; border-radius:50%; background:#f1f3f5; color:#737b85; font-size:20px; }
 .mobile-account-list { display:grid; gap:9px; margin-top:14px; }
 .mobile-account-list button { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; padding:14px 15px; border:1px solid #e8eaee; border-radius:13px; background:#fff; color:#242931; text-align:left; }

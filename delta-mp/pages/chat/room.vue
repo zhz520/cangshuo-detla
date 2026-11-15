@@ -1,5 +1,14 @@
 <template>
   <view class="chat-room" :class="{ 'toolbar-open': showToolbar, 'keyboard-open': keyboardHeight > 0 }" :style="{ '--chat-keyboard-height': keyboardHeight + 'px' }">
+    <view v-if="targetType === 'CS'" class="service-state">
+      <view class="service-state-copy">
+        <text class="service-state-title">{{ serviceStateTitle }}</text>
+        <text class="service-state-desc">{{ serviceStateDesc }}</text>
+      </view>
+      <view v-if="sessionStatus === 'ACTIVE'" class="service-state-btn" @click="closeSession">结束会话</view>
+      <view v-else-if="canRate && !sessionRating" class="service-state-btn primary" @click="openRating">评价服务</view>
+      <view v-else-if="sessionRating" class="service-state-score">{{ sessionRating }}.0 ★</view>
+    </view>
     <view ref="messagePane" class="message-pane">
     <scroll-view scroll-y class="msg-list" :scroll-into-view="scrollAnchor" @scroll="onScroll">
       <view v-for="(m, idx) in messages" :key="m.id">
@@ -35,7 +44,8 @@
       </view>
     </view>
 
-    <view class="input-bar">
+    <view v-if="sessionStatus === 'CLOSED'" class="closed-input">会话已结束，如有新问题请重新发起客服会话</view>
+    <view v-else class="input-bar">
       <view class="plus-btn" @mousedown.prevent @click="toggleToolbar">＋</view>
       <input v-model="inputText" placeholder="输入消息" confirm-type="send" :confirm-hold="true" :adjust-position="false" @confirm="send" @focus="onInputFocus" @blur="onInputBlur" @keyboardheightchange="onKeyboardHeightChange" />
       <view class="send-btn" @mousedown.prevent @touchend.prevent="send" @click="send">发送</view>
@@ -83,6 +93,30 @@
         </scroll-view>
       </view>
     </view>
+
+    <view v-if="ratingVisible" class="rating-mask" @click="ratingVisible = false">
+      <view class="rating-panel" @click.stop>
+        <view class="rating-head">
+          <text class="rating-title">评价本次客服服务</text>
+          <text class="rating-close" @click="ratingVisible = false">✕</text>
+        </view>
+        <text class="rating-tip">你的评价会用于客服服务质量统计，每个会话只能评价一次。</text>
+        <view class="rating-stars">
+          <text
+            v-for="star in 5"
+            :key="star"
+            class="rating-star"
+            :class="{ active: star <= ratingValue }"
+            @click="ratingValue = star"
+          >★</text>
+        </view>
+        <textarea v-model="ratingComment" class="rating-textarea" maxlength="500" placeholder="可以补充本次服务的体验（选填）" />
+        <view class="rating-actions">
+          <view class="rating-cancel" @click="ratingVisible = false">取消</view>
+          <view class="rating-submit" :class="{ disabled: ratingSubmitting }" @click="submitRating">{{ ratingSubmitting ? '提交中…' : '提交评价' }}</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 <script setup>
@@ -91,7 +125,7 @@ import AppImage from '@/components/AppImage.vue'
 import { ref, computed, watch, nextTick, getCurrentInstance, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import ChatBubble from '@/components/ChatBubble.vue'
-import { getChatMessageList, getSessionByOrderId, getSessionDetail, markMessageRead, sendChatSmsReminder } from '@/api/chat'
+import { closeChatSession, getChatMessageList, getSessionByOrderId, getSessionDetail, markMessageRead, rateChatSession, sendChatSmsReminder } from '@/api/chat'
 import { getProductList } from '@/api/product'
 import { getOrderList } from '@/api/order'
 import { useChatStore } from '@/store/chat'
@@ -130,6 +164,23 @@ const selfName = computed(() =>
 const otherAvatar = ref('')
 const otherName = ref('')
 const targetType = ref('')
+const sessionStatus = ref('ACTIVE')
+const sessionRating = ref(0)
+const ratingVisible = ref(false)
+const ratingValue = ref(5)
+const ratingComment = ref('')
+const ratingSubmitting = ref(false)
+const canRate = computed(() => targetType.value === 'CS' && appStore.role !== 'player')
+const serviceStateTitle = computed(() => {
+  if (sessionRating.value) return '本次服务已完成'
+  if (sessionStatus.value === 'CLOSED') return '本次客服会话已结束'
+  return '客服会话进行中'
+})
+const serviceStateDesc = computed(() => {
+  if (sessionRating.value) return '感谢你的评价，我们会持续改进服务'
+  if (sessionStatus.value === 'CLOSED') return canRate.value ? '可以为本次服务评分，评价后不可修改' : '会话已结束'
+  return '问题解决后可结束会话并评价客服'
+})
 const canSendSmsReminder = computed(() =>
   appStore.role === 'player' ? targetType.value === 'USER' : targetType.value === 'PLAYER'
 )
@@ -302,6 +353,8 @@ onLoad(async (opts) => {
     otherAvatar.value = sessionData.avatar || ''
     otherName.value = sessionData.targetName || ''
     targetType.value = resolveEncodedType(sessionData.targetId)
+    sessionStatus.value = sessionData.status || 'ACTIVE'
+    sessionRating.value = Number(sessionData.rating || 0)
     if (sessionData.targetName) uni.setNavigationBarTitle({ title: sessionData.targetName })
   } else if (opts.name) {
     otherName.value = decodeURIComponent(opts.name)
@@ -376,6 +429,51 @@ function send() {
   sendViaWs('TEXT', content)
 }
 
+async function closeSession() {
+  if (sessionStatus.value !== 'ACTIVE') return
+  try {
+    await new Promise((resolve, reject) => {
+      uni.showModal({
+        title: '结束客服会话',
+        content: '结束后消息记录仍可查看，也可以评价本次客服服务。',
+        confirmText: '结束会话',
+        success: result => result.confirm ? resolve() : reject(new Error('cancel')),
+        fail: reject
+      })
+    })
+    await closeChatSession(sessionId.value, USER_CHAT_OPTS)
+    sessionStatus.value = 'CLOSED'
+    showToolbar.value = false
+    uni.showToast({ title: '会话已结束，可以评价客服', icon: 'none' })
+  } catch (e) {
+    if (e?.message !== 'cancel' && !e?.errMsg?.includes('cancel')) {
+      uni.showToast({ title: e?.msg || '结束会话失败，请重试', icon: 'none' })
+    }
+  }
+}
+
+function openRating() {
+  if (!canRate.value || sessionRating.value || sessionStatus.value !== 'CLOSED') return
+  ratingValue.value = 5
+  ratingComment.value = ''
+  ratingVisible.value = true
+}
+
+async function submitRating() {
+  if (ratingSubmitting.value) return
+  ratingSubmitting.value = true
+  try {
+    await rateChatSession(sessionId.value, { rating: ratingValue.value, comment: ratingComment.value.trim() }, USER_CHAT_OPTS)
+    sessionRating.value = ratingValue.value
+    ratingVisible.value = false
+    uni.showToast({ title: '评价已提交', icon: 'none' })
+  } catch (e) {
+    uni.showToast({ title: e?.msg || '评价提交失败，请重试', icon: 'none' })
+  } finally {
+    ratingSubmitting.value = false
+  }
+}
+
 async function sendSmsReminder() {
   if (!sessionReady.value) return
   showToolbar.value = false
@@ -441,8 +539,31 @@ function resolveEncodedType(encodedId) {
 }
 </script>
 <style lang="scss" scoped>
-.chat-room { background: #f7f8f9; position: relative; overflow: hidden; }
-.msg-list { background: #f7f8f9; box-sizing: border-box; }
+.chat-room { background: #f7f7f7; position: relative; overflow: hidden; }
+.msg-list { background: #f7f7f7; box-sizing: border-box; }
+.service-state {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+  padding: 16rpx 24rpx;
+  border-bottom: 1rpx solid #eeeeee;
+  background: #ffffff;
+}
+.service-state-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3rpx; }
+.service-state-title { color: #111111; font-size: 24rpx; font-weight: 750; }
+.service-state-desc { color: #999999; font-size: 20rpx; line-height: 1.35; }
+.service-state-btn {
+  flex-shrink: 0;
+  padding: 10rpx 18rpx;
+  border: 1rpx solid #dedfe1;
+  border-radius: 999rpx;
+  color: #555555;
+  font-size: 22rpx;
+}
+.service-state-btn.primary { border-color: #171717; background: #171717; color: #ffffff; }
+.service-state-score { flex-shrink: 0; color: #c58a22; font-size: 22rpx; font-weight: 700; }
+.closed-input { flex-shrink: 0; padding: 24rpx 28rpx calc(24rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #eeeeee; background: #ffffff; color: #999999; font-size: 22rpx; text-align: center; }
 
 .scroll-bottom-btn {
   position: absolute;
@@ -453,14 +574,14 @@ function resolveEncodedType(encodedId) {
   line-height: 72rpx;
   text-align: center;
   font-size: 36rpx;
-  color: #17191c;
+  color: #111111;
   background: rgba(255,255,255,0.9);
   border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 50%;
   z-index: 10;
   box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.4);
 }
-.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #73777e; background: #f3f4f5; padding: 4rpx 16rpx; border-radius: 8rpx; } }
+.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #777777; background: #f3f4f5; padding: 4rpx 16rpx; border-radius: 8rpx; } }
 
 /* 工具栏 */
 .toolbar {
@@ -474,7 +595,7 @@ function resolveEncodedType(encodedId) {
   gap: 12rpx;
   padding: 8rpx 32rpx;
   background: #ffffff;
-  border-top: 1rpx solid #e6e7e9;
+  border-top: 1rpx solid #eeeeee;
   box-sizing: border-box;
 }
 .toolbar-item {
@@ -485,7 +606,7 @@ function resolveEncodedType(encodedId) {
   min-width: 80rpx;
 }
 .toolbar-icon-img { width: 36rpx; height: 36rpx; }
-.toolbar-label { font-size: 18rpx; color: #666b73; }
+.toolbar-label { font-size: 18rpx; color: #777777; }
 
 .input-bar {
   position: fixed;
@@ -497,11 +618,11 @@ function resolveEncodedType(encodedId) {
   align-items: center;
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background: rgba(255,255,255,0.95);
-  border-top: 1rpx solid #e6e7e9;
+  border-top: 1rpx solid #eeeeee;
   box-sizing: border-box;
 
-  input { flex: 1; height: 72rpx; background: #f7f8f9; border: 1rpx solid #e6e7e9; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #17191c; }
-  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
+  input { flex: 1; height: 72rpx; background: #f7f7f7; border: 1rpx solid #eeeeee; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #111111; }
+  .send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: #171717; color: #ffffff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
 }
 .plus-btn {
   width: 64rpx;
@@ -509,7 +630,7 @@ function resolveEncodedType(encodedId) {
   line-height: 60rpx;
   text-align: center;
   font-size: 40rpx;
-  color: #17191c;
+  color: #111111;
   border: 1rpx solid rgba(23, 25, 28, 0.15);
   border-radius: 50%;
   margin-right: 16rpx;
@@ -539,25 +660,41 @@ function resolveEncodedType(encodedId) {
   align-items: center;
   justify-content: space-between;
   padding: 28rpx 32rpx;
-  border-bottom: 1rpx solid #e6e7e9;
+  border-bottom: 1rpx solid #eeeeee;
 }
-.picker-title { font-size: 30rpx; font-weight: bold; color: #17191c; }
-.picker-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
+.picker-title { font-size: 30rpx; font-weight: bold; color: #111111; }
+.picker-close { font-size: 36rpx; color: #777777; padding: 0 8rpx; }
 .picker-list { flex: 1; max-height: 38vh; }
 .picker-item {
   display: flex;
   align-items: center;
   padding: 20rpx 32rpx;
-  border-bottom: 1rpx solid #eeeff1;
+  border-bottom: 1rpx solid #eeeeee;
 }
 .picker-cover { width: 100rpx; height: 100rpx; border-radius: 8rpx; flex-shrink: 0; margin-right: 20rpx; }
 .picker-info { flex: 1; overflow: hidden; }
-.picker-name { font-size: 28rpx; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.picker-price { font-size: 28rpx; color: #17191c; font-weight: bold; }
+.picker-name { font-size: 28rpx; color: #111111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.picker-price { font-size: 28rpx; color: #111111; font-weight: bold; }
 .picker-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
-.picker-status { font-size: 22rpx; color: #73777e; }
-.picker-sub { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
-.picker-empty { text-align: center; padding: 80rpx 0; color: #73777e; font-size: 28rpx; }
+.picker-status { font-size: 22rpx; color: #777777; }
+.picker-sub { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; }
+.picker-empty { text-align: center; padding: 80rpx 0; color: #777777; font-size: 28rpx; }
+
+.rating-mask { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 32rpx; background: rgba(0,0,0,.45); box-sizing: border-box; }
+.rating-panel { width: 100%; max-width: 620rpx; padding: 28rpx; border-radius: 28rpx; background: #ffffff; box-sizing: border-box; }
+.rating-head { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.rating-title { color: #111111; font-size: 30rpx; font-weight: 800; }
+.rating-close { color: #999999; font-size: 32rpx; }
+.rating-tip { display: block; margin-top: 12rpx; color: #888888; font-size: 21rpx; line-height: 1.55; }
+.rating-stars { display: flex; justify-content: center; gap: 18rpx; padding: 28rpx 0 20rpx; }
+.rating-star { color: #d9dadd; font-size: 56rpx; line-height: 1; }
+.rating-star.active { color: #c58a22; }
+.rating-textarea { width: 100%; height: 150rpx; padding: 18rpx; border-radius: 16rpx; background: #f7f7f7; box-sizing: border-box; color: #111111; font-size: 24rpx; line-height: 1.55; }
+.rating-actions { display: flex; gap: 16rpx; margin-top: 22rpx; }
+.rating-cancel, .rating-submit { flex: 1; height: 76rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 25rpx; font-weight: 700; }
+.rating-cancel { background: #f2f3f4; color: #666666; }
+.rating-submit { background: #171717; color: #ffffff; }
+.rating-submit.disabled { opacity: .55; }
 
 /* 消息区占满剩余空间，工具栏和输入栏按实际高度参与布局。 */
 .chat-room {

@@ -12,13 +12,13 @@
     </view>
     <!-- 接单员信息（用户端看到） -->
     <view v-if="order.playerId && !isPlayerView" class="person-row">
-      <AppImage :width="160" class="person-avatar" :src="order.playerAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+      <AppImage :width="160" class="person-avatar" :src="order.playerAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
       <text class="person-name">{{ order.playerName || '接单员' + order.playerId }}</text>
       <text class="person-label">服务人员</text>
     </view>
     <!-- 用户信息（接单员端看到） -->
     <view v-if="order.userNickname && isPlayerView" class="person-row">
-      <AppImage :width="160" class="person-avatar" :src="order.userAvatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+      <AppImage :width="160" class="person-avatar" :src="order.userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
       <text class="person-name">{{ order.userNickname }}</text>
       <text class="person-label">下单用户</text>
     </view>
@@ -125,7 +125,7 @@ function repeatOrder() {
 <style lang="scss" scoped>
 .order-card {
   background: #ffffff;
-  border: 1rpx solid #eeeff1;
+  border: 1rpx solid #eeeeee;
   border-radius: 20rpx;
   padding: 28rpx 28rpx 24rpx;
   margin-bottom: 20rpx;
@@ -147,7 +147,7 @@ function repeatOrder() {
     flex: 1;
     font-size: 30rpx;
     font-weight: bold;
-    color: #17191c;
+    color: #111111;
     margin-right: 16rpx;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -160,15 +160,15 @@ function repeatOrder() {
   .spec {
     display: inline-block;
     font-size: 24rpx;
-    color: #666b73;
-    background: #e6e7e9;
+    color: #777777;
+    background: #eeeeee;
     padding: 4rpx 14rpx;
     border-radius: 6rpx;
     margin-right: 12rpx;
   }
   .order-no {
     font-size: 22rpx;
-    color: #73777e;
+    color: #777777;
   }
 }
 
@@ -177,7 +177,7 @@ function repeatOrder() {
   align-items: center;
   margin-top: 16rpx;
   padding: 14rpx 16rpx;
-  background: #f4f5f6;
+  background: #f7f7f7;
   border-radius: 12rpx;
   .person-avatar {
     width: 48rpx;
@@ -188,20 +188,20 @@ function repeatOrder() {
   }
   .person-name {
     font-size: 26rpx;
-    color: #17191c;
+    color: #111111;
     font-weight: 500;
     flex: 1;
   }
   .person-label {
     font-size: 20rpx;
-    color: #73777e;
+    color: #777777;
     flex-shrink: 0;
   }
 }
 
 .divider {
   height: 1rpx;
-  background: #f4f5f6;
+  background: #f7f7f7;
   margin: 20rpx 0 16rpx;
 }
 
@@ -215,17 +215,17 @@ function repeatOrder() {
     gap: 8rpx;
     .amount-label {
       font-size: 24rpx;
-      color: #17191c;
+      color: #111111;
       font-weight: bold;
     }
     .amount {
       font-size: 34rpx;
-      color: #17191c;
+      color: #111111;
       font-weight: bold;
     }
     .time {
       font-size: 22rpx;
-      color: #73777e;
+      color: #777777;
       margin-left: 8rpx;
     }
   }
@@ -242,7 +242,7 @@ function repeatOrder() {
     }
     .btn-repeat {
       font-size: 24rpx;
-      color: #17191c;
+      color: #111111;
       padding: 6rpx 18rpx;
       border: 1rpx solid #cfd4db;
       border-radius: 999rpx;
@@ -252,7 +252,7 @@ function repeatOrder() {
       color: #fff;
       font-weight: 500;
       padding: 6rpx 20rpx;
-      background: linear-gradient(135deg, #17191c, #30343a);
+      background: #171717;
       border: none;
       border-radius: 999rpx;
     }
@@ -261,9 +261,9 @@ function repeatOrder() {
 .income-row {
   margin-top: 12rpx;
   padding-top: 12rpx;
-  border-top: 1rpx solid #e6e7e9;
-  .income-label { font-size: 24rpx; color: #666b73; }
+  border-top: 1rpx solid #eeeeee;
+  .income-label { font-size: 24rpx; color: #777777; }
   .income-value { font-size: 26rpx; color: #d44955; font-weight: bold; }
-  .income-hint { font-size: 22rpx; color: #73777e; margin-left: 8rpx; }
+  .income-hint { font-size: 22rpx; color: #777777; margin-left: 8rpx; }
 }
 </style>

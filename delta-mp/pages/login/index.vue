@@ -290,17 +290,17 @@ function toggleAgree() {
 </script>
 
 <style lang="scss" scoped>
-.setup-title{display:block;font-size:34rpx;font-weight:700;margin-bottom:20rpx}.setup-hint{display:block;font-size:24rpx;color:#73777e;line-height:1.7;margin:16rpx 0 28rpx}.setup-back{text-align:center;color:#73777e;font-size:25rpx;padding:24rpx}
+.setup-title{display:block;font-size:34rpx;font-weight:700;margin-bottom:20rpx}.setup-hint{display:block;font-size:24rpx;color:#777777;line-height:1.7;margin:16rpx 0 28rpx}.setup-back{text-align:center;color:#777777;font-size:25rpx;padding:24rpx}
 .verification-row { display:flex; align-items:center; gap:12rpx; margin-bottom:24rpx; .input {flex:1;min-width:0;margin-bottom:0;} }
 .captcha-image {width:180rpx;height:70rpx;flex-shrink:0;}
-.send-code {padding:0 16rpx;line-height:70rpx;font-size:24rpx;color:#17191c;background:#eceef0;white-space:nowrap;}
+.send-code {padding:0 16rpx;line-height:70rpx;font-size:24rpx;color:#111111;background:#eceef0;white-space:nowrap;}
 .login-page {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: var(--app-page-height, 100vh);
-  background: #f7f8f9;
+  background: #f7f7f7;
   padding: 0 60rpx;
   position: relative;
 }
@@ -314,15 +314,15 @@ function toggleAgree() {
   z-index: 1;
 
   .logo { width: 160rpx; height: 160rpx; margin-bottom: 24rpx; border-radius: 24rpx; }
-  .title { font-size: 44rpx; font-weight: bold; color: #17191c; }
-  .subtitle { font-size: 26rpx; color: #73777e; margin-top: 12rpx; }
+  .title { font-size: 44rpx; font-weight: bold; color: #111111; }
+  .subtitle { font-size: 26rpx; color: #777777; margin-top: 12rpx; }
 }
 
 .tab-bar {
   display: flex;
   width: 100%;
   margin-bottom: 60rpx;
-  border-bottom: 2rpx solid #e6e7e9;
+  border-bottom: 2rpx solid #eeeeee;
   position: relative;
   z-index: 1;
 
@@ -330,13 +330,13 @@ function toggleAgree() {
     flex: 1;
     text-align: center;
     font-size: 30rpx;
-    color: #73777e;
+    color: #777777;
     padding-bottom: 20rpx;
     position: relative;
     transition: color 0.2s;
 
     &.active {
-      color: #17191c;
+      color: #111111;
       font-weight: bold;
 
       &::after {
@@ -347,7 +347,7 @@ function toggleAgree() {
         transform: translateX(-50%);
         width: 48rpx;
         height: 4rpx;
-        background: linear-gradient(90deg, #17191c, #30343a);
+        background: #171717;
         border-radius: 2rpx;
       }
     }
@@ -361,12 +361,12 @@ function toggleAgree() {
 
   .input {
     height: 88rpx;
-    background: #f7f8f9;
-    border: 1rpx solid #e6e7e9;
+    background: #f7f7f7;
+    border: 1rpx solid #eeeeee;
     border-radius: 12rpx;
     padding: 0 32rpx;
     font-size: 30rpx;
-    color: #17191c;
+    color: #111111;
     margin-bottom: 32rpx;
   }
 
@@ -385,7 +385,7 @@ function toggleAgree() {
   }
 
   .wechat-btn {
-    background: linear-gradient(135deg, #17191c, #30343a);
+    background: #171717;
     color: #ffffff;
   }
 
@@ -393,12 +393,12 @@ function toggleAgree() {
     margin-top: 20rpx;
     font-size: 24rpx;
     line-height: 1.6;
-    color: #73777e;
+    color: #777777;
     text-align: center;
   }
 
   .account-btn {
-    background: linear-gradient(135deg, #17191c, #30343a);
+    background: #171717;
     margin-top: 8rpx;
   }
 
@@ -426,7 +426,7 @@ function toggleAgree() {
     }
 
     .checkbox.checked {
-      background: linear-gradient(135deg, #17191c, #30343a);
+      background: #171717;
       border-color: transparent;
     }
 
@@ -435,8 +435,8 @@ function toggleAgree() {
       color: #ffffff;
     }
 
-    .text { color: #73777e; }
-    .link { color: #17191c; }
+    .text { color: #777777; }
+    .link { color: #111111; }
   }
 }
 </style>

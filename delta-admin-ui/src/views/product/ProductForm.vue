@@ -48,7 +48,7 @@
             <el-form-item label="封面图" class="image-form-item">
               <div class="upload-field">
                 <ImageUpload v-model="form.coverImage" />
-                <span class="form-tip">支持任意宽高比，用户端会按原比例完整展示商品主图</span>
+                <span class="form-tip">推荐 3:2（如 1200×800），主体居中，最小 600×400。商品卡、列表和详情统一按 3:2 展示，原图保留。</span>
               </div>
             </el-form-item>
             <el-form-item label="商品图片" class="image-form-item">
@@ -58,6 +58,7 @@
                   <el-button circle type="danger" size="small" class="img-del" @click="imageList.splice(idx, 1)">×</el-button>
                 </div>
                 <ImageUpload v-model="newImage" @update:model-value="onImageAdd" />
+                <div class="form-tip" style="flex-basis:100%">商品详情轮播建议统一 3:2，最多 9 张；四边预留约 5% 安全区，避免圆角裁切主体。</div>
               </div>
             </el-form-item>
             <el-form-item label="描述">

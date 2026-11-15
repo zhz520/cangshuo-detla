@@ -106,22 +106,22 @@ async function pay() {
 </script>
 
 <style lang="scss" scoped>
-.recharge-page { min-height: var(--app-page-height, 100vh); padding: 24rpx 24rpx 220rpx; background: #f7f8f9; box-sizing: border-box; }
-.hero { padding: 34rpx 30rpx; border-radius: 24rpx; color: #fff; background: linear-gradient(135deg, #17191c, #30343a); box-shadow: 0 12rpx 28rpx rgba(23, 25, 28, .18); }
+.recharge-page { min-height: var(--app-page-height, 100vh); padding: 24rpx 24rpx 220rpx; background: #f7f7f7; box-sizing: border-box; }
+.hero { padding: 34rpx 30rpx; border-radius: 24rpx; color: #fff; background: #171717; box-shadow: 0 12rpx 28rpx rgba(23, 25, 28, .18); }
 .hero-title { display: block; font-size: 40rpx; font-weight: 800; }
 .hero-desc { display: block; margin-top: 12rpx; font-size: 24rpx; opacity: .86; }
 .section-title { padding: 30rpx 4rpx 18rpx; color: #41464e; font-size: 30rpx; font-weight: 800; }
 .package-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18rpx; }
 .package-card { padding: 28rpx 22rpx; min-height: 210rpx; border: 2rpx solid transparent; border-radius: 22rpx; background: #fff; box-shadow: 0 8rpx 24rpx rgba(23, 25, 28, .06); box-sizing: border-box; }
-.package-card.selected { border-color: #17191c; background: #f8f8f9; }
+.package-card.selected { border-color: #111111; background: #f8f8f9; }
 .package-name, .bonus, .arrival { display: block; }
-.package-name { color: #555b63; font-size: 24rpx; font-weight: 700; }
-.pay-amount { margin: 18rpx 0 8rpx; color: #17191c; font-size: 48rpx; font-weight: 800; }
+.package-name { color: #777777; font-size: 24rpx; font-weight: 700; }
+.pay-amount { margin: 18rpx 0 8rpx; color: #111111; font-size: 48rpx; font-weight: 800; }
 .unit { margin-right: 4rpx; font-size: 26rpx; }
-.bonus { color: #17191c; font-size: 24rpx; font-weight: 700; }
-.arrival { margin-top: 8rpx; color: #73777e; font-size: 22rpx; }
+.bonus { color: #111111; font-size: 24rpx; font-weight: 700; }
+.arrival { margin-top: 8rpx; color: #777777; font-size: 22rpx; }
 .bottom-area { position: fixed; left: 0; right: 0; bottom: 0; padding: 18rpx 24rpx calc(18rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); background: rgba(255,255,255,.96); box-shadow: 0 -8rpx 24rpx rgba(23, 25, 28, .06); }
-.selected-info { display: block; margin-bottom: 12rpx; color: #666b73; text-align: center; font-size: 23rpx; }
-.pay-button { height: 88rpx; line-height: 88rpx; border-radius: 999rpx; color: #fff; background: linear-gradient(135deg, #17191c, #30343a); text-align: center; font-size: 30rpx; font-weight: 800; }
-.pay-button.disabled { color: #73777e; background: #e6e7e9; }
+.selected-info { display: block; margin-bottom: 12rpx; color: #777777; text-align: center; font-size: 23rpx; }
+.pay-button { height: 88rpx; line-height: 88rpx; border-radius: 999rpx; color: #fff; background: #171717; text-align: center; font-size: 30rpx; font-weight: 800; }
+.pay-button.disabled { color: #777777; background: #eeeeee; }
 </style>

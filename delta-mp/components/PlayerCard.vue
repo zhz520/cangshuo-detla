@@ -24,8 +24,8 @@ defineEmits(['click'])
 .player-card {
   display: flex;
   align-items: center;
-  background: #f4f5f6;
-  border: 1rpx solid #e6e7e9;
+  background: #f7f7f7;
+  border: 1rpx solid #eeeeee;
   padding: 24rpx;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
@@ -35,7 +35,7 @@ defineEmits(['click'])
     height: 88rpx;
     border-radius: 50%;
     margin-right: 20rpx;
-    border: 2rpx solid #b9bdc4;
+    border: 2rpx solid #aaaaaa;
   }
 
   .info {
@@ -43,14 +43,14 @@ defineEmits(['click'])
 
     .name {
       font-size: 30rpx;
-      color: #17191c;
+      color: #111111;
       font-weight: 500;
     }
 
     .meta {
       margin-top: 8rpx;
       font-size: 24rpx;
-      color: #73777e;
+      color: #777777;
       display: flex;
       gap: 20rpx;
 

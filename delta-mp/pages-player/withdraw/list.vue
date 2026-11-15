@@ -25,7 +25,7 @@ import { getWithdrawList } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
 const WITHDRAW_STATUS_TEXT = { PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', COMPLETED: '已到账', CANCELLED: '已取消' }
-const WITHDRAW_STATUS_COLOR = { PENDING: '#996b30', APPROVED: '#347a5b', REJECTED: '#b84b55', COMPLETED: '#347a5b', CANCELLED: '#73777e' }
+const WITHDRAW_STATUS_COLOR = { PENDING: '#996b30', APPROVED: '#347a5b', REJECTED: '#b84b55', COMPLETED: '#347a5b', CANCELLED: '#777777' }
 const { items: records, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
   pageSize: 20,
   async fetchPage({ pageNum, pageSize }) {
@@ -46,7 +46,7 @@ function goDetail(id) { if (id != null) uni.navigateTo({ url: '/pages-player/wit
 .record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx;
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
   .amount { font-size: 34rpx; font-weight: bold; color: rgba(0,0,0,0.85); }
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; .account { font-size: 24rpx; color: #666b73; word-break: break-all; } .time { font-size: 22rpx; color: #73777e; } }
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; .account { font-size: 24rpx; color: #777777; word-break: break-all; } .time { font-size: 22rpx; color: #777777; } }
 }
 .loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
 </style>

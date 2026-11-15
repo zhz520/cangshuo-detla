@@ -86,6 +86,22 @@ public class DatabaseCompatibility {
                     "ALTER TABLE `order` ADD COLUMN requested_player_level_id INT DEFAULT NULL"),
             new AdditiveColumn("order", "player_level_name",
                     "ALTER TABLE `order` ADD COLUMN player_level_name VARCHAR(30) DEFAULT NULL"),
+            new AdditiveColumn("order", "cs_id",
+                    "ALTER TABLE `order` ADD COLUMN cs_id BIGINT DEFAULT NULL"),
+            new AdditiveColumn("category", "icon_size",
+                    "ALTER TABLE category ADD COLUMN icon_size INT NOT NULL DEFAULT 56"),
+            new AdditiveColumn("banner", "title",
+                    "ALTER TABLE banner ADD COLUMN title VARCHAR(100) DEFAULT NULL"),
+            new AdditiveColumn("banner", "subtitle",
+                    "ALTER TABLE banner ADD COLUMN subtitle VARCHAR(200) DEFAULT NULL"),
+            new AdditiveColumn("banner", "button_text",
+                    "ALTER TABLE banner ADD COLUMN button_text VARCHAR(30) DEFAULT NULL"),
+            new AdditiveColumn("chat_session", "rating",
+                    "ALTER TABLE chat_session ADD COLUMN rating TINYINT DEFAULT NULL"),
+            new AdditiveColumn("chat_session", "rating_comment",
+                    "ALTER TABLE chat_session ADD COLUMN rating_comment VARCHAR(500) DEFAULT NULL"),
+            new AdditiveColumn("chat_session", "rated_at",
+                    "ALTER TABLE chat_session ADD COLUMN rated_at DATETIME DEFAULT NULL"),
             new AdditiveColumn("user", "password",
                     "ALTER TABLE `user` ADD COLUMN password VARCHAR(100) DEFAULT NULL"),
             new AdditiveColumn("user", "auth_version",
@@ -197,6 +213,22 @@ public class DatabaseCompatibility {
             ensureTable("player_follow", "CREATE TABLE IF NOT EXISTS player_follow (" +
                     "user_id BIGINT NOT NULL, player_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id))");
+            ensureTable("cs_routing_rule", "CREATE TABLE IF NOT EXISTS cs_routing_rule (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, match_type VARCHAR(16) NOT NULL, " +
+                    "target_id BIGINT NOT NULL DEFAULT 0, assignee_type VARCHAR(16) NOT NULL DEFAULT 'CS', " +
+                    "assignee_id BIGINT NOT NULL, enabled TINYINT NOT NULL DEFAULT 1, " +
+                    "remark VARCHAR(255) NOT NULL DEFAULT '', created_by BIGINT NULL, " +
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_cs_routing_scope(match_type,target_id), KEY idx_cs_routing_assignee(assignee_type,assignee_id))");
+            ensureTable("cs_group", "CREATE TABLE IF NOT EXISTS cs_group (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(64) NOT NULL, leader_id BIGINT NULL, " +
+                    "enabled TINYINT NOT NULL DEFAULT 1, remark VARCHAR(255) NOT NULL DEFAULT '', " +
+                    "created_by BIGINT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
+            ensureTable("cs_group_member", "CREATE TABLE IF NOT EXISTS cs_group_member (" +
+                    "group_id BIGINT NOT NULL, admin_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "PRIMARY KEY(group_id,admin_id), KEY idx_cs_group_member_admin(admin_id))");
             ensureTable("refund_request", "CREATE TABLE IF NOT EXISTS refund_request (" +
                     "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, refund_no VARCHAR(40) NOT NULL, " +
                     "order_id BIGINT NOT NULL, order_no VARCHAR(64) NOT NULL, user_id BIGINT NOT NULL, " +
@@ -295,6 +327,8 @@ public class DatabaseCompatibility {
                     "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");
             ensureIndex("wechat_notice_queue", "idx_wechat_notice_delivery",
                     "CREATE INDEX idx_wechat_notice_delivery ON wechat_notice_queue(status,next_at)");
+            ensureIndex("order", "idx_order_cs", "CREATE INDEX idx_order_cs ON `order`(cs_id)");
+            migrateChatSessionUniqueIndex();
             removeLegacyCouponUniqueIndex();
             ensureRewardGrabConfig();
             ensureGuestCheckoutConfig();
@@ -345,6 +379,28 @@ public class DatabaseCompatibility {
                 jdbc.execute("DROP INDEX `uk_coupon_user_template` ON `" + actualTable + "`");
             } else {
                 jdbc.execute("DROP INDEX uk_coupon_user_template");
+            }
+        }
+    }
+
+    /** Closed chat history must not block a new service cycle for the same pair. */
+    private void migrateChatSessionUniqueIndex() throws SQLException {
+        // Compute the unique slot in the database so v1.15.5 writes also remain safe after rollback.
+        ensureColumn("chat_session", "active_pair_slot",
+                "ALTER TABLE chat_session ADD COLUMN active_pair_slot TINYINT GENERATED ALWAYS AS (CASE WHEN status='ACTIVE' THEN 1 ELSE NULL END)");
+        ensureIndex("chat_session", "uk_chat_session_active_pair",
+                "CREATE UNIQUE INDEX uk_chat_session_active_pair ON chat_session(id1,id2,active_pair_slot)");
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
+            String actualTable = findTable(connection, "chat_session");
+            if (actualTable == null) return;
+            for (String legacy : List.of("uk_id1_id2", "uk_id1_id2_status", "uk_id1_id2_active")) {
+                if (hasIndex(connection, actualTable, legacy)) {
+                    if (connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql")) {
+                        jdbc.execute("DROP INDEX `" + legacy + "` ON `" + actualTable + "`");
+                    } else {
+                        jdbc.execute("DROP INDEX " + legacy);
+                    }
+                }
             }
         }
     }

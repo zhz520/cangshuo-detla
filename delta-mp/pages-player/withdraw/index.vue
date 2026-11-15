@@ -154,22 +154,22 @@ function goAccounts() { uni.navigateTo({ url: '/pages-player/account/list' }) }
 </script>
 <style lang="scss" scoped>
 .withdraw-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.balance-card { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
+.balance-card { background: #171717; color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .label { font-size: 26rpx; opacity: 0.85; display: block; } .amount { font-size: 56rpx; font-weight: bold; display: block; margin-top: 12rpx; }
 }
-.deposit-card{margin:24rpx;padding:24rpx;border:1rpx solid #ead8bd;border-radius:12rpx;background:#fff8ed;display:flex;flex-direction:column;gap:20rpx}.deposit-title{display:block;font-size:28rpx;font-weight:700;color:#17191c}.deposit-tip{display:block;margin-top:8rpx;color:#73777e;font-size:24rpx;line-height:1.7}.deposit-button{align-self:flex-start;margin:0;padding:14rpx 28rpx;border-radius:999rpx;background:#17191c;color:#fff;font-size:26rpx}
-.form-card { margin: 24rpx; background: #f4f5f6; border-radius: 12rpx; padding: 0 24rpx; }
-.form-item { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f4f5f6;
-  .item-label { font-size: 28rpx; color: #17191c; width: 160rpx; } .input { flex: 1; font-size: 28rpx; }
-  .pick-text { flex: 1; font-size: 28rpx; color: #17191c; &.placeholder { color: #b9bdc4; } } .arrow { color: #b9bdc4; } .all-btn { font-size: 26rpx; color: #17191c; }
+.deposit-card{margin:24rpx;padding:24rpx;border:1rpx solid #ead8bd;border-radius:12rpx;background:#fff8ed;display:flex;flex-direction:column;gap:20rpx}.deposit-title{display:block;font-size:28rpx;font-weight:700;color:#111111}.deposit-tip{display:block;margin-top:8rpx;color:#777777;font-size:24rpx;line-height:1.7}.deposit-button{align-self:flex-start;margin:0;padding:14rpx 28rpx;border-radius:999rpx;background:#111111;color:#fff;font-size:26rpx}
+.form-card { margin: 24rpx; background: #f7f7f7; border-radius: 12rpx; padding: 0 24rpx; }
+.form-item { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f7f7f7;
+  .item-label { font-size: 28rpx; color: #111111; width: 160rpx; } .input { flex: 1; font-size: 28rpx; }
+  .pick-text { flex: 1; font-size: 28rpx; color: #111111; &.placeholder { color: #aaaaaa; } } .arrow { color: #aaaaaa; } .all-btn { font-size: 26rpx; color: #111111; }
 }
 .btn-area { padding: 40rpx 24rpx 16rpx; }
-.submit-btn { background: linear-gradient(135deg, #17191c, #30343a, #30343a); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
-.links { display: flex; justify-content: center; gap: 48rpx; padding: 24rpx; .link { font-size: 26rpx; color: #17191c; } }
+.submit-btn { background: #171717; color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
+.links { display: flex; justify-content: center; gap: 48rpx; padding: 24rpx; .link { font-size: 26rpx; color: #111111; } }
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 999; }
-.picker-popup { width: 100%; background: #ffffff; border-radius: 24rpx 24rpx 0 0; border-top: 1rpx solid #e6e7e9; padding: 32rpx 24rpx; max-height: 60vh; overflow-y: auto;
+.picker-popup { width: 100%; background: #ffffff; border-radius: 24rpx 24rpx 0 0; border-top: 1rpx solid #eeeeee; padding: 32rpx 24rpx; max-height: 60vh; overflow-y: auto;
   .picker-title { font-size: 30rpx; font-weight: bold; display: block; margin-bottom: 24rpx; text-align: center; }
 }
-.account-option { padding: 24rpx; border-bottom: 1rpx solid #f4f5f6; font-size: 28rpx; &.active { color: #17191c; background: #f7f7f8; border-radius: 8rpx; } }
+.account-option { padding: 24rpx; border-bottom: 1rpx solid #f7f7f7; font-size: 28rpx; &.active { color: #111111; background: #f7f7f8; border-radius: 8rpx; } }
 .balance-card .pending { display:block; margin-top:10rpx; font-size:22rpx; font-weight:400; color:rgba(255,255,255,.72); }
 </style>

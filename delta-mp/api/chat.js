@@ -31,10 +31,28 @@ export const markMessageRead = (sessionId, opts = {}) => {
 }
 
 /** 发起客服会话（自动分配客服） */
-export const createCsSession = () => post('/common/chat/session/cs')
+export const createCsSession = (params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => encodeURIComponent(key) + '=' + encodeURIComponent(String(value)))
+    .join('&')
+  return post('/common/chat/session/cs' + (query ? '?' + query : ''))
+}
 
 /** 发送聊天短信提醒 */
 export const sendChatSmsReminder = (data, opts = {}) => {
   const q = opts.chatRole ? `?chatRole=${encodeURIComponent(opts.chatRole)}` : ''
   return post(`/common/chat/sms-reminder${q}`, data)
+}
+
+/** 结束客服会话；关闭后消息只读 */
+export const closeChatSession = (sessionId, opts = {}) => {
+  const q = opts.chatRole ? `?chatRole=${encodeURIComponent(opts.chatRole)}` : ''
+  return post(`/common/chat/session/${sessionId}/close${q}`, {})
+}
+
+/** 用户评价已结束的客服会话，每个会话仅可评价一次 */
+export const rateChatSession = (sessionId, data, opts = {}) => {
+  const q = opts.chatRole ? `?chatRole=${encodeURIComponent(opts.chatRole)}` : ''
+  return post(`/common/chat/session/${sessionId}/rate${q}`, data)
 }

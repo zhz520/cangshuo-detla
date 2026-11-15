@@ -44,7 +44,7 @@ watch(() => [props.visible, props.url], async ([visible, url]) => {
       width: 560,
       margin: 1,
       errorCorrectionLevel: 'M',
-      color: { dark: '#17191cff', light: '#ffffffff' }
+      color: { dark: '#111111ff', light: '#ffffffff' }
     })
     if (current === generation) qrImage.value = image
   } catch (_) {
@@ -67,14 +67,14 @@ function close() {
 .qr-overlay{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:32rpx;background:rgba(17,19,22,.58);box-sizing:border-box}
 .qr-panel{width:100%;max-width:640rpx;padding:30rpx;border-radius:28rpx;background:#fff;box-sizing:border-box;box-shadow:0 24rpx 80rpx rgba(0,0,0,.2)}
 .qr-header{display:flex;align-items:center;justify-content:space-between;gap:20rpx}
-.qr-title{font-size:32rpx;font-weight:800;color:#17191c}
-.qr-close{width:56rpx;height:56rpx;line-height:52rpx;text-align:center;font-size:42rpx;color:#73777e}
+.qr-title{font-size:32rpx;font-weight:800;color:#111111}
+.qr-close{width:56rpx;height:56rpx;line-height:52rpx;text-align:center;font-size:42rpx;color:#777777}
 .qr-stage{display:flex;align-items:center;justify-content:center;margin:24rpx auto 18rpx;padding:18rpx;border:1rpx solid #eceef1;border-radius:20rpx;background:#fff}
 .qr-image{width:480rpx;height:480rpx}
-.qr-placeholder{display:flex;align-items:center;justify-content:center;width:480rpx;height:480rpx;color:#858992;font-size:24rpx;text-align:center;line-height:1.6}
+.qr-placeholder{display:flex;align-items:center;justify-content:center;width:480rpx;height:480rpx;color:#aaaaaa;font-size:24rpx;text-align:center;line-height:1.6}
 .qr-tip,.qr-hint{display:block;text-align:center}
-.qr-tip{font-size:27rpx;font-weight:700;color:#17191c}
-.qr-hint{margin-top:10rpx;font-size:22rpx;color:#858992}
+.qr-tip{font-size:27rpx;font-weight:700;color:#111111}
+.qr-hint{margin-top:10rpx;font-size:22rpx;color:#aaaaaa}
 .qr-actions{display:flex;gap:16rpx;margin-top:26rpx}
-.qr-button{flex:1;height:78rpx;line-height:78rpx;text-align:center;border-radius:999rpx;font-size:26rpx;font-weight:700;&.secondary{background:#f1f2f4;color:#343a43}&.primary{background:#17191c;color:#fff}}
+.qr-button{flex:1;height:78rpx;line-height:78rpx;text-align:center;border-radius:999rpx;font-size:26rpx;font-weight:700;&.secondary{background:#f1f2f4;color:#343a43}&.primary{background:#111111;color:#fff}}
 </style>

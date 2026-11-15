@@ -2,6 +2,7 @@ package com.delta.admin;
 
 import com.delta.admin.controller.AdminOrderController;
 import com.delta.common.mapper.CrossModuleMapper;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.service.OrderPlayerService;
@@ -9,6 +10,7 @@ import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.pay.refund.OrderRefundWorkflowService;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,7 +50,7 @@ class AdminOrderDetailTest {
         when(cross.selectPlayerNickname(5L)).thenReturn("协同打手");
         when(cross.selectPlayerAvatar(5L)).thenReturn("/file/player.png");
         var controller = new AdminOrderController(orders, mock(OrderProgressService.class), players, cross,
-                mock(OrderRefundWorkflowService.class));
+                mock(OrderRefundWorkflowService.class), mock(CsRoutingService.class), mock(JdbcTemplate.class));
 
         Order detail = controller.detail(9L).getData();
 

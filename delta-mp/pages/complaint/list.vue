@@ -103,7 +103,7 @@ function goDetail(c) {
 
 <style lang="scss" scoped>
 .complaint-list-page {
-  background: #f7f8f9;
+  background: #f7f7f7;
   min-height: var(--app-page-height, 100vh);
 }
 .scroll {
@@ -121,11 +121,11 @@ function goDetail(c) {
   padding: 8rpx 20rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
-  color: #73777e;
+  color: #777777;
   border: 1rpx solid rgba(23, 25, 28, 0.1);
 }
 .status-chip.active {
-  background: linear-gradient(135deg, #17191c, #30343a);
+  background: #171717;
   color: #ffffff;
   border-color: transparent;
 }
@@ -134,7 +134,7 @@ function goDetail(c) {
   margin-bottom: 20rpx;
   background: #ffffff;
   border-radius: 16rpx;
-  border: 1rpx solid #e6e7e9;
+  border: 1rpx solid #eeeeee;
 }
 .card-top {
   display: flex;
@@ -144,7 +144,7 @@ function goDetail(c) {
 }
 .type {
   font-size: 26rpx;
-  color: #17191c;
+  color: #111111;
 }
 .card-body .content {
   font-size: 26rpx;
@@ -158,22 +158,22 @@ function goDetail(c) {
 }
 .time {
   font-size: 22rpx;
-  color: #73777e;
+  color: #777777;
 }
 .arrow {
   font-size: 22rpx;
-  color: #666b73;
+  color: #777777;
 }
 .empty {
   margin-top: 80rpx;
   text-align: center;
-  color: #73777e;
+  color: #777777;
   font-size: 26rpx;
 }
 .load-tip {
   text-align: center;
   padding: 20rpx 0;
   font-size: 24rpx;
-  color: #73777e;
+  color: #777777;
 }
 </style>

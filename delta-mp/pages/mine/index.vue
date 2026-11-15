@@ -1,194 +1,167 @@
 <template>
   <view class="mine-page tab-page">
-    <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
-      <view class="profile-card" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()">
-        <view class="profile-main">
-          <AppImage :width="160" class="avatar" :src="userStore.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
-          <view class="profile-info" v-if="userStore.isLoggedIn">
-            <text class="name">{{ userStore.nickname }}</text>
-            <text class="phone" v-if="userStore.phone">{{ formatPhone(userStore.phone) }}</text>
-            <text v-else class="phone">完善手机号，方便接收服务通知</text>
-          </view>
-          <view class="profile-info" v-else-if="userStore.isGuest">
-            <text class="name">{{ userStore.guestInfo?.nickname || '游客' }}</text>
-            <text class="phone">{{ userStore.guestInfo?.maskedPhone || '游客会话' }} · 点击登录正式账号</text>
-          </view>
-          <view class="profile-info" v-else>
-            <text class="name">点击登录</text>
-            <text class="phone">登录后查看订单和钱包</text>
-          </view>
-          <text class="profile-arrow">></text>
-        </view>
+    <ScreenHeader title="我的" center>
+      <view class="screen-icon-btn" role="button" aria-label="账号设置" @click="goSettings">
+        <image src="/static/icons/header-settings.svg" mode="aspectFit" />
       </view>
+    </ScreenHeader>
 
-      <view class="service-panel" :class="{ 'neo-panel': isNeo }">
-        <view class="quick-group">
-          <text v-if="isNeo" class="quick-group-title">我的服务</text>
-          <view class="quick-grid">
-            <view class="quick-item" @click="goOrders">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/订单.svg" mode="aspectFit" /></view>
-              <text>订单</text>
-            </view>
-            <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/wallet/index')">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/钞票.svg" mode="aspectFit" /></view>
-              <text>钱包</text>
-            </view>
-            <view class="quick-item" @click="goAccount('/pages/coupons/index')">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/理财.svg" mode="aspectFit" /></view>
-              <text>优惠券</text>
-            </view>
-            <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/membership/index')">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/会员.svg" mode="aspectFit" /></view>
-              <text>会员等级</text>
-            </view>
-          </view>
-        </view>
-        <view class="quick-group">
-          <text v-if="isNeo" class="quick-group-title">发现与帮助</text>
-          <view class="quick-grid">
-            <view class="quick-item" @click="go('/pages/display/index?tab=rank')">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/攻略.svg" mode="aspectFit" /></view>
-              <text>消费排行</text>
-            </view>
-            <view v-if="userStore.isLoggedIn" class="quick-item" @click="goAccount('/pages/invites/index')">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/分享.svg" mode="aspectFit" /></view>
-              <text>邀请好友</text>
-            </view>
-            <view v-if="userStore.isLoggedIn" class="quick-item" @click="go('/pages/message/index')">
-              <view class="quick-icon-wrap">
-                <image class="quick-icon" src="/static/icons/提示.svg" mode="aspectFit" />
-                <view v-if="systemUnread > 0" class="quick-badge">{{ systemUnread > 99 ? '99+' : systemUnread }}</view>
+    <scroll-view scroll-y class="mine-scroll" :show-scrollbar="false">
+      <view class="mine-content">
+        <view class="profile-row" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()">
+          <AppImage :width="240" class="avatar" :src="userStore.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
+          <view class="profile-info">
+            <text class="profile-name">{{ profileName }}</text>
+            <view class="profile-meta-row">
+              <text class="profile-meta">{{ profileMeta }}</text>
+              <view v-if="uid" class="copy-uid" role="button" aria-label="复制UID" @click.stop="copyUid">
+                <image src="/static/icons/svc-copy.svg" mode="aspectFit" />
+                <text>复制</text>
               </view>
-              <text>通知</text>
-            </view>
-            <view class="quick-item" @click="goCustomerService">
-              <view class="quick-icon-wrap"><image class="quick-icon" src="/static/icons/客服.svg" mode="aspectFit" /></view>
-              <text>客服</text>
             </view>
           </view>
+          <text class="profile-arrow">›</text>
         </view>
-      </view>
 
-      <view class="more-card">
-        <view class="more-heading">更多服务</view>
-        <view v-if="userStore.isLoggedIn" class="player-row" @click="goPlayer">
-          <image class="more-icon" src="/static/icons/攻略.svg" mode="aspectFit" />
-          <view class="player-copy">
-            <text class="more-title">{{ playerEntry.title }}</text>
-            <text class="more-desc">{{ playerEntry.desc }}</text>
+        <view class="balance-card" @click="goWallet">
+          <view class="balance-head">
+            <text class="balance-label">账户余额</text>
+            <text class="balance-hint">可用于余额支付</text>
           </view>
-          <text class="member-action">{{ playerEntry.action }}</text>
-        </view>
-        <view class="more-grid">
-          <view v-if="identityAvailable && userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/identity')">
-            <image class="more-icon" src="/static/icons/安全认证.svg" mode="aspectFit" />
-            <text>实名认证</text><text class="identity-state">{{ identityLabel }}</text>
-          </view>
-          <view v-if="userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/library')">
-            <image class="more-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" />
-            <text>收藏与关注</text>
-          </view>
-          <view class="more-item" @click="go('/pages/complaint/list')">
-            <image class="more-icon" src="/static/icons/警示.svg" mode="aspectFit" />
-            <text>投诉工单</text>
-          </view>
-          <view v-if="siteStore.guestCheckoutEnabled" class="more-item" @click="go('/pages/order/lookup')">
-            <image class="more-icon" src="/static/icons/订单.svg" mode="aspectFit" />
-            <text>游客订单</text>
-          </view>
-          <view v-if="officialWechat.isEnabled('user')" class="more-item" @click="go('/pages/wechat/binding')">
-            <image class="more-icon" src="/static/icons/提示.svg" mode="aspectFit" />
-            <text>公众号通知</text>
-          </view>
-          <view v-if="userStore.isLoggedIn" class="more-item" @click="go('/pages/mine/privacy-center')">
-            <image class="more-icon" src="/static/icons/安全认证.svg" mode="aspectFit" />
-            <text>隐私与注销</text>
+          <view class="balance-main">
+            <text class="balance-amount">{{ displayBalance }}</text>
+            <view class="recharge-btn" @click.stop="goRecharge">{{ userStore.isLoggedIn ? '充值' : '登录' }}</view>
           </view>
         </view>
-        <view class="legal-links">
-          <text @click="go('/pages/agreement/user')">用户协议</text>
-          <text class="legal-dot">·</text>
-          <text @click="go('/pages/agreement/privacy')">隐私政策</text>
-        </view>
-      </view>
 
-      <view v-if="userStore.isLoggedIn" class="logout" @click="userStore.logout()">退出登录</view>
-      <view v-if="userStore.isGuest" class="logout guest-logout" @click="userStore.exitGuest()">退出游客会话</view>
-      <TechSupportFooter />
-      <view class="tab-page-bottom-spacer"></view>
+        <view class="panel orders-panel">
+          <view class="order-grid">
+            <view class="order-shortcut" @click="goOrderTab('pending')">
+              <view class="shortcut-icon"><image src="/static/icons/order-pending.svg" mode="aspectFit" /></view>
+              <text>待支付</text>
+            </view>
+            <view class="order-shortcut" @click="goOrderTab('active')">
+              <view class="shortcut-icon"><image src="/static/icons/order-progress.svg" mode="aspectFit" /></view>
+              <text>进行中</text>
+            </view>
+            <view class="order-shortcut" @click="goOrderTab('completed')">
+              <view class="shortcut-icon"><image src="/static/icons/order-done.svg" mode="aspectFit" /></view>
+              <text>已完成</text>
+            </view>
+            <view class="order-shortcut" @click="goOrderTab('aftersale')">
+              <view class="shortcut-icon"><image src="/static/icons/order-after.svg" mode="aspectFit" /></view>
+              <text>售后</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="panel menu-panel">
+          <view class="menu-row" @click="goOrders">
+            <image class="menu-icon" src="/static/icons/menu-order.svg" mode="aspectFit" />
+            <text class="menu-text">我的订单</text>
+            <text class="menu-arrow">›</text>
+          </view>
+          <view class="menu-row" @click="goAccount('/pages/mine/library')">
+            <image class="menu-icon" src="/static/icons/menu-heart.svg" mode="aspectFit" />
+            <text class="menu-text">我的收藏</text>
+            <text class="menu-arrow">›</text>
+          </view>
+          <view class="menu-row" @click="goAccount('/pages/coupons/index')">
+            <image class="menu-icon" src="/static/icons/menu-coupon.svg" mode="aspectFit" />
+            <text class="menu-text">优惠券</text>
+            <text class="menu-arrow">›</text>
+          </view>
+          <view class="menu-row" @click="goOrderTab('completed')">
+            <image class="menu-icon" src="/static/icons/menu-review.svg" mode="aspectFit" />
+            <text class="menu-text">服务评价</text>
+            <text class="menu-arrow">›</text>
+          </view>
+        </view>
+
+        <view class="panel menu-panel">
+          <view v-if="userStore.isLoggedIn" class="menu-row" @click="goPlayer">
+            <image class="menu-icon" src="/static/icons/svc-player.svg" mode="aspectFit" />
+            <view class="menu-copy">
+              <text class="menu-text">{{ playerEntry.title }}</text>
+              <text class="menu-desc">{{ playerEntry.desc }}</text>
+            </view>
+            <text class="menu-state">{{ playerEntry.action }}</text>
+            <text class="menu-arrow">›</text>
+          </view>
+          <view class="menu-row" @click="goCustomerService">
+            <image class="menu-icon" src="/static/icons/menu-service.svg" mode="aspectFit" />
+            <text class="menu-text">客服中心</text>
+            <text class="menu-arrow">›</text>
+          </view>
+          <view class="menu-row" @click="goHelp">
+            <image class="menu-icon" src="/static/icons/menu-help.svg" mode="aspectFit" />
+            <text class="menu-text">帮助与反馈</text>
+            <text class="menu-arrow">›</text>
+          </view>
+        </view>
+
+        <TechSupportFooter />
+        <view class="tab-page-bottom-spacer" />
+      </view>
     </scroll-view>
     <CustomTabBar :current="4" />
   </view>
 </template>
 <script setup>
 import AppImage from '@/components/AppImage.vue'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
-import { useChatStore } from '@/store/chat'
-import { useRemindStore } from '@/store/remind'
-import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
+import { useChatStore } from '@/store/chat'
+import { useAppStore } from '@/store/app'
 import { getUserToken, setPlayerToken } from '@/utils/auth'
-import { switchToPlayerToken } from '@/api/auth'
+import { getWallet } from '@/api/user'
 import { getPlayerApplicationStatus } from '@/api/player'
-import { getIdentityStatus } from '@/api/user'
+import { switchToPlayerToken } from '@/api/auth'
 import { openCustomerService } from '@/utils/customer-service'
-import { useOfficialWechatStore } from '@/store/official-wechat'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import ScreenHeader from '@/components/ScreenHeader.vue'
 import TechSupportFooter from '@/components/TechSupportFooter.vue'
+
 const userStore = useUserStore()
 const siteStore = useSiteStore()
-const isNeo = computed(() => siteStore.themeId === 'neumorphism')
-const appStore = useAppStore()
 const chatStore = useChatStore()
-const officialWechat = useOfficialWechatStore()
-const remindStore = useRemindStore()
-const systemUnread = computed(() => remindStore.systemUnread)
-const identityAvailable=ref(false),identityStatus=ref('')
-const playerStatus=ref('')
-const identityLabel=computed(()=>({APPROVED:'已认证',PENDING:'审核中',REJECTED:'未通过',DRAFT:'待提交',NOT_SUBMITTED:'未认证'}[identityStatus.value]||'未认证'))
-const playerEntry=computed(()=>{
-  if(!userStore.isLoggedIn)return{title:'登录后入驻接单员端',desc:'登录后申请接单、查看收益和提现',action:'登录'}
-  if(playerStatus.value==='ACTIVE')return{title:'接单员工作台',desc:'切换身份接单、查看收益和提现',action:'进入'}
-  if(playerStatus.value==='PENDING')return{title:'接单员申请审核中',desc:'审核通过后即可进入接单员端',action:'查看'}
-  if(playerStatus.value==='FROZEN')return{title:'接单员账号已冻结',desc:'请联系客服处理后再接单',action:'查看'}
-  if(playerStatus.value==='REJECTED')return{title:'重新申请接单员',desc:'补充资料后可重新提交入驻申请',action:'申请'}
-  return{title:'入驻接单员端',desc:'通过审核后可接单、查看收益和提现',action:'进入'}
+const appStore = useAppStore()
+const balance = ref('0.00')
+const playerStatus = ref('')
+const uid = computed(() => userStore.isLoggedIn && userStore.userInfo?.id ? String(userStore.userInfo.id) : '')
+const profileName = computed(() => userStore.isLoggedIn ? userStore.nickname : (userStore.isGuest ? (userStore.guestInfo?.nickname || '游客') : '点击登录'))
+const profileMeta = computed(() => {
+  if (userStore.isLoggedIn) return uid.value ? 'UID: ' + uid.value : '完善资料，方便接收服务通知'
+  if (userStore.isGuest) return (userStore.guestInfo?.maskedPhone || '游客会话') + ' · 点击登录正式账号'
+  return '登录后查看订单和钱包'
+})
+const displayBalance = computed(() => userStore.isLoggedIn ? '¥' + Number(balance.value || 0).toFixed(2) : '¥—')
+const playerEntry = computed(() => {
+  if (playerStatus.value === 'ACTIVE') return { title: '接单员工作台', desc: '切换身份接单、查看收益和提现', action: '进入' }
+  if (playerStatus.value === 'PENDING') return { title: '接单员申请审核中', desc: '审核通过后即可进入接单员端', action: '查看' }
+  if (playerStatus.value === 'FROZEN') return { title: '接单员账号已冻结', desc: '请联系客服处理后再接单', action: '查看' }
+  if (playerStatus.value === 'REJECTED') return { title: '重新申请接单员', desc: '补充资料后可重新提交入驻申请', action: '申请' }
+  return { title: '入驻接单员端', desc: '通过审核后可接单、查看收益和提现', action: '进入' }
 })
 
-// 每次显示页面时检查登录态并刷新用户信息
 onShow(() => {
   userStore.syncSessionFromStorage()
-  if (userStore.isLoggedIn) officialWechat.load('user')
   const savedToken = getUserToken()
-  if (savedToken && !userStore.token) {
-    userStore.token = savedToken
-  }
+  if (savedToken && !userStore.token) userStore.token = savedToken
   if (userStore.token) {
     userStore.fetchProfile(true)
-    loadPlayerEntry()
-    useChatStore().fetchMessageUnreadCount()
-    getIdentityStatus({loading:false}).then(res=>{identityAvailable.value=!!res.data?.available;identityStatus.value=res.data?.status||''}).catch(()=>{identityAvailable.value=false})
+    chatStore.fetchMessageUnreadCount()
+    getPlayerApplicationStatus().then(res => { playerStatus.value = res.data?.status || '' }).catch(() => {})
+    getWallet({ loading: false }).then(res => { balance.value = Number(res.data?.balance || 0).toFixed(2) }).catch(() => {})
   }
 })
-
-async function loadPlayerEntry(){
-  try{
-    const{data}=await getPlayerApplicationStatus()
-    playerStatus.value=data?.status||''
-  }catch(e){
-    if(e?.data?.code===1002||e?.code===1002){playerStatus.value=''}
-  }
-}
 
 const TAB_PAGES = ['/pages/index/index', '/pages/category/index', '/pages/players/index', '/pages/chat/list', '/pages/mine/index']
 function go(url) {
-  if (TAB_PAGES.includes(url)) {
-    uni.switchTab({ url })
-  } else {
-    uni.navigateTo({ url })
-  }
+  if (TAB_PAGES.includes(url)) uni.switchTab({ url })
+  else uni.navigateTo({ url })
 }
 function goOrders() {
   if (userStore.isLoggedIn || userStore.isGuest) return go('/pages/order/list')
@@ -197,225 +170,135 @@ function goOrders() {
 }
 function goLogin() { uni.navigateTo({ url: '/pages/login/index' }) }
 function goAccount(url) { if (!userStore.checkLogin()) return; go(url) }
-function formatPhone(p) {
-  if (!p || p.length < 7) return p
-  return p.slice(0, 3) + '****' + p.slice(-4)
+function goSettings() { if (!userStore.isLoggedIn) return goLogin(); go('/pages/mine/services') }
+function goWallet() { if (!userStore.isLoggedIn) return goLogin(); go('/pages/wallet/index') }
+function goRecharge() { if (!userStore.isLoggedIn) return goLogin(); go('/pages/wallet/recharge') }
+function goOrderTab(tab) {
+  if (!userStore.isLoggedIn && !userStore.isGuest) return goOrders()
+  uni.navigateTo({ url: '/pages/order/list?tab=' + encodeURIComponent(tab) })
 }
+function goHelp() { go('/pages/complaint/list') }
 async function goPlayer() {
   if (!userStore.checkLogin()) return
   try {
     const { data } = await getPlayerApplicationStatus()
-    if (!data?.registered) {
-      uni.navigateTo({ url: '/pages-player/apply/index' })
-    } else if (data.status === 'PENDING') {
-      uni.showToast({ title: '审核中，请耐心等待', icon: 'none' })
-    } else if (data.status === 'ACTIVE') {
+    if (!data?.registered) uni.navigateTo({ url: '/pages-player/apply/index' })
+    else if (data.status === 'PENDING') uni.showToast({ title: '审核中，请耐心等待', icon: 'none' })
+    else if (data.status === 'ACTIVE') {
       const res = await switchToPlayerToken()
       if (res?.data?.token) {
         setPlayerToken(res.data.token)
-        useChatStore().disconnect()
+        chatStore.disconnect()
         appStore.switchToPlayer()
       }
-    } else if (data.status === 'FROZEN') {
-      uni.showToast({ title: '接单账号已冻结，请联系客服', icon: 'none' })
-    } else if (data.status === 'REJECTED') {
-      uni.navigateTo({ url: '/pages-player/apply/index' })
-    } else {
-      uni.showToast({ title: '接单账号状态异常，请联系客服', icon: 'none' })
-    }
+    } else if (data.status === 'FROZEN') uni.showToast({ title: '接单账号已冻结，请联系客服', icon: 'none' })
+    else if (data.status === 'REJECTED') uni.navigateTo({ url: '/pages-player/apply/index' })
+    else uni.showToast({ title: '接单账号状态异常，请联系客服', icon: 'none' })
   } catch (e) {
     const msg = e?.data?.msg || e?.message
     if (msg) uni.showToast({ title: msg, icon: 'none' })
-    if (e?.data?.code === 1002) uni.navigateTo({ url: '/pages-player/apply/index' })
   }
 }
+function copyUid() {
+  if (!uid.value) return
+  uni.setClipboardData({ data: uid.value, success: () => uni.showToast({ title: 'UID已复制', icon: 'none' }) })
+}
 async function goCustomerService() {
-  try {
-    await openCustomerService()
-  } catch (e) {
-    uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
-  }
+  try { await openCustomerService() }
+  catch (e) { uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' }) }
 }
 </script>
 <style lang="scss" scoped>
-.mine-page {
-  background: #f7f8f9;
-  height: var(--app-page-height, 100vh);
+.mine-page { height: var(--app-page-height, 100vh); min-height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; background: #f7f7f7; }
+.mine-scroll { flex: 1; height: 0; min-height: 0; width: 100%; }
+.mine-content { padding: 10rpx 28rpx calc(196rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; }
+.profile-row { display: flex; align-items: center; gap: 22rpx; padding: 10rpx 2rpx 28rpx; }
+.avatar { width: 120rpx; height: 120rpx; flex-shrink: 0; border-radius: 28rpx; background: #eef0f2; }
+.profile-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10rpx; }
+.profile-name { color: #111111; font-size: 40rpx; font-weight: 850; line-height: 1.2; letter-spacing: -0.02em; }
+.profile-meta-row { display: flex; align-items: center; gap: 14rpx; min-width: 0; }
+.profile-meta { overflow: hidden; color: #777777; font-size: 23rpx; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.copy-uid { display: inline-flex; align-items: center; gap: 4rpx; flex-shrink: 0; color: #777777; font-size: 20rpx; }
+.copy-uid image { width: 28rpx; height: 28rpx; }
+.profile-arrow { flex-shrink: 0; color: #bbbbbb; font-size: 40rpx; line-height: 1; }
+.balance-card {
   position: relative;
   overflow: hidden;
-  padding-bottom: 0;
+  padding: 30rpx 28rpx 28rpx;
+  border-radius: 28rpx;
+  background: #171717;
+  color: #ffffff;
+  box-sizing: border-box;
 }
-.mine-scroll {
-  height: calc(var(--app-page-height, 100vh) - 110rpx - var(--app-safe-bottom, env(safe-area-inset-bottom)));
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
+.balance-card::after {
+  content: '';
+  position: absolute;
+  right: -80rpx;
+  bottom: -120rpx;
+  width: 360rpx;
+  height: 360rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.16), rgba(255,255,255,0) 68%);
+  pointer-events: none;
 }
-
-/* #ifdef H5 */
-.mine-scroll :deep(.uni-scroll-view::-webkit-scrollbar),
-.mine-scroll :deep(.uni-scroll-view-content::-webkit-scrollbar) {
-  width: 0;
-  height: 0;
-  display: none;
-}
-/* #endif */
-
-.profile-card {
-  margin: 24rpx 24rpx 0;
-  padding: 24rpx;
-  background: linear-gradient(135deg, #ffffff, #f8f8f9);
-  border: 1rpx solid rgba(23, 25, 28, 0.14);
-  border-radius: 20rpx;
-  box-shadow: 0 12rpx 34rpx rgba(23, 25, 28, 0.04);
-  position: relative;
-  z-index: 1;
-}
-.profile-main {
+.balance-head { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.balance-label { font-size: 26rpx; font-weight: 700; }
+.balance-hint { color: rgba(255,255,255,.52); font-size: 21rpx; }
+.balance-main { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: space-between; gap: 18rpx; margin-top: 22rpx; }
+.balance-amount { font-size: 56rpx; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+.recharge-btn {
   display: flex;
   align-items: center;
-}
-.avatar {
-  width: 104rpx;
-  height: 104rpx;
-  border-radius: 50%;
+  justify-content: center;
+  min-width: 122rpx;
+  height: 60rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
   background: #ffffff;
-  border: 4rpx solid rgba(23, 25, 28, 0.14);
-  margin-right: 20rpx;
-  flex-shrink: 0;
-}
-.profile-info {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-.name {
-  display: block;
-  font-size: 32rpx;
+  color: #171717;
+  font-size: 23rpx;
   font-weight: 800;
-  color: #17191c;
-  line-height: 1.25;
 }
-.phone {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  color: #73777e;
-  line-height: 1.35;
-}
-.profile-arrow {
-  color: #b9bdc4;
-  font-size: 32rpx;
-  flex-shrink: 0;
-  margin-left: 12rpx;
-}
-
-.service-panel {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18rpx 8rpx;
-  margin: 18rpx 24rpx 0;
-  padding: 20rpx 8rpx 16rpx;
-  background: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
+.panel { margin-top: 18rpx; border: 0; border-radius: 26rpx; background: #ffffff; box-shadow: none; }
+.orders-panel { padding: 26rpx 0; }
+.order-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.order-shortcut {
   position: relative;
-  z-index: 1;
-}
-.quick-group,
-.quick-grid { display: contents; }
-.quick-item {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
-  font-size: 22rpx;
-  color: #41464e;
-  font-weight: 600;
-}
-.quick-icon-wrap {
-  position: relative;
-}
-.quick-icon {
-  width: 48rpx;
-  height: 48rpx;
-}
-.quick-badge {
-  position: absolute;
-  top: -12rpx;
-  right: -20rpx;
-  min-width: 32rpx;
-  height: 32rpx;
-  line-height: 32rpx;
-  padding: 0 8rpx;
-  font-size: 20rpx;
-  color: #fff;
-  background: #d44955;
-  border-radius: 32rpx;
-  text-align: center;
-}
-
-.more-card {
-  margin: 18rpx 24rpx 0;
-  background: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 10rpx 30rpx rgba(23, 25, 28, 0.04);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-.more-heading {
-  display: block;
-  padding: 20rpx 22rpx 12rpx;
+  gap: 10rpx;
+  padding: 2rpx;
+  color: #555b63;
   font-size: 23rpx;
-  color: #858a92;
-  font-weight: 700;
 }
-.player-row {
+.order-shortcut::after {
+  content: '';
+  position: absolute;
+  top: 8rpx;
+  right: 0;
+  bottom: 8rpx;
+  width: 1rpx;
+  background: #f0f0f0;
+}
+.order-shortcut:last-child::after { display: none; }
+.shortcut-icon { display: flex; align-items: center; justify-content: center; width: 48rpx; height: 48rpx; background: transparent; }
+.shortcut-icon image { width: 46rpx; height: 46rpx; }
+.menu-panel { padding: 4rpx 24rpx; }
+.menu-row {
   display: flex;
   align-items: center;
-  gap: 14rpx;
-  padding: 18rpx 22rpx;
-  border-bottom: 1rpx solid #f4f5f6;
-  background: #fafbfc;
-  &:active { background: #f4f6f8; }
+  gap: 20rpx;
+  min-height: 104rpx;
+  border-bottom: 1rpx solid #f3f3f3;
+  &:last-child { border-bottom: 0; }
+  &:active { opacity: .7; }
 }
-.more-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; filter: grayscale(1); opacity: 0.72; }
-.player-copy { flex: 1; min-width: 0; display: grid; gap: 4rpx; }
-.more-title { font-size: 27rpx; font-weight: 700; color: #17191c; }
-.more-desc { font-size: 21rpx; color: #858a92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.member-action { flex-shrink: 0; padding: 7rpx 18rpx; border-radius: 999rpx; background: #17191c; color: #fff; font-size: 22rpx; font-weight: 700; }
-.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.more-item {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 18rpx 20rpx;
-  border-bottom: 1rpx solid #f4f5f6;
-  font-size: 24rpx;
-  color: #41464e;
-  &:nth-child(odd) { border-right: 1rpx solid #f4f5f6; }
-  &:active { background: #fafbfc; }
-  > text:first-of-type { flex: 1; min-width: 0; }
-}
-.identity-state { flex: none; font-size: 20rpx; color: #858a92; }
-.legal-links { display: flex; justify-content: center; align-items: center; gap: 10rpx; padding: 20rpx; font-size: 21rpx; color: #9a9fa7; }
-.legal-dot { color: #c4c7cc; }
-.logout {
-  margin: 40rpx 24rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  background: #ffffff;
-  color: #c94f59;
-  font-size: 30rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(201, 79, 89, 0.08);
-  position: relative;
-  z-index: 1;
-}
-.guest-logout { color: #555b63; }
-
+.menu-icon { width: 44rpx; height: 44rpx; flex-shrink: 0; }
+.menu-text { flex: 1; min-width: 0; color: #111111; font-size: 28rpx; font-weight: 650; }
+.menu-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
+.menu-desc { overflow: hidden; color: #999999; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.menu-state { flex-shrink: 0; color: #999999; font-size: 21rpx; }
+.menu-arrow { flex-shrink: 0; color: #bbbbbb; font-size: 34rpx; line-height: 1; }
+:deep(.tech-support) { margin-top: 26rpx; }
 </style>

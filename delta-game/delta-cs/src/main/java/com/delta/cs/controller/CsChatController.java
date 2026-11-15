@@ -34,8 +34,9 @@ public class CsChatController {
     @GetMapping("/session/list")
     public R<Page<ChatSession>> sessionList(PageQuery query,
                                             @RequestParam(required = false) Long participantId) {
+        long encodedCs = com.delta.common.chat.util.ChatParticipantId.encodeCs(SecurityUtils.getUserId());
         LambdaQueryWrapper<ChatSession> w = new LambdaQueryWrapper<ChatSession>()
-                .and(participantId != null, q -> q.eq(ChatSession::getId1, participantId).or().eq(ChatSession::getId2, participantId))
+                .and(q -> q.eq(ChatSession::getId1, encodedCs).or().eq(ChatSession::getId2, encodedCs))
                 .orderByDesc(ChatSession::getLastMessageAt);
         Page<ChatSession> page = chatSessionMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), w);
         for (ChatSession s : page.getRecords()) {
@@ -46,6 +47,12 @@ public class CsChatController {
 
     @GetMapping("/message/list")
     public R<Page<ChatMessage>> messageList(@RequestParam Long sessionId, PageQuery query) {
+        ChatSession session = chatSessionMapper.selectById(sessionId);
+        long encodedCs = com.delta.common.chat.util.ChatParticipantId.encodeCs(SecurityUtils.getUserId());
+        if (session == null || (!Long.valueOf(encodedCs).equals(session.getId1())
+                && !Long.valueOf(encodedCs).equals(session.getId2()))) {
+            return R.fail(403, "无权查看该会话消息");
+        }
         LambdaQueryWrapper<ChatMessage> w = new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getSessionId, sessionId)
                 .orderByAsc(ChatMessage::getCreatedAt);

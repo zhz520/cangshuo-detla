@@ -18,6 +18,7 @@ import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.common.chat.service.ChatSessionService;
 import com.delta.common.chat.util.ChatParticipantId;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.product.entity.Product;
 import com.delta.product.enums.ProductLimitTypeEnum;
 import com.delta.product.service.ProductService;
@@ -49,6 +50,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final com.delta.common.security.service.VerificationService verification;
     private final com.delta.order.service.OrderPricingService orderPricing;
     private final com.delta.order.service.CouponRedemptionService couponRedemption;
+    @Autowired(required = false)
+    private CsRoutingService csRouting;
 
     @Override
     public Order getById(java.io.Serializable id) {
@@ -71,6 +74,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Product product = productService.getById(req.getProductId());
         if (product == null) throw new BusinessException("商品不存在");
         if (product.getStatus() != 1) throw new BusinessException("商品已下架");
+        Long assignedCsId = csRouting == null ? null : csRouting.resolveForProduct(product.getId());
         com.delta.order.dto.OrderQuote quote=orderPricing.quote(req.getProductId(),req.getDesignatedPlayerId(),req.getPlayerLevelId(),userId,req.getCouponId());
         LocalDateTime now = LocalDateTime.now();
 
@@ -135,6 +139,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             order.setExtraFields(com.alibaba.fastjson2.JSON.toJSONString(req.getExtraFields()));
         }
         order.setDesignatedPlayerId(req.getDesignatedPlayerId());
+        order.setCsId(assignedCsId);
         order.setStatus(OrderStatusEnum.PENDING_PAYMENT.name());
         int payDeadlineMinutes = Integer.parseInt(sysConfigService.getConfigValue("order.pay_deadline_minutes", "30"));
         order.setPayDeadline(now.plusMinutes(payDeadlineMinutes));
@@ -142,10 +147,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         save(order);
+        if (assignedCsId != null) {
+            try {
+                jdbc.update("UPDATE `order` SET cs_id=? WHERE id=?", assignedCsId, order.getId());
+            } catch (org.springframework.dao.DataAccessException ignored) {
+                // Older test fixtures may not have the additive compatibility column.
+            }
+        }
         if (quote.getCouponId() != null) couponRedemption.lock(userId, quote.getCouponId(), order.getId());
         BigDecimal csRate=new BigDecimal(sysConfigService.getConfigValue("settlement.cs_rate","0"));
         if(csRate.signum()<0||csRate.compareTo(BigDecimal.ONE)>0)throw new BusinessException("客服提成比例无效");
-        jdbc.update("INSERT INTO order_finance_snapshot(order_id,cs_rate) VALUES (?,?)",order.getId(),csRate);
+        jdbc.update("INSERT INTO order_finance_snapshot(order_id,cs_rate,cs_id) VALUES (?,?,?)",order.getId(),csRate,assignedCsId);
         addProgress(order.getId(), null, OrderStatusEnum.PENDING_PAYMENT.name(), "USER", userId, "创建订单");
 
         // 写入Redis超时key，到期自动取消订单

@@ -1,10 +1,16 @@
 <template>
-  <image ref="imageRef" :src="displaySource" :mode="mode" :lazy-load="!eager" class="app-image" :class="{ 'image-loading': !loaded, 'image-failed': failed }" @load="onLoad" @error="onError" />
+  <image ref="imageRef" :src="displaySource" :mode="mode" :lazy-load="!eager" class="app-image" :class="{ 'image-loading': !loaded, 'image-failed': failed, 'icon-image': isVector }" @load="onLoad" @error="onError" />
 </template>
 <script setup>
 import { computed, nextTick, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { thumbnailUrl } from '@/utils/image'
-const props = defineProps({ src: { type: String, default: '' }, mode: { type: String, default: 'aspectFill' }, width: { type: Number, default: 640 }, eager: Boolean })
+const props = defineProps({
+  src: { type: String, default: '' },
+  mode: { type: String, default: 'aspectFill' },
+  width: { type: Number, default: 640 },
+  fallback: { type: String, default: '/static/icons/图片.svg' },
+  eager: Boolean
+})
 const emit = defineEmits(['load', 'error'])
 const imageRef = ref(null), loaded = ref(false), failed = ref(false), original = ref(false)
 const visible = ref(true)
@@ -16,11 +22,12 @@ const criticalSource = computed(() => {
   const source = String(props.src || '').trim()
   return Boolean(props.eager) || source.startsWith('/static/') || /^(data|blob):/i.test(source)
 })
-const displaySource = computed(() => failed.value
-  ? '/static/icons/图片.svg'
-  : !visible.value && !criticalSource.value
-    ? ''
-    : original.value ? props.src : thumbnailUrl(props.src, props.width))
+const isVector = computed(() => /\.svg(?:\?|$)/i.test(String(props.src || '')))
+const displaySource = computed(() => {
+  if (!String(props.src || '').trim() || failed.value) return props.fallback
+  if (!visible.value && !criticalSource.value) return ''
+  return original.value ? props.src : thumbnailUrl(props.src, props.width)
+})
 function hints() {
   // #ifdef H5
   const element = imageRef.value?.$el || imageRef.value
@@ -51,4 +58,5 @@ onBeforeUnmount(() => observer?.disconnect())
 .app-image { background-color: #f0f1f3; transition: opacity 160ms ease; }
 .image-loading { background-color: #f0f1f3; }
 .image-failed { background-color: #f0f1f3; }
+.app-image.icon-image { background-color: transparent !important; }
 </style>

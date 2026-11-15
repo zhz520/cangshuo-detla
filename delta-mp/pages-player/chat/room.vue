@@ -381,34 +381,34 @@ function resolveEncodedType(encodedId) {
 }
 </script>
 <style lang="scss" scoped>
-.chat-room { background: #f4f5f6; position: relative; overflow: hidden; }
-.msg-list { background: #f4f5f6; box-sizing: border-box; }
+.chat-room { background: #f7f7f7; position: relative; overflow: hidden; }
+.msg-list { background: #f7f7f7; box-sizing: border-box; }
 
-.scroll-bottom-btn { position: absolute; right: 32rpx; bottom: 180rpx; width: 72rpx; height: 72rpx; line-height: 72rpx; text-align: center; font-size: 36rpx; color: #17191c; background: rgba(255,255,255,0.9); border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 50%; z-index: 10; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.4); }
-.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #73777e; background: #f4f5f6; padding: 4rpx 16rpx; border-radius: 8rpx; } }
-.toolbar { position: fixed; left: 0; right: 0; bottom: calc(104rpx + env(safe-area-inset-bottom)); z-index: 19; display: flex; justify-content: space-around; gap: 24rpx; padding: 24rpx 48rpx; background: rgba(255,255,255,0.95); border-top: 1rpx solid #e6e7e9; box-sizing: border-box; }
+.scroll-bottom-btn { position: absolute; right: 32rpx; bottom: 180rpx; width: 72rpx; height: 72rpx; line-height: 72rpx; text-align: center; font-size: 36rpx; color: #111111; background: rgba(255,255,255,0.9); border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 50%; z-index: 10; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.4); }
+.time-separator { text-align: center; padding: 16rpx 0; text { font-size: 22rpx; color: #777777; background: #f7f7f7; padding: 4rpx 16rpx; border-radius: 8rpx; } }
+.toolbar { position: fixed; left: 0; right: 0; bottom: calc(104rpx + env(safe-area-inset-bottom)); z-index: 19; display: flex; justify-content: space-around; gap: 24rpx; padding: 24rpx 48rpx; background: rgba(255,255,255,0.95); border-top: 1rpx solid #eeeeee; box-sizing: border-box; }
 .toolbar-item { display: flex; flex-direction: column; align-items: center; gap: 8rpx; min-width: 96rpx; }
 .toolbar-icon { font-size: 48rpx; }
-.toolbar-label { font-size: 22rpx; color: #666b73; }
-.input-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); border-top: 1rpx solid #e6e7e9; box-sizing: border-box; }
-.plus-btn { width: 64rpx; height: 64rpx; line-height: 60rpx; text-align: center; font-size: 40rpx; color: #17191c; border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 50%; margin-right: 16rpx; flex-shrink: 0; }
-input { flex: 1; height: 72rpx; background: #f4f5f6; border: 1rpx solid #e6e7e9; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #17191c; }
-.send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: linear-gradient(135deg, #17191c, #30343a); color: #fff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
+.toolbar-label { font-size: 22rpx; color: #777777; }
+.input-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); border-top: 1rpx solid #eeeeee; box-sizing: border-box; }
+.plus-btn { width: 64rpx; height: 64rpx; line-height: 60rpx; text-align: center; font-size: 40rpx; color: #111111; border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 50%; margin-right: 16rpx; flex-shrink: 0; }
+input { flex: 1; height: 72rpx; background: #f7f7f7; border: 1rpx solid #eeeeee; border-radius: 999rpx; padding: 0 24rpx; font-size: 28rpx; color: #111111; }
+.send-btn { margin-left: 16rpx; padding: 0 32rpx; height: 72rpx; line-height: 72rpx; background: #171717; color: #fff; font-weight: bold; font-size: 28rpx; border-radius: 999rpx; }
 .picker-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; z-index: 999; }
 .picker-popup { width: 100%; max-height: 70vh; background: #fff; border-top-left-radius: 24rpx; border-top-right-radius: 24rpx; display: flex; flex-direction: column; }
-.picker-header { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 32rpx; border-bottom: 1rpx solid #e6e7e9; }
-.picker-title { font-size: 30rpx; font-weight: bold; color: #17191c; }
-.picker-close { font-size: 36rpx; color: #73777e; padding: 0 8rpx; }
+.picker-header { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 32rpx; border-bottom: 1rpx solid #eeeeee; }
+.picker-title { font-size: 30rpx; font-weight: bold; color: #111111; }
+.picker-close { font-size: 36rpx; color: #777777; padding: 0 8rpx; }
 .picker-list { flex: 1; max-height: 60vh; }
-.picker-item { display: flex; align-items: center; padding: 20rpx 32rpx; border-bottom: 1rpx solid #f4f5f6; }
+.picker-item { display: flex; align-items: center; padding: 20rpx 32rpx; border-bottom: 1rpx solid #f7f7f7; }
 .picker-cover { width: 100rpx; height: 100rpx; border-radius: 8rpx; flex-shrink: 0; margin-right: 20rpx; }
 .picker-info { flex: 1; overflow: hidden; }
-.picker-name { font-size: 28rpx; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.picker-price { font-size: 28rpx; color: #17191c; font-weight: bold; }
+.picker-name { font-size: 28rpx; color: #111111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.picker-price { font-size: 28rpx; color: #111111; font-weight: bold; }
 .picker-meta { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
-.picker-status { font-size: 22rpx; color: #73777e; }
-.picker-sub { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; }
-.picker-empty { text-align: center; padding: 80rpx 0; color: #73777e; font-size: 28rpx; }
+.picker-status { font-size: 22rpx; color: #777777; }
+.picker-sub { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; }
+.picker-empty { text-align: center; padding: 80rpx 0; color: #777777; font-size: 28rpx; }
 
 /* 消息区占满剩余空间，工具栏和输入栏按实际高度参与布局。 */
 .chat-room {

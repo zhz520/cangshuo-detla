@@ -198,11 +198,15 @@ CREATE TABLE `chat_session` (
   `id1` bigint NOT NULL COMMENT '参与者1编码ID(较小)',
   `id2` bigint NOT NULL COMMENT '参与者2编码ID(较大)',
   `status` varchar(20) DEFAULT 'ACTIVE',
+  `active_pair_slot` tinyint GENERATED ALWAYS AS (CASE WHEN `status`='ACTIVE' THEN 1 ELSE NULL END),
   `last_message_at` datetime DEFAULT NULL,
+  `rating` tinyint DEFAULT NULL,
+  `rating_comment` varchar(500) DEFAULT NULL,
+  `rated_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_id1_id2` (`id1`,`id2`),
+  UNIQUE KEY `uk_chat_session_active_pair` (`id1`,`id2`,`active_pair_slot`),
   KEY `idx_id1` (`id1`),
   KEY `idx_id2` (`id2`)
 ) ENGINE=InnoDB AUTO_INCREMENT=712 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='私聊会话(id1<id2)';

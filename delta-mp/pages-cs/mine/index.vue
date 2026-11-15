@@ -3,7 +3,7 @@
     <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
       <view class="mine-shell">
         <view class="user-header" @click="goProfileEdit">
-          <AppImage :width="160" class="avatar" :src="csInfo.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+          <AppImage :width="160" class="avatar" :src="csInfo.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
           <view class="info">
             <view class="name-row">
               <text class="name">{{ csInfo.nickname || '客服工作台' }}</text>

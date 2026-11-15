@@ -4,7 +4,7 @@
     <view class="avatar-section">
       <!-- #ifdef MP-WEIXIN -->
       <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
-        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
           <text class="hint-text">点击更换头像</text>
         </view>
@@ -12,12 +12,13 @@
       <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
       <view class="avatar-btn" @click="chooseAvatarImage">
-        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
           <text class="hint-text">点击更换头像</text>
         </view>
       </view>
       <!-- #endif -->
+      <text class="avatar-ratio-tip">建议上传 1:1 正方形头像，人物居中，最小 300×300；未上传时显示 DELTA 默认头像。</text>
     </view>
 
     <!-- 表单 -->
@@ -114,7 +115,7 @@ async function save() {
 <style lang="scss" scoped>
 .profile-page {
   padding: 24rpx;
-  background: #f7f8f9;
+  background: #f7f7f7;
   min-height: var(--app-page-height, 100vh);
 }
 
@@ -148,9 +149,10 @@ async function save() {
   margin-top: 16rpx;
   .hint-text {
     font-size: 24rpx;
-    color: #17191c;
+    color: #111111;
   }
 }
+.avatar-ratio-tip { display: block; max-width: 560rpx; margin: 14rpx auto 0; color: #999999; font-size: 21rpx; line-height: 1.5; text-align: center; }
 
 .form-card {
   background: #ffffff;
@@ -164,7 +166,7 @@ async function save() {
   align-items: center;
   justify-content: space-between;
   padding: 32rpx 28rpx;
-  border-bottom: 1rpx solid #eeeff1;
+  border-bottom: 1rpx solid #eeeeee;
 
   &:last-child { border-bottom: none; }
 
@@ -179,17 +181,17 @@ async function save() {
     flex: 1;
     text-align: right;
     font-size: 28rpx;
-    color: #17191c;
+    color: #111111;
   }
 
   .value {
     font-size: 28rpx;
-    color: #666b73;
+    color: #777777;
   }
 
   .uid {
     font-size: 24rpx;
-    color: #73777e;
+    color: #777777;
   }
 }
 
@@ -197,7 +199,7 @@ async function save() {
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  background: linear-gradient(135deg, #17191c, #30343a);
+  background: #171717;
   color: #ffffff;
   font-weight: bold;
   font-size: 32rpx;

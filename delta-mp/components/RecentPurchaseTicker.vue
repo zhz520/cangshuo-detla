@@ -55,7 +55,7 @@ const hidden = ref(false)
   color: #fff;
   background: rgba(23, 25, 28, 0.94);
   box-shadow: 0 12rpx 30rpx rgba(23, 25, 28, 0.22);
-  backdrop-filter: blur(16rpx);
+  backdrop-filter: none;
 }
 
 .ticker-tag {

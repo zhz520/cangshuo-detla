@@ -4,7 +4,7 @@ import { permissionFor } from './permission-policy.js'
 const sections = [
   { id: 'workbench', title: '工作台', items: [
     { path: '/dashboard' },
-    { id: 'service', title: '客服服务', icon: 'ChatDotRound', paths: ['/chat/service', '/chat/quick-reply', '/chat/record'] }
+    { id: 'service', title: '客服服务', icon: 'ChatDotRound', paths: ['/chat/service', '/chat/quick-reply', '/chat/routing', '/chat/record'] }
   ] },
   { id: 'business', title: '业务运营', items: [
     { id: 'orders', title: '订单与售后', icon: 'List', paths: ['/order/list', '/refund', '/complaint', '/fulfillment-review'] },

@@ -1,172 +1,242 @@
 <template>
   <view class="product-detail" v-if="product">
-    <!-- 轮播图 -->
-    <view class="banner-wrap">
-      <swiper class="banner" autoplay :interval="3000" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
-        <swiper-item v-for="(img,i) in images" :key="i">
-          <AppImage :src="img" mode="aspectFit" class="banner-img" @click="previewImg(i)" />
-        </swiper-item>
-      </swiper>
-      <!-- 自定义指示器 -->
-      <view class="banner-dots" v-if="images.length > 1">
-        <view v-for="(img,i) in images" :key="i" class="dot" :class="{ active: swiperIdx === i }" />
+    <ScreenHeader class="detail-header" title="服务详情" back center>
+      <view class="header-btn" role="button" aria-label="分享" @click="shareProduct">
+        <image src="/static/icons/svc-share.svg" mode="aspectFit" />
       </view>
-      <!-- 图片计数 -->
-      <view class="img-counter">{{ swiperIdx + 1 }}/{{ images.length }}</view>
-    </view>
+      <view class="header-btn" role="button" :aria-label="favorite ? '取消收藏' : '收藏'" @click="toggleFavorite">
+        <image :src="favorite ? '/static/icons/svc-heart-filled.svg' : '/static/icons/svc-heart.svg'" mode="aspectFit" />
+      </view>
+    </ScreenHeader>
 
-    <!-- 价格区域 -->
-    <view class="price-card">
-      <view class="price-main">
-        <text class="yen">¥</text>
-        <text class="price-int">{{ priceInt }}</text>
-        <text class="price-dec">.{{ priceDec }}</text>
+    <view class="detail-body">
+      <view class="banner-wrap">
+        <swiper class="banner" autoplay :interval="4200" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
+          <swiper-item v-for="(img, i) in images" :key="i">
+            <AppImage :src="img" mode="aspectFit" fallback="/static/icons/图片.svg" class="banner-img" @click="previewImg(i)" />
+          </swiper-item>
+        </swiper>
+        <view class="banner-dots" v-if="images.length > 1">
+          <view v-for="(img, i) in images" :key="i" class="dot" :class="{ active: swiperIdx === i }" />
+        </view>
+        <view class="img-counter" v-if="images.length > 1">{{ swiperIdx + 1 }}/{{ images.length }}</view>
       </view>
-      <view class="price-extra">
-        <!-- <text class="sales-badge">已售 {{ product.salesCount || 0 }}</text> -->
-        <text v-if="limitLabel" class="limit-tag">{{ limitLabel }}</text>
-      </view>
-    </view>
 
-    <!-- 商品信息 -->
-    <view class="info-card">
-      <text class="product-name">{{ product.name }}</text>
-      <text v-if="product.subtitle" class="product-subtitle">{{ product.subtitle }}</text>
-      <view class="meta-row" v-if="product.categoryName">
-        <view class="category-tag">
-          <text class="tag-dot">●</text>
-          <text class="tag-text">{{ product.categoryName }}</text>
+      <view class="head-card">
+        <view class="head-top">
+          <view class="head-copy">
+            <text class="product-name">{{ product.name }}</text>
+            <text v-if="product.subtitle" class="product-subtitle">{{ product.subtitle }}</text>
+            <view class="rating-row" @click="openReviews">
+              <text class="rating-star">★</text>
+              <text class="rating-value">{{ ratingLabel }}</text>
+              <text class="rating-divider">|</text>
+              <text class="rating-count">{{ reviewCountLabel }}</text>
+              <text v-if="reviewTotal" class="rating-arrow">›</text>
+            </view>
+          </view>
+          <view class="head-price">
+            <text class="price-yen">¥</text>
+            <text class="price-int">{{ priceInt }}</text>
+            <text class="price-dec">.{{ priceDec }}</text>
+          </view>
+        </view>
+        <view v-if="limitLabel" class="limit-pill">{{ limitLabel }}</view>
+      </view>
+
+      <view class="info-card">
+        <text class="card-title">服务信息</text>
+        <view class="info-row">
+          <image class="info-icon" src="/static/icons/svc-gamepad.svg" mode="aspectFit" />
+          <text class="info-label">服务内容</text>
+          <view class="info-line" />
+          <text class="info-value">{{ descriptionText || '以本页服务说明为准' }}</text>
+        </view>
+        <view class="info-row" v-if="product.categoryName">
+          <image class="info-icon" src="/static/icons/svc-tag.svg" mode="aspectFit" />
+          <text class="info-label">服务分类</text>
+          <view class="info-line" />
+          <text class="info-value">{{ product.categoryName }}</text>
+        </view>
+        <view class="info-row">
+          <image class="info-icon" src="/static/icons/svc-sold.svg" mode="aspectFit" />
+          <text class="info-label">已售</text>
+          <view class="info-line" />
+          <text class="info-value">{{ Number(product.salesCount || 0) }} 单</text>
+        </view>
+        <view class="info-row">
+          <image class="info-icon" src="/static/icons/svc-info.svg" mode="aspectFit" />
+          <text class="info-label">限购规则</text>
+          <view class="info-line" />
+          <text class="info-value">{{ limitLabel || '不限购' }}</text>
         </view>
       </view>
-      <view class="desc-wrap" v-if="descriptionHtml">
-        <view class="desc-divider"></view>
-        <view class="desc"><rich-text :nodes="descriptionHtml" /></view>
+
+      <view class="detail-card" v-if="detailHtml">
+        <text class="card-title">详情与须知</text>
+        <view class="rich-body"><rich-text :nodes="detailHtml" /></view>
       </view>
+
+      <view class="review-card" id="reviews">
+        <view class="review-head">
+          <text class="card-title">评价<span v-if="reviewTotal" class="review-count"> ({{ reviewTotal }})</span></text>
+          <text v-if="reviewTotal" class="review-more" @click="openReviews">查看全部 ›</text>
+        </view>
+        <view v-if="reviews.length" class="review-item">
+          <AppImage class="review-avatar" :src="reviews[0].userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
+          <view class="review-main">
+            <view class="review-top">
+              <text class="review-name">{{ reviews[0].userNickname || '匿名用户' }}</text>
+              <text class="review-time">{{ formatReviewDate(reviews[0].createdAt) }}</text>
+            </view>
+            <text class="review-stars">{{ starText(reviews[0].rating) }}</text>
+            <text class="review-text">{{ reviews[0].content }}</text>
+            <view v-if="parseImages(reviews[0].images).length" class="review-images">
+              <AppImage v-for="(img, i) in parseImages(reviews[0].images).slice(0, 3)" :key="i" class="review-image" :src="img" mode="aspectFill" @click="previewReviewImage(reviews[0], i)" />
+            </view>
+          </view>
+        </view>
+        <view v-else class="review-empty">暂无评价，完成订单后可发表评价</view>
+      </view>
+
+      <view class="bottom-space" />
     </view>
 
-    <!-- 商品详情 -->
-    <view class="detail-section" v-if="product.detail">
-      <view class="section-header">
-        <view class="section-line"></view>
-        <text class="section-title">商品详情</text>
-        <view class="section-line"></view>
-      </view>
-      <view class="detail-body">
-        <rich-text :nodes="detailHtml" />
-      </view>
-    </view>
-
-    <!-- 底部操作栏 -->
     <view class="bottom-bar">
-      <view class="btn-favorite" :class="{ active: favorite }" @click="toggleFavorite">
-        <text class="favorite-mark">{{ favorite ? '★' : '☆' }}</text>
-        <text>{{ favorite ? '已收藏' : '收藏' }}</text>
-      </view>
-      <view class="btn-chat" @click="goChat">
-        <image class="btn-icon" src="/static/icons/客服.svg" mode="aspectFit" />
+      <view class="bar-action" role="button" aria-label="在线客服" @click="goChat">
+        <image class="bar-icon" src="/static/icons/header-headset.svg" mode="aspectFit" />
         <text>客服</text>
       </view>
-      <view v-if="siteStore.orderPurchaseEnabled" class="btn-buy" @click="goBuy">立即购买</view>
+      <view class="bar-action" :class="{ active: favorite }" role="button" :aria-label="favorite ? '取消收藏' : '收藏'" @click="toggleFavorite">
+        <image class="bar-icon" :src="favorite ? '/static/icons/svc-heart-filled.svg' : '/static/icons/svc-heart.svg'" mode="aspectFit" />
+        <text>{{ favorite ? '已收藏' : '收藏' }}</text>
+      </view>
+      <view v-if="siteStore.orderPurchaseEnabled" class="buy-btn" role="button" @click="goBuy">立即购买</view>
+      <view v-else class="buy-btn disabled" role="button">购买已暂停</view>
+    </view>
+
+    <view v-if="showReviews" class="review-sheet-mask" @click="showReviews = false">
+      <view class="review-sheet" @click.stop>
+        <view class="sheet-head">
+          <text class="sheet-title">全部评价<span v-if="reviewTotal"> ({{ reviewTotal }})</span></text>
+          <text class="sheet-close" @click="showReviews = false">✕</text>
+        </view>
+        <scroll-view scroll-y class="sheet-body">
+          <view v-for="review in reviews" :key="review.id" class="review-item">
+            <AppImage class="review-avatar" :src="review.userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
+            <view class="review-main">
+              <view class="review-top">
+                <text class="review-name">{{ review.userNickname || '匿名用户' }}</text>
+                <text class="review-time">{{ formatReviewDate(review.createdAt) }}</text>
+              </view>
+              <text class="review-stars">{{ starText(review.rating) }}</text>
+              <text class="review-text">{{ review.content }}</text>
+              <view v-if="parseImages(review.images).length" class="review-images">
+                <AppImage v-for="(img, i) in parseImages(review.images).slice(0, 3)" :key="i" class="review-image" :src="img" mode="aspectFill" @click="previewReviewImage(review, i)" />
+              </view>
+            </view>
+          </view>
+          <view v-if="!reviews.length" class="review-empty">暂无评价，完成订单后可发表评价</view>
+        </scroll-view>
+      </view>
     </view>
   </view>
 </template>
 <script setup>
 import AppImage from '@/components/AppImage.vue'
+import ScreenHeader from '@/components/ScreenHeader.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
-import PriceText from '@/components/PriceText.vue'
 import { productDescriptionHtml } from '@/utils/product-content'
 import { getProductRichDetail, getProductDetail } from '@/api/product'
+import { getReviewsByProduct } from '@/api/review'
 import { openCustomerService } from '@/utils/customer-service'
 import { useSiteStore } from '@/store/site'
 import { useUserStore } from '@/store/user'
 import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/user'
+
 const siteStore = useSiteStore()
 const userStore = useUserStore()
-const designatedPlayerId=ref('')
+const designatedPlayerId = ref('')
 const product = ref(null)
 const swiperIdx = ref(0)
-const favorite = ref(false), favoriteBusy = ref(false)
+const favorite = ref(false)
+const favoriteBusy = ref(false)
+const reviews = ref([])
+const reviewTotal = ref(0)
+const reviewLoading = ref(false)
+const showReviews = ref(false)
 
-// 分享给好友
 onShareAppMessage(() => {
   const p = product.value
   if (!p) return { title: '服务', path: '/pages/index/index' }
-  return {
-    title: p.name + ' ¥' + Number(p.price || 0).toFixed(2),
-    path: '/pages/product/detail?id=' + p.id,
-    imageUrl: p.coverImage || p.image || ''
-  }
+  return { title: p.name + ' ¥' + Number(p.price || 0).toFixed(2), path: '/pages/product/detail?id=' + p.id, imageUrl: p.coverImage || p.image || '' }
 })
-// 分享到朋友圈
 onShareTimeline(() => {
   const p = product.value
   if (!p) return { title: '服务' }
-  return {
-    title: p.name + ' ¥' + Number(p.price || 0).toFixed(2),
-    query: 'id=' + p.id,
-    imageUrl: p.coverImage || p.image || ''
-  }
+  return { title: p.name + ' ¥' + Number(p.price || 0).toFixed(2), query: 'id=' + p.id, imageUrl: p.coverImage || p.image || '' }
 })
 
-const priceInt = computed(() => {
-  const p = Number(product.value?.price || 0).toFixed(2)
-  return p.split('.')[0]
-})
-const priceDec = computed(() => {
-  const p = Number(product.value?.price || 0).toFixed(2)
-  return p.split('.')[1]
-})
+const priceInt = computed(() => Number(product.value?.price || 0).toFixed(2).split('.')[0])
+const priceDec = computed(() => Number(product.value?.price || 0).toFixed(2).split('.')[1])
+const ratingLabel = computed(() => Number(product.value?.avgRating || 5).toFixed(1))
+const reviewCountLabel = computed(() => reviewTotal.value ? '(' + reviewTotal.value + '条评价)' : '暂无评价')
 const limitLabel = computed(() => {
   const type = Number(product.value?.perUserLimitType || 0)
-  const labels = {
-    1: '永久限购 1 次',
-    2: '7 天内限购 1 次',
-    3: '30 天内限购 1 次',
-    4: '24 小时内限购 1 次'
-  }
+  const labels = { 1: '永久限购 1 次', 2: '7 天内限购 1 次', 3: '30 天内限购 1 次', 4: '24 小时内限购 1 次' }
   if (labels[type]) return labels[type]
-  return product.value?.perUserLimitEnabled === 1 && product.value?.perUserLimitCount
-    ? `限购 ${product.value.perUserLimitCount} 次`
-    : ''
+  return product.value?.perUserLimitEnabled === 1 && product.value?.perUserLimitCount ? '限购 ' + product.value.perUserLimitCount + ' 次' : ''
 })
-const descriptionHtml = computed(() => productDescriptionHtml(product.value?.description))
+const descriptionText = computed(() => String(product.value?.description || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim())
 const detailHtml = computed(() => productDescriptionHtml(product.value?.detail))
-
 const images = computed(() => {
   if (!product.value) return []
   const raw = product.value.images
   if (!raw) return [product.value.coverImage || product.value.image]
   try {
     const arr = JSON.parse(raw)
-    if (Array.isArray(arr)) return arr
-  } catch {}
-  return raw.split(',').filter(Boolean)
+    if (Array.isArray(arr)) return arr.filter(Boolean)
+  } catch (_) {}
+  return String(raw).split(',').filter(Boolean)
 })
-function previewImg(idx) { uni.previewImage({ urls: images.value, current: idx }) }
 
 onLoad(async (opts) => {
-  designatedPlayerId.value=opts.playerId || ''
+  designatedPlayerId.value = opts.playerId || ''
   try {
     const res = await getProductRichDetail(opts.id)
     const d = res.data
     product.value = d.product || d
     if (d.categoryName) product.value.categoryName = d.categoryName
-    await syncFavoriteStatus()
-  } catch (e) {
+  } catch (_) {
     const basic = await getProductDetail(opts.id)
     product.value = basic.data
-    await syncFavoriteStatus()
+  }
+  if (product.value?.id) {
+    await Promise.allSettled([syncFavoriteStatus(), loadReviews()])
   }
 })
-
 onShow(() => { if (product.value) syncFavoriteStatus() })
+
+async function loadReviews() {
+  if (!product.value?.id || reviewLoading.value) return
+  reviewLoading.value = true
+  try {
+    const res = await getReviewsByProduct(product.value.id, { pageNum: 1, pageSize: 20 })
+    reviews.value = res.data?.records || []
+    reviewTotal.value = Number(res.data?.total ?? reviews.value.length ?? 0)
+  } catch (_) {
+    reviews.value = []
+    reviewTotal.value = Number(product.value?.reviewCount || 0)
+  } finally {
+    reviewLoading.value = false
+  }
+}
 
 async function syncFavoriteStatus() {
   if (!product.value?.id || !userStore.isLoggedIn) { favorite.value = false; return }
   try { favorite.value = Boolean((await getFavoriteStatus(product.value.id)).data?.favorited) } catch (_) {}
 }
-
 async function toggleFavorite() {
   if (!userStore.checkLogin() || favoriteBusy.value || !product.value?.id) return
   favoriteBusy.value = true
@@ -175,52 +245,81 @@ async function toggleFavorite() {
     else await addFavorite(product.value.id)
     favorite.value = !favorite.value
     uni.showToast({ title: favorite.value ? '已收藏' : '已取消收藏', icon: 'none' })
-  } finally { favoriteBusy.value = false }
-}
-
-async function goChat() {
-  try {
-    await openCustomerService(product.value)
-  } catch (e) {
-    uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' })
+  } finally {
+    favoriteBusy.value = false
   }
+}
+function previewImg(idx) { uni.previewImage({ urls: images.value, current: idx }) }
+function parseImages(value) {
+  if (!value) return []
+  try { const arr = JSON.parse(value); if (Array.isArray(arr)) return arr.filter(Boolean) } catch (_) {}
+  return String(value).split(',').map(item => item.trim()).filter(Boolean)
+}
+function previewReviewImage(review, idx) {
+  const urls = parseImages(review.images)
+  if (urls.length) uni.previewImage({ urls, current: idx })
+}
+function starText(rating) {
+  const count = Math.max(0, Math.min(5, Math.round(Number(rating || 0))))
+  return '★'.repeat(count) + '☆'.repeat(5 - count)
+}
+function formatReviewDate(value) {
+  if (!value) return ''
+  return String(value).slice(0, 10)
+}
+function openReviews() {
+  if (!reviewTotal.value && !reviews.value.length) return
+  showReviews.value = true
+}
+async function shareProduct() {
+  // #ifdef H5
+  const url = window.location.origin + window.location.pathname + '#/pages/product/detail?id=' + product.value.id
+  uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，可发送给好友', icon: 'none' }) })
+  return
+  // #endif
+  uni.showToast({ title: '请使用右上角分享', icon: 'none' })
+}
+async function goChat() {
+  try { await openCustomerService(product.value) }
+  catch (e) { uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' }) }
 }
 function goBuy() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
   const price = product.value?.price || 0
   const name = encodeURIComponent(product.value.name)
-  uni.navigateTo({ url: `/pages/order/create?productId=${product.value.id}&amount=${price}&productName=${name}${designatedPlayerId.value ? `&playerId=${designatedPlayerId.value}` : ''}` })
+  uni.navigateTo({ url: '/pages/order/create?productId=' + product.value.id + '&amount=' + price + '&productName=' + name + (designatedPlayerId.value ? '&playerId=' + designatedPlayerId.value : '') })
 }
 </script>
 <style lang="scss" scoped>
 .product-detail {
-  background: #f7f8f9;
   min-height: var(--app-page-height, 100vh);
-  padding-bottom: 140rpx;
+  background: #f7f7f7;
+  color: #111111;
+  padding-bottom: calc(150rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
 }
-
-/* ---- 轮播 ---- */
+.detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #ffffff;
+}
+.header-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  image { display: block; width: 40rpx; height: 40rpx; }
+}
+.detail-body { padding: 8rpx 28rpx 0; }
 .banner-wrap {
   position: relative;
+  overflow: hidden;
+  border-radius: 28rpx;
+  background: #f1f2f3;
 }
-.banner {
-  height: 750rpx;
-}
-.banner-img {
-  width: 100%;
-  height: 750rpx;
-}
-.banner-wrap::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60rpx;
-  background: linear-gradient(to top, rgba(241,245,249,0.9), transparent);
-  pointer-events: none;
-  z-index: 1;
-}
+.banner { height: 460rpx; }
+.banner-img { display: block; width: 100%; height: 460rpx; background: #f1f2f3; }
 .banner-dots {
   position: absolute;
   bottom: 24rpx;
@@ -228,224 +327,117 @@ function goBuy() {
   transform: translateX(-50%);
   display: flex;
   gap: 12rpx;
-  .dot {
-    width: 12rpx;
-    height: 12rpx;
-    border-radius: 50%;
-    background: #b9bdc4;
-    transition: all 0.3s;
-    &.active {
-      width: 32rpx;
-      border-radius: 6rpx;
-      background: #17191c;
-    }
-  }
+  .dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: rgba(255,255,255,.55); transition: all .25s; }
+  .dot.active { width: 32rpx; border-radius: 6rpx; background: #ffffff; }
 }
 .img-counter {
   position: absolute;
-  top: 24rpx;
-  right: 24rpx;
-  font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 4rpx 16rpx;
-  border-radius: 20rpx;
+  top: 22rpx;
+  right: 22rpx;
+  padding: 5rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(0,0,0,.42);
+  color: #ffffff;
+  font-size: 21rpx;
 }
-
-/* ---- 价格栏 ---- */
-.price-card {
-  margin: 0 24rpx;
-  padding: 28rpx 32rpx;
+.head-card {
+  margin-top: 18rpx;
+  padding: 28rpx 26rpx;
+  border-radius: 26rpx;
+  background: #ffffff;
+}
+.head-top { display: flex; align-items: flex-start; gap: 18rpx; }
+.head-copy { flex: 1; min-width: 0; }
+.product-name { display: block; color: #111111; font-size: 40rpx; font-weight: 850; line-height: 1.28; letter-spacing: -0.02em; }
+.product-subtitle { display: block; margin-top: 8rpx; color: #777777; font-size: 24rpx; line-height: 1.45; }
+.rating-row { display: flex; align-items: center; gap: 8rpx; margin-top: 16rpx; color: #555b63; font-size: 22rpx; }
+.rating-star { color: #111111; font-size: 24rpx; }
+.rating-value { color: #111111; font-weight: 800; }
+.rating-divider { color: #dddddd; }
+.rating-count { color: #888888; }
+.rating-arrow { color: #aaaaaa; font-size: 28rpx; line-height: 1; }
+.head-price { flex-shrink: 0; display: flex; align-items: baseline; color: #111111; padding-top: 4rpx; }
+.price-yen { font-size: 28rpx; font-weight: 750; }
+.price-int { font-size: 48rpx; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+.price-dec { font-size: 28rpx; font-weight: 750; }
+.limit-pill { display: inline-flex; margin-top: 18rpx; padding: 7rpx 16rpx; border-radius: 999rpx; background: #f5f5f5; color: #777777; font-size: 21rpx; }
+.info-card, .detail-card, .review-card {
+  margin-top: 18rpx;
+  padding: 28rpx 26rpx;
+  border-radius: 26rpx;
+  background: #ffffff;
+}
+.card-title { display: block; color: #111111; font-size: 31rpx; font-weight: 850; line-height: 1.3; }
+.info-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14rpx;
+  padding: 22rpx 0;
+  border-top: 1rpx solid #f3f3f3;
+  &:first-of-type { margin-top: 12rpx; }
 }
-.price-main {
-  display: flex;
-  align-items: baseline;
-  .yen {
-    font-size: 30rpx;
-    color: #17191c;
-    font-weight: bold;
-    margin-right: 4rpx;
-  }
-  .price-int {
-    font-size: 56rpx;
-    color: #17191c;
-    font-weight: 800;
-    line-height: 1;
-  }
-  .price-dec {
-    font-size: 30rpx;
-    color: #17191c;
-    font-weight: bold;
-  }
-}
-.price-extra {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-}
-.sales-badge {
-  font-size: 22rpx;
-  color: #73777e;
-  background: #f7f8f9;
-  padding: 6rpx 18rpx;
-  border-radius: 20rpx;
-}
-.limit-tag {
-  font-size: 22rpx;
-  color: #ac3e49;
-  background: rgba(248, 113, 113, 0.16);
-  padding: 6rpx 18rpx;
-  border-radius: 20rpx;
-}
-
-/* ---- 商品信息 ---- */
-.info-card {
-  margin: 20rpx 24rpx 0;
-  padding: 28rpx 32rpx;
-  background: #f7f8f9;
-  border: 1rpx solid #eeeff1;
-  border-radius: 20rpx;
-}
-.product-name {
-  font-size: 34rpx;
-  font-weight: bold;
-  display: block;
-  color: #17191c;
-  line-height: 1.5;
-}
-.product-subtitle {
-  font-size: 24rpx;
-  color: #73777e;
-  display: block;
-  margin-top: 8rpx;
-  line-height: 1.4;
-}
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin-top: 16rpx;
-}
-.category-tag {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 22rpx;
-  color: #17191c;
-  background: rgba(23, 25, 28, 0.1);
-  padding: 6rpx 16rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid rgba(23, 25, 28, 0.15);
-  .tag-dot {
-    font-size: 14rpx;
-    color: #17191c;
-  }
-}
-.desc-wrap {
-  margin-top: 20rpx;
-}
-.desc-divider {
-  height: 1rpx;
-  background: #f7f8f9;
-  margin-bottom: 20rpx;
-}
-.desc {
-  font-size: 26rpx;
-  color: #666b73;
-  display: block;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
-}
-
-/* ---- 详情区域 ---- */
-.detail-section {
-  margin: 20rpx 24rpx 0;
-  background: #f7f8f9;
-  border: 1rpx solid #eeeff1;
-  border-radius: 20rpx;
-  overflow: hidden;
-}
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20rpx;
-  padding: 28rpx 32rpx 0;
-}
-.section-line {
-  flex: 1;
-  height: 1rpx;
-  background: linear-gradient(to right, transparent, rgba(23, 25, 28, 0.3), transparent);
-}
-.section-title {
-  font-size: 28rpx;
-  font-weight: bold;
-  color: #17191c;
-  white-space: nowrap;
-}
-.detail-body {
-  padding: 24rpx 32rpx 32rpx;
-}
-
-/* ---- 底部栏 ---- */
+.info-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; margin-top: 2rpx; opacity: .82; }
+.info-label { width: 112rpx; flex-shrink: 0; color: #555b63; font-size: 23rpx; line-height: 1.55; }
+.info-line { width: 1rpx; height: 28rpx; flex-shrink: 0; margin-top: 5rpx; background: #eeeeee; }
+.info-value { flex: 1; min-width: 0; color: #44484e; font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
+.rich-body { margin-top: 18rpx; color: #555555; font-size: 24rpx; line-height: 1.75; overflow-wrap: anywhere; }
+.review-head { display: flex; align-items: center; justify-content: space-between; gap: 14rpx; }
+.review-count { color: #999999; font-size: 24rpx; font-weight: 500; }
+.review-more { color: #777777; font-size: 22rpx; }
+.review-item { display: flex; gap: 16rpx; padding-top: 22rpx; }
+.review-avatar { width: 64rpx; height: 64rpx; flex-shrink: 0; border-radius: 50%; }
+.review-main { flex: 1; min-width: 0; }
+.review-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.review-name { color: #111111; font-size: 24rpx; font-weight: 750; }
+.review-time { color: #aaaaaa; font-size: 20rpx; }
+.review-stars { display: block; margin-top: 6rpx; color: #111111; font-size: 22rpx; letter-spacing: 2rpx; }
+.review-text { display: block; margin-top: 10rpx; color: #44484e; font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
+.review-images { display: flex; gap: 10rpx; margin-top: 14rpx; }
+.review-image { width: 150rpx; height: 100rpx; border-radius: 12rpx; }
+.review-empty { padding: 34rpx 0 12rpx; color: #999999; font-size: 23rpx; text-align: center; }
+.bottom-space { height: 20rpx; }
 .bottom-bar {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  z-index: 40;
   display: flex;
-  padding: 16rpx 24rpx;
-  padding-bottom: calc(16rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-  background: rgba(255, 255, 255, 0.96);
-  border-top: 1rpx solid #e6e7e9;
-  gap: 20rpx;
-  backdrop-filter: blur(20px);
+  align-items: center;
+  gap: 18rpx;
+  padding: 14rpx 28rpx calc(14rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
+  background: #ffffff;
 }
-.btn-favorite {
-  width: 96rpx;
-  flex: 0 0 auto;
-  height: 84rpx;
+.bar-action {
+  width: 88rpx;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rpx;
-  border: 1rpx solid #d9dde3;
-  border-radius: 18rpx;
-  color: #73777e;
+  gap: 3rpx;
+  color: #777777;
   font-size: 20rpx;
-  &.active { color: #b37717; border-color: #d8b977; background: #fffaf0; }
-  .favorite-mark { font-size: 34rpx; line-height: 1; }
+  &.active { color: #111111; }
 }
-.btn-chat {
+.bar-icon { width: 42rpx; height: 42rpx; }
+.buy-btn {
   flex: 1;
-  height: 84rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-  border: 1rpx solid rgba(23, 25, 28, 0.4);
-  color: #17191c;
+  height: 88rpx;
+  line-height: 88rpx;
   border-radius: 999rpx;
-  font-size: 26rpx;
-  .btn-icon {
-    width: 36rpx;
-    height: 36rpx;
-  }
-}
-.btn-buy {
-  flex: 2;
-  height: 84rpx;
-  line-height: 84rpx;
-  text-align: center;
-  background: linear-gradient(135deg, #17191c, #30343a);
+  background: #171717;
   color: #ffffff;
-  font-weight: bold;
-  border-radius: 999rpx;
-  font-size: 30rpx;
-  letter-spacing: 2rpx;
+  font-size: 29rpx;
+  font-weight: 750;
+  text-align: center;
+  letter-spacing: 1rpx;
+  &.disabled { background: #e8e8e8; color: #999999; }
 }
+.review-sheet-mask { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; background: rgba(12, 14, 17, .5); }
+.review-sheet { width: 100%; max-height: 76vh; display: flex; flex-direction: column; border-radius: 28rpx 28rpx 0 0; background: #ffffff; overflow: hidden; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 26rpx 30rpx 18rpx; }
+.sheet-title { color: #111111; font-size: 32rpx; font-weight: 850; }
+.sheet-close { color: #888888; font-size: 34rpx; }
+.sheet-body { max-height: 62vh; padding: 0 30rpx 40rpx; box-sizing: border-box; }
 </style>

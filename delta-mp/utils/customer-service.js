@@ -13,7 +13,7 @@ function openExternal(url) {
   })
 }
 
-export async function openCustomerService(product = null) {
+export async function openCustomerService(product = null, orderId = null) {
   const siteStore = useSiteStore()
   await siteStore.fetchSiteConfig()
   const external = siteStore.externalCustomerServiceEnabled
@@ -26,7 +26,10 @@ export async function openCustomerService(product = null) {
     userStore.checkLogin()
     return
   }
-  const { data: session } = await createCsSession()
+  const params = {}
+  if (product?.id) params.productId = product.id
+  if (orderId) params.orderId = orderId
+  const { data: session } = await createCsSession(params)
   if (product) {
     const content = JSON.stringify({
       id: product.id,

@@ -101,6 +101,9 @@ export function adminOrderDetail(id) {
 export function adminOrderAssign(orderId, playerId) {
   return request({ url: `/admin/order/${orderId}/assign/${playerId}`, method: 'post' })
 }
+export function adminOrderReassignCs(orderId, csId) {
+  return request({ url: '/admin/order/' + orderId + '/cs', method: 'put', data: { csId } })
+}
 export function csOrderAssign(orderId, playerId) {
   return request({ url: `/cs/order/${orderId}/assign/${playerId}`, method: 'post' })
 }

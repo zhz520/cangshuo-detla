@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.mapper.CrossModuleMapper;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderProgress;
@@ -19,6 +20,8 @@ import com.delta.pay.refund.RefundRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/admin/order")
@@ -29,17 +32,22 @@ public class AdminOrderController {
     private final OrderPlayerService orderPlayerService;
     private final CrossModuleMapper crossModuleMapper;
     private final OrderRefundWorkflowService refunds;
+    private final CsRoutingService csRouting;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @GetMapping("/list")
     public R<Page<Order>> list(PageQuery query,
                                 @RequestParam(value = "status", required = false) String status,
                                 @RequestParam(value = "orderNo", required = false) String orderNo,
                                 @RequestParam(value = "playerId", required = false) Long playerId,
-                                @RequestParam(value = "userId", required = false) Long userId) {
+                                @RequestParam(value = "userId", required = false) Long userId,
+                                @RequestParam(value = "csId", required = false) Long csId) {
         LambdaQueryWrapper<Order> w = new LambdaQueryWrapper<Order>()
                 .eq(status != null && !status.isEmpty(), Order::getStatus, status)
                 .eq(playerId != null, Order::getPlayerId, playerId)
                 .eq(userId != null, Order::getUserId, userId)
+                .apply(csId != null && csId > 0, "cs_id = {0}", csId)
+                .apply(csId != null && csId == 0, "cs_id IS NULL")
                 .like(orderNo != null && !orderNo.isEmpty(), Order::getOrderNo, orderNo)
                 .orderByDesc(Order::getCreatedAt);
         Page<Order> page = orderService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
@@ -78,6 +86,18 @@ public class AdminOrderController {
             o.setPlayerName(crossModuleMapper.selectPlayerNickname(o.getPlayerId()));
             o.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(o.getPlayerId()));
         }
+        fillCs(o);
+    }
+
+    private void fillCs(Order order) {
+        try {
+            List<Long> rows = jdbc.queryForList("SELECT cs_id FROM `order` WHERE id=?", Long.class, order.getId());
+            if (rows != null && !rows.isEmpty()) {
+                order.setCsId(rows.get(0));
+                if (rows.get(0) != null) order.setCsName(crossModuleMapper.selectAdminNickname(rows.get(0)));
+            }
+        } catch (org.springframework.dao.DataAccessException ignored) {
+        }
     }
 
     @GetMapping("/{id}/progress")
@@ -90,6 +110,31 @@ public class AdminOrderController {
     @PostMapping("/{id}/assign/{playerId}")
     public R<Void> assign(@PathVariable Long id, @PathVariable Long playerId) {
         orderService.assignOrder(id, playerId, "ADMIN", SecurityUtils.getUserId());
+        return R.ok();
+    }
+
+    @OpLog(module = "order", operation = "改派归属客服")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/cs")
+    public R<Void> assignCs(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Order order = orderService.getById(id);
+        if (order == null) return R.fail(404, "订单不存在");
+        Long csId = body == null ? null : body.get("csId");
+        if (csId != null && csId <= 0) csId = null;
+        if (csId != null && !csRouting.isActiveCs(csId)) return R.fail(400, "请选择启用中的客服账号");
+        jdbc.update("UPDATE `order` SET cs_id=?,updated_at=? WHERE id=?", csId, LocalDateTime.now(), id);
+        // Only unsettled orders may change financial attribution; settled ledger stays immutable.
+        jdbc.update("UPDATE order_finance_snapshot SET cs_id=? WHERE order_id=? " +
+                "AND NOT EXISTS(SELECT 1 FROM order_settlement_ledger WHERE order_id=?)", csId, id, id);
+        OrderProgress progress = new OrderProgress();
+        progress.setOrderId(id);
+        progress.setType("CS_ASSIGN");
+        progress.setOperatorType("ADMIN");
+        progress.setOperatorId(SecurityUtils.getUserId());
+        String name = csId == null ? "公共池" : crossModuleMapper.selectAdminNickname(csId);
+        progress.setContent("管理员将归属客服调整为：" + (name == null || name.isBlank() ? "公共池" : name));
+        progress.setCreatedAt(LocalDateTime.now());
+        orderProgressService.save(progress);
         return R.ok();
     }
 

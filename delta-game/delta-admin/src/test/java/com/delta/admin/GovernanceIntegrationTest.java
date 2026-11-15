@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GovernanceIntegrationTest {
  @Configuration @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
  @MapperScan({"com.delta.player.mapper","com.delta.common.mapper"})
- @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,RefundController.class,RefundProbe.class})
+ @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,com.delta.common.customer.CsRoutingService.class,RefundController.class,RefundProbe.class})
  static class Config{}
  @RestController static class RefundProbe {
   @PostMapping("/cs/order/{id}/refund") @PreAuthorize("@staffPermissions.allowed('order.refund')") public R<Void> refund(@PathVariable Long id){return R.ok();}

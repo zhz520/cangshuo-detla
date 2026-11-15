@@ -1,17 +1,26 @@
 <template>
   <view class="order-list-page">
+    <view class="order-filter-bar">
+      <view
+        v-for="tab in tabs"
+        :key="tab.key"
+        class="order-filter"
+        :class="{ active: activeTab === tab.key }"
+        @click="selectTab(tab.key)"
+      >{{ tab.label }}</view>
+    </view>
     <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
-      <OrderCard v-for="o in orders" :key="o.id" :order="o" :owner-actions="canUseOwnerActions(o)" />
+      <OrderCard v-for="o in visibleOrders" :key="o.id" :order="o" :owner-actions="canUseOwnerActions(o)" />
       <view v-if="loading" class="loading-tip">加载中...</view>
       <view v-if="error && !loading" class="loading-tip error-tip" @click="loadData">{{ error }} · 点击重试</view>
-      <EmptyState v-if="!loading && orders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
+      <EmptyState v-if="!loading && visibleOrders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
       <view class="order-list-bottom-space"></view>
     </scroll-view>
   </view>
 </template>
 <script setup>
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import OrderCard from '@/components/OrderCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { getOrderList } from '@/api/order'
@@ -22,6 +31,28 @@ const pageNum = ref(1)
 const loading = ref(false)
 const finished = ref(false)
 const error = ref('')
+const activeTab = ref('all')
+const tabs = [
+  { key: 'all', label: '全部' },
+  { key: 'pending', label: '待支付' },
+  { key: 'active', label: '进行中' },
+  { key: 'completed', label: '已完成' },
+  { key: 'aftersale', label: '售后' }
+]
+const statusGroups = {
+  pending: ['PENDING_PAYMENT'],
+  active: ['PAID', 'ASSIGNED', 'ACCEPTED', 'WAITING_TEAMMATE', 'IN_PROGRESS'],
+  completed: ['COMPLETED', 'CONFIRMED', 'REVIEWED'],
+  aftersale: ['DISPUTED', 'ARBITRATED', 'REFUNDED', 'CANCELLED']
+}
+const visibleOrders = computed(() => {
+  if (activeTab.value === 'all') return orders.value
+  const allowed = statusGroups[activeTab.value] || []
+  return orders.value.filter(order => allowed.includes(order.status))
+})
+onLoad(options => {
+  if (tabs.some(tab => tab.key === options.tab)) activeTab.value = options.tab
+})
 onShow(() => {
   userStore.syncSessionFromStorage?.()
   if (!userStore.isLoggedIn && !userStore.isGuest) {
@@ -39,9 +70,9 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const res = await getOrderList({ pageNum: pageNum.value, pageSize: 10 }, { loading: false })
+    const res = await getOrderList({ pageNum: pageNum.value, pageSize: 50 }, { loading: false })
     const list = res.data?.records || []
-    if (list.length < 10) finished.value = true
+    if (list.length < 50) finished.value = true
     orders.value = pageNum.value === 1 ? list : [...orders.value, ...list]
   } catch (e) {
     error.value = e?.msg || e?.message || '订单暂时无法加载'
@@ -50,29 +81,55 @@ async function loadData() {
   }
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
+function selectTab(key) {
+  activeTab.value = key
+  if (!orders.value.length && !loading.value) refresh()
+}
 </script>
 <style lang="scss" scoped>
 .order-list-page {
-  background: #f7f8f9;
+  background: #f7f7f7;
   height: var(--app-page-height, 100vh);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.order-filter-bar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8rpx;
+  padding: 16rpx 24rpx 10rpx;
+  overflow-x: auto;
+}
+.order-filter {
+  flex-shrink: 0;
+  padding: 10rpx 20rpx;
+  border: 1rpx solid #eeeeee;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #777c83;
+  font-size: 21rpx;
+  &.active { border-color: #111111; background: #111111; color: #ffffff; font-weight: 750; }
 }
 .list {
-  height: var(--app-page-height, 100vh);
-  padding: 20rpx 24rpx;
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  padding: 8rpx 24rpx 20rpx;
   position: relative;
   z-index: 1;
   box-sizing: border-box;
 }
 .list :deep(.order-card) {
   background: #ffffff;
-  border: 1rpx solid #eeeff1;
+  border: 1rpx solid #eeeeee;
 }
 .loading-tip {
   text-align: center;
   padding: 32rpx;
   font-size: 24rpx;
-  color: #73777e;
+  color: #777777;
 }
 .error-tip { color: #c94f59; cursor: pointer; }
 .order-list-bottom-space {

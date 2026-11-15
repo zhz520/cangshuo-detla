@@ -20,10 +20,10 @@ defineEmits(['retry'])
 .state-skeleton { padding: 28rpx; margin-bottom: 20rpx; border-radius: 24rpx; background: #fff; border: 1rpx solid #edf0f2; }
 .skeleton-line { height: 22rpx; margin: 14rpx 0; border-radius: 8rpx; background: #eceff2; animation: state-pulse 1.4s ease-in-out infinite; }
 .short { width: 32%; } .medium { width: 65%; }
-.state-caption { display: block; color: #73777e; font-size: 25rpx; line-height: 1.7; text-align: center; }
+.state-caption { display: block; color: #777777; font-size: 25rpx; line-height: 1.7; text-align: center; }
 .state-message { display: flex; flex-direction: column; align-items: center; padding: 64rpx 32rpx; gap: 18rpx; }
-.state-title { font-size: 30rpx; font-weight: 600; color: #17191c; }
-.state-retry { font-size: 26rpx; padding: 0 36rpx; border-radius: 999rpx; background: #17191c; color: white; margin-top: 10rpx; }
+.state-title { font-size: 30rpx; font-weight: 600; color: #111111; }
+.state-retry { font-size: 26rpx; padding: 0 36rpx; border-radius: 999rpx; background: #111111; color: white; margin-top: 10rpx; }
 @keyframes state-pulse { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }
 </style>

@@ -8,7 +8,7 @@
     <scroll-view scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="item in records" :key="item.id" class="invite-card">
         <view class="card-top">
-          <AppImage :width="160" class="avatar" :src="(tab==='received' ? item.fromAvatar : item.toAvatar) || '/static/images/default-avatar.png'" mode="aspectFill" />
+          <AppImage :width="160" class="avatar" :src="(tab==='received' ? item.fromAvatar : item.toAvatar) || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
           <view class="info">
             <text class="name">{{ tab === 'received' ? item.fromNickname : item.toNickname }}</text>
             <text class="order-no">订单：{{ item.orderNo || item.orderId }}</text>
@@ -36,7 +36,7 @@ import { getInviteList, acceptInvite, rejectInvite } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
 const INVITE_STATUS_TEXT = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废' }
-const INVITE_STATUS_COLOR = { INVITED: '#996b30', ACCEPTED: '#347a5b', REJECTED: '#b84b55', CANCELLED: '#73777e' }
+const INVITE_STATUS_COLOR = { INVITED: '#996b30', ACCEPTED: '#347a5b', REJECTED: '#b84b55', CANCELLED: '#777777' }
 const SPLIT_TYPE_TEXT = { FIFTY_FIFTY: '五五开', FORTY_SIXTY: '四六开', THIRTY_SEVENTY: '三七开', CUSTOM: '自定义' }
 const pendingActions = ref({})
 let highlightedOrder = ''
@@ -120,20 +120,20 @@ async function doReject(item) {
 <style lang="scss" scoped>
 .invite-list-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
 .tabs { display: flex; background: #fff; border-bottom: 1rpx solid #edf0f2;
-  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #666b73; position: relative;
-    &.active { color: #17191c; &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: linear-gradient(135deg, #17191c, #30343a, #30343a); border-radius: 2rpx; } }
+  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #777777; position: relative;
+    &.active { color: #111111; &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: #171717; border-radius: 2rpx; } }
   }
 }
 .list { height: calc(var(--app-page-height, 100vh) - 100rpx); box-sizing: border-box; padding: 20rpx 24rpx calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
 .invite-card { background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; align-items: center; gap: 16rpx; }
   .avatar { width: 72rpx; height: 72rpx; border-radius: 50%; }
-  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: #73777e; display: block; margin-top: 4rpx; } }
+  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } }
   .status-label { font-size: 24rpx; font-weight: 500; white-space: nowrap; }
-  .card-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f4f5f6; }
+  .card-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f7f7f7; }
   .btn-accept, .btn-reject { margin: 0; line-height: 1.6; padding: 10rpx 32rpx; font-size: 26rpx; border-radius: 999rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
-  .btn-accept { background: #17191c; color: #fff; font-weight: bold; }
+  .btn-accept { background: #111111; color: #fff; font-weight: bold; }
   .btn-reject { background: #fff; border: 1rpx solid #b84b55; color: #b84b55; }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #73777e; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
 </style>

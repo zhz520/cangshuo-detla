@@ -14,7 +14,7 @@
   "pages": [
     {
       "path": "pages/index/index",
-      "style": { "navigationBarTitleText": "首页", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "首页", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {"path":"pages/mine/privacy-center","style":{"navigationBarTitleText":"隐私与账号"}},
     {"path":"pages/mine/identity","style":{"navigationBarTitleText":"实名认证"}},
@@ -23,7 +23,7 @@
     {"path":"pages/maintenance/index","style":{"navigationBarTitleText":"服务维护"}},
     {
       "path": "pages/players/index",
-      "style": { "navigationBarTitleText": "打手", "navigationBarTextStyle": "black", "backgroundColor": "#f7f8f9" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "打手", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6" }
     },
     {
       "path": "pages/players/detail",
@@ -31,15 +31,15 @@
     },
     {
       "path": "pages/category/index",
-      "style": { "navigationBarTitleText": "分类", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "分类", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/product/list",
-      "style": { "navigationBarTitleText": "商品列表", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "商品列表", "navigationBarTextStyle": "black", "enablePullDownRefresh": true, "backgroundColor": "#f7f7f7", "backgroundColorTop": "#f7f7f7", "backgroundColorBottom": "#f7f7f7", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/product/detail",
-      "style": { "navigationBarTitleText": "商品详情", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "服务详情", "navigationBarTextStyle": "black", "backgroundColor": "#f7f7f7", "backgroundColorTop": "#f7f7f7", "backgroundColorBottom": "#f7f7f7", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/order/create",
@@ -87,15 +87,19 @@
       },
     {
       "path": "pages/mine/index",
-      "style": { "navigationBarTitleText": "我的", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "我的", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/mine/profile",
       "style": { "navigationBarTitleText": "编辑资料", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
+      "path": "pages/mine/services",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "设置", "navigationBarTextStyle": "black", "backgroundColor": "#f7f7f7", "backgroundColorTop": "#f7f7f7", "backgroundColorBottom": "#f7f7f7", "initialRenderingCache": "static" }
+    },
+    {
       "path": "pages/chat/list",
-      "style": { "navigationBarTitleText": "消息", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "消息", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/chat/room",
@@ -107,7 +111,7 @@
     },
     {
       "path": "pages/message/index",
-      "style": { "navigationBarTitleText": "系统通知", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "系统通知", "navigationBarTextStyle": "black", "backgroundColor": "#f7f7f7", "backgroundColorTop": "#f7f7f7", "backgroundColorBottom": "#f7f7f7", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/agreement/user",
@@ -116,6 +120,10 @@
     {
       "path": "pages/agreement/privacy",
       "style": { "navigationBarTitleText": "隐私政策", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+    },
+    {
+      "path": "pages/agreement/about",
+      "style": { "navigationBarTitleText": "关于我们", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/login/index",

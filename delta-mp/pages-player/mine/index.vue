@@ -118,12 +118,12 @@ function backToUser() {
 }
 </script>
 <style lang="scss" scoped>
-.player-mine { background: #f5f6f8; position: relative; }
+.player-mine { background: #f7f7f7; position: relative; }
 .online-bar { display:flex; align-items:center; justify-content:space-between; padding:22rpx 26rpx; margin:24rpx 28rpx 0; background:#fff; border:1rpx solid #edf0f3; border-radius:24rpx; }
 .online-label { font-size:27rpx; color:#343a43; font-weight:600; }
 .online-right { display:flex; align-items:center; gap:12rpx; }
-.online-status-text { font-size:24rpx; color:#73777e; } .online-status-text.on { color:#347a5b; }
-.group-heading { display:block; margin:34rpx 34rpx 16rpx; color:#73777e; font-size:23rpx; letter-spacing:2rpx; }
+.online-status-text { font-size:24rpx; color:#777777; } .online-status-text.on { color:#347a5b; }
+.group-heading { display:block; margin:34rpx 34rpx 16rpx; color:#777777; font-size:23rpx; letter-spacing:2rpx; }
 .menu-list { margin:0 28rpx; background:#fff; border:1rpx solid #edf0f3; border-radius:24rpx; overflow:hidden; }
 .menu-item { display:flex; align-items:center; padding:28rpx 26rpx; border-bottom:1rpx solid #f1f3f5; font-size:27rpx; gap:18rpx; }
 .menu-item:last-child { border-bottom:0; }
@@ -133,6 +133,6 @@ function backToUser() {
 .badge { min-width:32rpx; height:32rpx; line-height:32rpx; padding:0 8rpx; font-size:20rpx; color:#fff; background:#d44955; border-radius:32rpx; text-align:center; }
 .section { padding:28rpx; }
 .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18rpx; }
-.section-title { font-size:29rpx; font-weight:600; } .more { font-size:24rpx; color:#73777e; }
+.section-title { font-size:29rpx; font-weight:600; } .more { font-size:24rpx; color:#777777; }
 .switch-btn { margin:28rpx; padding:24rpx; text-align:center; background:#fff; color:#525a66; font-size:27rpx; border-radius:24rpx; border:1rpx solid #e4e8ed; }
 </style>

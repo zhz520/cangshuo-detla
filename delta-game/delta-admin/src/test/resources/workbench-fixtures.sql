@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS identity_verification (user_id BIGINT PRIMARY KEY,sta
 CREATE TABLE IF NOT EXISTS privacy_request (id VARCHAR(36) PRIMARY KEY,status VARCHAR(20),created_at DATETIME,reviewed_at DATETIME);
 CREATE TABLE IF NOT EXISTS refund_request (id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32),submitted_at DATETIME,completed_at DATETIME,admin_decided_at DATETIME);
 CREATE TABLE IF NOT EXISTS payment (id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(20),updated_at DATETIME);
-CREATE TABLE IF NOT EXISTS chat_session (id BIGINT PRIMARY KEY,id1 BIGINT,id2 BIGINT,status VARCHAR(20));
+CREATE TABLE IF NOT EXISTS chat_session (id BIGINT PRIMARY KEY,id1 BIGINT,id2 BIGINT,status VARCHAR(20),rating INT,rating_comment VARCHAR(500),rated_at DATETIME);
 CREATE TABLE IF NOT EXISTS chat_message (id BIGINT PRIMARY KEY,session_id BIGINT,created_at DATETIME,sender_type VARCHAR(20),is_read INT,content TEXT);
 CREATE TABLE IF NOT EXISTS system_notification (id BIGINT AUTO_INCREMENT PRIMARY KEY, receiver_type VARCHAR(16), receiver_id BIGINT, title VARCHAR(100), content TEXT, biz_type VARCHAR(40), related_id BIGINT, is_read INT, created_at DATETIME);
 CREATE TABLE IF NOT EXISTS `user` (id BIGINT PRIMARY KEY,openid VARCHAR(64),deleted INT DEFAULT 0);

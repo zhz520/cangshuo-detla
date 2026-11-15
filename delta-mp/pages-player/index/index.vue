@@ -45,10 +45,10 @@ async function load() {
 function go(url) { if (['/pages-player/hall/index', '/pages-player/order/list'].includes(url)) uni.redirectTo({ url }); else uni.navigateTo({ url }) }
 </script>
 <style lang="scss" scoped>
-.player-home { background: #f5f6f8; position: relative; }
+.player-home { background: #f7f7f7; position: relative; }
 .stat-cards { display: flex; gap: 20rpx; padding: 24rpx;
   .card { flex: 1; background: rgba(0,0,0,0.04); padding: 24rpx; border-radius: 12rpx; text-align: center;
-    .num { font-size: 36rpx; font-weight: bold; color: #17191c; display: block; }
+    .num { font-size: 36rpx; font-weight: bold; color: #111111; display: block; }
     .label { font-size: 24rpx; color: rgba(0,0,0,0.3); margin-top: 8rpx; display: block; }
   }
 }

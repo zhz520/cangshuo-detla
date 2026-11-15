@@ -8,6 +8,7 @@ import com.delta.common.domain.R;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.event.OrderConfirmedEvent;
 import com.delta.common.security.utils.SecurityUtils;
+import com.delta.common.customer.CsRoutingService;
 import com.delta.common.utils.ImageListUtils;
 import com.delta.order.entity.Complaint;
 import com.delta.order.entity.Order;
@@ -47,6 +48,7 @@ public class CsComplaintController {
     private final TransactionService transactionService;
     private final ApplicationEventPublisher eventPublisher;
     private final CrossModuleMapper crossModuleMapper;
+    private final CsRoutingService csRouting;
 
     /**
      * 客服代用户创建投诉工单
@@ -59,6 +61,7 @@ public class CsComplaintController {
         // 1. 校验订单存在
         Order order = orderService.getById(complaint.getOrderId());
         if (order == null) return R.fail("订单不存在");
+        csRouting.assertCsCanHandleOrder(order.getId(), SecurityUtils.getUserId());
         // 2. 校验用户ID与订单匹配
         if (!order.getUserId().equals(complaint.getUserId())) return R.fail("用户ID与订单不匹配");
         // 3. 校验是否已有进行中的投诉
@@ -94,6 +97,7 @@ public class CsComplaintController {
     public R<ComplaintDetailVO> detail(@PathVariable Long id) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
+        csRouting.assertCsCanHandleOrder(c.getOrderId(), SecurityUtils.getUserId());
         if (c.getCsReadAt() == null) {
             c.setCsReadAt(LocalDateTime.now());
             complaintService.updateById(c);
@@ -137,6 +141,7 @@ public class CsComplaintController {
     public R<Void> process(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
         Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
+        csRouting.assertCsCanHandleOrder(c.getOrderId(), SecurityUtils.getUserId());
         if (!java.util.Set.of("PENDING","APPEALING").contains(c.getStatus())) return R.fail("只有待处理或申诉中的投诉可以受理");
         c.setStatus("PROCESSING");
         if (c.getCsReadAt() == null) c.setCsReadAt(LocalDateTime.now());
@@ -147,6 +152,7 @@ public class CsComplaintController {
     @GetMapping("/list")
     public R<Page<Complaint>> list(PageQuery query, @RequestParam(required = false) Long taskId, @RequestParam(value = "status", required = false) String status) {
         LambdaQueryWrapper<Complaint> wrapper = new LambdaQueryWrapper<Complaint>()
+                .apply("order_id IN (SELECT id FROM `order` WHERE cs_id = {0} OR cs_id IS NULL)", SecurityUtils.getUserId())
                 .eq(taskId != null, Complaint::getId, taskId)
                 .orderByDesc(Complaint::getCreatedAt);
         // status 为空字符串时不作为筛选条件
@@ -166,6 +172,7 @@ public class CsComplaintController {
     public R<Void> resolve(@PathVariable Long id, @RequestBody Complaint complaint) {
         Complaint c = complaintService.getOne(new LambdaQueryWrapper<Complaint>().eq(Complaint::getId,id).last("FOR UPDATE"));
         if (c == null) return R.fail("投诉不存在");
+        csRouting.assertCsCanHandleOrder(c.getOrderId(), SecurityUtils.getUserId());
         if(!java.util.Set.of("PENDING","PROCESSING","APPEALING").contains(c.getStatus())) return R.fail(409,"投诉已处理");
         if(!java.util.Set.of("FULL_REFUND","PARTIAL_REFUND","REJECT","REDO").contains(complaint.getResult()==null?"":complaint.getResult())) return R.fail(400,"处理结果无效");
         if(java.util.Set.of("FULL_REFUND","PARTIAL_REFUND").contains(complaint.getResult()))staffPermissions.require("order.refund");

@@ -132,9 +132,9 @@ onUnmounted(() => {
 })
 </script>
 <style lang="scss" scoped>
-.voice-pill { display: flex; align-items: center; gap: 14rpx; width: fit-content; max-width: 100%; box-sizing: border-box; background: #f2f3f5; color: #17191c; border: 1rpx solid #e6e7e9; border-radius: 999rpx; padding: 16rpx 24rpx; font-size: 24rpx; cursor: pointer; touch-action: manipulation; }
+.voice-pill { display: flex; align-items: center; gap: 14rpx; width: fit-content; max-width: 100%; box-sizing: border-box; background: #f2f3f5; color: #111111; border: 1rpx solid #eeeeee; border-radius: 999rpx; padding: 16rpx 24rpx; font-size: 24rpx; cursor: pointer; touch-action: manipulation; }
 .voice-label { min-width: 0; overflow-wrap: anywhere; }
 .voice-duration, .wave { flex-shrink: 0; }
-.wave { display: flex; align-items: center; gap: 4rpx; .bar { width: 4rpx; height: 16rpx; background: #17191c; border-radius: 4rpx; &:nth-child(even) { height: 26rpx; } &.playing { animation: pulse .7s infinite alternate; &:nth-child(even) { animation-delay: .2s; } } } }
+.wave { display: flex; align-items: center; gap: 4rpx; .bar { width: 4rpx; height: 16rpx; background: #111111; border-radius: 4rpx; &:nth-child(even) { height: 26rpx; } &.playing { animation: pulse .7s infinite alternate; &:nth-child(even) { animation-delay: .2s; } } } }
 @keyframes pulse { to { transform: scaleY(.3); } }
 </style>

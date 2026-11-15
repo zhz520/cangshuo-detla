@@ -83,20 +83,20 @@ onMounted(load)
 </script>
 
 <style lang="scss" scoped>
-.invite-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f8f9; box-sizing: border-box; }
-.hero { padding: 42rpx 30rpx; border-radius: 24rpx; background: #17191c; color: #fff; }
+.invite-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f7f7; box-sizing: border-box; }
+.hero { padding: 42rpx 30rpx; border-radius: 24rpx; background: #111111; color: #fff; }
 .eyebrow { font-size: 20rpx; letter-spacing: 3rpx; opacity: .6; }
 .title { display: block; margin-top: 14rpx; font-size: 42rpx; font-weight: 700; }
 .hint { display: block; margin-top: 12rpx; font-size: 24rpx; opacity: .7; line-height: 1.6; }
 .card { margin-top: 20rpx; padding: 28rpx; border-radius: 20rpx; background: #fff; }
 .row { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 0; }
-.label { color: #73777e; font-size: 25rpx; }
-.code { font-size: 34rpx; font-weight: 700; letter-spacing: 4rpx; color: #17191c; }
-.value { font-size: 27rpx; font-weight: 600; color: #17191c; }
-.copy, .bind { margin-top: 16rpx; height: 72rpx; line-height: 72rpx; border-radius: 36rpx; background: #17191c; color: #fff; font-size: 25rpx; }
-.card-title { display: block; font-size: 28rpx; font-weight: 700; color: #17191c; margin-bottom: 18rpx; }
+.label { color: #777777; font-size: 25rpx; }
+.code { font-size: 34rpx; font-weight: 700; letter-spacing: 4rpx; color: #111111; }
+.value { font-size: 27rpx; font-weight: 600; color: #111111; }
+.copy, .bind { margin-top: 16rpx; height: 72rpx; line-height: 72rpx; border-radius: 36rpx; background: #111111; color: #fff; font-size: 25rpx; }
+.card-title { display: block; font-size: 28rpx; font-weight: 700; color: #111111; margin-bottom: 18rpx; }
 .input { height: 78rpx; padding: 0 22rpx; border-radius: 12rpx; background: #f2f3f5; font-size: 26rpx; }
-.small { display: block; margin-top: 12rpx; font-size: 22rpx; color: #73777e; line-height: 1.6; }
-.relation { display: flex; justify-content: space-between; padding: 18rpx 0; border-top: 1rpx solid #f0f1f2; font-size: 24rpx; color: #555b63; }
-.time { color: #73777e; }
+.small { display: block; margin-top: 12rpx; font-size: 22rpx; color: #777777; line-height: 1.6; }
+.relation { display: flex; justify-content: space-between; padding: 18rpx 0; border-top: 1rpx solid #f0f1f2; font-size: 24rpx; color: #777777; }
+.time { color: #777777; }
 </style>

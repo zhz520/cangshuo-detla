@@ -2,7 +2,7 @@
   <view class="audit-page" v-if="player">
     <view class="card">
       <view class="profile-top">
-        <AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <AppImage :width="160" class="avatar" :src="player.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="profile-info">
           <text class="name">{{ player.nickname || player.realName }}</text>
           <text class="status" :class="player.status?.toLowerCase()">{{ STATUS_TEXT[player.status] || player.status }}</text>

@@ -1,5 +1,10 @@
 <template>
   <view class="category-page tab-page">
+    <ScreenHeader title="分类">
+      <view class="screen-icon-btn" role="button" aria-label="搜索商品" @click="goSearch">
+        <image src="/static/icons/header-search.svg" mode="aspectFit" />
+      </view>
+    </ScreenHeader>
     <view class="category-body" :class="{ 'neo-body': isNeo }">
       <!-- 左侧父级分类 -->
       <scroll-view v-if="!isNeo" scroll-y class="side" :show-scrollbar="false">
@@ -59,7 +64,7 @@
             class="product-row"
             @click="goProductDetail(p.id)"
           >
-            <AppImage class="product-cover" :src="p.coverImage" mode="aspectFit" />
+            <AppImage class="product-cover" :src="p.coverImage" :width="320" mode="aspectFit" fallback="/static/icons/图片.svg" />
             <view class="product-info">
               <text class="product-name">{{ p.name }}</text>
               <text v-if="p.subtitle" class="product-subtitle">{{ p.subtitle }}</text>
@@ -67,6 +72,7 @@
                 <text class="product-price">¥{{ Number(p.price || 0).toFixed(2) }}</text>
               </view>
             </view>
+            <view class="row-arrow" aria-hidden="true"><image src="/static/icons/arrow-right.svg" mode="aspectFit" /></view>
           </view>
           <view v-if="productLoading" class="loading-tip">加载中...</view>
           <view v-if="!productLoading && products.length === 0" class="empty-tip">暂无商品</view>
@@ -84,6 +90,7 @@ import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
+import ScreenHeader from '@/components/ScreenHeader.vue'
 import ProductSortPicker from '@/components/ProductSortPicker.vue'
 import { useSiteStore } from '@/store/site'
 import { productSortParams } from '@/utils/product-sort'
@@ -211,6 +218,10 @@ function goProductDetail(id) {
   uni.navigateTo({ url: `/pages/product/detail?id=${id}` })
 }
 
+function goSearch() {
+  uni.navigateTo({ url: '/pages/product/list?focus=1' })
+}
+
 function loadMoreProducts() {
   if (!productLoading.value && !productFinished.value) {
     productPageNum.value++
@@ -222,41 +233,40 @@ function loadMoreProducts() {
 <style lang="scss" scoped>
 .category-page {
   height: var(--app-page-height, 100vh);
-  background: #f7f8f9;
-  position: relative;
-  overflow: hidden;
+  min-height: var(--app-page-height, 100vh);
   display: flex;
   flex-direction: column;
-  padding-bottom: 0;
+  overflow: hidden;
+  background: #f7f7f7;
 }
 
 .category-body {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: calc(110rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-  left: 0;
+  flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
-  z-index: 1;
 }
 
 .side {
-  width: 200rpx;
+  width: 176rpx;
   height: 100%;
-  background: #ffffff;
   flex-shrink: 0;
   box-sizing: border-box;
   overflow: hidden;
+  padding-top: 10rpx;
+  background: transparent;
 }
 
 .side-item {
-  padding: 28rpx 16rpx;
-  font-size: 26rpx;
-  color: #666b73;
-  text-align: center;
   position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  padding: 18rpx 12rpx 18rpx 24rpx;
   box-sizing: border-box;
+  color: #7d8289;
+  font-size: 24rpx;
+  line-height: 1.35;
 
   .side-text {
     display: block;
@@ -266,10 +276,9 @@ function loadMoreProducts() {
   }
 
   &.active {
-    background: #f4f5f6;
-    color: #17191c;
-    font-weight: 600;
-    border-left: 6rpx solid #17191c;
+    background: #ffffff;
+    color: #171717;
+    font-weight: 800;
   }
 }
 
@@ -277,7 +286,7 @@ function loadMoreProducts() {
   flex: 1;
   min-width: 0;
   height: 100%;
-  padding: 20rpx;
+  padding: 4rpx 22rpx 0 16rpx;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -294,127 +303,137 @@ function loadMoreProducts() {
 /* #endif */
 
 .children-wrap {
+  height: 64rpx;
+  margin-bottom: 16rpx;
   white-space: nowrap;
-  margin-bottom: 24rpx;
-  height: 72rpx;
 }
-
 .children-inner {
   display: inline-flex;
-  gap: 16rpx;
-  padding-right: 20rpx;
+  gap: 12rpx;
+  padding-right: 16rpx;
 }
-
 .child-tag {
-  display: inline-block;
-  padding: 14rpx 28rpx;
-  font-size: 24rpx;
-  color: #666b73;
-  background: #ffffff;
-  border-radius: 999rpx;
-  box-shadow: 0 2rpx 10rpx rgba(23, 25, 28, 0.04);
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  padding: 13rpx 24rpx;
+  border: 1rpx solid #eeeeee;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #6d7279;
+  font-size: 22rpx;
+  white-space: nowrap;
+  box-sizing: border-box;
 
   &.active {
-    background: #17191c;
-    border-color: #17191c;
+    border-color: #171717;
+    background: #171717;
     color: #ffffff;
-    font-weight: 600;
-  }
-
-  &:active {
-    background: rgba(23, 25, 28, 0.08);
-    border-color: rgba(23, 25, 28, 0.3);
-    color: #17191c;
+    font-weight: 750;
   }
 }
 
-.category-sort { margin-bottom: 20rpx; }
-.product-section {
-  min-height: 200rpx;
-  overflow: hidden;
+.category-sort {
+  display: block;
+  margin-bottom: 16rpx;
+  :deep(.product-sort-picker) { width: 100%; }
+  :deep(.sort-label) {
+    justify-content: space-between;
+    gap: 10rpx;
+    padding: 17rpx 24rpx;
+    border: 0;
+    border-radius: 18rpx;
+    background: #ffffff;
+    color: #171717;
+    font-size: 24rpx;
+  }
 }
 
+.product-section { min-height: 200rpx; overflow: hidden; }
 .product-row {
   display: flex;
-  gap: 20rpx;
-  padding: 20rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx;
   margin-bottom: 16rpx;
-  box-shadow: 0 4rpx 16rpx rgba(23, 25, 28, 0.04);
+  border: 0;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: none;
   overflow: hidden;
 }
-
 .product-cover {
-  width: 180rpx;
-  height: 180rpx;
-  border-radius: 8rpx;
+  width: 210rpx;
+  height: 140rpx;
   flex-shrink: 0;
+  border-radius: 18rpx;
+  background: #f1f2f4;
 }
-
 .product-info {
   flex: 1;
   min-width: 0;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 7rpx;
   overflow: hidden;
 }
-
 .product-name {
-  font-size: 26rpx;
-  color: #17191c;
-  font-weight: 600;
-  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  color: #171717;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-
 .product-subtitle {
-  font-size: 22rpx;
-  color: #73777e;
-  margin-top: 6rpx;
   display: block;
   width: 100%;
-  white-space: nowrap;
   overflow: hidden;
+  color: #777777;
+  font-size: 22rpx;
+  line-height: 1.4;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
 .product-bottom {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 8rpx;
+  margin-top: 2rpx;
 }
-
 .product-price {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #17191c;
+  color: #171717;
+  font-size: 34rpx;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
 }
-
-.product-sales {
-  font-size: 22rpx;
-  color: #73777e;
+.row-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44rpx;
+  height: 44rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f3f4f5;
+  image { width: 24rpx; height: 24rpx; }
 }
-
 .loading-tip {
+  padding: 30rpx;
+  color: #777777;
+  font-size: 23rpx;
   text-align: center;
-  padding: 32rpx;
-  font-size: 24rpx;
-  color: #73777e;
 }
-
 .empty-tip {
   width: 100%;
+  padding: 58rpx 20rpx;
+  color: #777777;
+  font-size: 24rpx;
   text-align: center;
-  padding: 60rpx;
-  font-size: 26rpx;
-  color: #73777e;
 }
 </style>
