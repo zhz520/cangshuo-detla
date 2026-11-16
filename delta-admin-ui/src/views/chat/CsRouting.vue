@@ -18,7 +18,7 @@
             type="info"
             :closable="false"
             show-icon
-            title="商品规则优先于分类规则，分类从最末级向上匹配；没有命中规则的订单进入公共池。"
+            title="一条规则可以同时绑定多个商品或分类，分类支持同时勾选主分类和子分类；商品规则优先于分类规则，分类从最末级向上匹配。"
             description="规则目标可以是单个客服，也可以是客服组。客服组只从当前上班成员中选人，并优先分配给进行中订单较少的成员；组内无人上班时订单进入公共池。"
           />
           <el-table :data="rules" v-loading="loading" stripe>
@@ -29,8 +29,15 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="targetName" label="匹配对象" min-width="180" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.targetName || (row.matchType === 'DEFAULT' ? '未匹配商品/分类' : '-') }}</template>
+            <el-table-column prop="targetName" label="匹配对象" min-width="260">
+              <template #default="{ row }">
+                <div v-if="row.targets?.length" class="target-tags">
+                  <el-tag v-for="target in row.targets" :key="target.id" size="small" effect="plain">
+                    {{ target.name || target.id }}
+                  </el-tag>
+                </div>
+                <span v-else class="muted">{{ row.matchType === 'DEFAULT' ? '未匹配商品/分类' : '-' }}</span>
+              </template>
             </el-table-column>
             <el-table-column label="归属" min-width="190">
               <template #default="{ row }">
@@ -158,15 +165,16 @@
     <el-dialog v-model="ruleVisible" :title="ruleForm.id ? '编辑分配规则' : '新增分配规则'" width="560px" destroy-on-close>
       <el-form label-position="top">
         <el-form-item label="匹配方式">
-          <el-radio-group v-model="ruleForm.matchType" @change="ruleForm.targetId = null">
-            <el-radio-button label="PRODUCT">指定商品</el-radio-button>
-            <el-radio-button label="CATEGORY">商品分类</el-radio-button>
+          <el-radio-group v-model="ruleForm.matchType" @change="ruleForm.targetIds = []; ruleForm.targetId = null">
+            <el-radio-button label="PRODUCT">指定商品（可多选）</el-radio-button>
+            <el-radio-button label="CATEGORY">商品分类（可多选）</el-radio-button>
             <el-radio-button label="DEFAULT">默认规则</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item v-if="ruleForm.matchType === 'PRODUCT'" label="选择商品" required>
           <el-select
-            v-model="ruleForm.targetId"
+            v-model="ruleForm.targetIds"
+            multiple collapse-tags collapse-tags-tooltip
             filterable remote clearable
             :remote-method="searchProducts"
             :loading="productLoading"
@@ -178,13 +186,17 @@
         </el-form-item>
         <el-form-item v-if="ruleForm.matchType === 'CATEGORY'" label="选择分类" required>
           <el-tree-select
-            v-model="ruleForm.targetId"
+            v-model="ruleForm.targetIds"
             :data="categoryTree"
             node-key="id"
             :props="{ label: 'name', children: 'children' }"
+            multiple
+            show-checkbox
             check-strictly
             default-expand-all
-            placeholder="选择商品分类"
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="可同时选择主分类和子分类"
             style="width:100%"
           />
         </el-form-item>
@@ -280,7 +292,7 @@ const ratingStaff = computed(() => ratingStats.value.staff || [])
 const ratingRecent = computed(() => ratingStats.value.recent || [])
 
 const ruleForm = reactive({
-  id: null, matchType: 'PRODUCT', targetId: null,
+  id: null, matchType: 'PRODUCT', targetId: null, targetIds: [],
   assigneeType: 'GROUP', assigneeId: null, enabled: 1, remark: ''
 })
 const groupForm = reactive({
@@ -343,9 +355,11 @@ async function searchProducts(keyword) {
   productLoading.value = true
   try {
     const res = await getProductList({ pageNum: 1, pageSize: 30, keyword: keyword || '' })
-    productOptions.value = res.data?.records || []
+    const merged = new Map(productOptions.value.map(item => [item.id, item]))
+    for (const item of res.data?.records || []) merged.set(item.id, item)
+    productOptions.value = [...merged.values()]
   } catch (_) {
-    productOptions.value = []
+    // Keep previously loaded options so existing multi-select values remain readable.
   } finally {
     productLoading.value = false
   }
@@ -356,19 +370,26 @@ function openRule(row = null) {
     id: row?.id || null,
     matchType: row?.matchType || 'PRODUCT',
     targetId: row?.targetId ?? null,
+    targetIds: Array.isArray(row?.targetIds) ? [...row.targetIds] : (row?.targetId ? [row.targetId] : []),
     assigneeType: row?.assigneeType || (enabledGroups.value.length ? 'GROUP' : 'CS'),
     assigneeId: row?.assigneeId ?? null,
     enabled: row?.enabled ?? 1,
     remark: row?.remark || ''
   })
-  if (row?.matchType === 'PRODUCT' && !productOptions.value.some(item => item.id === row.targetId)) {
-    productOptions.value.unshift({ id: row.targetId, name: row.targetName || ('商品 ' + row.targetId) })
+  if (row?.matchType === 'PRODUCT') {
+    for (let index = 0; index < ruleForm.targetIds.length; index += 1) {
+      const targetId = ruleForm.targetIds[index]
+      if (!productOptions.value.some(item => item.id === targetId)) {
+        const target = row.targets?.[index]
+        productOptions.value.unshift({ id: targetId, name: target?.name || ('商品 ' + targetId) })
+      }
+    }
   }
   ruleVisible.value = true
 }
 
 async function saveRule() {
-  if (ruleForm.matchType !== 'DEFAULT' && !ruleForm.targetId) {
+  if (ruleForm.matchType !== 'DEFAULT' && !ruleForm.targetIds.length) {
     ElMessage.warning('请选择要匹配的商品或分类')
     return
   }
@@ -381,7 +402,8 @@ async function saveRule() {
     await saveCsRoutingRule({
       id: ruleForm.id,
       matchType: ruleForm.matchType,
-      targetId: ruleForm.matchType === 'DEFAULT' ? 0 : ruleForm.targetId,
+      targetId: ruleForm.matchType === 'DEFAULT' ? 0 : (ruleForm.targetIds.length === 1 ? ruleForm.targetIds[0] : null),
+      targetIds: ruleForm.matchType === 'DEFAULT' ? [0] : ruleForm.targetIds,
       assigneeType: ruleForm.assigneeType,
       assigneeId: ruleForm.assigneeId,
       enabled: ruleForm.enabled,
@@ -402,7 +424,7 @@ async function toggleRule(row) {
     await saveCsRoutingRule({
       id: row.id,
       matchType: row.matchType,
-      targetId: row.targetId,
+      targetIds: row.targetIds,
       assigneeType: row.assigneeType,
       assigneeId: row.assigneeId,
       enabled: row.enabled === 1 ? 0 : 1,
@@ -473,6 +495,7 @@ onMounted(() => { loadAll(); loadRatings() })
 .header-copy span { color: #171717; font-size: 16px; font-weight: 800; }
 .header-copy small { display: block; margin-top: 4px; color: #909399; font-size: 12px; font-weight: 400; }
 .rule-note { margin-bottom: 16px; }
+.target-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .group-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; color: #777777; font-size: 12px; }
 .form-tip { margin-top: 6px; color: #909399; font-size: 12px; line-height: 1.5; }
 .rating-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }

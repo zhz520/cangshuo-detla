@@ -12,11 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/cs-routing")
@@ -36,8 +38,9 @@ public class CsRoutingController {
 
     @GetMapping("/rules")
     public R<List<Map<String, Object>>> rules() {
-        return R.ok(jdbc.queryForList(
-                "SELECT r.id,r.match_type AS matchType,r.target_id AS targetId," +
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT COALESCE(r.rule_group_id,CAST(r.id AS CHAR)) AS ruleGroupId," +
+                        "r.match_type AS matchType,r.target_id AS targetId," +
                         "r.assignee_type AS assigneeType,r.assignee_id AS assigneeId," +
                         "r.enabled,r.remark,r.updated_at AS updatedAt," +
                         "CASE WHEN r.assignee_type='GROUP' THEN g.name ELSE COALESCE(NULLIF(a.nickname,''),a.username) END AS assigneeName," +
@@ -47,24 +50,58 @@ public class CsRoutingController {
                         "LEFT JOIN cs_group g ON r.assignee_type='GROUP' AND g.id=r.assignee_id " +
                         "LEFT JOIN product p ON r.match_type='PRODUCT' AND p.id=r.target_id " +
                         "LEFT JOIN category c ON r.match_type='CATEGORY' AND c.id=r.target_id " +
-                        "ORDER BY FIELD(r.match_type,'PRODUCT','CATEGORY','DEFAULT'),r.id DESC"));
+                        "ORDER BY CASE r.match_type WHEN 'PRODUCT' THEN 1 WHEN 'CATEGORY' THEN 2 ELSE 3 END," +
+                        "r.id ASC");
+        Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            String groupId = String.valueOf(row.get("ruleGroupId"));
+            Map<String, Object> group = grouped.computeIfAbsent(groupId, ignored -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("id", groupId);
+                item.put("matchType", row.get("matchType"));
+                item.put("assigneeType", row.get("assigneeType"));
+                item.put("assigneeId", row.get("assigneeId"));
+                item.put("assigneeName", row.get("assigneeName"));
+                item.put("enabled", row.get("enabled"));
+                item.put("remark", row.get("remark"));
+                item.put("updatedAt", row.get("updatedAt"));
+                item.put("targets", new ArrayList<Map<String, Object>>());
+                return item;
+            });
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> targets = (List<Map<String, Object>>) group.get("targets");
+            Map<String, Object> target = new LinkedHashMap<>();
+            target.put("id", ((Number) row.get("targetId")).longValue());
+            target.put("name", row.get("targetName"));
+            target.put("type", row.get("matchType"));
+            targets.add(target);
+        }
+        for (Map<String, Object> group : grouped.values()) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> targets = (List<Map<String, Object>>) group.get("targets");
+            group.put("targetIds", targets.stream().map(item -> item.get("id")).toList());
+            group.put("targetName", targets.stream().map(item -> String.valueOf(item.get("name"))).collect(java.util.stream.Collectors.joining("、")));
+        }
+        List<Map<String, Object>> groupedRules = new ArrayList<>(grouped.values());
+        groupedRules.sort((left, right) -> String.valueOf(right.get("updatedAt"))
+                .compareTo(String.valueOf(left.get("updatedAt"))));
+        return R.ok(groupedRules);
     }
 
     @OpLog(module = "cs-routing", operation = "保存客服分配规则")
     @PostMapping("/rules")
     @Transactional(rollbackFor = Exception.class)
-    public R<Long> saveRule(@RequestBody RuleRequest body) {
+    public R<String> saveRule(@RequestBody RuleRequest body) {
         String matchType = normalizeType(body.matchType(), Set.of("PRODUCT", "CATEGORY", "DEFAULT"), "匹配方式无效");
         String assigneeType = normalizeType(body.assigneeType(), Set.of("CS", "GROUP"), "分配对象无效");
-        Long targetId = "DEFAULT".equals(matchType) ? 0L : body.targetId();
-        if ("DEFAULT".equals(matchType) && targetId == null) targetId = 0L;
-        if (!"DEFAULT".equals(matchType) && (targetId == null || targetId <= 0)) {
-            throw new BusinessException(400, "请选择要匹配的商品或分类");
-        }
-        if ("PRODUCT".equals(matchType)) {
-            requireExists("SELECT COUNT(*) FROM product WHERE id=? AND deleted=0", targetId, "商品不存在");
-        } else if ("CATEGORY".equals(matchType)) {
-            requireExists("SELECT COUNT(*) FROM category WHERE id=? AND deleted=0", targetId, "分类不存在");
+        List<Long> targetIds = normalizedTargetIds(body, matchType);
+        if (targetIds.size() > 200) throw new BusinessException(400, "单条规则最多选择200个商品或分类");
+        for (Long targetId : targetIds) {
+            if ("PRODUCT".equals(matchType)) {
+                requireExists("SELECT COUNT(*) FROM product WHERE id=? AND deleted=0", targetId, "商品不存在");
+            } else if ("CATEGORY".equals(matchType)) {
+                requireExists("SELECT COUNT(*) FROM category WHERE id=? AND deleted=0", targetId, "分类不存在");
+            }
         }
         if (body.assigneeId() == null) throw new BusinessException(400, "请选择客服或客服组");
         if ("CS".equals(assigneeType)) {
@@ -75,25 +112,42 @@ public class CsRoutingController {
         int enabled = body.enabled() == null ? 1 : (body.enabled() == 0 ? 0 : 1);
         String remark = body.remark() == null ? "" : body.remark().trim();
         if (remark.length() > 200) throw new BusinessException(400, "备注不能超过200字");
-        List<Long> existing = jdbc.queryForList(
-                "SELECT id FROM cs_routing_rule WHERE match_type=? AND target_id=?", Long.class, matchType, targetId);
-        Long id = body.id() != null ? body.id() : (existing.isEmpty() ? null : existing.get(0));
-        if (id == null) {
-            jdbc.update("INSERT INTO cs_routing_rule(match_type,target_id,assignee_type,assignee_id,enabled,remark,created_by) " +
-                            "VALUES (?,?,?,?,?,?,?)",
-                    matchType, targetId, assigneeType, body.assigneeId(), enabled, remark, SecurityUtils.getUserId());
-            id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        } else {
-            jdbc.update("UPDATE cs_routing_rule SET match_type=?,target_id=?,assignee_type=?,assignee_id=?,enabled=?,remark=? WHERE id=?",
-                    matchType, targetId, assigneeType, body.assigneeId(), enabled, remark, id);
+        String ruleGroupId = body.id() == null || body.id().isBlank() ? UUID.randomUUID().toString() : body.id().trim();
+        if (body.id() != null && !body.id().isBlank()) {
+            Integer existing = jdbc.queryForObject("SELECT COUNT(*) FROM cs_routing_rule WHERE rule_group_id=?", Integer.class, ruleGroupId);
+            if (existing == null || existing == 0) throw new BusinessException(404, "分配规则不存在或已删除");
         }
-        return R.ok(id);
+        if (!"DEFAULT".equals(matchType)) {
+            String placeholders = String.join(",", Collections.nCopies(targetIds.size(), "?"));
+            List<Object> conflictArgs = new ArrayList<>();
+            conflictArgs.add(matchType);
+            conflictArgs.addAll(targetIds);
+            conflictArgs.add(ruleGroupId);
+            List<Long> conflicts = jdbc.queryForList(
+                    "SELECT target_id FROM cs_routing_rule WHERE match_type=? AND target_id IN (" + placeholders + ") " +
+                            "AND rule_group_id<>? ORDER BY target_id",
+                    Long.class, conflictArgs.toArray());
+            if (!conflicts.isEmpty()) {
+                List<String> names = conflictNames(matchType, conflicts);
+                throw new BusinessException(409, "以下商品或分类已存在其他分配规则：" + String.join("、", names));
+            }
+        }
+        if (body.id() != null && !body.id().isBlank()) {
+            jdbc.update("DELETE FROM cs_routing_rule WHERE rule_group_id=?", ruleGroupId);
+        }
+        for (Long targetId : targetIds) {
+            jdbc.update("INSERT INTO cs_routing_rule(rule_group_id,match_type,target_id,assignee_type,assignee_id,enabled,remark,created_by) " +
+                            "VALUES (?,?,?,?,?,?,?,?)",
+                    ruleGroupId, matchType, targetId, assigneeType, body.assigneeId(), enabled, remark, SecurityUtils.getUserId());
+        }
+        return R.ok(ruleGroupId);
     }
 
     @OpLog(module = "cs-routing", operation = "删除客服分配规则")
     @DeleteMapping("/rules/{id}")
-    public R<Void> deleteRule(@PathVariable Long id) {
-        jdbc.update("DELETE FROM cs_routing_rule WHERE id=?", id);
+    public R<Void> deleteRule(@PathVariable String id) {
+        int changed = jdbc.update("DELETE FROM cs_routing_rule WHERE rule_group_id=? OR CAST(id AS CHAR)=?", id, id);
+        if (changed == 0) throw new BusinessException(404, "分配规则不存在或已删除");
         return R.ok();
     }
 
@@ -197,6 +251,27 @@ public class CsRoutingController {
         if (count == null || count == 0) throw new BusinessException(400, message);
     }
 
+    private List<Long> normalizedTargetIds(RuleRequest body, String matchType) {
+        if ("DEFAULT".equals(matchType)) return List.of(0L);
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
+        if (body.targetIds() != null) {
+            for (Long id : body.targetIds()) if (id != null && id > 0) ids.add(id);
+        }
+        if (ids.isEmpty() && body.targetId() != null && body.targetId() > 0) ids.add(body.targetId());
+        if (ids.isEmpty()) throw new BusinessException(400, "请选择要匹配的商品或分类");
+        return new ArrayList<>(ids);
+    }
+
+    private List<String> conflictNames(String matchType, List<Long> ids) {
+        String table = "PRODUCT".equals(matchType) ? "product" : "category";
+        List<String> names = new ArrayList<>();
+        for (Long id : ids) {
+            List<String> found = jdbc.queryForList("SELECT name FROM " + table + " WHERE id=?", String.class, id);
+            names.add(found.isEmpty() ? String.valueOf(id) : found.get(0));
+        }
+        return names;
+    }
+
     private long number(Object value) {
         return value instanceof Number n ? Math.round(n.doubleValue()) : 0L;
     }
@@ -207,7 +282,7 @@ public class CsRoutingController {
         return normalized;
     }
 
-    public record RuleRequest(Long id, String matchType, Long targetId, String assigneeType,
+    public record RuleRequest(String id, String matchType, Long targetId, List<Long> targetIds, String assigneeType,
                               Long assigneeId, Integer enabled, String remark) {}
 
     public record GroupRequest(Long id, String name, Long leaderId, List<Long> memberIds,

@@ -69,4 +69,4 @@ export const deleteAccount = (id) => del(`/player/account/${id}`, {}, { role: 'p
 // ========== 换人 ==========
 export const replaceSelf = (orderId) => post(`/player/order/${orderId}/replace-self`, {}, { role: 'player' })
 export const replaceAll = (orderId) => post(`/player/order/${orderId}/replace-all`, {}, { role: 'player' })
-export const replaceTeammate = (orderId) => post(`/player/order/${orderId}/replace-teammate`, {}, { role: 'player' })
+export const replaceTeammate = (orderId, data = {}) => post(`/player/order/${orderId}/replace-teammate`, data, { role: 'player' })

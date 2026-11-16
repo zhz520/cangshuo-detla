@@ -198,7 +198,7 @@ public class PlayerOrderController {
     public R<Void> inviteTeammate(@PathVariable Long orderId, @RequestBody InviteRequest req) {
         Long playerId = SecurityUtils.getUserId();
         Order order = orderService.getById(orderId);
-        if (order == null) return R.fail("订单不存在");
+        if (order == null) return R.fail(404, "订单不存在");
         if (!"true".equalsIgnoreCase(sysConfigService.getConfigValue("order.cooperation.enabled", "true")))
             return R.fail(403, "协同打单功能已关闭，暂不接受新的队友邀请");
         String st = order.getStatus();
@@ -537,20 +537,105 @@ public class PlayerOrderController {
      */
     @PostMapping("/{orderId}/replace-teammate")
     @Transactional(rollbackFor = Exception.class)
-    public R<Void> replaceTeammate(@PathVariable Long orderId) {
+    public R<Void> replaceTeammate(@PathVariable Long orderId,
+                                   @RequestBody(required = false) ReplaceTeammateRequest req) {
         Long playerId = SecurityUtils.getUserId();
         Order order = orderService.getById(orderId);
-        if (order == null) return R.fail("订单不存在");
-        if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail("当前状态不允许换人");
-        if (!playerId.equals(order.getPlayerId())) return R.fail("只有主接单员可以操作");
-        // 只标记队友为 REPLACED，主接单员保留
-        List<OrderPlayer> replaced = markTeammatesReplaced(orderId);
-        addProgress(orderId, "TEAMMATE_REPLACED", "PLAYER", playerId, "主接单员更换队友，可重新邀请");
-        // 通知被踢的队友
-        for (OrderPlayer op : replaced) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_REMOVED",
-                    "PLAYER", op.getPlayerId(), orderId, "您已被主接单员从订单中移除"));
+        if (order == null) return R.fail(404, "订单不存在");
+        if (!java.util.Set.of("ACCEPTED", "WAITING_TEAMMATE", "IN_PROGRESS").contains(order.getStatus()))
+            return R.fail(409, "当前状态不允许更换协同打手");
+        if (!playerId.equals(order.getPlayerId())) return R.fail(403, "只有主接单员可以更换协同打手");
+        if (!"true".equalsIgnoreCase(sysConfigService.getConfigValue("order.cooperation.enabled", "true")))
+            return R.fail(403, "协同打单功能已关闭，不能更换协同打手");
+
+        List<OrderPlayer> activeTeammates = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
+                .eq(OrderPlayer::getOrderId, orderId)
+                .eq(OrderPlayer::getRole, "TEAMMATE")
+                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
+        if (activeTeammates.isEmpty()) return R.fail(409, "当前没有可更换的协同打手");
+
+        // 兼容旧客户端：不传新打手时只移除现有队友，主接单员保留。
+        if (req == null || req.getReplacementPlayerId() == null) {
+            List<OrderPlayer> replaced = markTeammatesReplaced(orderId);
+            addProgress(orderId, "TEAMMATE_REPLACED", "PLAYER", playerId, "主接单员移除协同打手，可重新邀请");
+            for (OrderPlayer op : replaced) {
+                eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_REMOVED",
+                        "PLAYER", op.getPlayerId(), orderId, "您已被主接单员从订单中移除"));
+            }
+            return R.ok();
         }
+
+        OrderPlayer oldTeammate;
+        if (req.getTeammatePlayerId() != null) {
+            oldTeammate = activeTeammates.stream()
+                    .filter(item -> req.getTeammatePlayerId().equals(item.getPlayerId()))
+                    .findFirst().orElse(null);
+            if (oldTeammate == null) return R.fail(404, "指定的协同打手不在当前队伍中");
+        } else {
+            if (activeTeammates.size() > 1) return R.fail(400, "请指定要替换的协同打手");
+            oldTeammate = activeTeammates.get(0);
+        }
+        Long replacementId = req.getReplacementPlayerId();
+        if (replacementId.equals(playerId)) return R.fail(400, "不能把协同打手替换成主接单员");
+        if (replacementId.equals(oldTeammate.getPlayerId())) return R.fail(400, "新协同打手不能与被替换打手相同");
+        boolean duplicate = activeTeammates.stream().anyMatch(item -> replacementId.equals(item.getPlayerId()));
+        if (duplicate) return R.fail(409, "该打手已在当前队伍中");
+        Player replacement = playerService.getById(replacementId);
+        if (replacement == null || !"ACTIVE".equals(replacement.getStatus()) || !Integer.valueOf(1).equals(replacement.getIsOnline()))
+            return R.fail(409, "替补打手不可用或当前不在线");
+        int max = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
+        if (crossModuleMapper.countActivePlayerOrders(replacementId) >= max)
+            return R.fail(400, "替补打手当前进行中的订单已达上限(" + max + "单)");
+
+        String splitType = req.getSplitType();
+        if (!java.util.Set.of("FIFTY_FIFTY", "FORTY_SIXTY", "THIRTY_SEVENTY", "CUSTOM").contains(splitType))
+            return R.fail(400, "请选择有效的分成方式");
+        if ("CUSTOM".equals(splitType)) {
+            try {
+                com.delta.common.utils.Money.positive(req.getCustomAmount());
+            } catch (BusinessException error) {
+                return R.fail(error.getCode(), error.getMessage());
+            }
+            BigDecimal rate = order.getCommissionRate() != null
+                    ? order.getCommissionRate()
+                    : new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
+            BigDecimal playerTotal = order.getAmount().multiply(BigDecimal.ONE.subtract(rate));
+            if (req.getCustomAmount().compareTo(playerTotal) > 0) return R.fail(409, "自定义金额不可超过打手总收入");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        oldTeammate.setStatus("REPLACED");
+        oldTeammate.setRejectedAt(now);
+        orderPlayerService.updateById(oldTeammate);
+        validateTeamAllocation(order, splitType, req.getCustomAmount());
+
+        OrderPlayer replacementRow = new OrderPlayer();
+        replacementRow.setOrderId(orderId);
+        replacementRow.setPlayerId(replacementId);
+        replacementRow.setRole("TEAMMATE");
+        replacementRow.setStatus("INVITED");
+        replacementRow.setSplitType(splitType);
+        replacementRow.setSplitAmount("CUSTOM".equals(splitType) ? req.getCustomAmount() : null);
+        replacementRow.setInvitedBy(playerId);
+        replacementRow.setInvitedAt(now);
+        replacementRow.setInviteDeadline(now.plusMinutes(5));
+        replacementRow.setCreatedAt(now);
+        orderPlayerService.save(replacementRow);
+
+        int requiredTeam = Math.max(0, (order.getRequiredPlayerCount() == null ? 1 : order.getRequiredPlayerCount()) - 1);
+        if (OrderStatusEnum.ACCEPTED.name().equals(order.getStatus()) && requiredTeam > 0) {
+            order.setStatus(OrderStatusEnum.WAITING_TEAMMATE.name());
+            order.setTeammateDeadline(now.plusHours(2));
+            order.setUpdatedAt(now);
+            orderService.updateById(order);
+        }
+        Player oldPlayer = playerService.getById(oldTeammate.getPlayerId());
+        addProgress(orderId, "TEAMMATE_REPLACED", "PLAYER", playerId,
+                "更换协同打手：" + (oldPlayer == null ? oldTeammate.getPlayerId() : oldPlayer.getNickname()) + " → " + replacement.getNickname());
+        eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_REMOVED",
+                "PLAYER", oldTeammate.getPlayerId(), orderId, "您已被主接单员从订单中移除"));
+        eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_INVITED",
+                "PLAYER", replacementId, orderId, "您收到一份替补协同邀请，请尽快确认"));
         return R.ok();
     }
 
@@ -561,6 +646,7 @@ public class PlayerOrderController {
                 .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
         for (OrderPlayer op : all) {
             op.setStatus("REPLACED");
+            op.setRejectedAt(LocalDateTime.now());
             orderPlayerService.updateById(op);
         }
     }
@@ -573,6 +659,7 @@ public class PlayerOrderController {
                 .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
         for (OrderPlayer op : teammates) {
             op.setStatus("REPLACED");
+            op.setRejectedAt(LocalDateTime.now());
             orderPlayerService.updateById(op);
         }
         return teammates;
@@ -648,6 +735,14 @@ public class PlayerOrderController {
         /** 分成方式: FIFTY_FIFTY / FORTY_SIXTY / THIRTY_SEVENTY / CUSTOM */
         private String splitType;
         /** 自定义金额（仅splitType=CUSTOM时有效） */
+        private java.math.BigDecimal customAmount;
+    }
+
+    @Data
+    public static class ReplaceTeammateRequest {
+        private Long teammatePlayerId;
+        private Long replacementPlayerId;
+        private String splitType;
         private java.math.BigDecimal customAmount;
     }
 

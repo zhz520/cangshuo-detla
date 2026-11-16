@@ -214,7 +214,7 @@ public class DatabaseCompatibility {
                     "user_id BIGINT NOT NULL, player_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "PRIMARY KEY(user_id,player_id), KEY idx_player_follow_player(player_id))");
             ensureTable("cs_routing_rule", "CREATE TABLE IF NOT EXISTS cs_routing_rule (" +
-                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, match_type VARCHAR(16) NOT NULL, " +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, rule_group_id VARCHAR(64) NULL, match_type VARCHAR(16) NOT NULL, " +
                     "target_id BIGINT NOT NULL DEFAULT 0, assignee_type VARCHAR(16) NOT NULL DEFAULT 'CS', " +
                     "assignee_id BIGINT NOT NULL, enabled TINYINT NOT NULL DEFAULT 1, " +
                     "remark VARCHAR(255) NOT NULL DEFAULT '', created_by BIGINT NULL, " +
@@ -322,6 +322,10 @@ public class DatabaseCompatibility {
             for (AdditiveColumn required : STATISTICS_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
+            ensureColumn("cs_routing_rule", "rule_group_id", "ALTER TABLE cs_routing_rule ADD COLUMN rule_group_id VARCHAR(64) NULL");
+            jdbc.update("UPDATE cs_routing_rule SET rule_group_id=CONCAT('legacy-',id) WHERE rule_group_id IS NULL OR rule_group_id=''");
+            ensureIndex("cs_routing_rule", "idx_cs_routing_group",
+                    "CREATE INDEX idx_cs_routing_group ON cs_routing_rule(rule_group_id)");
             ensureOfficialWechatBindingUniqueness();
             ensureIndex("wechat_notice_queue", "uk_wechat_notice_dedupe",
                     "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");

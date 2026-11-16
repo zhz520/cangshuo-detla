@@ -35,6 +35,7 @@ public class PlayerWorkController {
         Long playerId=SecurityUtils.getUserId();Order order=orderService.getById(id);
         if(order==null) return R.fail(404,"订单不存在");
         boolean primary=playerId.equals(order.getPlayerId());
+        order.setPrimaryPlayer(primary);
         boolean teammate=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,id)
                 .eq(OrderPlayer::getPlayerId,playerId).eq(OrderPlayer::getStatus,"ACCEPTED"))>0;
         boolean available="PAID".equals(order.getStatus()) && order.getPlayerId()==null

@@ -51,6 +51,7 @@
         <AppImage :width="160" class="t-avatar" :src="t.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <text class="t-name">{{ t.nickname }}</text>
         <StatusTag :status="t.status" :textMap="teammateStatusText" :colorMap="teammateStatusColor" />
+        <view v-if="canManageTeammates && ['INVITED','ACCEPTED'].includes(t.status)" class="t-replace" @click="goReplaceTeammate(t)">更换</view>
       </view>
     </view>
     <!-- 进度历史 -->
@@ -108,8 +109,8 @@
             <text class="opt-desc">自己退出不拿钱，订单回到接单大厅</text>
           </view>
           <view v-if="hasTeammate" class="replace-opt" @click="doReplace('teammate')">
-            <text class="opt-label">换队友</text>
-            <text class="opt-desc">踢掉队友，可重新选择分成方式邀请新队友</text>
+            <text class="opt-label">移除全部队友</text>
+            <text class="opt-desc">清空当前协同打手；如需指定替补，请直接在队友行点击“更换”</text>
           </view>
         </view>
         <PageState v-if="actionError" :error="actionError" @retry="retryAction" />
@@ -173,6 +174,8 @@ const hasTeammate = computed(() => {
   const t = order.value?.teammates
   return t && t.some(m => m.status === 'ACCEPTED' || m.status === 'INVITED')
 })
+const canManageTeammates = computed(() => order.value?.primaryPlayer === true &&
+  ['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS'].includes(order.value?.status))
 
 const teammateStatusText = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废', REPLACED: '已更换' }
 const teammateStatusColor = { INVITED: '#e6a23c', ACCEPTED: '#07c160', REJECTED: '#ee0a24', CANCELLED: '#999', REPLACED: '#909399' }
@@ -335,6 +338,13 @@ function submitComplete() {
 function goProgress() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/order/progress?orderId=' + orderId.value }) }
 function goChat() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/chat/room?orderId=' + orderId.value }) }
 function goInvite() { if (!actionDisabled.value) uni.navigateTo({ url: '/pages-player/invite/teammate?orderId=' + orderId.value }) }
+function goReplaceTeammate(teammate) {
+  if (actionDisabled.value || !teammate?.playerId) return
+  uni.navigateTo({
+    url: '/pages-player/invite/teammate?orderId=' + orderId.value +
+      '&replace=1&teammatePlayerId=' + teammate.playerId
+  })
+}
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 function copyText(text, title) {
   if (!text) {
@@ -424,7 +434,7 @@ function doReplace(type) {
 .income-label { font-size: 26rpx; color: #777777; }
 .income-val { font-size: 36rpx; color: #d44955; font-weight: bold; }
 .income-hint { font-size: 22rpx; color: #777777; margin-top: 6rpx; display: block; }
-.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7; .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; font-size: 26rpx; color: #111111; } }
+.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7; .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; font-size: 26rpx; color: #111111; } .t-replace { padding: 8rpx 18rpx; border: 1rpx solid #d9dde2; border-radius: 999rpx; color: #444444; font-size: 22rpx; background: #ffffff; } }
 .progress-item {
   padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7;
   .p-content { font-size: 26rpx; color: #111111; display: block; }

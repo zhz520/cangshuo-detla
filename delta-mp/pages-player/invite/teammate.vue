@@ -15,7 +15,7 @@
             <text class="tag" :class="{'tag-warn': p.activeOrders >= maxConcurrent}">进行中{{ p.activeOrders || 0 }}/{{ maxConcurrent }}</text>
           </view>
         </view>
-        <button class="invite-btn" :disabled="sending || !!sentIds[p.id]" @click="openInvite(p)">{{ sentIds[p.id] ? '已邀请' : '邀请' }}</button>
+        <button class="invite-btn" :disabled="sending || !!sentIds[p.id]" @click="openInvite(p)">{{ sentIds[p.id] ? '已发送' : (replaceMode ? '替换' : '邀请') }}</button>
       </view>
       <PageState :loading="loading && !players.length" :error="error" :empty="!players.length" empty-text="暂无可邀请的队友" @retry="retry" />
       <view v-if="players.length && loading" class="loading-tip">正在加载…</view>
@@ -24,8 +24,8 @@
     <!-- 分成方式选择弹窗 -->
     <view v-if="showSplitModal" class="modal-mask" @click="closeInvite">
       <view class="modal-box" @click.stop>
-        <text class="modal-title">选择分成方式</text>
-        <text class="modal-sub">邀请 {{ inviteTarget?.nickname }}</text>
+        <text class="modal-title">{{ replaceMode ? '更换协同打手' : '选择分成方式' }}</text>
+        <text class="modal-sub">{{ replaceMode ? '由 ' + inviteTarget?.nickname + ' 接替当前协同位' : '邀请 ' + inviteTarget?.nickname }}</text>
         <view class="split-options">
           <view v-for="opt in splitOptions" :key="opt.value" class="split-opt" :class="{active: selectedSplit===opt.value}" @click="selectSplit(opt.value)">
             <text class="opt-label">{{ opt.label }}</text>
@@ -39,7 +39,7 @@
         <text v-if="submitError" class="submit-error" role="alert">{{ submitError }}</text>
         <view class="modal-actions">
           <button class="modal-cancel" :disabled="sending" @click="closeInvite">取消</button>
-          <button class="modal-confirm" :disabled="sending" :loading="sending" @click="confirmInvite">{{ sending ? '发送中…' : '确认邀请' }}</button>
+          <button class="modal-confirm" :disabled="sending" :loading="sending" @click="confirmInvite">{{ sending ? '发送中…' : (replaceMode ? '确认更换' : '确认邀请') }}</button>
         </view>
       </view>
     </view>
@@ -50,10 +50,12 @@ import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import PageState from '@/components/PageState.vue'
-import { getAvailableTeammates, inviteTeammate } from '@/api/player'
+import { getAvailableTeammates, inviteTeammate, replaceTeammate } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
 const orderId = ref('')
+const replaceMode = ref(false)
+const replaceTeammatePlayerId = ref('')
 const keyword = ref('')
 const maxConcurrent = ref(5)
 const sending = ref(false)
@@ -83,7 +85,12 @@ const splitOptions = [
   { value: 'CUSTOM', label: '自定义金额', desc: '指定队友分成金额' },
 ]
 
-onLoad((opts) => { orderId.value = opts?.orderId || '' })
+onLoad((opts) => {
+  orderId.value = opts?.orderId || ''
+  replaceMode.value = String(opts?.replace || '') === '1'
+  replaceTeammatePlayerId.value = opts?.teammatePlayerId || ''
+  uni.setNavigationBarTitle({ title: replaceMode.value ? '更换协同打手' : '邀请队友' })
+})
 onShow(() => refresh())
 onHide(cancel)
 onUnload(() => { disposed = true; dispose() })
@@ -112,13 +119,27 @@ async function confirmInvite() {
     }
     data.customAmount = Number(customAmount.value)
   }
+  const replaceTargetPlayerId = Number(replaceTeammatePlayerId.value)
+  if (replaceMode.value && !replaceTargetPlayerId) {
+    return uni.showToast({ title: '缺少原协同打手信息，请返回重试', icon: 'none' })
+  }
   sending.value = true
   submitError.value = ''
   try {
-    await inviteTeammate(orderId.value, data)
+    if (replaceMode.value) {
+      const payload = {
+        teammatePlayerId: replaceTargetPlayerId,
+        replacementPlayerId: inviteTarget.value.id,
+        splitType: selectedSplit.value
+      }
+      if (selectedSplit.value === 'CUSTOM') payload.customAmount = Number(customAmount.value)
+      await replaceTeammate(orderId.value, payload)
+    } else {
+      await inviteTeammate(orderId.value, data)
+    }
     if (disposed) return
     sentIds.value[targetId] = true
-    uni.showToast({ title: '已发送邀请' })
+    uni.showToast({ title: replaceMode.value ? '已发送更换邀请' : '已发送邀请' })
     showSplitModal.value = false
     await refresh({ force: true })
   } catch (e) {

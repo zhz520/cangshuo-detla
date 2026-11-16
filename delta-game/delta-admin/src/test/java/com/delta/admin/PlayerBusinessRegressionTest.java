@@ -146,6 +146,45 @@ class PlayerBusinessRegressionTest {
         assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200",String.class)).isEqualTo("IN_PROGRESS");
     }
 
+    @Test void primaryPlayerCanReplaceAnAcceptedTeammateWithAnotherOnlinePlayer() throws Exception {
+        jdbc.update("UPDATE `order` SET status='IN_PROGRESS',player_id=1,required_player_count=2,amount=100,commission_rate=0 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status,split_type) VALUES(200,1,'PRIMARY','ACCEPTED','FIFTY_FIFTY'),(200,2,'TEAMMATE','ACCEPTED','FIFTY_FIFTY')");
+
+        mvc.perform(get("/player/work/200").with(player(1)))
+                .andExpect(jsonPath("$.data.primaryPlayer").value(true));
+        mvc.perform(post("/player/order/200/replace-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"teammatePlayerId\":2,\"replacementPlayerId\":3,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=2", String.class)).isEqualTo("REPLACED");
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=3", String.class)).isEqualTo("INVITED");
+        assertThat(jdbc.queryForObject("SELECT player_id FROM `order` WHERE id=200", Long.class)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_progress WHERE order_id=200 AND type='TEAMMATE_REPLACED'", Integer.class)).isEqualTo(1);
+
+        mvc.perform(post("/player/order/200/accept-invite").with(player(3)))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=3", String.class)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT status FROM `order` WHERE id=200", String.class)).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test void onlyThePrimaryPlayerCanReplaceATeammateAndInvalidReplacementRollsBack() throws Exception {
+        jdbc.update("UPDATE `order` SET status='IN_PROGRESS',player_id=1,required_player_count=3,amount=100,commission_rate=0 WHERE id=200");
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES(3,'player-three','普通打手丙','ACTIVE',1,'13900000003',1),(4,'player-four','普通打手丁','ACTIVE',1,'13900000004',1)");
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status,split_type,split_amount) VALUES(200,1,'PRIMARY','ACCEPTED','FIFTY_FIFTY',NULL),(200,2,'TEAMMATE','ACCEPTED','FIFTY_FIFTY',NULL),(200,4,'TEAMMATE','ACCEPTED','CUSTOM',90)");
+
+        mvc.perform(post("/player/order/200/replace-teammate").with(player(2)).contentType("application/json")
+                        .content("{\"teammatePlayerId\":2,\"replacementPlayerId\":3,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(403));
+
+        mvc.perform(post("/player/order/200/replace-teammate").with(player(1)).contentType("application/json")
+                        .content("{\"teammatePlayerId\":2,\"replacementPlayerId\":3,\"splitType\":\"CUSTOM\",\"customAmount\":20}"))
+                .andExpect(jsonPath("$.code").value(409));
+
+        assertThat(jdbc.queryForObject("SELECT status FROM order_player WHERE order_id=200 AND player_id=2", String.class)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND player_id=3", Integer.class)).isZero();
+    }
+
     @Test void frozenPlayerCannotAcceptATeammateInvitation() throws Exception {
         invitation("WAITING_TEAMMATE");
         jdbc.update("UPDATE player SET status='FROZEN' WHERE id=2");

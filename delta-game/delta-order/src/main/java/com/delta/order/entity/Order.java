@@ -76,4 +76,7 @@ public class Order {
     /** 队友列表（非DB字段，详情展示用） */
     @TableField(exist = false)
     private List<OrderPlayer> teammates;
+    /** 当前打手是否为订单主打手（打手端详情权限展示用） */
+    @TableField(exist = false)
+    private Boolean primaryPlayer;
 }
