@@ -31,9 +31,12 @@
             </el-table-column>
             <el-table-column prop="targetName" label="匹配对象" min-width="260">
               <template #default="{ row }">
-                <div v-if="row.targets?.length" class="target-tags">
-                  <el-tag v-for="target in row.targets" :key="target.id" size="small" effect="plain">
+                <div v-if="row.targets?.length" class="target-tags" :title="row.targetName">
+                  <el-tag v-for="target in row.targets.slice(0, 4)" :key="target.id" size="small" effect="plain">
                     {{ target.name || target.id }}
+                  </el-tag>
+                  <el-tag v-if="row.targets.length > 4" size="small" effect="plain" type="info">
+                    +{{ row.targets.length - 4 }}
                   </el-tag>
                 </div>
                 <span v-else class="muted">{{ row.matchType === 'DEFAULT' ? '未匹配商品/分类' : '-' }}</span>

@@ -197,7 +197,8 @@ public class PlayerOrderController {
     @Transactional(rollbackFor = Exception.class)
     public R<Void> inviteTeammate(@PathVariable Long orderId, @RequestBody InviteRequest req) {
         Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
+        Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                .eq(Order::getId, orderId).last("FOR UPDATE"));
         if (order == null) return R.fail(404, "订单不存在");
         if (!"true".equalsIgnoreCase(sysConfigService.getConfigValue("order.cooperation.enabled", "true")))
             return R.fail(403, "协同打单功能已关闭，暂不接受新的队友邀请");
@@ -540,7 +541,8 @@ public class PlayerOrderController {
     public R<Void> replaceTeammate(@PathVariable Long orderId,
                                    @RequestBody(required = false) ReplaceTeammateRequest req) {
         Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
+        Order order = orderService.getOne(new LambdaQueryWrapper<Order>()
+                .eq(Order::getId, orderId).last("FOR UPDATE"));
         if (order == null) return R.fail(404, "订单不存在");
         if (!java.util.Set.of("ACCEPTED", "WAITING_TEAMMATE", "IN_PROGRESS").contains(order.getStatus()))
             return R.fail(409, "当前状态不允许更换协同打手");
@@ -551,7 +553,8 @@ public class PlayerOrderController {
         List<OrderPlayer> activeTeammates = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
                 .eq(OrderPlayer::getOrderId, orderId)
                 .eq(OrderPlayer::getRole, "TEAMMATE")
-                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
+                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED")
+                .last("FOR UPDATE"));
         if (activeTeammates.isEmpty()) return R.fail(409, "当前没有可更换的协同打手");
 
         // 兼容旧客户端：不传新打手时只移除现有队友，主接单员保留。
