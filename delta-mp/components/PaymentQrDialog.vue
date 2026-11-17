@@ -21,7 +21,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import QRCode from 'qrcode'
+import { createPaymentQr } from '../utils/payment-qr.js'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -40,12 +40,7 @@ watch(() => [props.visible, props.url], async ([visible, url]) => {
   qrError.value = ''
   if (!visible || !url) return
   try {
-    const image = await QRCode.toDataURL(url, {
-      width: 560,
-      margin: 1,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#111111ff', light: '#ffffffff' }
-    })
+    const image = await createPaymentQr(url)
     if (current === generation) qrImage.value = image
   } catch (_) {
     if (current === generation) qrError.value = '二维码生成失败，请使用下方按钮复制链接'
