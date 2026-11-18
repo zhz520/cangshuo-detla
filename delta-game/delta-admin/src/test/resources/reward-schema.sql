@@ -71,6 +71,7 @@ CREATE TABLE `order` (`id` bigint NOT NULL AUTO_INCREMENT,
   `contact` varchar(64) NOT NULL DEFAULT '',
   `remark` varchar(500) NOT NULL DEFAULT '',
   `extra_fields` json DEFAULT NULL,
+  cs_id BIGINT DEFAULT NULL,
   `required_player_count` tinyint NOT NULL DEFAULT '1',
   `designated_player_id` bigint DEFAULT NULL,
   `player_id` bigint DEFAULT NULL,
@@ -99,6 +100,8 @@ CREATE TABLE `order_player` (`id` bigint NOT NULL AUTO_INCREMENT,
   `split_ratio` decimal(5,2) DEFAULT NULL,
   `split_amount` decimal(10,2) DEFAULT NULL,
   `invited_by` bigint DEFAULT NULL,
+  `invited_by_type` varchar(16) DEFAULT NULL,
+  `replaces_participant_id` bigint DEFAULT NULL,
   `invited_at` datetime DEFAULT NULL,
   `invite_deadline` datetime DEFAULT NULL,
   `accepted_at` datetime DEFAULT NULL,
@@ -195,7 +198,9 @@ CREATE TABLE `player_reward` (id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
 
 CREATE TABLE `identity_verification` (
   user_id BIGINT PRIMARY KEY,
-  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT'
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  real_name VARCHAR(64),
+  reviewed_at TIMESTAMP NULL
 );
 
 INSERT INTO player_level(id,name,sort_order,status,grab_captcha_required) VALUES(1,'普通打手',1,1,1),(2,'金牌打手',2,1,0);
@@ -219,3 +224,6 @@ CREATE TABLE order_finance_snapshot(order_id BIGINT PRIMARY KEY,cs_rate DECIMAL(
 UPDATE player SET is_online=1;
 DROP TABLE IF EXISTS player_refund_recovery;
 CREATE TABLE player_refund_recovery(order_id BIGINT,player_id BIGINT,refund_share DECIMAL(16,2),recovered DECIMAL(16,2),remaining DECIMAL(16,2));
+
+DROP TABLE IF EXISTS order_settlement_ledger;
+CREATE TABLE order_settlement_ledger(order_id BIGINT PRIMARY KEY);

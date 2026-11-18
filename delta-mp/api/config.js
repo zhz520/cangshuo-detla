@@ -1,8 +1,8 @@
 import { get } from './request'
 
 /** 获取站点配置（公开接口，无需登录） */
-export function getSiteConfig() {
-  return get('/system/config/site', {}, { auth: false, loading: false })
+export function getSiteConfig(options = {}) {
+  return get('/system/config/site', {}, { auth: false, loading: false, ...options })
 }
 
 /** 获取当前站点可用的网页主题（公开接口，授权由后端校验） */

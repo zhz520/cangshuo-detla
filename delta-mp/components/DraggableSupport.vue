@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <style scoped>
-.support-float { position: fixed; right: calc(var(--app-content-left, 0px) + 24rpx); bottom: calc(150rpx + var(--app-safe-bottom, 0px)); width: 100rpx; height: 100rpx; border-radius: 50%; background: #171717; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(23,25,28,.12); z-index: 100; touch-action: none; user-select: none; cursor: grab; }
+.support-float { position: fixed; right: calc(var(--app-content-left, 0px) + 24rpx); bottom: calc(150rpx + var(--app-safe-bottom, 0px)); width: 100rpx; height: 100rpx; border-radius: 50%; background: var(--store-primary); display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(23,25,28,.12); z-index: 100; touch-action: none; user-select: none; cursor: grab; }
 .support-float:active { cursor: grabbing; }
 .support-icon { width: 52rpx; height: 52rpx; filter: brightness(0) saturate(100%) invert(100%); pointer-events: none; }
 </style>

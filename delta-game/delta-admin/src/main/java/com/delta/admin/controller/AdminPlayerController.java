@@ -10,6 +10,7 @@ import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
+import com.delta.player.service.PlayerDepositService;
 import com.delta.order.entity.Order;
 import com.delta.order.service.OrderService;
 import com.delta.pay.entity.Transaction;
@@ -41,6 +42,7 @@ public class AdminPlayerController {
     private final TransactionService transactionService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.delta.system.service.FeatureAuditService featureAudit;
+    private final PlayerDepositService playerDeposits;
 
     public record BatchIdsRequest(List<Long> ids) {}
     public record BatchRejectRequest(List<Long> ids, String reason) {}
@@ -65,6 +67,7 @@ public class AdminPlayerController {
                     .eq(Order::getPlayerId, p.getId())
                     .in(Order::getStatus, "CONFIRMED", "REVIEWED", "SETTLED"));
             p.setCompletedOrders((int) completed);
+            fillDeposit(p);
         }
         return R.ok(page);
     }
@@ -79,8 +82,23 @@ public class AdminPlayerController {
                     .eq(Order::getPlayerId, id)
                     .in(Order::getStatus, "CONFIRMED", "REVIEWED", "SETTLED"));
             p.setCompletedOrders((int) completed);
+            fillDeposit(p);
         }
         return R.ok(p);
+    }
+
+    @GetMapping("/{id}/deposits")
+    public R<List<PlayerDepositService.PaymentView>> deposits(@PathVariable Long id) {
+        return R.ok(playerDeposits.payments(id));
+    }
+
+    @GetMapping("/deposits")
+    public R<PlayerDepositService.PageResult> depositList(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status) {
+        return R.ok(playerDeposits.list(keyword, status, pageNum, pageSize));
     }
 
     @GetMapping("/{id}/transactions")
@@ -166,6 +184,17 @@ public class AdminPlayerController {
         if (current == null) throw new BusinessException(404, "打手不存在");
         if (!expected.equals(current.getStatus())) throw new BusinessException(409, message);
         return current;
+    }
+
+    private void fillDeposit(Player player) {
+        PlayerDepositService.Summary summary = playerDeposits.summary(player.getId());
+        player.setDepositMode(summary.mode());
+        player.setDepositRequiredAmount(summary.requiredAmount());
+        player.setDepositPaidAmount(summary.paidAmount());
+        player.setDepositOutstandingAmount(summary.outstandingAmount());
+        player.setDepositStatus(summary.status());
+        player.setDepositPaymentCount(summary.paymentCount());
+        player.setDepositLastPaidAt(summary.lastPaidAt());
     }
 
     @OpLog(module = "player", operation = "批量通过入驻审核")

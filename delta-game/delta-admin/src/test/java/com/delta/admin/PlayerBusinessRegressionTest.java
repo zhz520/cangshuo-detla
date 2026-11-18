@@ -52,7 +52,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PlayerBusinessRegressionTest {
     @Configuration
     @Import({RewardGrabIntegrationTest.Config.class, PlayerHomeController.class, WithdrawController.class, PayController.class,
-            PlayerAccountServiceImpl.class, WithdrawServiceImpl.class, com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class})
+            PlayerAccountServiceImpl.class, WithdrawServiceImpl.class, com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,
+            com.delta.admin.controller.StaffOrderTeamController.class, com.delta.player.service.PlayerIdentityNameService.class})
     static class Config {}
 
     @Autowired MockMvc mvc;
@@ -68,6 +69,7 @@ class PlayerBusinessRegressionTest {
     @MockBean PaymentService payments;
     @MockBean WechatOfficialPayService officialPay;
     @MockBean WxPayConfiguration wxPayConfiguration;
+    @MockBean(name = "staffPermissions") com.delta.common.security.service.StaffPermissions staffPermissions;
 
     @BeforeEach void withdrawalFixtures() {
         jdbc.update("UPDATE player SET real_name='测试收款人' WHERE id=1");
@@ -144,6 +146,171 @@ class PlayerBusinessRegressionTest {
                 .andExpect(jsonPath("$.code").value(409));
         mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
         assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200",String.class)).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test void primaryCanReplaceOneTeammateInAFullActiveTeam() throws Exception {
+        jdbc.update("UPDATE \u0060order\u0060 SET status='IN_PROGRESS',player_id=1,required_player_count=3,amount=300,commission_rate=0 WHERE id=200");
+        addReplacementPlayers();
+        jdbc.update("INSERT INTO order_player(order_id,player_id,role,status,split_type) VALUES" +
+                "(200,2,'TEAMMATE','ACCEPTED','FIFTY_FIFTY'),(200,4,'TEAMMATE','ACCEPTED','FIFTY_FIFTY')");
+        String replacement = "{\"inviteePlayerId\":3,\"replacedTeammateId\":2,\"splitType\":\"FIFTY_FIFTY\"}";
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(4)).contentType("application/json").content(replacement))
+                .andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.not(200)));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json").content(replacement))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(4)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(3)).isEqualTo("INVITED");
+        mvc.perform(post("/player/order/200/accept-invite").with(player(3))).andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(3)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(2)).isEqualTo("REPLACED");
+        assertThat(teammateStatus(4)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200", String.class)).isEqualTo("IN_PROGRESS");
+        mvc.perform(get("/player/order/200/progress").with(player(2))).andExpect(jsonPath("$.code").value(404));
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json").content(replacement))
+                .andExpect(jsonPath("$.code").value(409));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_progress WHERE order_id=200 AND type='TEAMMATE_REPLACED'", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test void invalidReplacementKeepsOriginalAndValidReplacementWaitsForNewAcceptance() throws Exception {
+        invitation("ACCEPTED");
+        addReplacementPlayers();
+        jdbc.update("UPDATE order_player SET status='ACCEPTED' WHERE order_id=200 AND player_id=2");
+        String replacement = "{\"inviteePlayerId\":3,\"replacedTeammateId\":2,\"splitType\":\"FIFTY_FIFTY\"}";
+        jdbc.update("UPDATE player SET is_online=0 WHERE id=3");
+
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json").content(replacement))
+                .andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.not(200)));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(3)).isNull();
+
+        jdbc.update("UPDATE player SET is_online=1 WHERE id=3");
+        mvc.perform(post("/player/order/200/invite-teammate").with(player(1)).contentType("application/json").content(replacement))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(3)).isEqualTo("INVITED");
+        assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200", String.class)).isEqualTo("ACCEPTED");
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
+        mvc.perform(post("/player/order/200/accept-invite").with(player(3))).andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("REPLACED");
+        assertThat(jdbc.queryForObject("SELECT status FROM \u0060order\u0060 WHERE id=200", String.class)).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test void rejectedExpiredAndRevokedReplacementNeverDisplacesOriginal() throws Exception {
+        prepareStaffTeam("IN_PROGRESS", 81L);
+        mvc.perform(staffInvite("/cs", 81, "CS", 3)).andExpect(jsonPath("$.code").value(200));
+        mvc.perform(post("/player/order/200/reject-invite").with(player(3))).andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(3)).isEqualTo("REJECTED");
+
+        mvc.perform(staffInvite("/cs", 81, "CS", 4)).andExpect(jsonPath("$.code").value(200));
+        Long invite = teamRow(4);
+        mvc.perform(post("/cs/order/200/teammates/"+invite+"/revoke").with(staff("CS", 81)))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(4)).isEqualTo("CANCELLED");
+
+        jdbc.update("UPDATE order_player SET status='INVITED',invite_deadline=? WHERE id=?", LocalDateTime.now().minusMinutes(1), invite);
+        mvc.perform(post("/player/order/200/accept-invite").with(player(4))).andExpect(jsonPath("$.code").value(409));
+        mvc.perform(get("/cs/order/200/teammates").with(staff("CS", 81)))
+                .andExpect(jsonPath("$.data[0].status").value("EXPIRED"));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+    }
+
+    @Test void staffMustHaveGrantAndAssignmentCannotBeBypassed() throws Exception {
+        prepareStaffTeam("IN_PROGRESS", 81L);
+        mvc.perform(staffInvite("/cs", 82, "CS", 3)).andExpect(jsonPath("$.code").value(403));
+        mvc.perform(get("/cs/order/200/teammates").with(staff("CS", 82))).andExpect(jsonPath("$.code").value(403));
+        mvc.perform(staffInvite("/admin", 91, "DEMO", 3)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        when(staffPermissions.allowed("order.manage")).thenReturn(false);
+        mvc.perform(staffInvite("/admin", 91, "ADMIN", 3)).andExpect(jsonPath("$.code").value(403));
+        assertThat(teammateStatus(3)).isNull();
+        when(staffPermissions.allowed("order.manage")).thenReturn(true);
+        jdbc.update("UPDATE \u0060order\u0060 SET cs_id=NULL WHERE id=200");
+        mvc.perform(staffInvite("/cs", 81, "CS", 3)).andExpect(jsonPath("$.code").value(403));
+        jdbc.update("INSERT INTO order_settlement_ledger(order_id) VALUES(200)");
+        mvc.perform(staffInvite("/admin", 91, "ADMIN", 3)).andExpect(jsonPath("$.code").value(409));
+        jdbc.update("DELETE FROM order_settlement_ledger WHERE order_id=200");
+        jdbc.update("UPDATE \u0060order\u0060 SET status='COMPLETED' WHERE id=200");
+        mvc.perform(staffInvite("/admin", 91, "ADMIN", 3)).andExpect(jsonPath("$.code").value(409));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(teammateStatus(3)).isNull();
+    }
+
+    @Test void immediateRemovalRequiresReasonAndCancelsAssociatedReplacement() throws Exception {
+        prepareStaffTeam("ACCEPTED", 81L);
+        mvc.perform(staffInvite("/admin", 91, "ADMIN", 3)).andExpect(jsonPath("$.code").value(200));
+        var remove = "/admin/order/200/teammates/" + teamRow(2) + "/remove";
+        mvc.perform(post(remove).with(staff("ADMIN", 91)).contentType("application/json").content("{}"))
+                .andExpect(jsonPath("$.code").value(400));
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        mvc.perform(post(remove).with(staff("ADMIN", 91)).contentType("application/json").content("{\"reason\":\"原队友无法继续\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        assertThat(teammateStatus(2)).isEqualTo("REPLACED");
+        assertThat(teammateStatus(3)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT operator_type FROM order_progress WHERE type='TEAMMATE_REMOVED'", String.class)).isEqualTo("ADMIN");
+        assertThat(jdbc.queryForObject("SELECT remark FROM order_progress WHERE type='TEAMMATE_REMOVED'", String.class)).isEqualTo("原队友无法继续");
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(409));
+        mvc.perform(post("/cs/order/200/teammates/invite").with(staff("CS", 81)).contentType("application/json")
+                        .content("{\"inviteePlayerId\":4,\"splitType\":\"FIFTY_FIFTY\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(post("/player/order/200/accept-invite").with(player(4))).andExpect(jsonPath("$.code").value(200));
+        mvc.perform(post("/player/order/200/start").with(player(1))).andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test void simultaneousStaffInvitesForSameSlotProduceOnlyOneReplacement() throws Exception {
+        prepareStaffTeam("IN_PROGRESS", 81L);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var start = new CyclicBarrier(2);
+            Future<String> a = pool.submit(() -> { start.await(5, TimeUnit.SECONDS);
+                return mvc.perform(staffInvite("/admin", 91, "ADMIN", 3)).andReturn().getResponse().getContentAsString(); });
+            Future<String> b = pool.submit(() -> { start.await(5, TimeUnit.SECONDS);
+                return mvc.perform(staffInvite("/cs", 81, "CS", 4)).andReturn().getResponse().getContentAsString(); });
+            assertThat(List.of(a.get(10, TimeUnit.SECONDS), b.get(10, TimeUnit.SECONDS)))
+                    .anyMatch(body -> body.contains("\"code\":200")).anyMatch(body -> body.contains("\"code\":409"));
+        } finally { pool.shutdownNow(); }
+        assertThat(teammateStatus(2)).isEqualTo("ACCEPTED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_player WHERE order_id=200 AND status='INVITED'", Integer.class)).isEqualTo(1);
+    }
+
+    private void prepareStaffTeam(String status, Long cs) {
+        invitation(status);
+        jdbc.update("UPDATE \u0060order\u0060 SET cs_id=? WHERE id=200", cs);
+        jdbc.update("UPDATE order_player SET status='ACCEPTED' WHERE order_id=200 AND player_id=2");
+        addReplacementPlayers();
+        when(staffPermissions.allowed("order.manage")).thenReturn(true);
+        when(staffPermissions.allowed("order.read")).thenReturn(true);
+    }
+
+    private Long teamRow(long playerId) {
+        return jdbc.queryForObject("SELECT id FROM order_player WHERE order_id=200 AND player_id=?", Long.class, playerId);
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder staffInvite(
+            String prefix, long staffId, String role, long target) {
+        return post(prefix + "/order/200/teammates/invite").with(staff(role, staffId)).contentType("application/json")
+                .content("{\"inviteePlayerId\":" + target + ",\"replacedTeammateId\":2,\"splitType\":\"FIFTY_FIFTY\",\"reason\":\"排班调整\"}");
+    }
+
+    private RequestPostProcessor staff(String type, long id) {
+        return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId", id, "userType", type), null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + type))));
+    }
+
+    private void addReplacementPlayers() {
+        jdbc.update("INSERT INTO player(id,openid,nickname,status,level,phone,is_online) VALUES" +
+                "(3,'player-three','测试打手丙','ACTIVE',1,'13900000003',1)," +
+                "(4,'player-four','测试打手丁','ACTIVE',1,'13900000004',1)");
+    }
+
+    private String teammateStatus(long playerId) {
+        return jdbc.queryForList("SELECT status FROM order_player WHERE order_id=200 AND player_id=?", String.class, playerId)
+                .stream().findFirst().orElse(null);
     }
 
     @Test void frozenPlayerCannotAcceptATeammateInvitation() throws Exception {
@@ -278,6 +445,16 @@ class PlayerBusinessRegressionTest {
         when(payments.playerDepositPaidAmount(7L)).thenReturn(new BigDecimal(paid));
     }
 
+    @Test void enrollmentOnlyDepositDoesNotBlockWithdrawal() throws Exception {
+        jdbc.update("UPDATE sys_config SET config_value='REQUIRED' WHERE config_key='player.deposit_mode'");
+        jdbc.update("INSERT INTO sys_config(config_key,config_value) VALUES('player.deposit_amount','999999')");
+        mvc.perform(get("/player/withdraw/deposit-status").with(player(1)))
+                .andExpect(jsonPath("$.data.needsPayment").value(false));
+        mvc.perform(post("/player/withdraw").with(player(1)).contentType("application/json")
+                        .content("{\"amount\":10,\"accountId\":10}"))
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
     @Test void unpaidDepositBlocksWithdrawalWithoutChangingTheWallet() throws Exception {
         beforeWithdrawDeposit("60");
         mvc.perform(get("/player/withdraw/deposit-status").with(player(1)))
@@ -310,7 +487,7 @@ class PlayerBusinessRegressionTest {
         mvc.perform(post("/player/withdraw").with(player(1)).contentType("application/json").content("{\"amount\":10,\"accountId\":10}"))
                 .andExpect(jsonPath("$.code").value(200));
         mvc.perform(post("/player/withdraw").with(player(1)).contentType("application/json").content("{\"amount\":10,\"accountId\":10}"))
-                .andExpect(jsonPath("$.code").value(500));
+                .andExpect(jsonPath("$.code").value(409));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM withdraw", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT balance FROM player_wallet WHERE player_id=1", BigDecimal.class)).isEqualByComparingTo("10");
     }
@@ -335,7 +512,7 @@ class PlayerBusinessRegressionTest {
             var first = executor.submit(request);
             var second = executor.submit(request);
             start.countDown();
-            assertThat(List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS))).containsExactlyInAnyOrder(200, 500);
+            assertThat(List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS))).containsExactlyInAnyOrder(200, 409);
         } finally {
             executor.shutdownNow();
         }

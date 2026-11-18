@@ -95,6 +95,7 @@ class AdminBatchControllerTest {
     private AdminPlayerController playerController(PlayerService players, PlayerGovernanceService governance) {
         return new AdminPlayerController(players, governance, mock(PlayerLevelService.class),
                 mock(PlayerWalletService.class), mock(OrderService.class), mock(TransactionService.class),
-                mock(ApplicationEventPublisher.class), mock(FeatureAuditService.class));
+                mock(ApplicationEventPublisher.class), mock(FeatureAuditService.class),
+                mock(com.delta.player.service.PlayerDepositService.class));
     }
 }

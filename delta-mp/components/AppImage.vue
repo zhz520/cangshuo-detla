@@ -3,7 +3,7 @@
 </template>
 <script setup>
 import { computed, nextTick, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { thumbnailUrl } from '@/utils/image'
+import { imageRecoveryUrl, thumbnailUrl } from '@/utils/image'
 const props = defineProps({
   src: { type: String, default: '' },
   mode: { type: String, default: 'aspectFill' },
@@ -12,7 +12,7 @@ const props = defineProps({
   eager: Boolean
 })
 const emit = defineEmits(['load', 'error'])
-const imageRef = ref(null), loaded = ref(false), failed = ref(false), original = ref(false)
+const imageRef = ref(null), loaded = ref(false), failed = ref(false), original = ref(false), recovered = ref('')
 const visible = ref(true)
 let observer
 // #ifdef H5
@@ -26,7 +26,7 @@ const isVector = computed(() => /\.svg(?:\?|$)/i.test(String(props.src || '')))
 const displaySource = computed(() => {
   if (!String(props.src || '').trim() || failed.value) return props.fallback
   if (!visible.value && !criticalSource.value) return ''
-  return original.value ? props.src : thumbnailUrl(props.src, props.width)
+  return recovered.value || (original.value ? props.src : thumbnailUrl(props.src, props.width))
 })
 function hints() {
   // #ifdef H5
@@ -35,11 +35,27 @@ function hints() {
   if (img) { img.decoding = 'async'; img.fetchPriority = props.eager ? 'high' : 'auto' }
   // #endif
 }
-watch(() => props.src, () => { loaded.value = false; failed.value = false; original.value = false; nextTick(hints) })
+watch([() => props.src, () => props.width], () => {
+  loaded.value = false
+  failed.value = false
+  original.value = false
+  recovered.value = ''
+  nextTick(hints)
+})
 function onLoad(event) { loaded.value = true; hints(); emit('load', event) }
 function onError(event) {
-  if (!original.value && displaySource.value !== props.src) { original.value = true; return }
-  if (!failed.value) { failed.value = true; loaded.value = true; emit('error', event) }
+  if (failed.value || !displaySource.value) return
+  const source = String(props.src || '').trim()
+  if (source && !original.value && displaySource.value !== source) { original.value = true; return }
+  // #ifdef H5
+  if (!recovered.value && source) {
+    const retry = imageRecoveryUrl(source, window.location.origin, Date.now())
+    if (retry) { recovered.value = retry; return }
+  }
+  // #endif
+  failed.value = true
+  loaded.value = true
+  emit('error', event)
 }
 onMounted(() => {
   // #ifdef H5

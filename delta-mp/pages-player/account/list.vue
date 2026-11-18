@@ -96,20 +96,20 @@ async function doDelete(id) {
 }
 </script>
 <style lang="scss" scoped>
-.account-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 24rpx 24rpx calc(32rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
-.refresh-tip { color: #777777; font-size: 24rpx; text-align: center; padding: 16rpx; }
-.action-error { color: #b84b55; background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 20rpx; font-size: 25rpx; }
-.account-card { background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 24rpx; margin-bottom: 20rpx;
+.account-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 24rpx 24rpx calc(32rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
+.refresh-tip { color: var(--store-regular); font-size: 24rpx; text-align: center; padding: 16rpx; }
+.action-error { color: #b84b55; background: var(--store-surface); border-radius: 16rpx; padding: 24rpx; margin-bottom: 20rpx; font-size: 25rpx; }
+.account-card { background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx; padding: 24rpx; margin-bottom: 20rpx;
   .card-top { display: flex; align-items: center; gap: 8rpx; margin-bottom: 12rpx;
     .type-icon { width: 36rpx; height: 36rpx; } .type-name { font-size: 28rpx; font-weight: bold; }
-    .default-tag { font-size: 20rpx; color: #111111; background: #f7f7f8; padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: auto; }
+    .default-tag { font-size: 20rpx; color: var(--store-text); background: var(--store-soft); padding: 2rpx 12rpx; border-radius: 4rpx; margin-left: auto; }
   }
-  .account-no { font-size: 32rpx; color: #111111; letter-spacing: 2rpx; display: block; word-break: break-all; }
-  .real-name { font-size: 24rpx; color: #777777; display: block; margin-top: 4rpx; }
+  .account-no { font-size: 32rpx; color: var(--store-text); letter-spacing: 2rpx; display: block; word-break: break-all; }
+  .real-name { font-size: 24rpx; color: var(--store-regular); display: block; margin-top: 4rpx; }
   .identity-warning { font-size: 22rpx; line-height: 1.5; color: #a04b55; display: block; margin-top: 6rpx; }
   .card-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f7f7f7;
-    .action-btn { margin: 0; padding: 8rpx 16rpx; background: #f7f8fa; font-size: 26rpx; line-height: 1.6; color: #111111; border-radius: 12rpx; &::after { border: 0; } &[disabled] { opacity: .5; } &.danger { color: #b84b55; } }
+    .action-btn { margin: 0; padding: 8rpx 16rpx; background: var(--store-soft); font-size: 26rpx; line-height: 1.6; color: var(--store-text); border-radius: 12rpx; &::after { border: 0; } &[disabled] { opacity: .5; } &.danger { color: #b84b55; } }
   }
 }
-.add-btn { text-align: center; line-height: 1.6; padding: 24rpx; background: #111111; border-radius: 999rpx; font-size: 28rpx; color: #fff; margin-top: 20rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
+.add-btn { text-align: center; line-height: 1.6; padding: 24rpx; background: var(--store-primary); border-radius: 999rpx; font-size: 28rpx; color: #fff; margin-top: 20rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
 </style>

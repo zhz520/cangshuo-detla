@@ -22,29 +22,47 @@ public class IdentityBillingClient {
     private final PlatformProperties properties;
     private final PlatformService platform;
     private final ObjectMapper json;
+    private final com.delta.common.sms.service.SmsGatewayClient gateway;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public record Result(boolean matched, String status, long balanceCents) {}
 
     public boolean configured() {
-        try { endpoint(); return true; } catch (Exception error) { return false; }
+        try { gateway.signedJsonRequest(endpoint("verify"), "{}"); return true; } catch (Exception error) { return false; }
     }
 
     public Result verify(String realName, String idNumber, String idempotencyKey) {
-        URI endpoint = endpoint();
+        var body = clientBody();
+        body.put("idempotencyKey", idempotencyKey);
+        body.put("realName", realName);
+        body.put("idNumber", idNumber);
+        JsonNode payload = request("verify", body);
+        if (!payload.path("matched").isBoolean()) throw new BusinessException(502, "实名核验服务返回异常");
+        return new Result(payload.path("matched").asBoolean(), payload.path("status").asText(""),
+                payload.path("balanceCents").asLong(0));
+    }
+
+    public JsonNode account() { return request("account", clientBody()); }
+
+    public JsonNode checkout(String id) {
+        if (!id.matches("[0-9a-f-]{36}")) throw new BusinessException(400, "套餐编号无效");
+        return request("packages/" + id + "/checkout", clientBody());
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode clientBody() {
         var license = platform.reportPayload().license();
         if (license == null) throw new BusinessException(409, "当前实例尚未完成授权接入");
         var body = json.createObjectNode();
         body.set("license", json.valueToTree(license));
         body.put("version", platform.overview().version());
-        body.put("idempotencyKey", idempotencyKey);
-        body.put("realName", realName);
-        body.put("idNumber", idNumber);
+        return body;
+    }
+
+    private JsonNode request(String path, JsonNode body) {
         try {
-            var request = HttpRequest.newBuilder(endpoint)
+            URI endpoint = endpoint(path);
+            var request = gateway.signedJsonRequest(endpoint, json.writeValueAsString(body))
                     .timeout(Duration.ofSeconds(12))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body), StandardCharsets.UTF_8))
                     .build();
             var response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             JsonNode payload;
@@ -57,9 +75,18 @@ public class IdentityBillingClient {
                         : response.statusCode() == 403 ? 403 : 502;
                 throw new BusinessException(status, safeMessage(message));
             }
-            if (!payload.path("matched").isBoolean()) throw new BusinessException(502, "实名核验服务返回异常");
-            return new Result(payload.path("matched").asBoolean(), payload.path("status").asText(""),
-                    payload.path("balanceCents").asLong(0));
+            if (payload == null || !payload.isObject()) throw new BusinessException(502, "实名核验服务返回异常");
+            if (path.endsWith("/checkout")) {
+                URI target = URI.create(payload.path("checkoutUrl").asText());
+                if (!java.util.Objects.equals(target.getScheme(), endpoint.getScheme())
+                        || !java.util.Objects.equals(target.getRawAuthority(), endpoint.getRawAuthority())
+                        || !target.getPath().matches("/pay/identity-package/[A-Za-z0-9_-]{43}"))
+                    throw new BusinessException(502, "实名套餐支付地址无效");
+            }
+            return payload;
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(503, "实名核验服务请求已中断");
         } catch (BusinessException error) {
             throw error;
         } catch (Exception error) {
@@ -67,7 +94,7 @@ public class IdentityBillingClient {
         }
     }
 
-    private URI endpoint() {
+    private URI endpoint(String action) {
         String raw = properties.getReportUrl();
         if (raw == null || raw.isBlank()) throw new IllegalStateException("authority report URL missing");
         URI report = URI.create(raw.trim());
@@ -80,7 +107,7 @@ public class IdentityBillingClient {
         if (slash < 0) throw new IllegalStateException("authority report path invalid");
         try {
             return new URI(report.getScheme(), report.getUserInfo(), report.getHost(), report.getPort(),
-                    path.substring(0, slash + 1) + "identity/verify", null, null);
+                    path.substring(0, slash + 1) + "identity/" + action, null, null);
         } catch (Exception error) {
             throw new IllegalStateException("authority report URL invalid", error);
         }

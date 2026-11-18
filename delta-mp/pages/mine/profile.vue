@@ -115,7 +115,7 @@ async function save() {
 <style lang="scss" scoped>
 .profile-page {
   padding: 24rpx;
-  background: #f7f7f7;
+  background: var(--store-soft);
   min-height: var(--app-page-height, 100vh);
 }
 
@@ -142,20 +142,20 @@ async function save() {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
-  border: 4rpx solid rgba(23, 25, 28, 0.2);
+  border: 4rpx solid var(--store-line);
 }
 
 .avatar-edit-hint {
   margin-top: 16rpx;
   .hint-text {
     font-size: 24rpx;
-    color: #111111;
+    color: var(--store-text);
   }
 }
-.avatar-ratio-tip { display: block; max-width: 560rpx; margin: 14rpx auto 0; color: #999999; font-size: 21rpx; line-height: 1.5; text-align: center; }
+.avatar-ratio-tip { display: block; max-width: 560rpx; margin: 14rpx auto 0; color: var(--store-muted); font-size: 21rpx; line-height: 1.5; text-align: center; }
 
 .form-card {
-  background: #ffffff;
+  background: var(--store-surface);
   border-radius: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(23, 25, 28, 0.04);
   overflow: hidden;
@@ -166,13 +166,13 @@ async function save() {
   align-items: center;
   justify-content: space-between;
   padding: 32rpx 28rpx;
-  border-bottom: 1rpx solid #eeeeee;
+  border-bottom: 1rpx solid var(--store-line);
 
   &:last-child { border-bottom: none; }
 
   .label {
     font-size: 28rpx;
-    color: #41464e;
+    color: var(--store-regular);
     flex-shrink: 0;
     margin-right: 20rpx;
   }
@@ -181,17 +181,17 @@ async function save() {
     flex: 1;
     text-align: right;
     font-size: 28rpx;
-    color: #111111;
+    color: var(--store-text);
   }
 
   .value {
     font-size: 28rpx;
-    color: #777777;
+    color: var(--store-regular);
   }
 
   .uid {
     font-size: 24rpx;
-    color: #777777;
+    color: var(--store-regular);
   }
 }
 
@@ -199,7 +199,7 @@ async function save() {
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   font-weight: bold;
   font-size: 32rpx;

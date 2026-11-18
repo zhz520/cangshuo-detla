@@ -72,17 +72,17 @@ function load() {
 function previewProof() { if (detail.value?.proofImage) uni.previewImage({ urls: [detail.value.proofImage], current: detail.value.proofImage }) }
 </script>
 <style lang="scss" scoped>
-.detail-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 1rpx 0 calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
-.refresh-tip { color: #777777; font-size: 24rpx; text-align: center; padding: 16rpx; }
-.status-header { margin: 24rpx 24rpx 0; border-radius: 20rpx; padding: 40rpx; text-align: center; color: #111111; background: #fff; border: 1rpx solid #edf0f2;
+.detail-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 1rpx 0 calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
+.refresh-tip { color: var(--store-regular); font-size: 24rpx; text-align: center; padding: 16rpx; }
+.status-header { margin: 24rpx 24rpx 0; border-radius: 20rpx; padding: 40rpx; text-align: center; color: var(--store-text); background: var(--store-surface); border: 1rpx solid var(--store-line);
   &.pending { color: #996b30; } &.approved, &.completed { color: #347a5b; } &.rejected { color: #b84b55; }
   .status-text { font-size: 36rpx; font-weight: bold; display: block; }
   .reject-reason { font-size: 24rpx; opacity: 0.9; display: block; margin-top: 8rpx; }
 }
-.amount-section { text-align: center; padding: 48rpx; .amount { font-size: 56rpx; font-weight: bold; color: #111111; } }
-.info-card, .proof-card { margin: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 8rpx 24rpx; }
-.proof-card { padding: 24rpx; }.proof-label { display: block; color: #777777; font-size: 26rpx; margin-bottom: 16rpx; }.proof-image { width: 100%; height: 360rpx; }
+.amount-section { text-align: center; padding: 48rpx; .amount { font-size: 56rpx; font-weight: bold; color: var(--store-text); } }
+.info-card, .proof-card { margin: 24rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx; padding: 8rpx 24rpx; }
+.proof-card { padding: 24rpx; }.proof-label { display: block; color: var(--store-regular); font-size: 26rpx; margin-bottom: 16rpx; }.proof-image { width: 100%; height: 360rpx; }
 .info-row { display: flex; justify-content: space-between; gap: 24rpx; padding: 20rpx 0; border-bottom: 1rpx solid #f7f7f7;
-  .label { font-size: 26rpx; color: #777777; flex-shrink: 0; } .value { font-size: 26rpx; color: #111111; text-align: right; word-break: break-all; }
+  .label { font-size: 26rpx; color: var(--store-regular); flex-shrink: 0; } .value { font-size: 26rpx; color: var(--store-text); text-align: right; word-break: break-all; }
 }
 </style>

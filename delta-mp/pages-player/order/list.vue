@@ -47,10 +47,10 @@ onPullDownRefresh(async () => {
 })
 </script>
 <style lang="scss" scoped>
-.player-order-list { width: 100%; overflow: hidden; box-sizing: border-box; background: #ffffff; position: relative; }
-.tabs { background: #f7f7f7; border-bottom:1rpx solid #f7f7f7; white-space:nowrap; }
+.player-order-list { width: 100%; overflow: hidden; box-sizing: border-box; background: var(--store-surface); position: relative; }
+.tabs { background: var(--store-soft); border-bottom:1rpx solid #f7f7f7; white-space:nowrap; }
 .tabs-inner { display:inline-flex; padding:0 12rpx; }
-.tab { padding:24rpx 24rpx; font-size:26rpx; color: #777777; flex-shrink:0; &.active { color: #111111; border-bottom:4rpx solid rgba(23, 25, 28, 0.5); } }
+.tab { padding:24rpx 24rpx; font-size:26rpx; color: var(--store-regular); flex-shrink:0; &.active { color: var(--store-text); border-bottom:4rpx solid var(--store-line); } }
 .list { height: calc(var(--app-page-height, 100vh) - 190rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; box-sizing: border-box; overflow-x: hidden; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-regular); }
 </style>

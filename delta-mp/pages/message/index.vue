@@ -58,6 +58,10 @@ const finished = ref(false)
 const announcements = ref(false)
 const notices = ref([])
 const noticeError = ref('')
+const listError = ref('')
+const marking = new Set()
+const markingAll = ref(false)
+const remind = useRemindStore()
 const openNoticeId = ref(null)
 
 onLoad((options) => {
@@ -91,11 +95,21 @@ async function loadData() {
 }
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 async function onTap(m) {
-  if (!m.isRead) { await markRead(m.id); m.isRead = 1; useRemindStore().changed() }
+  if (markingAll.value || marking.has(m.id)) return
+  if (Number(m.isRead) !== 1) {
+    marking.add(m.id)
+    try {
+      await markRead(m.id)
+      m.isRead = 1
+      remind.readConfirmed('systemUnread', Math.max(0, remind.systemUnread - 1))
+    } catch (_) { return }
+    finally { marking.delete(m.id) }
+  }
   const role = getCurrentRole()
   const type = m.bizType
   const relatedId = encodeURIComponent(m.relatedId || '')
   let url = ''
+  if (type === 'PRIVACY_REQUEST' && role === 'user') url = '/pages/mine/privacy-center'
   if (type === 'IDENTITY_REVIEWED' && role === 'user') url = '/pages/mine/identity'
   if (type === 'MATERIAL_REVIEWED' && role === 'player') url = '/pages-player/profile/introduction'
   if (['WITHDRAW_COMPLETED', 'WITHDRAW_REJECTED'].includes(type) && role === 'player') url = '/pages-player/withdraw/list'
@@ -108,46 +122,48 @@ async function onTap(m) {
 }
 
 async function markAllReadClick() {
+  if (marking.size || markingAll.value) return
+  markingAll.value = true
   try {
     const role = clientStorage.get('app_role') || 'user'
     const userType = role === 'cs' ? 'CS' : role === 'player' ? 'PLAYER' : 'USER'
     await markAllRead(userType)
     uni.showToast({ title: '已全部标为已读', icon: 'none' })
     messages.value.forEach(m => { m.isRead = 1 })
-    useRemindStore().changed()
+    remind.readConfirmed('systemUnread', 0)
   } catch (e) {
-    uni.showToast({ title: '操作失败', icon: 'none' })
-  }
+    // request.js already reports the failed write.
+  } finally { markingAll.value = false }
 }
 </script>
 <style lang="scss" scoped>
-.message-page { display: flex; flex-direction: column; height: var(--app-page-height, 100vh); min-height: 0; background: #f7f7f7; overflow: hidden; }
-.read-all { padding: 9rpx 16rpx; border: 1rpx solid #171717; border-radius: 14rpx; color: #171717; font-size: 20rpx; font-weight: 700; }
-.header-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 24rpx 20rpx; background: #f7f7f7; border-bottom: 1rpx solid #eeeeee; }
-.page-title { font-size: 32rpx; font-weight: bold; color: #111111; }
-.btn-read-all { font-size: 28rpx; color: #111111; }
+.message-page { display: flex; flex-direction: column; height: var(--app-page-height, 100vh); min-height: 0; background: var(--store-soft); overflow: hidden; }
+.read-all { padding: 9rpx 16rpx; border: 1rpx solid #171717; border-radius: 14rpx; color: var(--store-text); font-size: 20rpx; font-weight: 700; }
+.header-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 24rpx 20rpx; background: var(--store-soft); border-bottom: 1rpx solid var(--store-line); }
+.page-title { font-size: 32rpx; font-weight: bold; color: var(--store-text); }
+.btn-read-all { font-size: 28rpx; color: var(--store-text); }
 .list { flex: 1; height: 0; min-height: 0; padding: 0 24rpx 30rpx; box-sizing: border-box; }
-.msg-item { padding: 22rpx; margin-top: 12rpx; background: #ffffff; border: 1rpx solid #eeeeee; border-radius: 20rpx; }
+.msg-item { padding: 22rpx; margin-top: 12rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx; }
 .msg-header { display: flex; align-items: center; gap: 8rpx;
-  .msg-title { font-size: 28rpx; font-weight: 500; color: #111111; flex: 1; }
+  .msg-title { font-size: 28rpx; font-weight: 500; color: var(--store-text); flex: 1; }
   .dot { width: 14rpx; height: 14rpx; background: #d44955; border-radius: 50%; flex-shrink: 0; }
 }
-.msg-content { font-size: 26rpx; color: #777777; margin-top: 8rpx; display: block; }
-.notice-expand { color: #666666; font-size: 22rpx; flex-shrink: 0; }
-.msg-time { font-size: 22rpx; color: #777777; margin-top: 8rpx; display: block; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
+.msg-content { font-size: 26rpx; color: var(--store-regular); margin-top: 8rpx; display: block; }
+.notice-expand { color: var(--store-regular); font-size: 22rpx; flex-shrink: 0; }
+.msg-time { font-size: 22rpx; color: var(--store-regular); margin-top: 8rpx; display: block; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-regular); }
 </style>
 <style lang="scss" scoped>
-.read-all { padding: 0; border: 0; color: #777777; font-size: 23rpx; font-weight: 650; }
+.read-all { padding: 0; border: 0; color: var(--store-regular); font-size: 23rpx; font-weight: 650; }
 .list { padding: 8rpx 28rpx calc(34rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
-.msg-item { padding: 26rpx; margin-top: 14rpx; background: #ffffff; border: 0; border-radius: 24rpx; }
-.msg-header .msg-title { font-size: 30rpx; font-weight: 800; color: #111111; }
+.msg-item { padding: 26rpx; margin-top: 14rpx; background: var(--store-surface); border: 0; border-radius: 24rpx; }
+.msg-header .msg-title { font-size: 30rpx; font-weight: 800; color: var(--store-text); }
 .msg-header .dot { width: 14rpx; height: 14rpx; background: #e24d4d; }
-.msg-content { font-size: 24rpx; color: #666666; line-height: 1.7; margin-top: 14rpx; }
-.notice-expand { color: #111111; font-size: 22rpx; font-weight: 650; }
-.msg-time { font-size: 21rpx; color: #aaaaaa; margin-top: 10rpx; }
-.empty-page { display: flex; flex-direction: column; align-items: center; padding: 90rpx 24rpx; margin-top: 14rpx; border-radius: 24rpx; background: #ffffff; }
+.msg-content { font-size: 24rpx; color: var(--store-regular); line-height: 1.7; margin-top: 14rpx; }
+.notice-expand { color: var(--store-text); font-size: 22rpx; font-weight: 650; }
+.msg-time { font-size: 21rpx; color: var(--store-muted); margin-top: 10rpx; }
+.empty-page { display: flex; flex-direction: column; align-items: center; padding: 90rpx 24rpx; margin-top: 14rpx; border-radius: 24rpx; background: var(--store-surface); }
 .empty-page-icon { width: 112rpx; height: 112rpx; opacity: .45; }
-.empty-page-title { margin-top: 18rpx; color: #111111; font-size: 30rpx; font-weight: 800; }
-.empty-page-desc { margin-top: 8rpx; color: #999999; font-size: 22rpx; }
+.empty-page-title { margin-top: 18rpx; color: var(--store-text); font-size: 30rpx; font-weight: 800; }
+.empty-page-desc { margin-top: 8rpx; color: var(--store-muted); font-size: 22rpx; }
 </style>

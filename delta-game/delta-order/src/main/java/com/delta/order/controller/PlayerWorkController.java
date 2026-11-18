@@ -48,7 +48,13 @@ public class PlayerWorkController {
             order.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
             if (crossModuleMapper.selectUserIsGuest(order.getUserId()) == 1) order.setContact(null);
             order.setTeammates(orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,id).eq(OrderPlayer::getRole,"TEAMMATE")));
-            order.getTeammates().forEach(op->{op.setNickname(crossModuleMapper.selectPlayerNickname(op.getPlayerId()));op.setAvatar(crossModuleMapper.selectPlayerAvatar(op.getPlayerId()));});
+            LocalDateTime now = LocalDateTime.now();
+            order.getTeammates().forEach(op -> {
+                op.setNickname(crossModuleMapper.selectPlayerNickname(op.getPlayerId()));
+                op.setAvatar(crossModuleMapper.selectPlayerAvatar(op.getPlayerId()));
+                if ("INVITED".equals(op.getStatus()) && op.getInviteDeadline() != null && !op.getInviteDeadline().isAfter(now))
+                    op.setStatus("EXPIRED");
+            });
         }
         return R.ok(order);
     }

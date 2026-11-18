@@ -1,7 +1,6 @@
 package com.delta.system.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.util.Arrays;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.common.notification.NotificationTemplateSources;
@@ -34,7 +33,8 @@ public class SysConfigController {
     @GetMapping("/list")
     public R<List<SysConfig>> list() {
         ensureBuiltinConfigs();
-        List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId));
+        List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId))
+                .stream().filter(config -> !retiredOrDedicated(config.getConfigKey())).toList();
         repairMetadata(list);
         list.forEach(c -> {if(secret(c.getConfigKey()) && c.getConfigValue()!=null && !c.getConfigValue().isBlank()) c.setConfigValue("********");});
         return R.ok(list);
@@ -145,6 +145,7 @@ public class SysConfigController {
         String officialOrigin = sysConfigService.getConfigValue("wx.pay.official-return-origin", "").trim();
         map.put("wx_pay_official_enabled", Boolean.toString("true".equalsIgnoreCase(officialEnabled)
                 && !officialAppId.isBlank() && !officialSecret.isBlank() && !officialOrigin.isBlank()));
+        map.put("age_confirmation_enabled", sysConfigService.getConfigValue("auth.age_confirmation.enabled", "false"));
         map.put("notice_popup_every_visit", sysConfigService.getConfigValue("notice.popup_every_visit", "true"));
         map.put("tech_support_text", sysConfigService.getConfigValue("site.tech_support_text", "KK云网络提供技术支持"));
         map.put("tech_support_url", sysConfigService.getConfigValue("site.tech_support_url", ""));
@@ -209,6 +210,7 @@ public class SysConfigController {
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         ensureConfig("order.cooperation.enabled", "启用协同打单", "true", "boolean", "订单配置",
                 "关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算");
+        ensureConfig("auth.age_confirmation.enabled","打开前台前确认已满18岁","false","boolean","账号与登录","");
         ensureConfig("auth.phone.enabled", "启用手机验证码登录", "true", "boolean", "账号与登录",
                 "关闭后网页端不再提供手机验证码登录；密码辅助入口和微信登录分别受独立开关控制");
         ensureConfig("auth.password.enabled", "启用密码辅助登录", "true", "boolean", "账号与登录",
@@ -232,7 +234,6 @@ public class SysConfigController {
         ensureConfig("player.directory.enabled", "展示打手页面", "true", "boolean", "打手配置",
                 "关闭后隐藏用户端底部打手入口，并阻止直接打开打手列表或详情页面");
         ensureConfig("sms.aliyun.otp_enabled","启用短信验证码登录","false","boolean","短信配置","仅在验证码模板和短信风控验收后开启");
-        ensureConfig("sms.aliyun.template_code.verification","短信验证码模板 Code","","text","短信配置","已审核模板，使用code作为验证码参数名");
         ensureConfig("player.deposit_mode", "打手押金政策",
                 "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE",
                 "text", "打手配置", "REQUIRED：入驻必须缴纳；NONE：全部不收；BEFORE_WITHDRAW：入驻免交，提现前按等级补交");
@@ -279,54 +280,19 @@ public class SysConfigController {
                 "填写 WAP、IOS 或 ANDROID；普通手机浏览器使用 WAP");
         ensureConfig("wx.pay.h5-app-name", "H5 应用名称", "三角洲服务", "text", "微信支付配置",
                 "微信 H5 支付场景中的应用名称");
-        ensureConfig("sms.aliyun.enabled", "启用阿里云短信提醒", "false", "boolean", "短信配置",
-                "开启后聊天页和后台业务事件均可发送短信提醒");
-        ensureConfig("sms.aliyun.access_key_id", "阿里云 AccessKey ID", "", "text", "短信配置",
-                "阿里云 RAM 用户的 AccessKey ID");
-        ensureConfig("sms.aliyun.access_key_secret", "阿里云 AccessKey Secret", "", "text", "短信配置",
-                "阿里云 RAM 用户的 AccessKey Secret");
-        ensureConfig("sms.aliyun.endpoint", "阿里云短信 Endpoint", "dysmsapi.aliyuncs.com", "text", "短信配置",
-                "短信服务默认 Endpoint，一般无需修改");
-        ensureConfig("sms.aliyun.sign_name", "阿里云短信签名", "", "text", "短信配置",
-                "已审核通过的短信签名");
-        ensureConfig("sms.aliyun.template_code.cs_message_reminder", "消息提醒模板 Code", "SMS_504365043", "text", "短信配置",
-                "用户、打手、客服端通用的消息提醒短信模板");
-        ensureConfig("sms.aliyun.template_code.player_finish_order", "通知老板结单模板 Code", "SMS_504575043", "text", "短信配置",
-                "打手端通知老板结单使用的固定内容短信模板");
-        ensureConfig("sms.aliyun.template_code.player_order_assigned", "打手被指派模板 Code", "SMS_504890091", "text", "短信配置",
-                "后台自动发送给被指派打手的固定内容短信模板");
-        ensureConfig("sms.aliyun.template_code.player_teammate_invited", "打手被邀请模板 Code", "SMS_504775096", "text", "短信配置",
-                "后台自动发送给被邀请打手的固定内容短信模板");
-        ensureConfig("sms.notification.templates.user", "客户业务短信模板组", "{}", "json", "短信配置",
-                "JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review分组配置templateCode和fields");
-        ensureConfig("sms.notification.templates.player", "打手业务短信模板组", "{}", "json", "短信配置",
-                "JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review分组配置templateCode和fields");
-        ensureConfig("sms.notification.templates.admin", "管理员业务短信模板组", "{}", "json", "短信配置",
-                "JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review分组配置templateCode和fields");
-        ensureConfig("sms.notification.templates.cs", "客服业务短信模板组", "{}", "json", "短信配置",
-                "JSON对象；按new_order/order_status/refund_status/complaint_status/staff_review分组配置templateCode和fields");
         ensureConfig("sms.aliyun.cooldown_seconds", "客服短信提醒冷却秒数", "60", "number", "短信配置",
                 "客服发送短信提醒的冷却时间");
         ensureConfig("sms.aliyun.user_player_cooldown_seconds", "用户/打手短信冷却秒数", "600", "number", "短信配置",
                 "用户端和打手端全局发送短信提醒冷却时间");
         ensureConfig("sms.aliyun.player_fee", "打手短信提醒扣费金额", "0.05", "number", "短信配置",
                 "打手每次成功发送短信提醒时从余额中扣除的金额");
+        ensureConfig("sms.gateway.enabled", "启用授权中心短信网关", "false", "boolean", "短信配置",
+                "开启后短信统一经授权中心发送和计费；授权中心未配置模板或额度不足时发送失败关闭");
+        ensureConfig("sms.gateway.timeout-ms", "短信网关超时毫秒", "8000", "number", "短信配置",
+                "建议 5000 至 15000；超时只返回未知状态，客户端不能自动换幂等键重发");
+        ensureConfig("sms.gateway.client-version", "短信网关客户端版本", "1.16.5", "text", "短信配置",
+                "用于授权中心模板最低版本校验，不要写客户展示版本");
 
-        // 删除已废弃的配置项
-        sysConfigService.remove(new LambdaQueryWrapper<SysConfig>()
-                .in(SysConfig::getConfigKey, Arrays.asList(
-                        "sms.aliyun.template_code.player_invite_login",
-                        "sms.aliyun.template_code.user_allow_login",
-                        "sms.aliyun.template_code.user_notify_player"
-                )));
-        // 将旧名称“客服消息提醒模板 Code”更新为“消息提醒模板 Code”
-        SysConfig msgTpl = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>()
-                .eq(SysConfig::getConfigKey, "sms.aliyun.template_code.cs_message_reminder"));
-        if (msgTpl != null && !"消息提醒模板 Code".equals(msgTpl.getConfigName())) {
-            msgTpl.setConfigName("消息提醒模板 Code");
-            msgTpl.setRemark("用户、打手、客服端通用的消息提醒短信模板");
-            sysConfigService.updateById(msgTpl);
-        }
         SysConfig wxAppId = sysConfigService.getOne(new LambdaQueryWrapper<SysConfig>()
                 .eq(SysConfig::getConfigKey, "wx.pay.appid"));
         if (wxAppId != null && !"小程序支付 AppID".equals(wxAppId.getConfigName())) {
@@ -348,16 +314,24 @@ public class SysConfigController {
         }
     }
 
-    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","wx.pay.official-appsecret","sms.aliyun.access_key_secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
+    private boolean retiredOrDedicated(String key) {
+        return key != null && (key.startsWith("sms.gateway.") || key.startsWith("sms.notification.templates.")
+                || key.startsWith("sms.aliyun.template_code.") || key.startsWith("sms.aliyun.access_key_")
+                || java.util.Set.of("sms.aliyun.enabled", "sms.aliyun.endpoint", "sms.aliyun.sign_name",
+                "sms.aliyun.otp_enabled", "sms.provider.mode", "identity.auto.enabled",
+                "identity.auto.attempt_limit_enabled", "identity.auto.max_failed_attempts",
+                "identity.auto.failed_window_hours", "identity.auto.lock_hours").contains(key));
+    }
+    private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","wx.pay.official-appsecret","sms.aliyun.access_key_secret","sms.gateway.secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
     private void updateValue(SysConfig submitted) {
         SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
         if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
         String key=old.getConfigKey(),value=submitted.getConfigValue();
+        if (retiredOrDedicated(key)) throw new com.delta.common.exception.BusinessException(409,"该配置已迁移至专用服务页面");
         if(key!=null && key.startsWith("email.notifications.")) throw new com.delta.common.exception.BusinessException(409,"邮件通知配置请使用专用设置页面保存");
         if(com.delta.system.service.RewardGrabRulesService.KEY.equals(key)) return; // Edited through validated dedicated settings only.
-        if(value==null || secret(key) && "********".equals(value)) return;
+        if(value==null || secret(key) && ("********".equals(value) || value.isBlank())) return;
         if(value.length()>10000) throw new com.delta.common.exception.BusinessException(400,"配置内容过长");
-        if("sms.aliyun.endpoint".equals(key) && !"dysmsapi.aliyuncs.com".equals(value)) throw new com.delta.common.exception.BusinessException(400,"短信服务地址无效");
         if("wx.pay.api-v3-key".equals(key) && !value.isEmpty() && value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length!=32)
             throw new com.delta.common.exception.BusinessException(400,"微信API v3密钥须为32字节");
         if("wx.pay.official-return-origin".equals(key) && !value.isBlank())try{
@@ -376,6 +350,8 @@ public class SysConfigController {
         }
         if("withdraw.require_identity_match".equals(key)&&!java.util.Set.of("true","false").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
+        if ("auth.age_confirmation.enabled".equals(key) && !java.util.Set.of("true", "false").contains(value))
+            throw new com.delta.common.exception.BusinessException(400, "年龄确认开关无效");
         if("auth.primary_method".equals(key)&&!java.util.Set.of("PHONE","WECHAT").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"网页主登录方式只能是 PHONE 或 WECHAT");
         if("identity.prompt_mode".equals(key)&&!java.util.Set.of("OFF","REMIND","REQUIRED").contains(value))
@@ -498,8 +474,8 @@ public class SysConfigController {
                 && !appId.isBlank() && !appSecret.isBlank();
         if (!phone && !password && !wechat)
             throw new com.delta.common.exception.BusinessException(400, "至少保留一种可用的网页登录方式，并先完成公众号配置后再关闭手机与密码登录");
-        if ("WECHAT".equalsIgnoreCase(values.getOrDefault("auth.primary_method", "PHONE")) && !wechat)
-            throw new com.delta.common.exception.BusinessException(400, "微信尚未启用或公众号凭据未配置，不能设为主登录方式");
+        if ("WECHAT".equalsIgnoreCase(values.getOrDefault("auth.primary_method", "PHONE")) && !wechat && !phone)
+            throw new com.delta.common.exception.BusinessException(400, "微信凭据未配置。请保留手机验证码登录作为兜底");
     }
 
     private void validateOfficialTemplate(String value) {

@@ -293,15 +293,15 @@ function goBuy() {
 <style lang="scss" scoped>
 .product-detail {
   min-height: var(--app-page-height, 100vh);
-  background: #f7f7f7;
-  color: #111111;
+  background: var(--store-soft);
+  color: var(--store-text);
   padding-bottom: calc(150rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
 }
 .detail-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: #ffffff;
+  background: var(--store-surface);
 }
 .header-btn {
   width: 64rpx;
@@ -328,7 +328,7 @@ function goBuy() {
   display: flex;
   gap: 12rpx;
   .dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: rgba(255,255,255,.55); transition: all .25s; }
-  .dot.active { width: 32rpx; border-radius: 6rpx; background: #ffffff; }
+  .dot.active { width: 32rpx; border-radius: 6rpx; background: var(--store-surface); }
 }
 .img-counter {
   position: absolute;
@@ -344,30 +344,30 @@ function goBuy() {
   margin-top: 18rpx;
   padding: 28rpx 26rpx;
   border-radius: 26rpx;
-  background: #ffffff;
+  background: var(--store-surface);
 }
 .head-top { display: flex; align-items: flex-start; gap: 18rpx; }
 .head-copy { flex: 1; min-width: 0; }
-.product-name { display: block; color: #111111; font-size: 40rpx; font-weight: 850; line-height: 1.28; letter-spacing: -0.02em; }
-.product-subtitle { display: block; margin-top: 8rpx; color: #777777; font-size: 24rpx; line-height: 1.45; }
-.rating-row { display: flex; align-items: center; gap: 8rpx; margin-top: 16rpx; color: #555b63; font-size: 22rpx; }
-.rating-star { color: #111111; font-size: 24rpx; }
-.rating-value { color: #111111; font-weight: 800; }
+.product-name { display: block; color: var(--store-text); font-size: 40rpx; font-weight: 850; line-height: 1.28; letter-spacing: -0.02em; }
+.product-subtitle { display: block; margin-top: 8rpx; color: var(--store-regular); font-size: 24rpx; line-height: 1.45; }
+.rating-row { display: flex; align-items: center; gap: 8rpx; margin-top: 16rpx; color: var(--store-regular); font-size: 22rpx; }
+.rating-star { color: var(--store-text); font-size: 24rpx; }
+.rating-value { color: var(--store-text); font-weight: 800; }
 .rating-divider { color: #dddddd; }
-.rating-count { color: #888888; }
-.rating-arrow { color: #aaaaaa; font-size: 28rpx; line-height: 1; }
-.head-price { flex-shrink: 0; display: flex; align-items: baseline; color: #111111; padding-top: 4rpx; }
+.rating-count { color: var(--store-muted); }
+.rating-arrow { color: var(--store-muted); font-size: 28rpx; line-height: 1; }
+.head-price { flex-shrink: 0; display: flex; align-items: baseline; color: var(--store-text); padding-top: 4rpx; }
 .price-yen { font-size: 28rpx; font-weight: 750; }
 .price-int { font-size: 48rpx; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
 .price-dec { font-size: 28rpx; font-weight: 750; }
-.limit-pill { display: inline-flex; margin-top: 18rpx; padding: 7rpx 16rpx; border-radius: 999rpx; background: #f5f5f5; color: #777777; font-size: 21rpx; }
+.limit-pill { display: inline-flex; margin-top: 18rpx; padding: 7rpx 16rpx; border-radius: 999rpx; background: var(--store-soft); color: var(--store-regular); font-size: 21rpx; }
 .info-card, .detail-card, .review-card {
   margin-top: 18rpx;
   padding: 28rpx 26rpx;
   border-radius: 26rpx;
-  background: #ffffff;
+  background: var(--store-surface);
 }
-.card-title { display: block; color: #111111; font-size: 31rpx; font-weight: 850; line-height: 1.3; }
+.card-title { display: block; color: var(--store-text); font-size: 31rpx; font-weight: 850; line-height: 1.3; }
 .info-row {
   display: flex;
   align-items: flex-start;
@@ -377,24 +377,24 @@ function goBuy() {
   &:first-of-type { margin-top: 12rpx; }
 }
 .info-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; margin-top: 2rpx; opacity: .82; }
-.info-label { width: 112rpx; flex-shrink: 0; color: #555b63; font-size: 23rpx; line-height: 1.55; }
-.info-line { width: 1rpx; height: 28rpx; flex-shrink: 0; margin-top: 5rpx; background: #eeeeee; }
-.info-value { flex: 1; min-width: 0; color: #44484e; font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
+.info-label { width: 112rpx; flex-shrink: 0; color: var(--store-regular); font-size: 23rpx; line-height: 1.55; }
+.info-line { width: 1rpx; height: 28rpx; flex-shrink: 0; margin-top: 5rpx; background: var(--store-soft); }
+.info-value { flex: 1; min-width: 0; color: var(--store-regular); font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
 .rich-body { margin-top: 18rpx; color: #555555; font-size: 24rpx; line-height: 1.75; overflow-wrap: anywhere; }
 .review-head { display: flex; align-items: center; justify-content: space-between; gap: 14rpx; }
-.review-count { color: #999999; font-size: 24rpx; font-weight: 500; }
-.review-more { color: #777777; font-size: 22rpx; }
+.review-count { color: var(--store-muted); font-size: 24rpx; font-weight: 500; }
+.review-more { color: var(--store-regular); font-size: 22rpx; }
 .review-item { display: flex; gap: 16rpx; padding-top: 22rpx; }
 .review-avatar { width: 64rpx; height: 64rpx; flex-shrink: 0; border-radius: 50%; }
 .review-main { flex: 1; min-width: 0; }
 .review-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
-.review-name { color: #111111; font-size: 24rpx; font-weight: 750; }
-.review-time { color: #aaaaaa; font-size: 20rpx; }
-.review-stars { display: block; margin-top: 6rpx; color: #111111; font-size: 22rpx; letter-spacing: 2rpx; }
-.review-text { display: block; margin-top: 10rpx; color: #44484e; font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
+.review-name { color: var(--store-text); font-size: 24rpx; font-weight: 750; }
+.review-time { color: var(--store-muted); font-size: 20rpx; }
+.review-stars { display: block; margin-top: 6rpx; color: var(--store-text); font-size: 22rpx; letter-spacing: 2rpx; }
+.review-text { display: block; margin-top: 10rpx; color: var(--store-regular); font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
 .review-images { display: flex; gap: 10rpx; margin-top: 14rpx; }
 .review-image { width: 150rpx; height: 100rpx; border-radius: 12rpx; }
-.review-empty { padding: 34rpx 0 12rpx; color: #999999; font-size: 23rpx; text-align: center; }
+.review-empty { padding: 34rpx 0 12rpx; color: var(--store-muted); font-size: 23rpx; text-align: center; }
 .bottom-space { height: 20rpx; }
 .bottom-bar {
   position: fixed;
@@ -406,7 +406,7 @@ function goBuy() {
   align-items: center;
   gap: 18rpx;
   padding: 14rpx 28rpx calc(14rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-  background: #ffffff;
+  background: var(--store-surface);
 }
 .bar-action {
   width: 88rpx;
@@ -416,9 +416,9 @@ function goBuy() {
   align-items: center;
   justify-content: center;
   gap: 3rpx;
-  color: #777777;
+  color: var(--store-regular);
   font-size: 20rpx;
-  &.active { color: #111111; }
+  &.active { color: var(--store-text); }
 }
 .bar-icon { width: 42rpx; height: 42rpx; }
 .buy-btn {
@@ -426,18 +426,18 @@ function goBuy() {
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 999rpx;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   font-size: 29rpx;
   font-weight: 750;
   text-align: center;
   letter-spacing: 1rpx;
-  &.disabled { background: #e8e8e8; color: #999999; }
+  &.disabled { background: var(--store-line); color: var(--store-muted); }
 }
 .review-sheet-mask { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; background: rgba(12, 14, 17, .5); }
-.review-sheet { width: 100%; max-height: 76vh; display: flex; flex-direction: column; border-radius: 28rpx 28rpx 0 0; background: #ffffff; overflow: hidden; }
+.review-sheet { width: 100%; max-height: 76vh; display: flex; flex-direction: column; border-radius: 28rpx 28rpx 0 0; background: var(--store-surface); overflow: hidden; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 26rpx 30rpx 18rpx; }
-.sheet-title { color: #111111; font-size: 32rpx; font-weight: 850; }
-.sheet-close { color: #888888; font-size: 34rpx; }
+.sheet-title { color: var(--store-text); font-size: 32rpx; font-weight: 850; }
+.sheet-close { color: var(--store-muted); font-size: 34rpx; }
 .sheet-body { max-height: 62vh; padding: 0 30rpx 40rpx; box-sizing: border-box; }
 </style>

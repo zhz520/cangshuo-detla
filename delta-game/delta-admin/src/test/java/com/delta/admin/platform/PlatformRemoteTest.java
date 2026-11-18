@@ -136,7 +136,9 @@ class PlatformRemoteTest {
             includeFeatureMap.set(true);
             price.set(6400);
             var controller = new PlatformController(platform, remote, null);
-            var synced = controller.syncMarket().getData();
+            var request = new org.springframework.mock.web.MockHttpServletRequest();
+            request.setServerName("localhost");
+            var synced = controller.syncMarket(request).getData();
             assertThat(synced.lastSync()).isEqualTo(now.toString());
             assertThat(projectSequence.get()).isEqualTo(2);
             assertThatThrownBy(remote::syncFeatureMarket).isInstanceOf(BusinessException.class)

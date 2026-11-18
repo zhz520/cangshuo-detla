@@ -15,6 +15,7 @@ import com.delta.player.entity.PlayerWallet;
 import com.delta.player.entity.Withdraw;
 import com.delta.player.service.PlayerService;
 import com.delta.player.service.PlayerWalletService;
+import com.delta.player.service.PlayerIdentityNameService;
 import com.delta.player.service.WithdrawService;
 import com.delta.player.service.WithdrawDepositPolicy;
 import com.delta.system.service.SysConfigService;
@@ -44,6 +45,7 @@ public class WithdrawController {
     private final SysConfigService sysConfigService;
     private final com.delta.player.service.PlayerAccountService accounts;
     private final PaymentService paymentService;
+    private final PlayerIdentityNameService identityNames;
 
     @GetMapping("/deposit-status")
     public R<WithdrawDepositPolicy.Status> depositStatus() {
@@ -68,9 +70,11 @@ public class WithdrawController {
     }
 
     @PostMapping
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public R<Void> apply(@RequestBody WithdrawRequest req) {
         Long playerId = SecurityUtils.getUserId();
+        if (jdbc.queryForList("SELECT id FROM player WHERE id=? AND deleted=0 FOR UPDATE", playerId).isEmpty())
+            throw new BusinessException(404, "打手不存在");
         if(jdbc.queryForObject("SELECT COUNT(*) FROM player_refund_recovery WHERE player_id=? AND remaining>0",Long.class,playerId)>0)throw new BusinessException(409,"存在退款待追回款，请先核对结算台账");
         com.delta.common.utils.Money.positive(req.getAmount());
         if(playerWalletService.getByPlayerId(playerId)==null) throw new BusinessException("钱包不存在");
@@ -87,17 +91,7 @@ public class WithdrawController {
         String minStr = sysConfigService.getConfigValue("withdraw.min_amount", "10");
         BigDecimal minAmount = new BigDecimal(minStr);
         if (req.getAmount() == null || req.getAmount().compareTo(minAmount) < 0) {
-            throw new BusinessException("最低提现金额为" + minAmount + "元");
-        }
-
-        // 1.5 每日提现次数上限校验
-        int maxDailyCount = Integer.parseInt(sysConfigService.getConfigValue("withdraw.max_daily_count", "3"));
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        long todayCount = withdrawService.count(new LambdaQueryWrapper<Withdraw>()
-                .eq(Withdraw::getPlayerId, playerId)
-                .ge(Withdraw::getCreatedAt, todayStart));
-        if (todayCount >= maxDailyCount) {
-            throw new BusinessException("每日最多提现" + maxDailyCount + "次");
+            throw new BusinessException(400, "最低提现金额为" + minAmount + "元");
         }
 
         doWithdraw(playerId, req);
@@ -112,11 +106,22 @@ public class WithdrawController {
         var account=req.getAccountId()==null?null:accounts.getOne(new LambdaQueryWrapper<com.delta.player.entity.PlayerAccount>()
                 .eq(com.delta.player.entity.PlayerAccount::getId,req.getAccountId()).eq(com.delta.player.entity.PlayerAccount::getPlayerId,playerId).last("FOR UPDATE"));
         if(account==null) throw new BusinessException(404,"收款账户不存在");
-        requireReceiptIdentity(playerId,account.getAccountName());
-        // 3. 校验余额
-        PlayerWallet wallet = playerWalletService.getByPlayerId(playerId);
+        if (identityNames.required()) identityNames.requireMatches(playerId, account.getAccountName(), "提现");
+        // 3. 锁钱包后再校验余额和当日次数，避免并发提现绕过限额。
+        PlayerWallet wallet = playerWalletService.getOne(new LambdaQueryWrapper<PlayerWallet>()
+                .eq(PlayerWallet::getPlayerId, playerId).last("FOR UPDATE"));
         if (wallet == null || wallet.getBalance().compareTo(req.getAmount()) < 0) {
-            throw new BusinessException("余额不足");
+            throw new BusinessException(409, "余额不足");
+        }
+
+        int maxDailyCount = Integer.parseInt(sysConfigService.getConfigValue("withdraw.max_daily_count", "3"));
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long todayCount = withdrawService.count(new LambdaQueryWrapper<Withdraw>()
+                .eq(Withdraw::getPlayerId, playerId)
+                .ge(Withdraw::getCreatedAt, todayStart)
+                .notIn(Withdraw::getStatus, "REJECTED", "CANCELLED"));
+        if (todayCount >= maxDailyCount) {
+            throw new BusinessException(409, "每日最多提现" + maxDailyCount + "次");
         }
 
         BigDecimal balanceBefore = wallet.getBalance();
@@ -155,21 +160,4 @@ public class WithdrawController {
                 "ADMIN", null, withdraw.getId(), "新提现申请待处理，金额: " + req.getAmount() + "元"));
     }
 
-    private void requireReceiptIdentity(Long playerId,String receiptName) {
-        if(!Boolean.parseBoolean(sysConfigService.getConfigValue("withdraw.require_identity_match","true")))return;
-        String verified=null;
-        try {
-            List<String> approved=jdbc.queryForList("SELECT iv.real_name FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id " +
-                    "JOIN player p ON p.openid=u.openid WHERE p.id=? AND iv.status='APPROVED' ORDER BY iv.reviewed_at DESC LIMIT 1",String.class,playerId);
-            verified=approved.isEmpty()?null:approved.get(0);
-        } catch (Exception ignored) {}
-        if(verified==null||verified.isBlank()){
-            List<String> onboarding=jdbc.queryForList("SELECT real_name FROM player WHERE id=? AND deleted=0",String.class,playerId);
-            verified=onboarding.isEmpty()?null:onboarding.get(0);
-        }
-        if(verified==null||verified.isBlank())throw new BusinessException(409,"请先完善实名姓名后再提现");
-        String expected=verified.replaceAll("[\\s·•]","").toLowerCase(java.util.Locale.ROOT);
-        String actual=receiptName==null?"":receiptName.replaceAll("[\\s·•]","").toLowerCase(java.util.Locale.ROOT);
-        if(!expected.equals(actual))throw new BusinessException(409,"收款账户姓名必须与实名认证姓名一致");
-    }
 }

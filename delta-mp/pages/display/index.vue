@@ -11,16 +11,16 @@
         <switch :checked="privacy.spendRankVisible" color="#111111" @change="changePrivacy('spendRankVisible', $event)" />
       </view>
       <view class="privacy-row">
-        <view class="privacy-copy"><text>允许出现在最近购买动态</text><text class="privacy-hint">需主动同意；不展示订单号、金额和联系方式</text></view>
+        <view class="privacy-copy"><text>允许出现在最近购买动态</text><text class="privacy-hint">仅展示脱敏昵称、默认头像和商品名称</text></view>
         <switch :checked="privacy.purchaseFeedConsent" color="#111111" @change="changePrivacy('purchaseFeedConsent', $event)" />
       </view>
     </view>
-    <view v-if="loading" class="empty">加载中…</view>
-    <view v-else-if="!items.length" class="empty">{{ tab === 'rank' ? '本月暂无消费排行' : '最近暂无购买动态' }}</view>
+    <PageState v-if="loading || loadError || !items.length" :loading="loading" :error="loadError"
+      :empty="!items.length" :empty-text="tab === 'rank' ? '本月暂无消费排行' : '最近暂无购买动态'" @retry="load" />
     <view v-else class="list">
       <view v-for="(item, index) in items" :key="index" class="row">
         <text v-if="tab === 'rank'" class="rank">{{ index + 1 }}</text>
-        <AppImage class="avatar" :src="item.avatar || ''" mode="aspectFill" />
+        <AppImage class="avatar" :src="tab === 'rank' ? item.avatar : '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="content">
           <text class="name">{{ item.nickname || '匿名玩家' }}</text>
           <text v-if="tab === 'rank'" class="meta">本月净消费 ¥{{ Number(item.spend || 0).toFixed(2) }}</text>
@@ -35,11 +35,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import AppImage from '@/components/AppImage.vue'
+import PageState from '@/components/PageState.vue'
 import { getDisplayPrivacy, getPurchaseFeed, getSpendRanking, updateDisplayPrivacy } from '@/api/display'
 import { useUserStore } from '@/store/user'
 
 const tab = ref('rank')
 const loading = ref(false)
+const loadError = ref('')
+let revision = 0
 const rankItems = ref([])
 const feedItems = ref([])
 const userStore = useUserStore()
@@ -48,16 +51,18 @@ const items = computed(() => tab.value === 'rank' ? rankItems.value : feedItems.
 let ready = false
 
 async function load() {
+  const current = ++revision
+  const kind = tab.value
+  const target = kind === 'rank' ? rankItems : feedItems
   loading.value = true
+  loadError.value = ''
   try {
-    const [rank, feed] = await Promise.all([getSpendRanking(), getPurchaseFeed()])
-    rankItems.value = Array.isArray(rank.data?.items) ? rank.data.items : []
-    feedItems.value = Array.isArray(feed.data?.items) ? feed.data.items : []
+    const { data } = await (kind === 'rank' ? getSpendRanking() : getPurchaseFeed())
+    if (revision === current) target.value = Array.isArray(data?.items) ? data.items : []
   } catch (_) {
-    rankItems.value = []
-    feedItems.value = []
+    if (revision === current) loadError.value = '暂时无法读取展示记录'
   } finally {
-    loading.value = false
+    if (revision === current) loading.value = false
   }
 }
 
@@ -91,22 +96,22 @@ onMounted(() => { ready = true; load(); loadPrivacy() })
 </script>
 
 <style lang="scss" scoped>
-.display-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f7f7; box-sizing: border-box; }
-.tabs { display: flex; padding: 8rpx; border-radius: 16rpx; background: #eceef0; margin-bottom: 24rpx; }
-.tab { flex: 1; padding: 20rpx; text-align: center; border-radius: 12rpx; color: #777777; font-size: 26rpx; }
-.tab.active { background: #fff; color: #111111; font-weight: 700; box-shadow: 0 4rpx 12rpx rgba(23,25,28,.06); }
-.privacy-card { display: grid; gap: 18rpx; margin-bottom: 24rpx; padding: 24rpx; border-radius: 18rpx; background: #fff; }
-.privacy-title { font-size: 28rpx; font-weight: 700; color: #111111; }
+.display-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: var(--store-soft); box-sizing: border-box; }
+.tabs { display: flex; padding: 8rpx; border-radius: 16rpx; background: var(--store-soft); margin-bottom: 24rpx; }
+.tab { flex: 1; padding: 20rpx; text-align: center; border-radius: 12rpx; color: var(--store-regular); font-size: 26rpx; }
+.tab.active { background: var(--store-surface); color: var(--store-text); font-weight: 700; box-shadow: 0 4rpx 12rpx rgba(23,25,28,.06); }
+.privacy-card { display: grid; gap: 18rpx; margin-bottom: 24rpx; padding: 24rpx; border-radius: 18rpx; background: var(--store-surface); }
+.privacy-title { font-size: 28rpx; font-weight: 700; color: var(--store-text); }
 .privacy-row { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
 .privacy-copy { display: grid; gap: 6rpx; min-width: 0; }
-.privacy-copy > text:first-child { font-size: 26rpx; color: #111111; }
-.privacy-hint { font-size: 22rpx; line-height: 1.5; color: #777777; }
+.privacy-copy > text:first-child { font-size: 26rpx; color: var(--store-text); }
+.privacy-hint { font-size: 22rpx; line-height: 1.5; color: var(--store-regular); }
 .list { display: grid; gap: 16rpx; }
-.row { display: flex; align-items: center; gap: 18rpx; padding: 24rpx; border-radius: 18rpx; background: #fff; }
-.rank { width: 44rpx; text-align: center; font-weight: 700; color: #777777; }
-.avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: #eceef0; flex-shrink: 0; }
+.row { display: flex; align-items: center; gap: 18rpx; padding: 24rpx; border-radius: 18rpx; background: var(--store-surface); }
+.rank { width: 44rpx; text-align: center; font-weight: 700; color: var(--store-regular); }
+.avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: var(--store-soft); flex-shrink: 0; }
 .content { flex: 1; min-width: 0; display: grid; gap: 6rpx; }
-.name { font-size: 28rpx; color: #111111; font-weight: 600; }
-.meta { font-size: 23rpx; color: #777777; }
-.empty { padding: 140rpx 0; text-align: center; color: #777777; font-size: 25rpx; }
+.name { font-size: 28rpx; color: var(--store-text); font-weight: 600; }
+.meta { font-size: 23rpx; color: var(--store-regular); }
+.empty { padding: 140rpx 0; text-align: center; color: var(--store-regular); font-size: 25rpx; }
 </style>

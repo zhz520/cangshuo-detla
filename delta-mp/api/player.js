@@ -59,6 +59,10 @@ export const applyWithdraw = (data) => post('/player/withdraw', data, { role: 'p
 export const getWithdrawDepositStatus = () => get('/player/withdraw/deposit-status', {}, { role: 'player', loading: false })
 export const getWithdrawList = (params) => get('/player/withdraw', params, { role: 'player', loading: false })
 export const getWithdrawDetail = (id) => get(`/player/withdraw/${id}`, {}, { role: 'player', loading: false })
+export const getDepositRefundContext = () => get('/player/deposit/refund/context', {}, { role: 'player', loading: false })
+export const getDepositRefundList = () => get('/player/deposit/refund/list', {}, { role: 'player', loading: false })
+export const submitDepositRefund = (data) => post('/player/deposit/refund', data, { role: 'player' })
+export const cancelDepositRefund = (id) => post(`/player/deposit/refund/${id}/cancel`, {}, { role: 'player' })
 
 // ========== 提现账户 ==========
 export const getAccountList = (options = {}) => get('/player/account', {}, { role: 'player', ...options })
@@ -69,4 +73,6 @@ export const deleteAccount = (id) => del(`/player/account/${id}`, {}, { role: 'p
 // ========== 换人 ==========
 export const replaceSelf = (orderId) => post(`/player/order/${orderId}/replace-self`, {}, { role: 'player' })
 export const replaceAll = (orderId) => post(`/player/order/${orderId}/replace-all`, {}, { role: 'player' })
+export const revokeOrderTeammate = (id, memberId) => post('/player/order/' + id + '/teammates/' + memberId + '/revoke', {}, { role: 'player' })
+export const removeOrderTeammate = (id, memberId, reason) => post('/player/order/' + id + '/teammates/' + memberId + '/remove', { reason }, { role: 'player' })
 export const replaceTeammate = (orderId) => post(`/player/order/${orderId}/replace-teammate`, {}, { role: 'player' })

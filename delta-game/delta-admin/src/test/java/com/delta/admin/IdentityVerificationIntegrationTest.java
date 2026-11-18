@@ -4,6 +4,7 @@ import com.delta.admin.controller.IdentityVerificationController;
 import com.delta.admin.platform.PlatformService;
 import com.delta.admin.service.IdentityVerificationCleanup;
 import com.delta.admin.service.IdentityBillingClient;
+import com.delta.admin.service.IdentityAttemptLimitService;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;
 import com.delta.common.security.filter.JwtAuthenticationFilter;
@@ -15,6 +16,7 @@ import com.delta.common.security.service.TokenService;
 import com.delta.system.service.SysConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -39,6 +41,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -60,7 +63,7 @@ class IdentityVerificationIntegrationTest {
     @EnableAutoConfiguration(excludeName = "com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
     @Import({SecurityConfig.class, JwtAuthenticationFilter.class, AuthenticationEntryPointImpl.class,
             AccessDeniedHandlerImpl.class, GlobalExceptionHandler.class, StaffPermissions.class,
-            IdentityVerificationController.class, IdentityVerificationCleanup.class})
+            IdentityVerificationController.class, IdentityVerificationCleanup.class, IdentityAttemptLimitService.class})
     static class Config {}
 
     @Autowired MockMvc mvc;
@@ -168,6 +171,11 @@ class IdentityVerificationIntegrationTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.matched").value(true));
 
+        ArgumentCaptor<String> requestKey = ArgumentCaptor.forClass(String.class);
+        verify(identityBilling).verify(eq("张三"), eq("11010519491231002X"), requestKey.capture());
+        assertThat(requestKey.getValue()).startsWith("identity-").hasSizeLessThanOrEqualTo(64)
+                .matches("[A-Za-z0-9_-]{16,64}");
+
         var row = jdbc.queryForMap("SELECT status,real_name,id_number_masked,front_image,back_image,review_note FROM identity_verification WHERE user_id=7");
         assertThat(row.get("status")).isEqualTo("APPROVED");
         assertThat(row.get("real_name")).isEqualTo("张三");
@@ -175,6 +183,31 @@ class IdentityVerificationIntegrationTest {
         assertThat(row.get("front_image")).isNull();
         assertThat(row.get("back_image")).isNull();
         assertThat(String.valueOf(row.get("review_note"))).contains("二要素核验");
+    }
+
+    @Test void repeatedMismatchesLockTheAccountUntilTheConfiguredLimitExpires() throws Exception {
+        when(configs.getConfigValue("identity.auto.enabled", "false")).thenReturn("true");
+        when(configs.getConfigValue("identity.auto.attempt_limit_enabled", "true")).thenReturn("true");
+        when(configs.getConfigValue("identity.auto.max_failed_attempts", "5")).thenReturn("2");
+        when(configs.getConfigValue("identity.auto.failed_window_hours", "24")).thenReturn("24");
+        when(configs.getConfigValue("identity.auto.lock_hours", "24")).thenReturn("24");
+        when(identityBilling.configured()).thenReturn(true);
+        when(identityBilling.verify(eq("张三"), eq("11010519491231002X"), anyString()))
+                .thenReturn(new IdentityBillingClient.Result(false, "CHARGED", 0));
+        String body = "{\"realName\":\"张三\",\"idNumber\":\"11010519491231002X\",\"privacyAccepted\":true}";
+
+        mvc.perform(post("/user/identity/auto-verify").with(role("USER", 7)).contentType("application/json").content(body))
+                .andExpect(jsonPath("$.code").value(422));
+        mvc.perform(post("/user/identity/auto-verify").with(role("USER", 7)).contentType("application/json").content(body))
+                .andExpect(jsonPath("$.code").value(422));
+        mvc.perform(post("/user/identity/auto-verify").with(role("USER", 7)).contentType("application/json").content(body))
+                .andExpect(jsonPath("$.code").value(429))
+                .andExpect(jsonPath("$.msg", containsString("失败次数过多")));
+
+        verify(identityBilling, times(2)).verify(eq("张三"), eq("11010519491231002X"), anyString());
+        var row = jdbc.queryForMap("SELECT failed_attempts,locked_until FROM identity_verification WHERE user_id=7");
+        assertThat(((Number) row.get("failed_attempts")).intValue()).isEqualTo(2);
+        assertThat(row.get("locked_until")).isNotNull();
     }
 
     private void uploadBoth(long userId) throws Exception {

@@ -24,12 +24,12 @@ const caption = computed(() => {
 function open() { uni.navigateTo({ url: '/pages/workbench/index' }) }
 </script>
 <style scoped>
-.workbench-entry { margin:20rpx 24rpx; padding:22rpx 24rpx; border:1rpx solid #e5e7ea; border-left:6rpx solid #202326; border-radius:14rpx; background:#fff; display:flex; align-items:center; gap:12rpx; }
+.workbench-entry { margin:20rpx 24rpx; padding:22rpx 24rpx; border:1rpx solid #e5e7ea; border-left:6rpx solid #202326; border-radius:14rpx; background:var(--store-surface); display:flex; align-items:center; gap:12rpx; }
 .workbench-copy { flex:1; min-width:0; }
 .workbench-title,.workbench-caption { display:block; }
 .workbench-title { font-size:30rpx; font-weight:700; }
-.workbench-caption { font-size:24rpx; color:#626974; margin-top:5rpx; }
-.workbench-count { padding:3rpx 12rpx; border-radius:30rpx; background:#eef0f2; font-weight:700; }
+.workbench-caption { font-size:24rpx; color:var(--store-regular); margin-top:5rpx; }
+.workbench-count { padding:3rpx 12rpx; border-radius:30rpx; background:var(--store-soft); font-weight:700; }
 .workbench-dot { width:13rpx; height:13rpx; background:#c83e4b; border-radius:50%; }
-.workbench-arrow { font-size:34rpx; color:#626974; }
+.workbench-arrow { font-size:34rpx; color:var(--store-regular); }
 </style>

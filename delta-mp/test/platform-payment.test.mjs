@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isMobileUserAgent, isWechatUserAgent, resolveWechatPayChannel, withH5PaymentReturnUrl } from '../utils/platform.js'
+import { isDesktopWechatUserAgent, isMobileUserAgent, isWechatUserAgent, resolveWechatPayChannel, withH5PaymentReturnUrl } from '../utils/platform.js'
+import { createPaymentQr } from '../utils/payment-qr.js'
 
 test('each configured WeChat payment method is routed to a compatible browser scene', () => {
   const base = { miniappEnabled: true, h5Enabled: true, officialEnabled: false }
@@ -9,7 +10,7 @@ test('each configured WeChat payment method is routed to a compatible browser sc
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: true, officialEnabled: true }), 'OFFICIAL')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: true, mobile: false, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: true }), 'H5')
-  assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: true, officialEnabled: true }), 'H5')
+  assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: true, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, h5Enabled: false, miniapp: false, web: true, inWechat: false, mobile: true, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: false, officialEnabled: true }), 'OFFICIAL_QR')
   assert.equal(resolveWechatPayChannel({ ...base, miniapp: false, web: true, inWechat: false, mobile: false, officialEnabled: false }), 'OPEN_IN_MOBILE_BROWSER')
@@ -34,7 +35,21 @@ test('desktop and mobile WeChat user agents are distinguished without misclassif
   assert.equal(isMobileUserAgent(iphoneWechat), true)
   assert.equal(isMobileUserAgent(ipadDesktopMode, 5, 'MacIntel'), true)
   assert.equal(isMobileUserAgent(macWechat, 10, 'Win32'), false)
+  assert.equal(isDesktopWechatUserAgent(macWechat), true)
+  assert.equal(isDesktopWechatUserAgent(windowsWechat + ' Mobile'), true)
+  assert.equal(isDesktopWechatUserAgent(iphoneWechat), false)
   assert.equal(isMobileUserAgent('Mozilla/5.0 (Windows NT 10.0) Chrome/140.0 Safari/537.36', 0), false)
+})
+
+test('checkout renders a PNG for a long official OAuth URL independently of the current theme', async () => {
+  const url = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx-example&redirect_uri=' +
+    encodeURIComponent('https://shop.example/api/pay/wx/official/callback') +
+    '&response_type=code&scope=snsapi_base&state=' + 'a'.repeat(64) + '#wechat_redirect'
+  const png = await createPaymentQr(url)
+  assert.match(png, /^data:image\/png;base64,iVBORw0KGgo/)
+  const data = Buffer.from(png.split(',')[1], 'base64')
+  assert.equal(data.readUInt32BE(16), 560)
+  assert.equal(data.readUInt32BE(20), 560)
 })
 
 test('H5 payment is opt-in when the H5 site may not be deployed', async () => {

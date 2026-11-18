@@ -116,8 +116,12 @@ public class OrderController {
     @GetMapping("/{id}/progress")
     public R<List<OrderProgress>> progress(@PathVariable Long id) {
         requireOwner(orderService.getById(id));
-        return R.ok(orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
-                .eq(OrderProgress::getOrderId, id).orderByAsc(OrderProgress::getCreatedAt)));
+        List<OrderProgress> history = orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
+                .eq(OrderProgress::getOrderId, id).orderByAsc(OrderProgress::getCreatedAt));
+        history.forEach(entry -> {
+            if (entry.getType() != null && entry.getType().startsWith("TEAMMATE_")) entry.setRemark(null);
+        });
+        return R.ok(history);
     }
 
     private void requireOwner(Order order) {

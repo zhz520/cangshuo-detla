@@ -123,17 +123,17 @@ onHide(() => { visible = false; generation++ })
 </script>
 
 <style scoped>
-.workbench-page { min-height:100vh; padding:24rpx; background:#f5f6f7; }
+.workbench-page { min-height:100vh; padding:24rpx; background:var(--store-soft); }
 .toolbar,.tabs,.task { display:flex; align-items:center; gap:10rpx; }
 .toolbar { justify-content:space-between; }
 .toolbar button,.tabs button,.task button { margin:0; }
 .tabs { flex-wrap:wrap; margin:16rpx 0; }
 .title,.task-title { font-weight:700; }
 .hint { display:block; color:#626974; font-size:24rpx; margin:10rpx 0; }
-.task { border:1rpx solid #e6e8eb; border-radius:12rpx; background:#fff; margin:12rpx 0; padding:18rpx 12rpx 18rpx 18rpx; }
+.task { border:1rpx solid var(--store-line); border-radius:12rpx; background:var(--store-surface); margin:12rpx 0; padding:18rpx 12rpx 18rpx 18rpx; }
 .task-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
 .task-title { font-size:28rpx; }
 .urgent { font-size:22rpx; margin-left:8rpx; color:#a83842; }
 .dot { display:inline-block; width:12rpx; height:12rpx; margin-right:8rpx; background:#c83e4b; border-radius:50%; }
-button.active { color:#fff; background:#22262b; }
+button.active { color:#fff; background:var(--store-primary); }
 </style>

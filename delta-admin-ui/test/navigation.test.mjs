@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {buildNavigation, activeNavigationMenu} from '../src/utils/navigation.js'
 
 const screen = (path, title, roles = ['admin', 'cs'], extra = {}) => ({path,children:[{path:'',meta:{title,roles,...extra}}]})
@@ -33,9 +34,26 @@ test('a limited administrator cannot see finance, chat or configuration entries 
 })
 
 test('paid feature routes are hidden until the platform reports them enabled',()=>{
-  const routes=[screen('/dashboard','仪表盘'),screen('/system/wechat-notices','公众号通知记录',['admin'],{permission:'system.manage',feature:'official_wechat_notifications'}),screen('/system/email-notifications','邮件通知',['admin'],{permission:'system.manage',feature:'email_notifications'}),screen('/system/player-layout','打手列表布局',['admin'],{permission:'system.manage',feature:'player_directory_layouts'}),screen('/user/identity-review','实名认证审核',['admin'],{permission:'user.manage',feature:'identity_verification'})]
+  const routes=[screen('/dashboard','仪表盘'),screen('/system/wechat-notices','公众号通知记录',['admin'],{permission:'system.manage',feature:'official_wechat_notifications'}),screen('/system/email-notifications','邮件通知',['admin'],{permission:'system.manage',feature:'email_notifications'}),screen('/system/player-layout','打手列表布局',['admin'],{permission:'system.manage',feature:'player_directory_layouts'})]
   assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>false)),['/dashboard'])
-  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/user/identity-review','/system/player-layout','/system/wechat-notices','/system/email-notifications'])
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/system/player-layout','/system/wechat-notices','/system/email-notifications'])
+})
+
+test('identity review moves into user detail while the feature market entry stays in navigation', () => {
+  const navigation = readFileSync(new URL('../src/utils/navigation.js', import.meta.url), 'utf8')
+  assert.match(navigation, /\/platform\/features/)
+  assert.doesNotMatch(navigation, /\/user\/identity-review/)
+})
+
+test('settings editors have one administrator entry while customer service retains invitations', () => {
+  const routes = [
+    screen('/system/config','系统配置',['admin']), screen('/invitations','入驻邀请',['admin','cs'],{permission:'player.manage'}),
+    screen('/marketing/membership','会员等级',['admin'],{permission:'system.manage'}),
+    screen('/system/email-notifications','邮件通知',['admin'],{permission:'system.manage'})
+  ]
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true)), ['/system/config'])
+  assert.deepEqual(paths(buildNavigation(routes,'cs',p=>p==='player.manage')), ['/invitations'])
+  assert.deepEqual(paths(buildNavigation(routes,'admin',p=>p==='player.manage')), ['/invitations'])
 })
 
 test('paid reports and platform configuration respect both staff grants and feature authorization', () => {

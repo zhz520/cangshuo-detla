@@ -11,11 +11,15 @@ export const userLogin = (code, phoneCode) => post('/user/auth/login', { code, p
 
 /** H5 手机号验证码登录 */
 export const h5Login = (data) => post('/user/auth/h5-login', data, { auth: false })
-export const setupUserPassword = data => post('/user/auth/set-password',data,{auth:false})
 export const userPasswordLogin = data => post('/user/auth/password-login',data,{auth:false})
 export const getLoginPolicy = () => get('/user/auth/login-policy', {}, { auth: false, loading: false })
 export const getWechatLoginUrl = (returnTo, invite = '') => get('/user/auth/wechat/start', { returnTo, invite }, { auth: false, loading: false })
-export const exchangeWechatTicket = ticket => post('/user/auth/wechat/exchange', { ticket }, { auth: false })
+const pendingAuth = { auth: false, loading: false, silent: true, redirectOnUnauthorized: false }
+export const exchangeWechatTicket = ticket => post('/user/auth/wechat/exchange', { ticket }, pendingAuth)
+const bindingAuth = accountBinding => accountBinding ? { ...pendingAuth, auth: true, role: 'user' } : pendingAuth
+export const sendWechatPhoneCode = (data, accountBinding) => post('/user/auth/wechat/phone/code', data, bindingAuth(accountBinding))
+export const verifyWechatPhone = (data, accountBinding) => post('/user/auth/wechat/phone/complete', data, bindingAuth(accountBinding))
+export const confirmWechatPhone = (data, accountBinding) => post('/user/auth/wechat/phone/confirm', data, bindingAuth(accountBinding))
 
 /** Revoke a token explicitly before removing it from local storage. */
 export const revokeSession = token => post('/auth/logout', {}, {

@@ -18,7 +18,7 @@ let foreground = true
 function applyTheme(themeId) {
   // #ifdef H5
   const root = document.documentElement
-  if (themeId === 'neumorphism') root.setAttribute('data-theme', 'neumorphism')
+  if (['neumorphism', 'dark'].includes(themeId)) root.setAttribute('data-theme', themeId)
   else root.removeAttribute('data-theme')
   // #endif
 }
@@ -59,7 +59,8 @@ onLaunch(() => {
 
   siteStore.fetchSiteConfig()
   // #ifdef H5
-  siteStore.fetchThemeConfig().then(applyTheme)
+  watch(() => siteStore.themeId, applyTheme, { immediate:true })
+  siteStore.fetchThemeConfig()
   // #endif
   appStore.restoreRole()
   watch(() => [appStore.role, userStore.token], () => { if (foreground) syncRemindPolling() })
@@ -80,6 +81,9 @@ onShow(() => {
   foreground = true
   const userStore = useUserStore()
   userStore.syncSessionFromStorage()
+  // #ifdef H5
+  useSiteStore().fetchThemeConfig()
+  // #endif
   const chatStore = useChatStore()
   if (shouldConnectChat()) {
     if (!chatStore.connected) chatStore.connect()
@@ -100,6 +104,8 @@ onHide(() => { foreground = false; useRemindStore().stopPolling(); useChatStore(
 @import '@/styles/default-2026.scss';
 /* #ifdef H5 */
 @import '@/styles/neumorphism.scss';
+@import '@/styles/dark.scss';
+@import '@/styles/theme-storefront.scss';
 /* #endif */
 
 page, view, text, image, scroll-view, textarea, input { box-sizing: border-box; }

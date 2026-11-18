@@ -120,19 +120,19 @@ async function submitAppeal() {
 function previewImg(imgs, idx) { uni.previewImage({ urls: imgs, current: idx }) }
 </script>
 <style lang="scss" scoped>
-.complaint-detail { background: #f7f7f7; min-height: var(--app-page-height, 100vh); }
-.card { margin-top: 20rpx; padding: 24rpx; background: #ffffff; border: 1rpx solid #eeeeee; }
-.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: #111111; }
-.info-row { display: flex; align-items: center; padding: 8rpx 0; .label { font-size: 26rpx; color: #777777; width: 140rpx; } .value { font-size: 26rpx; color: #111111; &.refund { color: #d44955; font-weight: bold; } } }
-.content-text { font-size: 28rpx; color: #111111; line-height: 1.6; display: block; }
+.complaint-detail { background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
+.card { margin-top: 20rpx; padding: 24rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); }
+.card-title { font-size: 28rpx; font-weight: bold; display: block; margin-bottom: 16rpx; color: var(--store-text); }
+.info-row { display: flex; align-items: center; padding: 8rpx 0; .label { font-size: 26rpx; color: var(--store-regular); width: 140rpx; } .value { font-size: 26rpx; color: var(--store-text); &.refund { color: #d44955; font-weight: bold; } } }
+.content-text { font-size: 28rpx; color: var(--store-text); line-height: 1.6; display: block; }
 .evidence-images { display: flex; gap: 12rpx; margin-top: 16rpx; flex-wrap: wrap; }
 .ev-img { width: 160rpx; height: 160rpx; border-radius: 8rpx; }
-.expected { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #eeeeee; }
+.expected { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid var(--store-line); }
 .actions { padding: 40rpx 24rpx; }
-.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: #171717; color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; }
+.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: var(--store-primary); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; }
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-body { width: 80%; background: #ffffff; border: 1rpx solid rgba(23, 25, 28, 0.15); border-radius: 16rpx; padding: 40rpx; textarea { width: 100%; height: 200rpx; background: #f7f7f7; border: 1rpx solid #eeeeee; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; margin: 20rpx 0; color: #111111; } }
-.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: #111111; }
+.modal-body { width: 80%; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 16rpx; padding: 40rpx; textarea { width: 100%; height: 200rpx; background: var(--store-soft); border: 1rpx solid var(--store-line); border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; margin: 20rpx 0; color: var(--store-text); } }
+.modal-title { font-size: 32rpx; font-weight: bold; text-align: center; display: block; color: var(--store-text); }
 .modal-btns { display: flex; gap: 24rpx; }
-.modal-btn { flex: 1; height: 76rpx; line-height: 76rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx; &.cancel { background: #f7f7f7; color: #777777; } &.confirm { background: #171717; color: #ffffff; font-weight: bold; } }
+.modal-btn { flex: 1; height: 76rpx; line-height: 76rpx; text-align: center; border-radius: 999rpx; font-size: 28rpx; &.cancel { background: var(--store-soft); color: var(--store-regular); } &.confirm { background: var(--store-primary); color: #ffffff; font-weight: bold; } }
 </style>

@@ -8,7 +8,7 @@ import com.delta.common.constant.Constants;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.redis.service.RedisService;
-import com.delta.common.sms.service.AliyunSmsService;
+import com.delta.common.sms.service.SmsGatewayClient;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,15 +26,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class ChatSmsReminderService {
-    private static final String CFG_ENABLED = "sms.aliyun.enabled";
-    private static final String CFG_ACCESS_KEY_ID = "sms.aliyun.access_key_id";
-    private static final String CFG_ACCESS_KEY_SECRET = "sms.aliyun.access_key_secret";
-    private static final String CFG_ENDPOINT = "sms.aliyun.endpoint";
-    private static final String CFG_SIGN_NAME = "sms.aliyun.sign_name";
     private static final String CFG_COOLDOWN_SECONDS = "sms.aliyun.cooldown_seconds";
     private static final String CFG_USER_PLAYER_COOLDOWN_SECONDS = "sms.aliyun.user_player_cooldown_seconds";
     private static final String CFG_PLAYER_FEE = "sms.aliyun.player_fee";
-    private static final String DEFAULT_ENDPOINT = "dysmsapi.aliyuncs.com";
     private static final int DEFAULT_COOLDOWN_SECONDS = 60;
     private static final int DEFAULT_USER_PLAYER_COOLDOWN_SECONDS = 600;
     private static final BigDecimal DEFAULT_PLAYER_FEE = new BigDecimal("0.05");
@@ -42,7 +36,7 @@ public class ChatSmsReminderService {
     private final ChatServiceImpl chatService;
     private final CrossModuleMapper crossModuleMapper;
     private final RedisService redisService;
-    private final AliyunSmsService aliyunSmsService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false) private SmsGatewayClient smsGateway;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(rollbackFor = Exception.class)
@@ -73,17 +67,8 @@ public class ChatSmsReminderService {
             throw new BusinessException(400, "当前会话不支持该短信提醒");
         }
 
-        if (!"true".equalsIgnoreCase(getConfig(CFG_ENABLED, "false"))) {
+        if (smsGateway == null || !smsGateway.enabled()) {
             throw new BusinessException(400, "短信提醒未开启");
-        }
-
-        String accessKeyId = getConfig(CFG_ACCESS_KEY_ID, "");
-        String accessKeySecret = getConfig(CFG_ACCESS_KEY_SECRET, "");
-        String endpoint = getConfig(CFG_ENDPOINT, DEFAULT_ENDPOINT);
-        String signName = getConfig(CFG_SIGN_NAME, "");
-        String templateCode = getConfig(reminderType.getTemplateConfigKey(), reminderType.getDefaultTemplateCode());
-        if (StrUtil.hasBlank(accessKeyId, accessKeySecret, endpoint, signName, templateCode)) {
-            throw new BusinessException(400, "短信配置不完整，请先在系统配置中填写阿里云短信参数");
         }
 
         String phone = crossModuleMapper.selectPhoneByEncodedId(targetEncodedId);
@@ -100,7 +85,7 @@ public class ChatSmsReminderService {
             throw new BusinessException(400, "发送过于频繁，请稍后再试");
         }
 
-        boolean smsSent = false;
+        boolean keepCooldown = false;
         String walletLockKey = null;
         try {
             BigDecimal playerFee = resolvePlayerFee(senderType);
@@ -112,11 +97,21 @@ public class ChatSmsReminderService {
                 }
                 chargePlayerSmsFee(playerId, playerFee);
             }
-            aliyunSmsService.sendTemplate(endpoint, accessKeyId, accessKeySecret, signName, templateCode, phone,
-                    Map.of());
-            smsSent = true;
+            long bucket = (System.currentTimeMillis() / 1000L) / Math.max(10, cooldownSeconds);
+            String idempotencyKey = "chat:" + sessionId + ":" + senderType + ":" + myEncodedId + ":"
+                    + targetEncodedId + ":" + reminderType.getCode() + ":" + bucket;
+            try {
+                smsGateway.send(reminderType.gatewayTemplateKey(), phone, Map.of(), idempotencyKey);
+            } catch (SmsGatewayClient.SmsGatewayUnknownException unknown) {
+                // The authority may have submitted the SMS; keep the cooldown, but roll back the player fee.
+                keepCooldown = true;
+                log.warn("chat sms reminder is awaiting provider confirmation, sessionId={}, senderType={}, targetType={}",
+                        sessionId, senderType, targetType);
+                throw unknown;
+            }
+            keepCooldown = true;
         } catch (RuntimeException e) {
-            if (!smsSent) {
+            if (!keepCooldown) {
                 redisService.unlock(cooldownKey);
             }
             throw e;
@@ -125,10 +120,9 @@ public class ChatSmsReminderService {
                 redisService.unlock(walletLockKey);
             }
         }
-        log.info("chat sms reminder sent, sessionId={}, senderType={}, targetType={}, reminderCode={}",
+        log.info("chat sms reminder accepted by authority, sessionId={}, senderType={}, targetType={}, reminderCode={}",
                 sessionId, senderType, targetType, reminderType.getCode());
     }
-
     private String getConfig(String key, String defaultValue) {
         String value = crossModuleMapper.selectConfigValue(key);
         return StrUtil.isBlank(value) ? defaultValue : value.trim();
@@ -235,9 +229,9 @@ public class ChatSmsReminderService {
     @RequiredArgsConstructor
     private enum ReminderType {
         PLAYER_FINISH_ORDER("PLAYER_FINISH_ORDER", Set.of("PLAYER"), Set.of("USER"),
-                "sms.aliyun.template_code.player_finish_order", "SMS_504575043"),
+                null, null),
         CS_MESSAGE_REMINDER("CS_MESSAGE_REMINDER", Set.of("CS", "USER", "PLAYER"), Set.of("USER", "PLAYER"),
-                "sms.aliyun.template_code.cs_message_reminder", "SMS_504365043");
+                null, null);
 
         private final String code;
         private final Set<String> senderTypes;
@@ -247,6 +241,13 @@ public class ChatSmsReminderService {
 
         boolean supports(String senderType, String targetType) {
             return senderTypes.contains(senderType) && targetTypes.contains(targetType);
+        }
+
+        String gatewayTemplateKey() {
+            return switch (this) {
+                case PLAYER_FINISH_ORDER -> "chat_player_finish_order";
+                case CS_MESSAGE_REMINDER -> "chat_cs_message_reminder";
+            };
         }
 
         static ReminderType fromCode(String code) {

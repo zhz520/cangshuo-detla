@@ -1,18 +1,17 @@
 <template>
   <view v-if="items.length && !hidden" class="purchase-ticker" role="status" aria-label="最近购买动态">
-    <text class="ticker-tag">热购</text>
     <swiper
       class="ticker-swiper"
       vertical
-      :autoplay="items.length > 1"
-      :circular="items.length > 1"
+      :autoplay="items.length > 1 && !reducedMotion"
+      :circular="items.length > 1 && !reducedMotion"
       :interval="3200"
-      :duration="420"
+      :duration="160"
       :disable-touch="true"
     >
       <swiper-item v-for="(item, index) in items" :key="`${item.nickname}-${item.product_name}-${index}`">
         <view class="ticker-line" @click="$emit('more')">
-          <AppImage class="ticker-avatar" :src="item.avatar || ''" :width="80" mode="aspectFill" />
+          <AppImage class="ticker-avatar" src="/static/images/delta-default-avatar.png" :width="80" mode="aspectFill" />
           <view class="ticker-copy">
             <text class="ticker-name">{{ item.nickname || '匿名玩家' }}</text>
             <text class="ticker-muted"> 购买了 </text>
@@ -21,8 +20,8 @@
         </view>
       </swiper-item>
     </swiper>
-    <text class="ticker-more" @click.stop="$emit('more')">更多</text>
-    <text class="ticker-close" aria-label="关闭最近购买动态" @click.stop="hidden = true">×</text>
+    <text class="ticker-more" role="button" aria-label="查看最近购买" @click.stop="$emit('more')">›</text>
+    <text class="ticker-close" role="button" aria-label="关闭最近购买动态" @click.stop="hidden = true">×</text>
   </view>
 </template>
 
@@ -36,6 +35,10 @@ defineProps({
 defineEmits(['more'])
 
 const hidden = ref(false)
+const reducedMotion = ref(false)
+// #ifdef H5
+reducedMotion.value = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+// #endif
 </script>
 
 <style scoped>
@@ -54,18 +57,8 @@ const hidden = ref(false)
   border-radius: 999rpx;
   color: #fff;
   background: rgba(23, 25, 28, 0.94);
-  box-shadow: 0 12rpx 30rpx rgba(23, 25, 28, 0.22);
+  box-shadow: 0 4rpx 18rpx rgba(23, 25, 28, 0.12);
   backdrop-filter: none;
-}
-
-.ticker-tag {
-  flex-shrink: 0;
-  padding: 4rpx 10rpx;
-  border-radius: 999rpx;
-  font-size: 20rpx;
-  line-height: 1.2;
-  color: #ffe1b8;
-  background: rgba(255, 193, 112, 0.16);
 }
 
 .ticker-swiper {
@@ -102,7 +95,7 @@ const hidden = ref(false)
 
 .ticker-name { color: #fff; font-weight: 700; }
 .ticker-muted { color: rgba(255, 255, 255, 0.64); }
-.ticker-product { color: #ffe1b8; font-weight: 600; }
+.ticker-product { color: #fff; font-weight: 600; }
 
 .ticker-more,
 .ticker-close {

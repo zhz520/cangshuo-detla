@@ -1,0 +1,183 @@
+/* H5-only refinements. Page components own dimensions; themes own surfaces and states. */
+html:root[data-theme='dark'] {
+  --field-focus: #adbcff;
+  --field-error: #ff9aa2;
+}
+html:root[data-theme='neumorphism'] {
+  --field-focus: var(--neo-accent-deep);
+  --field-error: #a63842;
+}
+
+/* UniApp wraps each editable control. Paint the wrapper, not its nested native element. */
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(.uni-input-input, .uni-textarea-textarea) {
+  min-width: 0;
+  background: transparent !important;
+  color: var(--store-text) !important;
+  caret-color: var(--store-text);
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(.uni-input-placeholder, .uni-textarea-placeholder) {
+  color: var(--store-muted) !important;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(uni-input, uni-textarea):focus-within,
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  .product-list .search-bar:focus-within {
+  outline: 2px solid var(--field-focus) !important;
+  outline-offset: -2px;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(uni-input, uni-textarea):has(:is(.uni-input-input, .uni-textarea-textarea):disabled) {
+  opacity: .7;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(uni-input, uni-textarea):is(.invalid,[aria-invalid='true']) {
+  outline: 1px solid var(--field-error) !important;
+  outline-offset: -1px;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  .product-list .search-input {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  .profile-page .profile-nickname {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html:root[data-theme='neumorphism'] .product-list .search-bar {
+  background: var(--neo-surface);
+  box-shadow: var(--neo-inset);
+}
+html:root[data-theme='neumorphism'] .auth-shell .verify-side {
+  background: var(--neo-surface);
+  border-color: var(--neo-line);
+}
+
+/* Home: keep one gutter; reserve a stable square for the configured category icon. */
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .category-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .category-item {
+  min-width: 0;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .category-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .category-icon {
+  max-width: 100%;
+  max-height: 100%;
+  background-color: transparent;
+}
+html:root[data-theme='neumorphism'] .home-page .category-icon-wrap {
+  border-radius: 22rpx;
+  background: var(--neo-surface);
+  box-shadow: var(--neo-shadow-soft);
+}
+html:root[data-theme='neumorphism'] .home-page .neo-home-head {
+  margin: 8rpx 0 18rpx !important;
+  padding: 4rpx 0 0 !important;
+}
+html:root[data-theme='neumorphism'] .home-page .section {
+  padding-top: 26rpx !important;
+}
+html:root[data-theme='dark'] .home-page .search-bar,
+html:root[data-theme='dark'] .home-page .section {
+  background: transparent !important;
+}
+html:root[data-theme='dark'] .home-page .search-inner,
+html:root[data-theme='dark'] .product-list .search-bar {
+  background: var(--store-surface) !important;
+}
+html:root[data-theme='dark'] .home-page .hero-feature .hero-bg {
+  filter: grayscale(1) brightness(.8);
+}
+
+/* Keep long configured copy within the slide and allow space for the CTA and dots. */
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .hero-copy {
+  width: 73%;
+  padding: 14rpx 16rpx 32rpx 22rpx;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page :is(.hero-title,.hero-sub) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .hero-title {
+  font-size: 40rpx;
+  -webkit-line-clamp: 2;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .hero-sub {
+  -webkit-line-clamp: 2;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .hero-action {
+  flex-shrink: 0;
+  margin-top: 14rpx;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .home-page .hero-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0,0,0,.64), transparent 96%);
+  pointer-events: none;
+}
+
+/* Intrinsic image proportions remain governed by AppImage's aspectFit. */
+html:root:is([data-theme='dark'], [data-theme='neumorphism'])
+  :is(.product-card .cover, .category-page .product-cover, .product-detail .banner-wrap, .product-detail .banner-img) {
+  background-color: var(--store-soft);
+}
+html:root[data-theme='neumorphism'] .product-detail
+  :is(.banner-wrap, .head-card, .info-card, .detail-card, .review-card, .review-sheet) {
+  border-radius: var(--neo-radius);
+  box-shadow: var(--neo-shadow-soft);
+}
+html:root[data-theme='neumorphism'] .product-detail .banner {
+  border-radius: inherit !important;
+  box-shadow: none !important;
+}
+html:root[data-theme='neumorphism'] .product-detail :is(.head-card, .detail-card, .review-card, .review-sheet) {
+  background-color: var(--neo-surface);
+}
+html:root[data-theme='neumorphism'] .product-detail .buy-btn {
+  background: var(--neo-accent-deep);
+}
+html:root[data-theme='neumorphism'] .product-detail .buy-btn.disabled {
+  background: var(--store-soft);
+  color: var(--store-muted);
+}
+html:root[data-theme='dark'] .product-detail :is(.banner-wrap,.banner-img,.review-sheet) {
+  background: var(--store-surface);
+}
+html:root[data-theme='dark'] .product-detail :is(.info-row,.review-item) {
+  border-color: var(--store-line);
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .product-detail .banner-dots .dot {
+  background: rgba(128,128,128,.8);
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .product-detail .banner-dots .dot.active {
+  background: var(--store-text);
+}
+html:root[data-theme='dark'] .home-page :is(.search-icon,.notice-label-icon),
+html:root[data-theme='dark'] :is(.product-list,.category-page) .search-icon,
+html:root[data-theme='dark'] .product-detail :is(.header-btn uni-image,.info-icon,.bar-icon) {
+  filter: brightness(0) invert(.9);
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .product-detail .rich-body {
+  color: var(--store-regular);
+  overflow-x: auto;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .product-detail .rich-body img {
+  max-width: 100%;
+  height: auto;
+}
+html:root:is([data-theme='dark'], [data-theme='neumorphism']) .product-detail .review-image {
+  min-width: 0;
+}

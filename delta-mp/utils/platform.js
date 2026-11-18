@@ -34,14 +34,15 @@ export function isMobileBrowser() {
 
 /**
  * 按浏览器场景和后台开关选择可实际完成的微信支付通道。
- * 微信内置浏览器使用公众号 JSAPI；微信外手机浏览器使用 H5；电脑端需要引导到微信完成。
+ * P0 支付约定：公众号支付开启时，仅手机微信直接 JSAPI，其他浏览器均扫码。
+ * 未开启公众号支付时，保留原 H5 支付及小程序独立通道。
  */
 export function wechatPayChannel({ miniappEnabled = true, h5Enabled = false, officialEnabled = false } = {}) {
   return resolveWechatPayChannel({
     miniapp: isMpWeixin(),
     web: isH5(),
     inWechat: isWechatBrowser(),
-    mobile: isMobileBrowser(),
+    mobile: !isDesktopWechatUserAgent(typeof navigator === 'undefined' ? '' : navigator.userAgent) && isMobileBrowser(),
     miniappEnabled,
     h5Enabled,
     officialEnabled
@@ -51,16 +52,16 @@ export function wechatPayChannel({ miniappEnabled = true, h5Enabled = false, off
 export function resolveWechatPayChannel({ miniapp, web, inWechat, mobile, miniappEnabled, h5Enabled, officialEnabled }) {
   if (miniapp) return miniappEnabled ? 'MINIAPP' : null
   if (!web) return null
+  if (officialEnabled) return inWechat && mobile ? 'OFFICIAL' : 'OFFICIAL_QR'
   if (inWechat) {
-    // 电脑微信的 UA 也包含 MicroMessenger，但桌面端不能可靠调用公众号 JSAPI 收银台。
-    // 改用授权地址二维码，由手机微信扫码后进入公众号支付链路。
-    if (!mobile) return officialEnabled ? 'OFFICIAL_QR' : h5Enabled ? 'OPEN_IN_BROWSER' : null
-    if (officialEnabled) return 'OFFICIAL'
     return h5Enabled ? 'OPEN_IN_BROWSER' : null
   }
   if (mobile && h5Enabled) return 'H5'
-  if (officialEnabled) return 'OFFICIAL_QR'
   return h5Enabled ? 'OPEN_IN_MOBILE_BROWSER' : null
+}
+
+export function isDesktopWechatUserAgent(userAgent = '') {
+  return /WindowsWechat|MacWechat|WeChatWin|WeChatMac|Windows NT|X11/i.test(userAgent)
 }
 
 export function showWechatPaymentEnvironmentPrompt(channel) {

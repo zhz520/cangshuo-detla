@@ -1,41 +1,63 @@
 <template>
   <view class="apply-page">
     <view v-if="inviteName" class="deposit-tip">邀请：{{inviteName}}</view>
-    <view class="form-item"><text class="label">头像 *</text><ImageUploader v-model="avatarImages" :max="1"/><text class="upload-tip">使用 1:1 方图，建议 640×640 像素以上；头像会展示在打手列表和主页。</text></view>
-    <view class="form-item"><text class="label">接单名 *</text><input v-model="form.nickname" maxlength="32" placeholder="对外展示的接单名"/></view>
-    <view class="form-item"><text class="label">真实姓名</text><input v-model="form.realName" placeholder="请输入" /></view>
-    <view class="form-item"><text class="label">联系电话</text><input v-model="form.phone" disabled placeholder="登录后自动使用已验证的手机号" /></view>
-    <view class="form-item"><text class="label">游戏ID</text><input v-model="form.gameLevel" placeholder="请输入游戏ID或段位" /></view>
-    <view class="form-item"><text class="label">擅长服务</text><input v-model="form.serviceTypes" placeholder="如：三角洲行动，无畏契约" /></view>
-    <view class="form-item"><text class="label">技能标签</text><input v-model="form.skillTags" placeholder="如：突击位，信息位" /></view>
-    <view class="form-item"><text class="label">证明截图</text><ImageUploader v-model="proofImages" :max="4" /></view>
+    <view v-if="inviteIssue" class="apply-error" role="alert">{{ inviteIssue }}</view>
+    <view class="apply-section">
+      <text class="section-heading">基本资料</text>
+      <view class="form-item"><text class="label">头像 *</text><ImageUploader v-model="avatarImages" :max="1"/>
+        <text class="upload-tip">1:1 方图，建议 640×640 像素以上</text>
+        <text v-if="fieldError.key === 'avatar' && !avatarImages.length" class="apply-error" role="alert">{{ fieldError.message }}</text>
+      </view>
+      <view class="form-item"><text class="label">接单名 *</text><input v-model="form.nickname" aria-label="接单名" maxlength="32" :disabled="locked" :class="{invalid: fieldError.key === 'nickname'}" @input="clearField('nickname')"/>
+        <text v-if="fieldError.key === 'nickname'" class="apply-error" role="alert">{{ fieldError.message }}</text>
+      </view>
+      <view class="form-item"><text class="label">真实姓名 *</text><input v-model="form.realName" aria-label="真实姓名" :disabled="locked" :class="{invalid: fieldError.key === 'realName'}" @input="clearField('realName')"/>
+        <text v-if="fieldError.key === 'realName'" class="apply-error" role="alert">{{ fieldError.message }}</text>
+      </view>
+      <view class="form-item"><text class="label">联系电话 *</text><input v-model="form.phone" aria-label="联系电话" disabled placeholder="未绑定" />
+        <text v-if="fieldError.key === 'phone'" class="apply-error" role="alert">{{ fieldError.message }}</text>
+      </view>
+    </view>
+    <view class="apply-section">
+      <text class="section-heading">服务资料</text>
+      <view class="form-item"><text class="label">游戏 ID / 段位</text><input v-model="form.gameLevel" aria-label="游戏 ID 或段位" :disabled="locked" /></view>
+      <view class="form-item"><text class="label">擅长服务</text><input v-model="form.serviceTypes" aria-label="擅长服务" :disabled="locked" /></view>
+      <view class="form-item"><text class="label">技能标签</text><input v-model="form.skillTags" aria-label="技能标签" :disabled="locked" /></view>
+      <view class="form-item"><text class="label">证明截图</text><ImageUploader v-model="proofImages" :max="4" /></view>
+    </view>
+    <view class="apply-footer">
     <view v-if="siteStore.depositMode === 'REQUIRED'" class="deposit-tip">申请成为打手需缴纳押金</view>
     <view v-else-if="siteStore.depositMode === 'BEFORE_WITHDRAW'" class="deposit-tip">入驻无需缴纳押金；后续提现前按平台等级要求补交押金。</view>
-    <view v-else class="deposit-tip">当前平台不收取打手押金。</view>
-    <view class="deposit-tip" @click="agreed=!agreed">{{agreed?'☑':'☐'}} 我已阅读并同意 <text @click.stop="goAgreement('user')">《用户协议》</text>及<text @click.stop="goAgreement('privacy')">《隐私政策》</text>。实名及手机号仅客服、管理员可见。</view>
+    <view class="agreement-row">
+      <checkbox-group @change="agreed = $event.detail.value.includes('agree'); clearField('agreement')">
+        <label><checkbox value="agree" :checked="agreed" :disabled="locked" color="#171717" />我已阅读并同意</label>
+      </checkbox-group>
+      <text @click="goAgreement('user')">《用户协议》</text>
+      <text @click="goAgreement('privacy')">《隐私政策》</text>
+    </view>
+    <text v-if="fieldError.key === 'agreement'" class="apply-error" role="alert">{{ fieldError.message }}</text>
+    <text v-if="submitError" class="apply-error" role="alert">{{ submitError }}</text>
     <view v-if="pendingDepositNo" class="deposit-tip">已返回支付页面，请确认资料后提交申请。到账状态以平台核验为准。<text @click="reopenPayment">重新打开支付</text></view>
-    <view class="btn" :class="{ disabled: submitting }" @click="submit">{{ submitting ? '提交中...' : (siteStore.depositMode === 'REQUIRED' ? (pendingDepositNo ? '确认押金到账并提交' : '支付押金并提交') : '提交申请') }}</view>
+    <button class="apply-submit" :disabled="locked" @click="submit">{{ submitted ? '已提交' : submitting ? '正在提交' : (siteStore.depositMode === 'REQUIRED' ? (pendingDepositNo ? '确认押金到账并提交' : '支付押金并提交') : '提交申请') }}</button>
+    </view>
     <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="押金支付二维码" />
   </view>
 </template>
 <script setup>
-import { reactive, ref } from 'vue'
-import {onLoad} from '@dcloudio/uni-app'
+import { computed, reactive, ref } from 'vue'
+import {onLoad, onUnload} from '@dcloudio/uni-app'
 import {clientStorage} from '@/utils/client-storage'
 import {get} from '@/api/request'
 import {getUserProfile} from '@/api/user'
-const agreed=ref(false),avatarImages=ref([]),inviteName=ref('')
+const agreed=ref(false),avatarImages=ref([]),inviteName=ref(''),inviteIssue=ref('')
 let invitationToken='',deviceId=clientStorage.get('enrollment_device')
 if(!deviceId){deviceId='device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);clientStorage.set('enrollment_device',deviceId)}
 onLoad(async options => {
-  await siteStore.fetchSiteConfig()
-  try { const {data} = await getUserProfile(); form.phone = data.phone || '' } catch (_) {}
+  try { await siteStore.fetchSiteConfig() } catch (_) {}
+  try { const {data} = await getUserProfile({ loading: false, silent: true }); form.phone = data.phone || '' } catch (_) {}
   invitationToken = options.invite || clientStorage.get('enrollment_invite') || ''
-  if (invitationToken) {
-    clientStorage.set('enrollment_invite', invitationToken)
-    try { const {data} = await get('/player/invitations/' + encodeURIComponent(invitationToken), {}, {auth:false}); inviteName.value = data.name }
-    catch (_) { uni.showToast({title:'邀请链接已失效',icon:'none'}) }
-  }
+  if (invitationToken) await verifyInvitation()
+  loading.value = false
   // #ifdef H5
   if (options.depositReturn === '1') {
     try {
@@ -50,7 +72,7 @@ onLoad(async options => {
 })
 
 import ImageUploader from '@/components/ImageUploader.vue'
-import { applyPlayer } from '@/api/player'
+import { applyPlayer, getPlayerApplicationStatus } from '@/api/player'
 import { createPlayerDeposit, createH5PlayerDeposit, createOfficialPlayerDeposit } from '@/api/pay'
 import { useSiteStore } from '@/store/site'
 import { showWechatPaymentEnvironmentPrompt, wechatPayChannel } from '@/utils/platform'
@@ -62,30 +84,83 @@ const paymentQrUrl = ref('')
 const draftKey = 'cangshuo-enrollment-deposit-draft'
 const form = reactive({ nickname:'', realName: '', phone: '', gameLevel: '', serviceTypes: '', skillTags: '' })
 const proofImages = ref([])
-const submitting = ref(false)
+const submitting = ref(false), submitted = ref(false), loading = ref(true)
+const locked = computed(() => submitting.value || submitted.value || loading.value)
+const fieldError = ref({}), submitError = ref('')
+let returnTimer
+onUnload(() => clearTimeout(returnTimer))
+function clearField(key) { if (fieldError.value.key === key) fieldError.value = {} }
+function complete() {
+  submitted.value = true
+  uni.showToast({ title: '已提交，等待审核' })
+  returnTimer = setTimeout(() => uni.navigateBack(), 850)
+}
+function valid() {
+  const invalid = [
+    ['avatar', avatarImages.value.length, '请上传头像'],
+    ['nickname', form.nickname.trim(), '请输入接单名'],
+    ['realName', form.realName.trim(), '请输入真实姓名'],
+    ['phone', form.phone, '请先在账号设置绑定手机号'],
+    ['agreement', agreed.value, '请同意用户协议和隐私政策']
+  ].find(([, valid]) => !valid)
+  fieldError.value = invalid ? { key: invalid[0], message: invalid[2] } : {}
+  return !invalid
+}
+async function verifyInvitation() {
+  inviteIssue.value = ''
+  if (!invitationToken) return true
+  try {
+    const {data} = await get('/player/invitations/' + encodeURIComponent(invitationToken), {}, {auth:false, silent:true, loading:false})
+    inviteName.value = data.name
+    clientStorage.set('enrollment_invite', invitationToken)
+    return true
+  } catch (error) {
+    inviteName.value = ''
+    if ([400,404].includes(Number(error?.code))) {
+      clientStorage.remove('enrollment_invite')
+      inviteIssue.value = '邀请链接已停用或过期，请向邀请人获取新链接。'
+    } else inviteIssue.value = '暂时无法核验邀请，请重试。'
+    return false
+  }
+}
+const applyOptions = { silent: true, loading: false }
 function goAgreement(kind){uni.navigateTo({url:'/pages/agreement/'+kind})}
 async function submit() {
-  if (!agreed.value || !avatarImages.value.length || !form.nickname.trim() || !form.realName || !form.phone) return uni.showToast({ title: '请填写完整', icon: 'none' })
-  if (submitting.value) return
+  if (locked.value) return
+  submitError.value = ''
+  if (!valid()) return
   submitting.value = true
   try {
+    if (!(await verifyInvitation())) return
     if (siteStore.depositMode === 'REQUIRED') {
-      // 需要押金：先支付再提交
+      const { data } = await getPlayerApplicationStatus()
+      if (data?.depositSatisfied) {
+        // Browser may have been refreshed or the payment completed on another device.
+        await submitApplication()
+        return
+      }
       await submitWithDeposit()
     } else {
       // 无需押金：直接提交
-      await applyPlayer({
-        ...form,avatar:avatarImages.value[0],privacyAccepted:agreed.value,invitationToken,deviceId,
-        proofImages: proofImages.value.join(',')
-      })
-      uni.showToast({ title: '已提交，等待审核' })
-      setTimeout(() => uni.navigateBack(), 1500)
+      await submitApplication()
     }
   } catch (e) {
-    if (!e?.errMsg?.includes('cancel')) uni.showToast({ title: e?.msg || e?.message || '操作失败', icon: 'none' })
+    if (!e?.errMsg?.includes('cancel')) submitError.value = e?.msg || e?.message || '提交失败，请重试'
   } finally {
     submitting.value = false
   }
+}
+
+async function submitApplication() {
+  await applyPlayer({
+    ...form, avatar: avatarImages.value[0], privacyAccepted: agreed.value, invitationToken, deviceId,
+    proofImages: proofImages.value.join(',')
+  }, applyOptions)
+  // #ifdef H5
+  sessionStorage.removeItem(draftKey)
+  // #endif
+  pendingDepositNo.value = ''
+  complete()
 }
 
 async function submitWithDeposit() {
@@ -137,7 +212,7 @@ async function submitWithDeposit() {
     ...form,avatar:avatarImages.value[0],privacyAccepted:agreed.value,invitationToken,deviceId,
     proofImages: proofImages.value.join(','),
     depositPaymentNo: paymentNo
-  })
+  }, applyOptions)
   try {
     await doApply()
   } catch (e) {
@@ -153,15 +228,40 @@ async function submitWithDeposit() {
   sessionStorage.removeItem(draftKey)
   // #endif
   pendingDepositNo.value = ''
-  uni.showToast({ title: '已提交，等待审核' })
-  setTimeout(() => uni.navigateBack(), 1500)
+  complete()
 }
-async function reopenPayment() { if (submitting.value) return; pendingDepositNo.value = ''; submitting.value = true; try { await submitWithDeposit() } catch (e) { uni.showToast({title:e?.msg||e?.message||'操作失败',icon:'none'}) } finally { submitting.value = false } }
+async function reopenPayment() {
+  if (locked.value || !valid()) return
+  submitError.value = ''
+  const previous = pendingDepositNo.value
+  pendingDepositNo.value = ''
+  submitting.value = true
+  try { await submitWithDeposit() }
+  catch (e) { submitError.value = e?.msg || e?.message || '无法打开支付，请重试' }
+  finally {
+    if (!submitted.value && !pendingDepositNo.value) pendingDepositNo.value = previous
+    submitting.value = false
+  }
+}
 </script>
 <style lang="scss" scoped>
-.apply-page { padding:24rpx; background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.form-item { background: #f7f7f7; padding:24rpx; border-radius:12rpx; margin-bottom:20rpx; .label { font-size:26rpx; color: #777777; margin-bottom:12rpx; display:block; } input { height:72rpx; background: rgba(0,0,0,0.05); border-radius:8rpx; padding:0 24rpx; font-size:28rpx; } }
-.deposit-tip { font-size:24rpx; color:#777777; margin-top:16rpx; margin-bottom:8rpx; }
-.upload-tip { display:block; font-size:22rpx; line-height:1.7; color:#aaaaaa; margin-top:12rpx; }
-.btn { height:88rpx; line-height:88rpx; text-align:center; background: #171717; color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; &.disabled { opacity:0.7; } }
+.apply-page { box-sizing: border-box; padding: 24rpx 24rpx calc(28rpx + env(safe-area-inset-bottom)); background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
+.apply-section, .apply-footer { padding: 22rpx 26rpx; border-radius: 24rpx; background: var(--store-surface); margin-bottom: 18rpx; }
+.section-heading { display: block; font-size: 30rpx; font-weight: 750; margin-bottom: 8rpx; }
+.form-item { padding: 16rpx 0; }
+.form-item + .form-item { border-top: 1rpx solid var(--store-line); }
+.label { display: block; margin-bottom: 8rpx; font-size: 27rpx; font-weight: 600; }
+.form-item input { box-sizing: border-box; min-height: 44px; padding: 0 16rpx; border-radius: 12rpx; background: var(--store-soft); font-size: 28rpx; box-shadow: inset 0 0 0 1px transparent; }
+.form-item input:focus-within { box-shadow: inset 0 0 0 1px #777; }
+.form-item input.invalid { box-shadow: inset 0 0 0 1px #a63842; }
+.form-item input[disabled] { color: #777; }
+.form-item :deep(.uni-input-input) { outline: none; }
+.deposit-tip { display: block; font-size: 24rpx; color: var(--store-regular); margin: 10rpx 0 16rpx; }
+.deposit-tip text, .agreement-row > text { color: var(--store-text); text-decoration: underline; }
+.upload-tip { display: block; font-size: 22rpx; color: var(--store-muted); margin-top: 10rpx; }
+.agreement-row { display: flex; align-items: center; flex-wrap: wrap; font-size: 24rpx; line-height: 1.6; column-gap: 4rpx; }
+.agreement-row label { display: flex; align-items: center; min-height: 44px; }
+.apply-error { display: block; color: #a63842; font-size: 24rpx; margin-top: 8rpx; }
+.apply-submit { margin-top: 18rpx; min-height: 44px; padding: 12rpx; background: var(--store-primary); color: #fff; font-weight: 700; line-height: 1.5; font-size: 28rpx; border-radius: 16rpx; }
+.apply-submit::after { border: 0; }
 </style>

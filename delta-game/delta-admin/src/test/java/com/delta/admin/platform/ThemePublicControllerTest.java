@@ -19,6 +19,17 @@ class ThemePublicControllerTest {
     @InjectMocks ThemePublicController controller;
 
     @Test
+    void builtInDarkThemeAndUserPreferenceDoNotRequireAnEntitlement() {
+        var request = mock(HttpServletRequest.class);
+        when(configs.getConfigValue(ThemeController.ACTIVE_THEME_KEY, ThemeController.DEFAULT_THEME))
+                .thenReturn(ThemeController.DARK_THEME);
+        when(configs.getConfigValue(ThemeController.USER_THEME_KEY, "false")).thenReturn("true");
+
+        assertThat(controller.theme(request).getData()).containsEntry("id", "dark").containsEntry("userSwitchEnabled", "true");
+        org.mockito.Mockito.verifyNoInteractions(platform);
+    }
+
+    @Test
     void fallsBackToDefaultWhenThePaidThemeIsNotEnabled() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getServerName()).thenReturn("shop.example.com");

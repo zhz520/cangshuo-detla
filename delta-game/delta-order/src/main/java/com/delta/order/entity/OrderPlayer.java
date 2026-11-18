@@ -18,6 +18,8 @@ public class OrderPlayer {
     private BigDecimal splitRatio;
     private BigDecimal splitAmount;
     private Long invitedBy;
+    private String invitedByType;
+    private Long replacesParticipantId;
     private LocalDateTime invitedAt;
     private LocalDateTime inviteDeadline;
     private LocalDateTime acceptedAt;

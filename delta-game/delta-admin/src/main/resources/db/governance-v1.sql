@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS player_homepage_revision (
 );
 CREATE TABLE IF NOT EXISTS privacy_request (
  id VARCHAR(36) PRIMARY KEY, user_id BIGINT NOT NULL, kind VARCHAR(32) NOT NULL,
- status VARCHAR(32) NOT NULL, note VARCHAR(500), reviewer_id BIGINT,
+ status VARCHAR(32) NOT NULL, note VARCHAR(500), review_note VARCHAR(500), reviewer_id BIGINT,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, reviewed_at TIMESTAMP NULL
 );
 CREATE TABLE IF NOT EXISTS staff_shift (
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS identity_verification (
   user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL,
   id_number_masked VARCHAR(32) NOT NULL DEFAULT '', front_image LONGTEXT NULL, front_mime VARCHAR(64) NULL,
   back_image LONGTEXT NULL, back_mime VARCHAR(64) NULL, status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  failed_attempts INT NOT NULL DEFAULT 0, last_failed_at TIMESTAMP NULL, locked_until TIMESTAMP NULL,
   privacy_version VARCHAR(32) NOT NULL DEFAULT '', privacy_accepted_at TIMESTAMP NULL,
   review_note VARCHAR(500) NOT NULL DEFAULT '', reviewer_id BIGINT NULL, submitted_at TIMESTAMP NULL,
   reviewed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,7 +75,7 @@ CREATE TABLE IF NOT EXISTS wechat_notice_queue (
  UNIQUE KEY uk_wechat_notice_dedupe(dedupe_key), KEY idx_wechat_notice_delivery(status,next_at)
 );
 CREATE TABLE IF NOT EXISTS sms_notice_queue (
- id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, event_type VARCHAR(64) NOT NULL,
+ id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, delivery_key VARCHAR(64) NULL, event_type VARCHAR(64) NOT NULL,
  event_group VARCHAR(32) NOT NULL, user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL,
  order_id BIGINT NULL, phone VARCHAR(32) NOT NULL, message VARCHAR(1000) NOT NULL,
  status VARCHAR(20) NOT NULL DEFAULT 'PENDING', attempts INT NOT NULL DEFAULT 0,

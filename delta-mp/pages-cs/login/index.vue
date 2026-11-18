@@ -58,13 +58,13 @@ onLoad(async () => {
 .staff-transfer { min-height: var(--app-page-height, 100vh); padding: 36rpx 28rpx calc(48rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; background: #f4f5f6; }
 .brand-card, .transfer-card { width: 100%; max-width: 720rpx; margin: 0 auto; box-sizing: border-box; background: #fff; border: 1rpx solid #eceef1; border-radius: 24rpx; }
 .brand-card { padding: 44rpx 28rpx; display: flex; flex-direction: column; align-items: center; }
-.logo { width: 112rpx; height: 112rpx; border-radius: 24rpx; background: #17191c; }
+.logo { width: 112rpx; height: 112rpx; border-radius: 24rpx; background: var(--store-primary); }
 .logo.placeholder { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 44rpx; font-weight: 700; }
-.title { margin-top: 20rpx; font-size: 36rpx; line-height: 1.3; font-weight: 800; color: #17191c; }
-.subtitle { margin-top: 8rpx; font-size: 24rpx; color: #7b8088; }
+.title { margin-top: 20rpx; font-size: 36rpx; line-height: 1.3; font-weight: 800; color: var(--store-text); }
+.subtitle { margin-top: 8rpx; font-size: 24rpx; color: var(--store-muted); }
 .transfer-card { margin-top: 20rpx; padding: 34rpx 28rpx; }
-.status { display: block; color: #20242a; font-size: 30rpx; font-weight: 700; line-height: 1.5; }
-.tip, .diagnostic { display: block; margin-top: 18rpx; color: #777e88; font-size: 24rpx; line-height: 1.8; }
-.submit { margin-top: 30rpx; height: 88rpx; line-height: 88rpx; border: 0; border-radius: 999rpx; background: #17191c; color: #fff; font-size: 29rpx; font-weight: 700; }
+.status { display: block; color: var(--store-text); font-size: 30rpx; font-weight: 700; line-height: 1.5; }
+.tip, .diagnostic { display: block; margin-top: 18rpx; color: var(--store-muted); font-size: 24rpx; line-height: 1.8; }
+.submit { margin-top: 30rpx; height: 88rpx; line-height: 88rpx; border: 0; border-radius: 999rpx; background: var(--store-primary); color: #fff; font-size: 29rpx; font-weight: 700; }
 .submit[disabled] { opacity: .55; }
 </style>

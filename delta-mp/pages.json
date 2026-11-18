@@ -94,6 +94,10 @@
       "style": { "navigationBarTitleText": "编辑资料", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
+      "path": "pages/mine/security",
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "账号安全" }
+    },
+    {
       "path": "pages/mine/services",
       "style": { "navigationStyle": "custom", "navigationBarTitleText": "设置", "navigationBarTextStyle": "black", "backgroundColor": "#f7f7f7", "backgroundColorTop": "#f7f7f7", "backgroundColorBottom": "#f7f7f7", "initialRenderingCache": "static" }
     },
@@ -127,11 +131,11 @@
     },
     {
       "path": "pages/login/index",
-      "style": { "navigationBarTitleText": "登录", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "登录", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
     },
     {
       "path": "pages/login/bind-phone",
-      "style": { "navigationBarTitleText": "绑定手机号" }
+      "style": { "navigationStyle": "custom", "navigationBarTitleText": "绑定手机号" }
     },
     {
       "path": "pages/display/index",
@@ -213,6 +217,10 @@
         {
           "path": "withdraw/detail",
           "style": { "navigationBarTitleText": "提现详情", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
+        },
+        {
+          "path": "deposit/refund",
+          "style": { "navigationBarTitleText": "押金退款", "navigationBarTextStyle": "black", "backgroundColor": "#f4f5f6", "backgroundColorTop": "#f4f5f6", "backgroundColorBottom": "#f4f5f6", "initialRenderingCache": "static" }
         },
         {
           "path": "account/list",

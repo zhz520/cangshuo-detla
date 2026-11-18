@@ -35,7 +35,7 @@ function openSupportLink() {
   align-items: center;
   justify-content: center;
   padding: 32rpx 24rpx calc(16rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-  color: #aaaaaa;
+  color: var(--store-muted);
   font-size: 22rpx;
   letter-spacing: 1rpx;
   line-height: 1.6;
@@ -49,7 +49,7 @@ function openSupportLink() {
 }
 
 .tech-support-footer text.link {
-  color: #777777;
+  color: var(--store-regular);
   text-decoration: underline;
   text-underline-offset: 4rpx;
   cursor: pointer;

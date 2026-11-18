@@ -1,0 +1,86 @@
+/* Dark theme reuses the default layout and leaves product and user media intact. */
+html:root[data-theme='dark'] {
+  color-scheme: dark;
+  --store-bg:#151516;
+  --store-surface:#212123;
+  --store-soft:#2a2a2d;
+  --store-text:#f4f4f5;
+  --store-regular:#c3c3c8;
+  --store-muted:#a9a9b0;
+  --store-line:#36363a;
+  --store-primary:#39393e;
+  --store-primary-2:#30343a;
+  --store-success:#8ddbb2;
+  --store-icon-size:42rpx;
+  color:#f4f4f5;
+}
+html:root[data-theme='dark'] :is(.display-page,.services-page,.privacy-center,.chat-page,.agreement-page) { background:var(--store-bg) !important; color:var(--store-text); }
+html:root[data-theme='dark'] :is(.screen-header,.native-navigation-bar,.bottom-nav,
+  uni-modal .uni-modal,uni-actionsheet .uni-actionsheet) {
+  background:var(--store-surface) !important; color:var(--store-text) !important; border-color:var(--store-line) !important;
+}
+html:root[data-theme='dark'] :is(.menu-row,.privacy-row,.msg-item,.detail-row) { border-color:var(--store-line) !important; }
+html:root[data-theme='dark'] :is(.screen-subtitle,.menu-state,.menu-desc,.group-title,.msg-content,.msg-time,.state-caption) { color:var(--store-muted) !important; }
+html:root[data-theme='dark'] uni-page-head .uni-page-head { background:var(--store-surface) !important; color:var(--store-text) !important; border-bottom:1rpx solid var(--store-line) !important; }
+html:root[data-theme='dark'] uni-page-head .uni-page-head__title { color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(.product-card,.order-card,.session-item,.group-card,.notice-card,.apply-section,.message-card,.panel,.card,.pay-card,.state-skeleton,.privacy-card,.msg-item,.display-page .row,.detail-section,.form-card,.profile-card,.setting-card,.sort-row,.sheet,.modal-content,.notice-box) {
+  background-color:var(--store-surface) !important; border-color:var(--store-line) !important; color:var(--store-text);
+}
+html:root[data-theme='dark'] :is(uni-button,button):focus-visible { outline:2px solid #adbcff; outline-offset:3px }
+html:root[data-theme='dark'] :is(input,textarea) { color:var(--store-text) !important; caret-color:var(--store-text) !important }
+html:root[data-theme='dark'] :is(.menu-icon,.screen-icon,.screen-icon-btn img,.screen-back .back-icon,.nav-icon) { filter:brightness(0) invert(.9) }
+html:root[data-theme='dark'] :is(.screen-icon-btn,.screen-back) :is(img,image,uni-image,uni-image > div),
+html:root[data-theme='dark'] :is(.shortcut-icon,.notice-icon,.go-arrow,.row-arrow) :is(img,image,uni-image,uni-image > div),
+html:root[data-theme='dark'] :is(.menu-icon,.quick-icon,.bundled-category-icon,.empty-image,.empty-state image,.custom-tabbar .icon-img) {
+  filter:brightness(0) invert(.9) !important;
+}
+html:root[data-theme='dark'] .shortcut-icon image { filter:brightness(0) invert(.9) !important; }
+html:root[data-theme='dark'] :is(.title,.screen-title,.uni-page-head__title,.section-title,.heading,.menu-text,.order-title,.label,.product-name,.price,.amount,.session-name,.dialog-title,.state-title,.msg-title,.display-page .name,.privacy-title) { color:var(--store-text) !important }
+
+/* Surfaces that used fixed light-colour declarations prior to the dark skin. */
+html:root[data-theme='dark'] :is(
+  .binding-page,.review-page,.progress-page,.lookup-page,.complaint-page,.order-list-page,.order-detail,
+  .product-list,.wallet-page,.mine-page,.services-page,.profile-page,.agreement-page,.display-page,
+  .membership-page,.coupon-page,.invite-page,.directory-page,.homepage,.identity-page,.library-page,
+  .message-page,.workbench-page,.create-order,.pay-page,.detail-page,.list-page,.account-page,
+  .edit-page,.withdraw-page,.earnings-page,.hall-page,.apply-page,.player-home,.player-mine,
+  .player-order-list,.chat-list,.chat-room,.maintenance,.login-container
+) { background:var(--store-bg) !important; color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(
+  .form-item,.section,.panel,.menu-panel,.orders-panel,.group-card,.notice-card,.player-list-card,
+  .profile-tabs,.section-card,.head-card,.bottom-bar,.pay-methods,.rating-area,.status-header,
+  .message-shortcuts,.empty-page,.empty-card,.apply-section,.apply-footer,.action-list,
+  .overview-shortcuts,.workbench-entry,.online-bar,.menu-list,.account-card,.brand-card,
+  .transfer-card,.lookup-card,.editor-card,.stat-item,.search-inner,.category-grid,.library-head,
+  .task,.msg-item,.product-row,.library-card,.state-skeleton,.qr-stage,.sort-label,.filter-card,
+  .search-form,.metric-card,.analytics-card,.summary-card,.config-group-item,.detail-card,
+  .settings-card,.form-field,.field-card,.listbox,.invite-card,.review-card,.coupon-card,
+  .wallet-card,.price-card,.notice-bar,.service-panel,.more-card,.showcase-card,.profile-card,
+  .order-card,.order-card-wrap,.product-card,.session-item,.group-card,.apply-section
+) { background:var(--store-surface) !important; border-color:var(--store-line) !important; color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(.custom-tabbar,.uni-page-head,.h5-bottom-nav,.admin-navigation,.sheet,.modal-content,.popup-content,.notice-list-popup,.sort-sheet,.sheet-panel,.action-sheet-panel,.modal-panel,.dialog-panel) {
+  background:var(--store-surface) !important; color:var(--store-text) !important; border-color:var(--store-line) !important;
+}
+html:root[data-theme='dark'] .custom-tabbar { border-top:1rpx solid var(--store-line) !important; }
+html:root[data-theme='dark'] .custom-tabbar .tabbar-text { color:var(--store-muted) !important; }
+html:root[data-theme='dark'] .custom-tabbar .tabbar-item.active .tabbar-text { color:var(--store-text) !important; }
+html:root[data-theme='dark'] .uni-page-head__title { color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(.form-item,.lookup-card,.review-page,.progress-page,.complaint-page) :is(uni-input,uni-textarea) {
+  background:var(--store-soft) !important; color:var(--store-text) !important; border-color:var(--store-line) !important;
+}
+html:root[data-theme='dark'] :is(.uni-input-placeholder,.uni-textarea-placeholder,.input-placeholder,.search-placeholder) { color:var(--store-muted) !important; }
+html:root[data-theme='dark'] :is(.btn-repeat,.btn-secondary,.secondary-btn,.ghost-btn,.action-button.secondary,.btn.ghost,.btn.secondary) {
+  background:var(--store-soft) !important; color:var(--store-text) !important; border-color:var(--store-line) !important;
+}
+html:root[data-theme='dark'] :is(.order-filter,.library-tab,.tab,.filter-item,.player-option,.read-all,.hint,.empty,.loading-more,.content-state) { color:var(--store-muted) !important; }
+html:root[data-theme='dark'] .status-tag { background:rgba(129,140,248,.18) !important; color:#c3caff !important; }
+html:root[data-theme='dark'] :is(.status-chip,.status-tag,.badge,.state-tag) { border-color:var(--store-line) !important; }
+html:root[data-theme='dark'] .btn-chat { color:#8ddbb2 !important; border-color:rgba(141,219,178,.35) !important; }
+html:root[data-theme='dark'] .btn-warn { color:#ff9aa2 !important; border-color:rgba(255,154,162,.35) !important; }
+html:root[data-theme='dark'] :is(.action-btn.danger,.action-error) { color:#ff9aa2 !important; }
+html:root[data-theme='dark'] .img-counter { background:rgba(0,0,0,.62) !important; color:#fff !important; }
+html:root[data-theme='dark'] .pay-button.disabled { background:var(--store-soft) !important; color:var(--store-muted) !important; }
+html:root[data-theme='dark'] :is(.uni-modal,.uni-actionsheet,.el-message-box) { background:var(--store-surface) !important; color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(.uni-modal__title,.uni-modal__bd,.uni-modal__btn,.uni-actionsheet__cell) { color:var(--store-text) !important; }
+html:root[data-theme='dark'] :is(.uni-modal__hd,.uni-modal__bd,.uni-modal__ft) { background:var(--store-surface) !important; border-color:var(--store-line) !important; }
+html:root[data-theme='dark'] :is(.empty-image,.empty-state image) { opacity:.72; }

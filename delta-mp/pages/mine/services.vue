@@ -25,6 +25,10 @@
 
         <view class="group-card">
           <text class="group-title">账户安全</text>
+          <view class="menu-row" @click="goProtected('/pages/mine/security')">
+            <image class="menu-icon" src="/static/icons/svc-privacy.svg" mode="aspectFit" />
+            <text class="menu-text">账号安全</text><text class="menu-arrow">›</text>
+          </view>
           <view class="menu-row" @click="goProtected('/pages/mine/identity')">
             <image class="menu-icon" src="/static/icons/svc-identity.svg" mode="aspectFit" />
             <text class="menu-text">实名认证</text>
@@ -65,6 +69,11 @@
 
         <view class="group-card">
           <text class="group-title">关于与设置</text>
+          <!-- #ifdef H5 -->
+          <view v-if="siteStore.userThemeAllowed" class="menu-row" @click="chooseTheme">
+            <text class="menu-text">外观</text><text class="menu-state">{{ themeLabels[siteStore.userTheme] }}</text><text class="menu-arrow">›</text>
+          </view>
+          <!-- #endif -->
           <view class="menu-row" @click="go('/pages/agreement/user')">
             <image class="menu-icon" src="/static/icons/svc-info.svg" mode="aspectFit" />
             <text class="menu-text">用户协议</text><text class="menu-arrow">›</text>
@@ -110,6 +119,11 @@ import { getIdentityStatus } from '@/api/user'
 
 const userStore = useUserStore()
 const siteStore = useSiteStore()
+const themeLabels = { '': '跟随站点', default: '浅色', dark: '暗黑' }
+function chooseTheme() {
+  const choices = ['', ...siteStore.userThemeOptions]
+  uni.showActionSheet({ itemList: choices.map(id => themeLabels[id]), success: ({ tapIndex }) => siteStore.setUserTheme(choices[tapIndex]) })
+}
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const remindStore = useRemindStore()
@@ -181,19 +195,19 @@ async function goPlayer() {
 }
 </script>
 <style lang="scss" scoped>
-.services-page { height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; background: #f7f7f7; }
+.services-page { height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; background: var(--store-soft); }
 .page-scroll { flex: 1; height: 0; min-height: 0; width: 100%; }
 .page-content { padding: 10rpx 28rpx calc(50rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; }
-.group-card { margin-bottom: 18rpx; padding: 8rpx 24rpx; border-radius: 26rpx; background: #ffffff; }
-.group-title { display: block; padding: 22rpx 2rpx 10rpx; color: #999999; font-size: 22rpx; font-weight: 650; letter-spacing: .02em; }
+.group-card { margin-bottom: 18rpx; padding: 8rpx 24rpx; border-radius: 26rpx; background: var(--store-surface); }
+.group-title { display: block; padding: 22rpx 2rpx 10rpx; color: var(--store-muted); font-size: 22rpx; font-weight: 650; letter-spacing: .02em; }
 .menu-row { display: flex; align-items: center; gap: 20rpx; min-height: 102rpx; border-bottom: 1rpx solid #f3f3f3; }
 .menu-row:last-child { border-bottom: 0; }
 .menu-row:active { opacity: .7; }
 .menu-icon { width: 42rpx; height: 42rpx; flex-shrink: 0; opacity: .9; }
-.menu-text { flex: 1; min-width: 0; color: #111111; font-size: 28rpx; font-weight: 650; }
+.menu-text { flex: 1; min-width: 0; color: var(--store-text); font-size: 28rpx; font-weight: 650; }
 .menu-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
-.menu-desc { overflow: hidden; color: #999999; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
-.menu-state { flex-shrink: 0; color: #999999; font-size: 22rpx; }
+.menu-desc { overflow: hidden; color: var(--store-muted); font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.menu-state { flex-shrink: 0; color: var(--store-muted); font-size: 22rpx; }
 .menu-badge { flex-shrink: 0; min-width: 30rpx; height: 30rpx; padding: 0 8rpx; border-radius: 999rpx; background: #e24d4d; color: #ffffff; font-size: 18rpx; line-height: 30rpx; text-align: center; box-sizing: border-box; }
 .menu-arrow { flex-shrink: 0; color: #bbbbbb; font-size: 34rpx; line-height: 1; }
 .danger .menu-text { color: #b84851; }

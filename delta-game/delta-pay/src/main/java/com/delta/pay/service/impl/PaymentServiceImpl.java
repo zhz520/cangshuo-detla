@@ -102,12 +102,12 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     @Transactional(rollbackFor = Exception.class)
     public Payment createPlayerDepositPayment(Long userId, WechatPayScene scene, String wxAppId) {
         lockUser(userId);
-        closeOtherPendingPlayerDeposits(userId, scene, wxAppId);
         BigDecimal amount = playerDepositRequiredAmount(userId);
         if(amount.signum()<=0) throw new BusinessException("当前无需缴纳打手押金");
         BigDecimal paid=playerDepositPaidAmount(userId);
         if (paid.compareTo(amount)>=0) throw new BusinessException("您已足额缴纳押金，无需重复支付");
         BigDecimal payable=amount.subtract(paid);
+        closeOtherPendingPlayerDeposits(userId, scene, wxAppId, payable);
         Payment paying = getOne(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getUserId, userId)
                 .eq(Payment::getBizType, "PLAYER_DEPOSIT")
@@ -147,6 +147,13 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     public BigDecimal playerDepositPaidAmount(Long userId) {
         BigDecimal value=jdbc.queryForObject("SELECT COALESCE(SUM(amount),0) FROM payment WHERE user_id=? AND biz_type='PLAYER_DEPOSIT' AND status='PAID'",BigDecimal.class,userId);
         return value==null?BigDecimal.ZERO:value;
+    }
+
+    @Override
+    public String latestPaidPlayerDepositNo(Long userId) {
+        var rows = jdbc.queryForList("SELECT payment_no FROM payment WHERE user_id=? AND biz_type='PLAYER_DEPOSIT' " +
+                "AND status='PAID' ORDER BY paid_at DESC,id DESC LIMIT 1", String.class, userId);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     @Override
@@ -199,6 +206,35 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         // Deposit creation charges only the outstanding amount, so a top-up receipt
         // need not equal the entire current requirement.
         return playerDepositPaidAmount(userId).compareTo(expectedAmount) >= 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void refundPlayerDeposit(Long paymentId, Long userId, BigDecimal amount, String reason) {
+        if (paymentId == null || userId == null) throw new BusinessException(400, "押金退款参数不完整");
+        com.delta.common.utils.Money.positive(amount);
+        Payment payment = lockPayment(paymentId);
+        if (!"PLAYER_DEPOSIT".equals(payment.getBizType()) || !userId.equals(payment.getUserId()))
+            throw new BusinessException(403, "押金支付记录不属于当前打手");
+        if (amount.compareTo(payment.getAmount()) != 0) throw new BusinessException(400, "押金须按原支付单整笔退款");
+        if ("REFUNDED".equals(payment.getStatus())) return;
+        if ("REFUNDING".equals(payment.getStatus())) {
+            if (amount.compareTo(payment.getRefundAmount() == null ? BigDecimal.ZERO : payment.getRefundAmount()) == 0
+                    && java.util.Objects.equals(reason, payment.getRefundReason())) return;
+            throw new BusinessException(409, "该押金已有退款正在处理");
+        }
+        if ("REFUND_FAILED".equals(payment.getStatus())) {
+            // Only a confirmed CLOSED result permits allocating a new refund number.
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM player_deposit_refund WHERE payment_id=? " +
+                            "AND status='REFUNDING' AND active_payment_id=? AND channel_refund_no=?", Long.class,
+                    paymentId, paymentId, payment.getRefundNo()) != 1)
+                throw new BusinessException(409, "原押金退款状态未核实");
+            payment.setStatus("PAID");
+        } else if (!"PAID".equals(payment.getStatus())) {
+            throw new BusinessException(409, "该押金当前不可退款");
+        }
+        processRefund(payment, amount, reason, false);
+        syncDepositRefund(payment, null);
     }
 
     @Override
@@ -281,7 +317,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor=Exception.class, isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void handleWxPayV3Notify(String jsonData, String serial, String nonce, String timestamp, String signature) {
         log.info("处理微信支付V3回调");
         WxPayConfiguration.CachedClients clients = wxPayConfiguration.getClients();
@@ -333,7 +369,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                     || transaction.getAmount().getTotal()==null || transaction.getAmount().getTotal()!=com.delta.common.utils.Money.cents(payment.getAmount())
                     || transactionId==null || transactionId.isBlank())
                 throw new BusinessException("支付通知与本地支付单不一致");
-            if("PAID".equals(payment.getStatus())) {
+            if("PAID".equals(payment.getStatus()) || ("PLAYER_DEPOSIT".equals(payment.getBizType())
+                    && java.util.Set.of("REFUNDING", "REFUNDED", "REFUND_FAILED").contains(payment.getStatus()))) {
                 if(!transactionId.equals(payment.getWxTransactionId())) throw new BusinessException("支付交易号不一致");
                 return;
             }
@@ -374,6 +411,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             payment.setWxTransactionId(transactionId);
             payment.setPaidAt(LocalDateTime.now());
             updateById(payment);
+
+            if ("PLAYER_DEPOSIT".equals(payment.getBizType())) {
+                // Keep the legacy player field pointing at the latest confirmed receipt;
+                // the authoritative amount is always summed from paid payment rows.
+                jdbc.update("UPDATE player p JOIN `user` u ON u.openid=p.openid " +
+                                "SET p.deposit_payment_no=? WHERE u.id=? AND p.deleted=0",
+                        payment.getPaymentNo(), payment.getUserId());
+            }
 
             if ("RECHARGE".equals(payment.getBizType())) {
                 creditRecharge(payment);
@@ -492,14 +537,43 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         Payment payment=lockPayment(candidate.getId());
         validateRefundNotification(payment,refundNo,transactionId,amount);
         if("REFUNDED".equals(payment.getStatus())) return;
-        if(!"REFUNDING".equals(payment.getStatus())) throw new BusinessException("退款状态不允许处理");
+        boolean depositFailed = "PLAYER_DEPOSIT".equals(payment.getBizType()) && "REFUND_FAILED".equals(payment.getStatus());
+        if(!"REFUNDING".equals(payment.getStatus()) && !depositFailed) throw new BusinessException("退款状态不允许处理");
+        if(depositFailed && status != com.wechat.pay.java.service.refund.model.Status.SUCCESS) return;
         if(status==com.wechat.pay.java.service.refund.model.Status.SUCCESS) {
             payment.setStatus("REFUNDED");payment.setRefundTime(LocalDateTime.now());updateById(payment);updateRefundOrder(payment);
+            syncDepositRefund(payment, null);
         } else if(status==com.wechat.pay.java.service.refund.model.Status.CLOSED || status==com.wechat.pay.java.service.refund.model.Status.ABNORMAL) {
             payment.setStatus("REFUND_FAILED");updateById(payment);
-            eventPublisher.publishEvent(new BusinessEvent(this,"ORDER_REFUND_FAILED","USER",payment.getUserId(),
-                    payment.getOrderId(),"微信退款失败或关闭，请维护人员核查后重试"));
+            boolean closed = status == com.wechat.pay.java.service.refund.model.Status.CLOSED;
+            syncDepositRefund(payment, closed ? DEPOSIT_REFUND_CLOSED : "渠道退款异常，请在商户平台处理原退款单");
+            if (!"PLAYER_DEPOSIT".equals(payment.getBizType()))
+                eventPublisher.publishEvent(new BusinessEvent(this,"ORDER_REFUND_FAILED","USER",payment.getUserId(),
+                        payment.getOrderId(),"微信退款失败或关闭，请维护人员核查后重试"));
             log.error("微信退款需人工核查: paymentId={}, status={}",payment.getId(),status);
+        }
+    }
+
+    private void syncDepositRefund(Payment payment, String error) {
+        if (!"PLAYER_DEPOSIT".equals(payment.getBizType())) return;
+        if ("REFUNDING".equals(payment.getStatus())) {
+            jdbc.update("UPDATE player_deposit_refund SET status='REFUNDING',channel_refund_no=?," +
+                            "last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_id=? AND status IN ('PENDING','REFUNDING')",
+                    payment.getRefundNo(), payment.getId());
+            return;
+        }
+        String status = "REFUNDED".equals(payment.getStatus()) ? "REFUNDED" : "FAILED";
+        boolean success = "REFUNDED".equals(status);
+        int changed = jdbc.update("UPDATE player_deposit_refund SET status=?,active_payment_id=?,channel_refund_no=?," +
+                        "last_error=?,completed_at=?,updated_at=CURRENT_TIMESTAMP WHERE payment_id=? AND " +
+                        "(status IN ('PENDING','REFUNDING') OR (status='FAILED' AND channel_refund_no=?))",
+                status, success ? null : payment.getId(), payment.getRefundNo(), error,
+                success ? LocalDateTime.now() : null, payment.getId(), payment.getRefundNo());
+        if (changed > 0 && isWechatPayment(payment)) {
+            Long playerId = jdbc.queryForObject("SELECT player_id FROM player_deposit_refund WHERE payment_id=? " +
+                    "AND channel_refund_no=?", Long.class, payment.getId(), payment.getRefundNo());
+            eventPublisher.publishEvent(new BusinessEvent(this, success ? "REFUND_SUCCEEDED" : "REFUND_FAILED",
+                    "PLAYER", playerId, null, success ? "押金退款已原路退回" : "押金退款未完成，请查看处理进度"));
         }
     }
 
@@ -526,13 +600,13 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
     }
 
     @Override
-    @Transactional(rollbackFor=Exception.class)
+    @Transactional(rollbackFor=Exception.class, isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void reconcilePayment(Long paymentId) {
         reconcilePayment(paymentId,false);
     }
 
     @Override
-    @Transactional(rollbackFor=Exception.class)
+    @Transactional(rollbackFor=Exception.class, isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void reconcilePayment(Long paymentId, boolean closeUnpaid) {
         Payment payment=lockPayment(paymentId);
         if(!"PAYING".equals(payment.getStatus()) || !isWechatPayment(payment)) return;
@@ -582,7 +656,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
         return appId.trim();
     }
 
-    private void closeOtherPendingPlayerDeposits(Long userId, WechatPayScene scene, String wxAppId) {
+    private void closeOtherPendingPlayerDeposits(Long userId, WechatPayScene scene, String wxAppId, BigDecimal amount) {
         String targetAppId=normalizedAppId(wxAppId);
         java.util.List<Payment> pending=list(new LambdaQueryWrapper<Payment>()
                 .eq(Payment::getUserId,userId)
@@ -590,7 +664,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 .eq(Payment::getStatus,"PAYING")
                 .last("FOR UPDATE"));
         java.util.List<Payment> otherScenes=pending.stream().filter(payment ->
-                !scene.payMethod().equals(payment.getPayMethod()) || !targetAppId.equals(payment.getWxAppId()))
+                !scene.payMethod().equals(payment.getPayMethod()) || !targetAppId.equals(payment.getWxAppId())
+                        || amount.compareTo(payment.getAmount()) != 0)
                 .toList();
         if(otherScenes.isEmpty()) return;
         var clients=wxPayConfiguration.getClients();

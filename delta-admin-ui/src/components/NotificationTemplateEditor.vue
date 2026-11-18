@@ -1,19 +1,17 @@
 <template>
   <section v-if="guide" class="template-editor">
-    <div class="editor-heading">
-      <div>
-        <strong>{{ guide.roleLabel }} · {{ guide.channel === 'wechat' ? '公众号模板' : '短信模板' }}</strong>
-        <p>按事件直接填写，保存时自动生成后台使用的 JSON，无需手工编辑。</p>
-      </div>
-      <el-tag size="small" effect="plain">{{ guide.channel === 'wechat' ? '服务号' : '阿里云' }}</el-tag>
-    </div>
+    <div v-if="!compact" class="editor-heading"><strong>{{ guide.roleLabel }} · {{ guide.channel === 'wechat' ? '公众号模板' : '短信模板' }}</strong></div>
+    <label v-if="compact" class="event-select">
+      <span>业务事件</span>
+      <select v-model="eventKey"><option v-for="event in guide.events" :key="event.key" :value="event.key">{{ event.label }}</option></select>
+    </label>
 
     <el-alert v-if="parseError" type="warning" :closable="false" show-icon :title="parseError" />
     <el-alert v-if="validationErrors.length" type="error" :closable="false" show-icon title="请先修正模板配置">
       <template #default><ul class="validation-list"><li v-for="error in validationErrors" :key="error">{{ error }}</li></ul></template>
     </el-alert>
 
-    <article v-for="event in guide.events" :key="event.key" class="event-editor">
+    <article v-for="event in visibleEvents" :key="event.key" class="event-editor">
       <div class="event-heading">
         <div><strong>{{ event.label }}</strong><code>{{ event.key }}</code></div>
         <el-button link type="primary" @click="recommend(event)">使用推荐字段</el-button>
@@ -31,13 +29,13 @@
         </label>
       </div>
 
-      <details v-if="guide.channel === 'wechat'" class="mini-program-settings">
-        <summary>小程序跳转（选填，填写后优先于网页链接）</summary>
+      <div v-if="guide.channel === 'wechat'" class="mini-program-settings">
+        <p class="event-trigger">小程序跳转（选填，优先于网页链接）</p>
         <div class="primary-fields two">
           <label><span>小程序 AppID</span><el-input v-model="form[event.key].miniAppId" maxlength="64" placeholder="wx..." @input="commit" /></label>
           <label><span>页面路径</span><el-input v-model="form[event.key].miniPagepath" maxlength="200" placeholder="pages/order/detail?id=..." @input="commit" /></label>
         </div>
-      </details>
+      </div>
 
       <div class="field-heading"><span>模板参数</span><small>左侧是模板变量，右侧是系统数据源</small></div>
       <div v-for="(field, index) in form[event.key].fields" :key="index" class="field-row">
@@ -67,11 +65,6 @@
       <div class="final-example"><span>最终通知示例</span><p>{{ event.finalExample }}</p></div>
     </article>
 
-    <details class="generated-json">
-      <summary>查看自动生成的 JSON</summary>
-      <pre>{{ generatedJson }}</pre>
-      <el-button link type="primary" @click="copy(generatedJson)">复制 JSON</el-button>
-    </details>
   </section>
 </template>
 
@@ -81,11 +74,15 @@ import { ElMessage } from 'element-plus'
 import { notificationConfigGuide } from '@/utils/notification-examples'
 
 const props = defineProps({
+  compact: Boolean,
   modelValue: { type: String, default: '{}' },
   configKey: { type: String, required: true }
 })
 const emit = defineEmits(['update:modelValue', 'validity'])
 const guide = computed(() => notificationConfigGuide(props.configKey))
+const eventKey = ref('')
+watch(guide, item => { eventKey.value = item?.events[0]?.key || '' }, { immediate:true })
+const visibleEvents = computed(() => props.compact ? (guide.value?.events || []).filter(event => event.key === eventKey.value) : guide.value?.events || [])
 const parseError = ref('')
 const form = reactive({})
 let extraGroups = {}
@@ -233,6 +230,8 @@ watch(validationErrors, errors => emit('validity', errors.length === 0), { immed
 
 <style scoped>
 .template-editor { width:100%; margin-top:10px; padding:14px; border:1px solid #dfe6ef; border-radius:13px; background:#fff; }
+.event-select { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:10px }
+.event-select select { min-height:36px; max-width:100%; padding:5px 8px; border:1px solid var(--el-border-color); border-radius:8px; color:var(--el-text-color-primary); background:var(--el-fill-color-light); font:inherit }
 .editor-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
 .editor-heading strong { color:#1d2733; font-size:15px; }
 .editor-heading p { margin:5px 0 0; color:#7c8795; font-size:12px; line-height:1.55; }

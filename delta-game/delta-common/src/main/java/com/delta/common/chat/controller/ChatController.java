@@ -121,15 +121,14 @@ public class ChatController {
     }
 
     @PostMapping("/message/read")
-    public R<Void> markRead(@RequestParam Long sessionId, @RequestParam(required = false) String chatRole) {
+    public R<Integer> markRead(@RequestParam Long sessionId, @RequestParam(required = false) String chatRole) {
         ChatSession s = chatService.getById(sessionId);
         if (s == null) return R.fail("会话不存在");
         long myEncodedId = getMyEncodedId(chatRole);
         if (!isSessionMember(s, myEncodedId)) return R.fail("无权限操作该会话");
         String userType = ChatParticipantId.getEntityType(myEncodedId) == 1 ? "USER" :
                 ChatParticipantId.getEntityType(myEncodedId) == 2 ? "PLAYER" : "CS";
-        chatService.markRead(sessionId, userType + ":" + ChatParticipantId.getRawId(myEncodedId));
-        return R.ok();
+        return R.ok(chatService.markRead(sessionId, userType + ":" + ChatParticipantId.getRawId(myEncodedId)));
     }
 
     /** 用户发起客服会话：分配在线客服 */

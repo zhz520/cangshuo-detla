@@ -21,11 +21,13 @@ public class ThemePublicController {
     @GetMapping("/theme")
     public R<Map<String, String>> theme(HttpServletRequest request) {
         String stored = configs.getConfigValue(ThemeController.ACTIVE_THEME_KEY, ThemeController.DEFAULT_THEME);
-        String active = ThemeController.DEFAULT_THEME;
+        String active = ThemeController.DARK_THEME.equals(stored) ? ThemeController.DARK_THEME : ThemeController.DEFAULT_THEME;
         if (ThemeController.NEUMORPHISM_THEME.equals(stored)
                 && platform.featureEnabled(ThemeController.THEME_FEATURE, request.getServerName())) {
             active = ThemeController.NEUMORPHISM_THEME;
         }
-        return R.ok(Map.of("id", active, "version", "1"));
+        boolean canSwitch = Boolean.parseBoolean(configs.getConfigValue(ThemeController.USER_THEME_KEY, "false"));
+        return R.ok(Map.of("id", active, "version", "1", "userSwitchEnabled", String.valueOf(canSwitch),
+                "userThemeOptions", canSwitch ? String.join(",", ThemeController.userOptions(configs)) : ""));
     }
 }

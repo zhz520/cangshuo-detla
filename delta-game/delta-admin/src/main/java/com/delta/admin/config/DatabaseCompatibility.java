@@ -38,6 +38,12 @@ public class DatabaseCompatibility {
                     "ALTER TABLE identity_verification ADD COLUMN privacy_version VARCHAR(32) NOT NULL DEFAULT ''"),
             new AdditiveColumn("identity_verification", "privacy_accepted_at",
                     "ALTER TABLE identity_verification ADD COLUMN privacy_accepted_at TIMESTAMP NULL"),
+            new AdditiveColumn("identity_verification", "failed_attempts",
+                    "ALTER TABLE identity_verification ADD COLUMN failed_attempts INT NOT NULL DEFAULT 0"),
+            new AdditiveColumn("identity_verification", "last_failed_at",
+                    "ALTER TABLE identity_verification ADD COLUMN last_failed_at TIMESTAMP NULL"),
+            new AdditiveColumn("identity_verification", "locked_until",
+                    "ALTER TABLE identity_verification ADD COLUMN locked_until TIMESTAMP NULL"),
             new AdditiveColumn("player_level", "grab_captcha_required",
                     "ALTER TABLE player_level ADD COLUMN grab_captcha_required TINYINT NOT NULL DEFAULT 1"),
             new AdditiveColumn("player_level", "price_increase_rate",
@@ -155,6 +161,7 @@ public class DatabaseCompatibility {
                     "user_id BIGINT PRIMARY KEY, real_name VARCHAR(64) NOT NULL DEFAULT '', id_number_hash CHAR(64) NULL, " +
                     "id_number_masked VARCHAR(32) NOT NULL DEFAULT '', front_image LONGTEXT NULL, front_mime VARCHAR(64) NULL, " +
                     "back_image LONGTEXT NULL, back_mime VARCHAR(64) NULL, status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', " +
+                    "failed_attempts INT NOT NULL DEFAULT 0, last_failed_at TIMESTAMP NULL, locked_until TIMESTAMP NULL, " +
                     "privacy_version VARCHAR(32) NOT NULL DEFAULT '', privacy_accepted_at TIMESTAMP NULL, " +
                     "review_note VARCHAR(500) NOT NULL DEFAULT '', reviewer_id BIGINT NULL, submitted_at TIMESTAMP NULL, " +
                     "reviewed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
@@ -255,6 +262,19 @@ public class DatabaseCompatibility {
                     "operator_type VARCHAR(16) NOT NULL, operator_id BIGINT NULL, note VARCHAR(500) NULL, " +
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                     "KEY idx_refund_request_audit_request(refund_request_id,created_at))");
+            ensureTable("player_deposit_refund", "CREATE TABLE IF NOT EXISTS player_deposit_refund (" +
+                    "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, refund_no VARCHAR(40) NOT NULL, " +
+                    "player_id BIGINT NOT NULL, user_id BIGINT NOT NULL, payment_id BIGINT NOT NULL, " +
+                    "amount DECIMAL(10,2) NOT NULL, reason VARCHAR(500) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'PENDING', " +
+                    "active_payment_id BIGINT NULL, reviewer_id BIGINT NULL, review_note VARCHAR(500) NULL, " +
+                    "reviewed_at TIMESTAMP NULL, channel_refund_no VARCHAR(64) NULL, last_error VARCHAR(500) NULL, " +
+                    "completed_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                    "UNIQUE KEY uk_player_deposit_refund_no(refund_no), " +
+                    "UNIQUE KEY uk_player_deposit_refund_active(active_payment_id), " +
+                    "KEY idx_player_deposit_refund_player(player_id,status,created_at), " +
+                    "KEY idx_player_deposit_refund_payment(payment_id,status), " +
+                    "KEY idx_player_deposit_refund_status(status,created_at))");
             ensureTable("wechat_official_binding", "CREATE TABLE IF NOT EXISTS wechat_official_binding (" +
                     "user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL, " +
                     "PRIMARY KEY(user_type,user_id), UNIQUE KEY uk_wechat_official_openid(openid))");
@@ -262,7 +282,7 @@ public class DatabaseCompatibility {
                     "user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, openid VARCHAR(128) NOT NULL, " +
                     "archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_type,user_id))");
             ensureTable("sms_notice_queue", "CREATE TABLE IF NOT EXISTS sms_notice_queue (" +
-                    "id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, event_type VARCHAR(64) NOT NULL, " +
+                    "id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, delivery_key VARCHAR(64) NULL, event_type VARCHAR(64) NOT NULL, " +
                     "event_group VARCHAR(32) NOT NULL, user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL, " +
                     "order_id BIGINT NULL, phone VARCHAR(32) NOT NULL, message VARCHAR(1000) NOT NULL, " +
                     "status VARCHAR(20) NOT NULL DEFAULT 'PENDING', attempts INT NOT NULL DEFAULT 0, " +
@@ -316,12 +336,16 @@ public class DatabaseCompatibility {
                     "active_player_count INT NOT NULL DEFAULT 0,new_complaint_count INT NOT NULL DEFAULT 0," +
                     "avg_order_amount DECIMAL(10,2) NOT NULL DEFAULT 0,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
                     "UNIQUE KEY uk_stat_date(stat_date))");
+            ensureColumn("order_player", "invited_by_type", "ALTER TABLE order_player ADD COLUMN invited_by_type VARCHAR(16) NULL");
+            ensureColumn("order_player", "replaces_participant_id", "ALTER TABLE order_player ADD COLUMN replaces_participant_id BIGINT NULL");
             for (AdditiveColumn required : REQUIRED_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
             for (AdditiveColumn required : STATISTICS_COLUMNS) {
                 ensureColumn(required.table(), required.column(), required.ddl());
             }
+            ensureColumn("sms_notice_queue", "delivery_key",
+                    "ALTER TABLE sms_notice_queue ADD COLUMN delivery_key VARCHAR(64) NULL");
             ensureOfficialWechatBindingUniqueness();
             ensureIndex("wechat_notice_queue", "uk_wechat_notice_dedupe",
                     "CREATE UNIQUE INDEX uk_wechat_notice_dedupe ON wechat_notice_queue(dedupe_key)");
@@ -462,6 +486,9 @@ public class DatabaseCompatibility {
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         insertBooleanConfigIfMissing("order.cooperation.enabled", "启用协同打单", "true",
                 "关闭后不再接受新的队友邀请；已经确认的队伍仍可继续履约、退款和结算");
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM sys_config WHERE config_key='auth.age_confirmation.enabled'", Integer.class) == 0)
+            jdbc.update("INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark) VALUES(?,?,?,?,?,?)",
+                    "auth.age_confirmation.enabled", "打开前台前确认已满18岁", "false", "boolean", "账号与登录", "");
         insertBooleanConfigIfMissing("auth.phone.enabled", "启用手机验证码登录", "true",
                 "关闭后网页端不再提供手机验证码登录；密码辅助入口和微信登录分别受独立开关控制");
         insertBooleanConfigIfMissing("auth.password.enabled", "启用密码辅助登录", "true",

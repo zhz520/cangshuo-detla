@@ -2,6 +2,22 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {configGroupCounts,editableSystemConfigs,isSystemConfigVisible,orderedConfigGroups} from '../src/utils/system-config.js'
 
+import { configTabs, configSection, configReadiness, orderConfigFields } from '../src/utils/config-sections.js'
+
+test('account, age and payment keep their tabs; supplier secrets stay out of the generic config editor', () => {
+  const tabFor = key => configTabs.find(tab => tab.panels.some(panel => panel.id === configSection(key)))?.id
+  assert.equal(tabFor('wechat.official.app_secret'),'login')
+  assert.equal(tabFor('auth.age_confirmation.enabled'),'age')
+  assert.equal(tabFor('wx.pay.public-key-path'),'certificate')
+  assert.equal(tabFor('wx.pay.h5-enabled'),'payment')
+  assert.equal(configSection('sms.aliyun.access_key_secret'),'')
+  assert.equal(tabFor('sms.aliyun.cooldown_seconds'),'sms')
+  assert.equal(isSystemConfigVisible({configGroup:'短信配置',configKey:'sms.aliyun.access_key_secret'}),false)
+  assert.equal(configReadiness('login', {'wechat.official.app_id':'wx-fixture','wechat.official.app_secret':'********'}),'complete')
+  assert.equal(configReadiness('login', {'wechat.official.app_id':'wx-fixture'}),'incomplete')
+  assert.equal(configReadiness('sms', null), null)
+})
+
 const config = (configKey, configName = configKey, configGroup = '站点配置') => ({configKey,configName,configGroup})
 
 test('system config save excludes dedicated email and business settings', () => {
@@ -16,6 +32,16 @@ test('system config save excludes dedicated email and business settings', () => 
   ]
   assert.deepEqual(editableSystemConfigs(configs).map(item => item.configKey), ['site_name'])
   assert.equal(isSystemConfigVisible(configs[1]), false)
+})
+
+test('both deposit settings remain editable together in enrollment and preserve saved amounts', () => {
+  const amount = { ...config('player.deposit_amount', '入驻押金金额（元）', '打手配置'), id: 71, configValue: '68.50' }
+  const mode = { ...config('player.deposit_mode', '押金政策', '打手配置'), id: 72, configValue: 'REQUIRED' }
+  const panel = configTabs.find(tab => tab.id === 'enrollment').panels.find(panel => panel.id === 'deposit')
+  assert.equal(panel.title, '打手押金')
+  const fields = editableSystemConfigs([amount, mode, config('player.deposit_required')])
+    .filter(item => configSection(item.configKey) === panel.id)
+  assert.deepEqual(orderConfigFields(fields), [mode, amount])
 })
 
 test('official notification fields follow the paid feature and save only visible values', () => {

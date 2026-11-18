@@ -34,8 +34,11 @@
         <el-table-column prop="level" label="等级" width="90"><template #default="{ row }"><el-tag type="info" size="small">{{ levelLabel(row.level) }}</el-tag></template></el-table-column>
         <el-table-column prop="completedOrders" label="完成订单" width="100" />
         <el-table-column prop="balance" label="余额" width="100"><template #default="{ row }">¥{{ row.balance || 0 }}</template></el-table-column>
-        <el-table-column prop="depositPaymentNo" label="押金订单号" width="200" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.depositPaymentNo || '-' }}</template>
+        <el-table-column label="押金" width="190">
+          <template #default="{ row }">
+            <el-tag :type="depositTagType(row.depositStatus)" size="small">{{ depositStatusText(row.depositStatus) }}</el-tag>
+            <div class="deposit-amount">¥{{ money(row.depositPaidAmount) }} / ¥{{ money(row.depositRequiredAmount) }}</div>
+          </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" min-width="150">
           <template #default="{ row }">
@@ -129,7 +132,12 @@
           <el-descriptions-item label="技能标签" :span="2">{{ skillTagsText }}</el-descriptions-item>
           <el-descriptions-item label="个人简介" :span="2"><span class="introduction-text">{{ detailData.introduction || '暂未填写' }}</span></el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ detailData.createdAt || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="押金订单号">{{ detailData.depositPaymentNo || '未缴纳 / 无需缴纳' }}</el-descriptions-item>
+          <el-descriptions-item label="押金状态">
+            <el-tag :type="depositTagType(detailData.depositStatus)" size="small">{{ depositStatusText(detailData.depositStatus) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="押金应缴 / 已缴">¥{{ money(detailData.depositRequiredAmount) }} / ¥{{ money(detailData.depositPaidAmount) }}</el-descriptions-item>
+          <el-descriptions-item label="押金待补">¥{{ money(detailData.depositOutstandingAmount) }}</el-descriptions-item>
+          <el-descriptions-item label="最近到账">{{ detailData.depositLastPaidAt || '-' }}</el-descriptions-item>
           <el-descriptions-item v-if="detailData.rejectReason" label="驳回原因" :span="2">
             {{ detailData.rejectReason }}
           </el-descriptions-item>
@@ -149,6 +157,20 @@
           <el-descriptions-item label="完成订单">{{ detailData.completedOrders || 0 }}</el-descriptions-item>
           <el-descriptions-item label="评分">{{ detailData.avgRating || '-' }}</el-descriptions-item>
         </el-descriptions>
+        <div class="deposit-history-head">
+          <el-divider content-position="left">押金缴纳记录</el-divider>
+          <el-button link type="primary" @click="router.push({ path: '/deposit-refunds', query: { keyword: String(detailData.id) } })">押金退款记录</el-button>
+        </div>
+        <el-table :data="playerDeposits" v-loading="depositLoading" stripe size="small" max-height="300">
+          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column prop="paymentNo" label="支付单号" min-width="190" show-overflow-tooltip />
+          <el-table-column prop="amount" label="金额" width="110"><template #default="{ row }">¥{{ money(row.amount) }}</template></el-table-column>
+          <el-table-column prop="status" label="状态" width="100"><template #default="{ row }"><el-tag :type="depositTagType(row.status)" size="small">{{ paymentStatusText(row.status) }}</el-tag></template></el-table-column>
+          <el-table-column prop="payMethod" label="支付方式" width="130" />
+          <el-table-column prop="paidAt" label="到账时间" width="170" />
+          <el-table-column prop="refundReason" label="退款说明" min-width="180" show-overflow-tooltip />
+        </el-table>
+        <div v-if="!depositLoading && !playerDeposits.length" class="proof-empty">暂无押金支付记录</div>
         <GrabVerificationStats v-if="isAdmin" :player-id="detailData.id" />
         <el-divider content-position="left">金额变化详情</el-divider>
         <el-table :data="playerTransactions" v-loading="transactionLoading" stripe size="small" max-height="360">
@@ -271,7 +293,7 @@ import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
@@ -303,6 +325,12 @@ const statusMap = { PENDING: '待审核', ACTIVE: '正常', REJECTED: '已驳回
 const statusTagMap = { PENDING: 'warning', ACTIVE: 'success', REJECTED: 'danger', FROZEN: 'info' }
 function statusText(s) { return statusMap[s] || s }
 function statusTagType(s) { return statusTagMap[s] || '' }
+const depositStatusMap = { NONE: '无需押金', UNPAID: '未缴', PARTIAL: '部分缴纳', PAID: '已缴清', PAYING: '支付中', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款', FAILED: '支付失败', NO_PLAYER: '未绑定打手' }
+const depositTagMap = { NONE: 'info', UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success', PAYING: 'warning', CLOSED: 'info', REFUNDING: 'warning', REFUNDED: 'danger', FAILED: 'danger', NO_PLAYER: 'info' }
+function depositStatusText(s) { return depositStatusMap[s] || s || '-' }
+function depositTagType(s) { return depositTagMap[s] || 'info' }
+function paymentStatusText(s) { return ({ PAID: '已到账', PAYING: '支付中', CLOSED: '已关闭', REFUNDING: '退款中', REFUNDED: '已退款', FAILED: '支付失败' })[s] || s || '-' }
+function money(value) { return Number(value || 0).toFixed(2) }
 async function fetchData() {
   clearSelection()
   loading.value = true
@@ -425,6 +453,7 @@ async function handleDelete(row) {
   await fetchData()
 }
 const detailVisible = ref(false), detailData = ref(null), detailLoading = ref(false)
+const playerDeposits = ref([]), depositLoading = ref(false)
 const proofImages = computed(() => {
   const raw = detailData.value?.proofImages
   if (!raw) return []
@@ -484,6 +513,8 @@ async function showDetail(id) {
   detailVisible.value = true
   detailLoading.value = true
   detailData.value = null
+  playerDeposits.value = []
+  depositLoading.value = true
   transactionQuery.playerId = id
   transactionQuery.pageNum = 1
   playerTransactions.value = []
@@ -492,10 +523,14 @@ async function showDetail(id) {
     const detailFn = isAdmin ? adminPlayerDetail : csPlayerDetail
     await Promise.all([
       detailFn(id).then(res => { detailData.value = res.data }),
-      fetchPlayerTransactions()
+      fetchPlayerTransactions(),
+      isAdmin
+        ? adminPlayerDeposits(id).then(res => { playerDeposits.value = res.data || [] }).catch(() => { playerDeposits.value = [] })
+        : Promise.resolve()
     ])
   } finally {
     detailLoading.value = false
+    depositLoading.value = false
   }
 }
 
@@ -624,6 +659,13 @@ watch(() => route.query.taskId, id => {
 .player-detail {
   padding: 4px 0;
 }
+.deposit-amount {
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
+.deposit-history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.deposit-history-head :deep(.el-divider) { flex: 1; margin-right: 8px; }
 .introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .proof-section { margin-top: 16px; }
 .proof-title { font-size: 13px; color: #606266; margin-bottom: 10px; }

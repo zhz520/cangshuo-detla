@@ -74,21 +74,6 @@
           </el-select>
           <span v-else>{{ detail.csName || '公共池' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item v-if="detail.teammates?.length" label="协同打手" :span="2">
-          <div class="team-summary">需要 {{ detail.requiredPlayerCount || (detail.teammates.length + 1) }} 人队，已记录 {{ detail.teammates.length }} 名队友</div>
-          <div v-for="member in detail.teammates" :key="member.id" class="team-member">
-            <div class="team-member-main">
-              <el-avatar :size="30" :src="member.avatar || undefined">{{ (member.nickname || '打')[0] }}</el-avatar>
-              <span class="team-name">{{ member.nickname || ('打手 ID: ' + member.playerId) }}</span>
-              <el-tag :type="teamTag(member.status)" size="small">{{ teamStatus(member.status) }}</el-tag>
-            </div>
-            <div class="team-member-meta">
-              <span>{{ teamSplit(member) }}</span>
-              <span>邀请 {{ member.invitedAt || '-' }}</span>
-              <span v-if="member.acceptedAt">接受 {{ member.acceptedAt }}</span>
-            </div>
-          </div>
-        </el-descriptions-item>
         <el-descriptions-item label="游戏账号">{{ detail.gameAccount || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ detail.contact || '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单时间">{{ detail.createdAt }}</el-descriptions-item>
@@ -101,6 +86,8 @@
           </div>
         </el-descriptions-item>
       </el-descriptions>
+      <OrderTeamPanel v-if="detail?.playerId || detail?.teammates?.length" :key="detail.id" :order="detail"
+        :admin="isAdmin" :can-manage="canManageTeam" @changed="refreshTeamOrder" />
       <div v-if="detail" class="detail-actions">
         <el-button v-if="can('order.manage') && detail.status === 'COMPLETED'" type="primary" :loading="confirmLoading" @click="handleConfirm(detail)">结单</el-button>
       </div>
@@ -111,6 +98,7 @@
             :type="idx === progressList.length - 1 ? 'primary' : ''">
             <span>{{ p.content || p.description || orderStatusLabel(p.toStatus) || p.toStatus }}</span>
             <span v-if="p.operatorType" style="margin-left:8px;color:#909399;font-size:12px">({{ { USER: '用户', PLAYER: '打手', CS: '客服', SYSTEM: '系统', ADMIN: '管理员' }[p.operatorType] || p.operatorType }})</span>
+            <div v-if="p.remark && p.type?.startsWith('TEAMMATE_')" class="team-audit-reason">原因：{{ p.remark }}</div>
             <div v-if="p.images" class="progress-images">
               <el-image lazy
                 v-for="(img, imgIdx) in p.images.split(',')"
@@ -127,39 +115,54 @@
       </div>
     </el-dialog>
     <!-- 指派弹窗 -->
-    <el-dialog v-model="assignVisible" :title="assignMode === 'reassign' ? '重新指派打手' : '指派打手'" width="600px">
-      <el-form :inline="true" style="margin-bottom:12px">
-        <el-form-item><el-input v-model="playerSearch" placeholder="搜索打手" clearable @keyup.enter="fetchPlayers" /></el-form-item>
-        <el-form-item><el-button type="primary" @click="fetchPlayers">搜索</el-button></el-form-item>
+    <el-dialog v-model="assignVisible" :title="assignMode === 'reassign' ? '重新指派打手' : '指派打手'"
+      width="min(600px, calc(100vw - 32px))" :close-on-click-modal="false"
+      :close-on-press-escape="!assigning" :show-close="!assigning">
+      <p v-if="assignmentCandidates" class="assignment-note">
+        {{ assignmentCandidates.requiredLevelId == null ? '订单未限制打手等级' :
+          '订单要求等级：' + (assignmentCandidates.requiredLevelName || '等级 #' + assignmentCandidates.requiredLevelId) }}
+        · 仅显示在线打手
+      </p>
+      <el-form :inline="true" @submit.prevent="searchPlayers">
+        <el-form-item><el-input v-model="playerSearch" placeholder="按打手昵称搜索" aria-label="打手昵称" clearable :disabled="assigning" @clear="searchPlayers" /></el-form-item>
+        <el-form-item><el-button type="primary" native-type="submit" :disabled="assigning">搜索</el-button></el-form-item>
       </el-form>
-      <el-table :data="playerList" v-loading="playerLoading" stripe size="small" max-height="300" :row-class-name="playerRowClass">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="nickname" label="昵称" />
-        <el-table-column prop="realName" label="姓名" width="100" />
-        <el-table-column label="在线" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.isOnline === 1 ? 'success' : 'info'" size="small">{{ row.isOnline === 1 ? '在线' : '离线' }}</el-tag>
-          </template>
+      <LoadFeedback :error="candidateError" label="候选打手" @retry="fetchPlayers" />
+      <p v-if="assignError" class="assignment-error" role="alert">{{ assignError }}</p>
+      <el-table v-if="!candidateError" :data="playerList" v-loading="playerLoading" stripe size="small" max-height="300"
+        :empty-text="playerLoading ? '正在加载候选打手…' : '暂无符合条件的在线打手'">
+        <el-table-column prop="id" label="ID" width="64" />
+        <el-table-column prop="nickname" label="昵称" min-width="90" show-overflow-tooltip />
+        <el-table-column label="等级" min-width="90" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.levelName || (row.levelId == null ? '未分级' : '等级 #' + row.levelId) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="80"><template #default="{ row }"><el-tag :type="{ ACTIVE: 'success', PENDING: 'warning', REJECTED: 'danger', FROZEN: 'info' }[row.status] || 'info'" size="small">{{ { PENDING: '待审核', ACTIVE: '正常', REJECTED: '已驳回', FROZEN: '已冻结' }[row.status] || row.status }}</el-tag></template></el-table-column>
-        <el-table-column label="操作" width="80">
+        <el-table-column label="接单数" width="85">
+          <template #default="{ row }">{{ row.activeOrders }} / {{ assignmentCandidates.maxConcurrent }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="90">
           <template #default="{ row }">
-            <el-button link type="primary" :disabled="row.isOnline !== 1" @click="handleAssign(row.id)">选择</el-button>
+            <el-button link type="primary" :disabled="playerLoading || assigning || isFull(row)" @click="handleAssign(row)">
+              {{ isFull(row) ? '订单已满' : '选择' }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-if="!candidateError && assignmentCandidates?.players?.total > candidatePageSize"
+        v-model:current-page="candidatePage" :page-size="candidatePageSize" :total="Number(assignmentCandidates.players.total)"
+        layout="prev, pager, next" :pager-count="5" :disabled="assigning" @current-change="fetchPlayers" />
     </el-dialog>
   </div>
 </template>
 <script setup>
 import { useRoute } from 'vue-router'
-import { watch } from 'vue'
-import {can} from '@/utils/staff-permissions'
+import {can, isDemoSession} from '@/utils/staff-permissions'
+import OrderTeamPanel from './OrderTeamPanel.vue'
 import { useResponsive } from '@/utils/responsive'
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useLoadTask } from '@/composables/useLoadTask'
 import LoadFeedback from '@/components/LoadFeedback.vue'
-import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminOrderReassignCs, adminPlayerList, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress, csPlayerList } from '@/api/business'
+import { adminOrderList, adminOrderDetail, adminOrderAssign, adminOrderRefund, adminOrderConfirm, adminOrderProgress, adminOrderReassignCs, csOrderList, csOrderDetail, csOrderAssign, csOrderRefund, csOrderConfirm, csOrderProgress } from '@/api/business'
+import { orderAssignmentCandidates } from '@/api/order-assignment'
 import { csRoutingStaff } from '@/api/cs-routing'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -168,6 +171,8 @@ const { isCompact, isNarrow } = useResponsive()
 
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
+const canManageTeam = computed(() => !isDemoSession() && can('order.manage')
+  && (isAdmin || (detail.value?.csId != null && String(detail.value.csId) === String(userStore.adminId))))
 // 兼容后端大写和前端小写枚举
 const orderStatusMap = {
   PENDING_PAYMENT: '待支付', PAID: '待接单', ASSIGNED: '已指派', ACCEPTED: '已接单',
@@ -183,22 +188,6 @@ const orderTagTypeMap = {
 }
 function orderStatusLabel(s) { return orderStatusMap[s] || s }
 function orderTagType(s) { return orderTagTypeMap[s] || '' }
-const teamStatusMap = {
-  INVITED: '待接受', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已取消', SETTLED: '已结算'
-}
-function teamStatus(status) { return teamStatusMap[status] || status || '未知' }
-function teamTag(status) {
-  return ['ACCEPTED', 'SETTLED'].includes(status) ? 'success' : status === 'INVITED' ? 'warning' : 'info'
-}
-function teamSplit(member) {
-  if (!member) return '-'
-  if (member.splitType === 'CUSTOM' && member.splitAmount != null) return `自定义分成 ¥${Number(member.splitAmount).toFixed(2)}`
-  if (member.splitType === 'FIFTY_FIFTY') return '五五分成'
-  if (member.splitType === 'FORTY_SIXTY') return '六四分成（队友 40%）'
-  if (member.splitType === 'THIRTY_SEVENTY') return '七三分成（队友 30%）'
-  if (member.splitRatio != null) return `按比例分成（队友 ${(Number(member.splitRatio) * 100).toFixed(0)}%）`
-  return '五五分成'
-}
 function parsedExtraFields(order) {
   if (!order?.extraFields) return []
   try {
@@ -235,6 +224,21 @@ async function showDetail(id) {
     ElMessage.error('订单详情加载失败，请稍后重试')
   } finally { detailLoading.value = false }
 }
+async function refreshTeamOrder() {
+  const id = detail.value?.id
+  if (!id || !detailVisible.value) return
+  try {
+    const [fresh, timeline] = await Promise.all([
+      (isAdmin ? adminOrderDetail : csOrderDetail)(id),
+      (isAdmin ? adminOrderProgress : csOrderProgress)(id),
+    ])
+    if (detailVisible.value && detail.value?.id === id) {
+      detail.value = fresh.data
+      progressList.value = timeline.data || []
+      fetchData()
+    }
+  } catch (_) { ElMessage.warning('协同操作已保存，订单详情可稍后刷新') }
+}
 async function loadCsStaff() {
   if (!isAdmin) return
   try { csStaff.value = (await csRoutingStaff()).data || [] } catch (_) { csStaff.value = [] }
@@ -265,36 +269,70 @@ async function handleConfirm(row) {
 }
 // 指派
 const assignVisible = ref(false), assignOrderId = ref(null), assignMode = ref('assign')
-const playerSearch = ref(''), playerList = ref([]), playerLoading = ref(false)
+const playerSearch = ref(''), candidateKeyword = ref(''), candidatePage = ref(1)
+const assignmentCandidates = ref(null), playerLoading = ref(false), candidateError = ref('')
+const assigning = ref(false), assignError = ref('')
+const candidatePageSize = 20
+let candidateRequest = 0
+const playerList = computed(() => playerLoading.value ? [] : assignmentCandidates.value?.players?.records || [])
 function canAssign(row) {
   return can('order.manage') && ((row.status === 'PAID' && !row.playerId) || row.status === 'ASSIGNED')
 }
 function openAssignDialog(row) {
+  if (assigning.value) return
   assignOrderId.value = row.id
   assignMode.value = row.status === 'ASSIGNED' ? 'reassign' : 'assign'
   playerSearch.value = ''
-  playerList.value = []
+  assignmentCandidates.value = null
   assignVisible.value = true
-  fetchPlayers()
+  searchPlayers()
+}
+function searchPlayers() {
+  if (assigning.value) return
+  candidateKeyword.value = playerSearch.value.trim()
+  candidatePage.value = 1
+  assignError.value = ''
+  return fetchPlayers()
 }
 async function fetchPlayers() {
+  if (!assignVisible.value) return
+  const current = ++candidateRequest
   playerLoading.value = true
+  candidateError.value = ''
   try {
-    const fn = isAdmin ? adminPlayerList : csPlayerList
-    const res = await fn({ pageNum: 1, pageSize: 20, keyword: playerSearch.value, status: 'ACTIVE' })
-    playerList.value = res.data.records || []
-  } finally { playerLoading.value = false }
+    const res = await orderAssignmentCandidates(isAdmin, assignOrderId.value, {
+      pageNum: candidatePage.value, pageSize: candidatePageSize, keyword: candidateKeyword.value
+    })
+    if (current === candidateRequest) assignmentCandidates.value = res.data
+  } catch (error) {
+    if (current === candidateRequest) candidateError.value = error?.response?.data?.msg || error?.message || '请稍后重试'
+  } finally {
+    if (current === candidateRequest) playerLoading.value = false
+  }
 }
-function playerRowClass({ row }) {
-  return row.isOnline !== 1 ? 'offline-row' : ''
+function isFull(row) {
+  return row.activeOrders >= assignmentCandidates.value?.maxConcurrent
 }
-async function handleAssign(playerId) {
-  const assignFn = isAdmin ? adminOrderAssign : csOrderAssign
-  await assignFn(assignOrderId.value, playerId)
-  ElMessage.success(assignMode.value === 'reassign' ? '重新指派成功' : '指派成功')
-  assignVisible.value = false
-  fetchData()
+async function handleAssign(row) {
+  if (assigning.value || playerLoading.value || candidateError.value || !playerList.value.includes(row) || isFull(row)) return
+  assigning.value = true
+  assignError.value = ''
+  const orderId = assignOrderId.value
+  try {
+    await (isAdmin ? adminOrderAssign : csOrderAssign)(orderId, row.id)
+    ElMessage.success(assignMode.value === 'reassign' ? '重新指派成功' : '指派成功')
+    assignVisible.value = false
+    fetchData()
+    if (detailVisible.value && detail.value?.id === orderId) showDetail(orderId)
+  } catch (error) {
+    assignError.value = error?.response?.data?.msg || error?.message || '指派失败，请重试'
+    await fetchPlayers()
+  } finally {
+    assigning.value = false
+  }
 }
+watch(assignVisible, visible => { if (!visible) ++candidateRequest })
+onBeforeUnmount(() => { ++candidateRequest })
 async function handleRefund(row) {
   await ElMessageBox.confirm('确定为该订单退款？订单将被取消并退回支付金额。', '退款确认', { type: 'warning' })
   const fn = isAdmin ? adminOrderRefund : csOrderRefund
@@ -312,9 +350,10 @@ watch(() => route.query, queryParams => {
 </script>
 <style scoped>
 .search-form { margin-bottom: 16px; }
-:deep(.offline-row) { opacity: 0.5; }
+.assignment-note { color: var(--el-text-color-secondary); }
+.assignment-error { color: var(--el-color-danger); }
 .detail-actions { margin-top: 16px; text-align: right; }
-.team-summary { margin-bottom: 8px; color: #909399; font-size: 12px; }
+.team-audit-reason { color: var(--el-text-color-secondary); font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; }
 .team-member { padding: 8px 0; border-top: 1px solid #ebeef5; }
 .team-member:first-of-type { border-top: 0; }
 .team-member-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

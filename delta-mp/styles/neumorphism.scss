@@ -19,7 +19,82 @@ html[data-theme='neumorphism'] {
   --neo-radius-lg: 40rpx;
   --neo-radius: 32rpx;
   --neo-radius-sm: 24rpx;
+  --store-bg: var(--neo-canvas);
+  --store-surface: var(--neo-surface);
+  --store-soft: var(--neo-sunken);
+  --store-text: var(--neo-ink);
+  --store-regular: var(--neo-ink-soft);
+  --store-muted: var(--neo-muted);
+  --store-line: var(--neo-line);
+  --store-primary: var(--neo-accent);
+  --store-primary-2: #6f8ede;
+  --store-success: #347a5b;
+  --store-icon-size: 42rpx;
 }
+
+/* Layout primitives stay identical to the default shell; only their surface treatment changes. */
+html[data-theme='neumorphism'] .screen-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max(44px, 64rpx);
+  height: max(44px, 64rpx);
+  padding: 0;
+  border: 0;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-theme='neumorphism'] .screen-icon-btn:active { background: rgba(88, 123, 212, 0.08); }
+html[data-theme='neumorphism'] .screen-icon-btn image {
+  width: 42rpx;
+  height: 42rpx;
+  display: block;
+  object-fit: contain;
+}
+html[data-theme='neumorphism'] :is(.screen-dot, .screen-badge) {
+  position: absolute;
+  top: 5rpx;
+  right: 4rpx;
+  min-width: 14rpx;
+  height: 14rpx;
+  border: 3rpx solid var(--neo-surface);
+  border-radius: 999rpx;
+  background: #e24d4d;
+  box-sizing: content-box;
+}
+html[data-theme='neumorphism'] .screen-badge {
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 5rpx;
+  color: #fff;
+  font-size: 17rpx;
+  font-weight: 750;
+  line-height: 28rpx;
+  text-align: center;
+}
+html[data-theme='neumorphism'] uni-page-head .uni-page-head {
+  background: var(--neo-surface) !important;
+  color: var(--neo-ink) !important;
+  border-bottom: 1rpx solid var(--neo-line) !important;
+}
+html[data-theme='neumorphism'] uni-page-head .uni-page-head__title { color: var(--neo-ink) !important; }
+html[data-theme='neumorphism'] :is(.uni-modal,.uni-actionsheet) {
+  background: var(--neo-surface) !important;
+  color: var(--neo-ink) !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+html[data-theme='neumorphism'] :is(.uni-modal__hd,.uni-modal__bd,.uni-modal__ft,.uni-modal__title,.uni-modal__btn) {
+  background: var(--neo-surface) !important;
+  color: var(--neo-ink) !important;
+  border-color: var(--neo-line) !important;
+}
+html[data-theme='neumorphism'] :is(.menu-icon, .notice-icon image) { width: 42rpx !important; height: 42rpx !important; }
+html[data-theme='neumorphism'] :is(.go-arrow, .row-arrow) { width: 40rpx !important; height: 40rpx !important; }
+html[data-theme='neumorphism'] :is(.go-arrow, .row-arrow) image { width: 22rpx !important; height: 22rpx !important; }
+html[data-theme='neumorphism'] .custom-tabbar .icon-img { width: 48rpx !important; height: 48rpx !important; }
+html[data-theme='neumorphism'] button[disabled] { opacity: .48 !important; }
 
 /* ---------- canvas ---------- */
 html[data-theme='neumorphism'] body,
@@ -129,18 +204,10 @@ html[data-theme='neumorphism'] .category-grid .category-item {
   padding: 18rpx 8rpx !important;
 }
 
-html[data-theme='neumorphism'] .category-grid .category-icon {
-  width: 76rpx !important;
-  height: 76rpx !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  filter: invert(45%) sepia(38%) saturate(1100%) hue-rotate(202deg) brightness(94%) !important;
-}
-
 html[data-theme='neumorphism'] .category-grid {
   background: transparent !important;
   box-shadow: none !important;
-  padding: 0 24rpx !important;
+  padding: 0 !important;
   margin: 16rpx 0 0 !important;
   gap: 16rpx !important;
 }
@@ -207,13 +274,10 @@ html[data-theme='neumorphism'] .detail-section {
 }
 
 /* ---------- inputs and search ---------- */
-html[data-theme='neumorphism'] input,
-html[data-theme='neumorphism'] textarea,
-html[data-theme='neumorphism'] .uni-input-input,
-html[data-theme='neumorphism'] .search-input,
+html[data-theme='neumorphism'] uni-input,
+html[data-theme='neumorphism'] uni-textarea,
 html[data-theme='neumorphism'] .search-inner,
-html[data-theme='neumorphism'] .picker-value,
-html[data-theme='neumorphism'] .form-input {
+html[data-theme='neumorphism'] .picker-value {
   background: var(--neo-surface) !important;
   color: var(--neo-ink) !important;
   border: 0 !important;
@@ -226,11 +290,6 @@ html[data-theme='neumorphism'] textarea::placeholder,
 html[data-theme='neumorphism'] .search-placeholder,
 html[data-theme='neumorphism'] .placeholder {
   color: var(--neo-muted) !important;
-}
-
-html[data-theme='neumorphism'] .search-bar {
-  background: transparent !important;
-  padding: 24rpx 24rpx 18rpx !important;
 }
 
 html[data-theme='neumorphism'] .search-inner {
@@ -394,20 +453,6 @@ html[data-theme='neumorphism'] .notice-more {
   color: var(--neo-muted) !important;
 }
 
-html[data-theme='neumorphism'] .category-grid {
-  gap: 24rpx 12rpx !important;
-  padding: 8rpx 24rpx 0 !important;
-}
-
-html[data-theme='neumorphism'] .category-item .category-icon {
-  width: 104rpx !important;
-  height: 104rpx !important;
-  padding: 26rpx !important;
-  border-radius: 32rpx !important;
-  background: var(--neo-surface) !important;
-  box-shadow: var(--neo-shadow-soft) !important;
-}
-
 html[data-theme='neumorphism'] .category-item .category-name {
   margin-top: 14rpx !important;
   font-size: 23rpx !important;
@@ -427,29 +472,7 @@ html[data-theme='neumorphism'] .section h3 {
   letter-spacing: -0.4rpx;
 }
 
-html[data-theme='neumorphism'] .product-grid {
-  gap: 22rpx 20rpx !important;
-  padding: 0 24rpx !important;
-}
-
 /* ---------- product card ---------- */
-html[data-theme='neumorphism'] .product-card {
-  padding: 16rpx !important;
-  border-radius: 34rpx !important;
-  background: var(--neo-surface) !important;
-  box-shadow: var(--neo-shadow-soft) !important;
-  overflow: hidden !important;
-}
-
-html[data-theme='neumorphism'] .product-card .cover {
-  border-radius: 24rpx !important;
-  overflow: hidden !important;
-}
-
-html[data-theme='neumorphism'] .product-card .info {
-  padding: 18rpx 8rpx 10rpx !important;
-}
-
 html[data-theme='neumorphism'] .product-card .info .name {
   font-size: 28rpx !important;
   font-weight: 700 !important;
@@ -666,43 +689,12 @@ html[data-theme='neumorphism'] .product-row .product-price {
 }
 
 /* ---------- product detail ---------- */
-html[data-theme='neumorphism'] .product-card {
-  border: 0 !important;
-  border-radius: 30rpx !important;
-  box-shadow: var(--neo-shadow-soft) !important;
-  background: var(--neo-surface) !important;
-}
-
-html[data-theme='neumorphism'] .product-card .cover {
-  height: 220rpx !important;
-  border-radius: 24rpx !important;
-  margin: 12rpx 12rpx 0 !important;
-  overflow: hidden !important;
-  width: auto !important;
-}
-
-html[data-theme='neumorphism'] .product-card .info {
-  padding: 16rpx 20rpx 22rpx !important;
-}
-
 html[data-theme='neumorphism'] .product-card .price {
   color: var(--neo-accent-deep) !important;
 }
 
 html[data-theme='neumorphism'] .product-detail {
   padding-bottom: 180rpx !important;
-}
-
-html[data-theme='neumorphism'] .banner-wrap {
-  margin: 20rpx 24rpx 0 !important;
-  border-radius: var(--neo-radius-lg) !important;
-  overflow: hidden !important;
-  box-shadow: var(--neo-shadow-soft) !important;
-}
-
-html[data-theme='neumorphism'] .banner-wrap .banner {
-  border-radius: var(--neo-radius-lg) !important;
-  box-shadow: none !important;
 }
 
 html[data-theme='neumorphism'] .price-card {
@@ -713,11 +705,6 @@ html[data-theme='neumorphism'] .price-card {
 html[data-theme='neumorphism'] .price-card .yen,
 html[data-theme='neumorphism'] .price-card .price-dec {
   color: var(--neo-price) !important;
-}
-
-html[data-theme='neumorphism'] .info-card {
-  margin: 22rpx 24rpx 0 !important;
-  padding: 28rpx !important;
 }
 
 html[data-theme='neumorphism'] .info-card .product-name {
@@ -1037,7 +1024,6 @@ html[data-theme='neumorphism'] .pay-methods,
 html[data-theme='neumorphism'] .replace-modal,
 html[data-theme='neumorphism'] .modal-body,
 html[data-theme='neumorphism'] .library-card,
-html[data-theme='neumorphism'] .sort-bar,
 html[data-theme='neumorphism'] .display-page .row {
   background: var(--neo-surface) !important;
   border: 0 !important;

@@ -136,7 +136,7 @@ export async function buildInventory() {
     counts: { customerRegistered: customer.length, customerMain: customer.filter(r => r.group === 'pages').length, player: customer.filter(r => r.group === 'pages-player').length, staffTransfer: customer.filter(r => r.group === 'pages-cs').length,
       adminPcLeaves: admin.filter(r => r.variant === 'pc').length, adminH5Leaves: admin.filter(r => r.variant === 'h5').length,
       adminPcFunctionPages: admin.filter(r => r.variant === 'pc' && r.purpose === 'function-page').length },
-    themes: ['default', 'neumorphism'], profiles, routes: { customer, admin },
+    themes: ['default', 'neumorphism', 'dark'], profiles, routes: { customer, admin },
     limitations: ['Inventory presence never constitutes rendering or business acceptance.', 'Fixtures use generated identities and records; list-empty states and seeded details are explicitly recorded per request.', 'No real login, payment, SMS, upload, settlement, authorization, upgrade, or production operation is exercised.', 'Closed dialogs, every status/data combination, actual iOS/Android/WeChat/QQ, mini-program builds, and subjective visual acceptance need separate validation.', 'Staff transfer fixture leaves staff_web_url empty; staff business pages are audited through the separate admin router.'] }
 }
 export async function writeInventory() {

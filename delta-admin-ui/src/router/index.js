@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
-import { buildH5Routes, canonicalAdminPath, h5RedirectTarget, isH5Path } from '@/utils/h5-route'
+import { buildH5Routes, canonicalAdminPath, h5Path, h5RedirectTarget, isH5Path } from '@/utils/h5-route'
+import { legacyConfigTabs } from '@/utils/config-sections'
 
 const Layout = () => import('@/layout/index.vue')
 const H5Layout = () => import('@/layout/H5Layout.vue')
@@ -123,14 +124,12 @@ const desktopRoutes = [
         name: 'SpendingRank',
         component: () => import('@/views/user/SpendingRank.vue'),
         meta: { title: '消费榜单', roles: ['admin', 'cs'] }
-      },
-      {
-        path: 'identity-review',
-        name: 'IdentityReview',
-        component: () => import('@/views/user/IdentityReview.vue'),
-        meta: { title: '实名认证审核', roles: ['admin'], permission: 'user.manage', feature: 'identity_verification' }
       }
     ]
+  },
+  {
+    path: '/user/identity-review',
+    redirect: to => ({ path: '/user/list', query: { ...(to.query.taskId ? { userId: to.query.taskId } : {}), tab: 'identity' } })
   },
   // 打手管理
   {
@@ -145,6 +144,7 @@ const desktopRoutes = [
       }
     ]
   },
+  {path:'/player/deposits',component:Layout,children:[{path:'',name:'PlayerDeposits',component:()=>import('@/views/player/PlayerDeposits.vue'),meta:{title:'押金记录',icon:'Money',roles:['admin'],permission:'player.manage'}}]},
   {path:'/player-level',component:Layout,children:[{path:'',name:'PlayerLevels',component:()=>import('@/views/player/PlayerLevels.vue'),meta:{title:'打手等级分类',icon:'Medal',roles:['admin']}}]},
   {path:'/rewards',component:Layout,children:[{path:'',name:'RewardList',component:()=>import('@/views/player/RewardList.vue'),meta:{title:'打赏记录',icon:'Wallet',roles:['admin']}}]},
   {path:'/invitations',component:Layout,children:[{path:'',component:()=>import('@/views/player/Governance.vue'),meta:{title:'入驻邀请',icon:'Link',roles:['admin','cs'],governance:'invitations',permission:'player.manage'}}]},
@@ -254,6 +254,14 @@ const desktopRoutes = [
       }
     ]
   },
+  {
+    path: '/deposit-refunds',
+    component: Layout,
+    children: [{
+      path: '', name: 'DepositRefunds', component: () => import('@/views/player/DepositRefunds.vue'),
+      meta: { title: '押金退款', icon: 'Wallet', roles: ['admin', 'cs'], permission: 'withdraw.review' }
+    }]
+  },
   // 客服聊天
   {
     path: '/chat',
@@ -343,6 +351,18 @@ const desktopRoutes = [
         meta: { title: '系统配置', roles: ['admin'] }
       },
       {
+        path: 'sms-account',
+        name: 'SmsAccount',
+        component: () => import('@/views/system/SmsAccount.vue'),
+        meta: { title: '短信服务', roles: ['admin'], permission: 'system.manage' }
+      },
+      {
+        path: 'identity-account',
+        name: 'IdentityAccount',
+        component: () => import('@/views/system/SmsAccount.vue'),
+        meta: { title: '实名服务', roles: ['admin'], permission: 'system.manage', feature: 'identity_verification' }
+      },
+      {
         path: 'recharge-packages',
         name: 'RechargePackages',
         component: () => import('@/views/system/RechargePackage.vue'),
@@ -420,14 +440,25 @@ router.beforeEach(async (to, from, next) => {
         if (error.code === 401) { removeToken(); next(h5 ? '/h5/login' : '/login'); return }
         throw error
       }
+      const legacyTab = Object.prototype.hasOwnProperty.call(legacyConfigTabs, canonicalAdminPath(to.path)) ? legacyConfigTabs[canonicalAdminPath(to.path)] : null
+      if (legacyTab && (user?.role === 'admin' && can('system.manage') && (legacyTab !== 'invitation' || can('player.manage')))) {
+        next({ path: h5 ? h5Path('/system/config') : '/system/config', query: { ...to.query, tab: legacyTab }, hash: to.hash, replace: true })
+        return
+      }
       const permission=to.meta.permission||permissionFor(canonicalAdminPath(to.path))
       if(permission&&!can(permission)){next(h5 ? '/h5/403' : '/403');return}
       if (to.matched.some(record => record.meta.roles && !record.meta.roles.includes(user?.role))) { next(h5 ? '/h5/403' : '/403'); return }
-      if (to.meta.feature) {
+      if (to.meta.wechatBinding && user?.role === 'cs') {
+        try {
+          const { getOfficialWechatBinding } = await import('@/api/official-wechat')
+          if ((await getOfficialWechatBinding()).data?.licensed !== true) { next(h5 ? '/h5/403' : '/403'); return }
+        } catch { next(h5 ? '/h5/403' : '/403'); return }
+      }
+      if (to.meta.feature || (to.meta.wechatBinding && user?.role === 'admin')) {
         const { loadPlatformFeatureVisibility, platformFeatureAllowed, platformFeatureError } = await import('@/utils/platform-feature-visibility')
         await loadPlatformFeatureVisibility()
         if (platformFeatureError.value) throw new Error(platformFeatureError.value)
-        if (!platformFeatureAllowed(to.meta.feature)) { next(h5 ? '/h5/403' : '/403'); return }
+        if (!platformFeatureAllowed(to.meta.feature || 'official_wechat_notifications')) { next(h5 ? '/h5/403' : '/403'); return }
       }
       const roles = to.meta.roles
       if (roles && !roles.includes(user?.role)) {

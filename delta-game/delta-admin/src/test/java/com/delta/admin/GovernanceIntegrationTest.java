@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GovernanceIntegrationTest {
  @Configuration @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
  @MapperScan({"com.delta.player.mapper","com.delta.common.mapper"})
- @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,com.delta.common.customer.CsRoutingService.class,RefundController.class,RefundProbe.class})
+ @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,com.delta.player.service.PlayerDepositService.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,com.delta.common.customer.CsRoutingService.class,RefundController.class,RefundProbe.class})
  static class Config{}
  @RestController static class RefundProbe {
   @PostMapping("/cs/order/{id}/refund") @PreAuthorize("@staffPermissions.allowed('order.refund')") public R<Void> refund(@PathVariable Long id){return R.ok();}
@@ -59,6 +59,7 @@ class GovernanceIntegrationTest {
  @MockBean com.delta.user.service.UserService users;@MockBean com.delta.pay.service.PaymentService payments;
  @MockBean OrderRefundWorkflowService refunds;
  @MockBean com.delta.admin.service.UserManagementService userManagement;
+ @MockBean com.delta.message.service.SystemNotificationService notifications;
  @MockBean com.delta.pay.service.TransactionService transactions;
  @BeforeEach void defaults(){when(configs.getConfigValue(anyString(),anyString())).thenAnswer(a->a.getArgument(1));}
  RequestPostProcessor role(String role,long id){return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId",id,"userType",role),null,List.of(new SimpleGrantedAuthority("ROLE_"+role))));}
@@ -178,6 +179,11 @@ class GovernanceIntegrationTest {
   mvc.perform(put("/admin/privacy/requests/"+id).with(role("CS",2)).contentType("application/json").content("{\"approved\":true,\"note\":\"确认\"}")).andExpect(jsonPath("$.code").value(403));
   jdbc.update("UPDATE `user` SET openid='private-openid' WHERE id=7");
   mvc.perform(put("/admin/privacy/requests/"+id).with(role("ADMIN",1)).contentType("application/json").content("{\"approved\":true,\"note\":\"确认删除\"}")).andExpect(jsonPath("$.code").value(200));
+  mvc.perform(get("/user/privacy/requests").with(role("USER",7)))
+    .andExpect(jsonPath("$.data[0].note").value("删除实名"))
+    .andExpect(jsonPath("$.data[0].review_note").value("确认删除"))
+    .andExpect(jsonPath("$.data[0].status").value("APPROVED"));
+  verify(notifications).send("USER", 7L, "隐私申请已处理", "请在隐私与注销页面查看审核结果。", "PRIVACY_REQUEST", null);
   assertThat(jdbc.queryForObject("SELECT real_name FROM player WHERE id=1",String.class)).isEmpty();
   assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM identity_verification WHERE user_id=7",Long.class)).isZero();
  }

@@ -13,6 +13,7 @@ import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderProgress;
 import com.delta.order.mapper.OrderMapper;
+import com.delta.order.service.OrderAssignmentRules;
 import com.delta.order.service.OrderPlayerService;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
@@ -220,12 +221,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void assignOrder(Long orderId, Long playerId, String operatorType, Long operatorId) {
         Order order = getById(orderId);
-        if (order == null) throw new BusinessException("订单不存在");
+        OrderAssignmentRules.requireAssignable(order);
         String currentStatus = order.getStatus();
-        if (!OrderStatusEnum.PAID.name().equals(currentStatus)
-                && !OrderStatusEnum.ASSIGNED.name().equals(currentStatus)) {
-            throw new BusinessException("当前状态不允许指派, 实际:" + currentStatus);
-        }
         Long previousPlayerId = order.getPlayerId();
         boolean reassign = OrderStatusEnum.ASSIGNED.name().equals(currentStatus);
         if (reassign && previousPlayerId != null && previousPlayerId.equals(playerId)) {
@@ -235,9 +232,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (crossModuleMapper.lockActivePlayer(playerId) == null) {
             throw new BusinessException("目标打手状态不可用，无法指派");
         }
-        requirePlayerLevel(order,playerId);
+        OrderAssignmentRules.requireRequestedLevel(order, () -> crossModuleMapper.selectPlayerLevelForUpdate(playerId));
         // 校验打手当前活跃订单数是否已达上限
-        int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
+        int maxConcurrent = OrderAssignmentRules.maxConcurrent(sysConfigService);
         int activeOrders = crossModuleMapper.countActivePlayerOrders(playerId);
         if (activeOrders >= maxConcurrent) {
             throw new BusinessException("该打手当前已有" + activeOrders + "个进行中订单，已达最大接单数" + maxConcurrent + "，无法指派");
@@ -292,7 +289,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     throw new BusinessException(400,"当前处于休息中，请先开启接单状态后再接单");
                 throw new BusinessException(403,"打手账号状态已变化，请刷新后重试");
             }
-            requirePlayerLevel(order,playerId);
+            OrderAssignmentRules.requireRequestedLevel(order, () -> crossModuleMapper.selectPlayerLevel(playerId));
             int max=Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player","5"));
             int active=crossModuleMapper.countActivePlayerOrders(playerId);
             if(assigned) active--; // This assigned order already occupies one slot.
@@ -371,7 +368,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         List<OrderPlayer> pendingInvites = orderPlayerService.list(
                 new LambdaQueryWrapper<OrderPlayer>()
                         .eq(OrderPlayer::getOrderId, orderId)
-                        .eq(OrderPlayer::getStatus, "INVITED"));
+                        .eq(OrderPlayer::getStatus, "INVITED")
+                        .isNull(OrderPlayer::getReplacesParticipantId));
         for (OrderPlayer inv : pendingInvites) {
             inv.setStatus("CANCELLED");
             orderPlayerService.updateById(inv);
@@ -508,12 +506,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setUpdatedAt(LocalDateTime.now());
         updateById(order);
         addProgress(order.getId(), from, to.name(), operatorType, operatorId, content);
-    }
-
-    private void requirePlayerLevel(Order order,Long playerId) {
-        if(order.getRequestedPlayerLevelId()!=null &&
-                !order.getRequestedPlayerLevelId().equals(crossModuleMapper.selectPlayerLevel(playerId)))
-            throw new BusinessException(403,"该订单仅限所选等级的打手接单");
     }
 
     private void addProgress(Long orderId, String from, String to, String operatorType, Long operatorId, String content) {

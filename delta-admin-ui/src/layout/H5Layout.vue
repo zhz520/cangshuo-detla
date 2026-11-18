@@ -20,7 +20,9 @@
       <router-view v-slot="{ Component, route: pageRoute }">
         <transition name="page-fade" mode="out-in">
           <div :key="`${pageRoute.path}:${pageVersion}`" class="layout-page-frame h5-page-frame">
-            <component :is="Component" />
+            <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :is="Component" read-only />
+            <DemoReadOnlyPage v-else-if="demoMode" />
+            <component v-else :is="Component" />
           </div>
         </transition>
       </router-view>
@@ -33,19 +35,22 @@
       </button>
     </nav>
 
+    <el-drawer v-if="demoMode" v-model="demoMenu" direction="ltr" size="min(86vw, 330px)" :with-header="false" append-to-body>
+      <SidebarNavigation :active="currentAdminPath" :groups="demoGroups" :title="siteStore.adminTitle" :logo="siteStore.logo" initial="演" @select="demoMenu = false" />
+    </el-drawer>
     <el-drawer v-model="mobileAccountOpen" direction="rtl" size="min(86vw, 360px)" :with-header="false" append-to-body>
       <div class="mobile-account">
         <div class="mobile-account-head">
           <StaffAvatar :size="52" :thumbnail-width="160" />
-          <div><strong>{{ nickname }}</strong><span>{{ roleLabel }} · {{ userStore.phone || '未填写手机号' }}</span></div>
+          <div><strong>{{ nickname }}</strong><span>{{ demoMode ? '演示账号仅可查看' : roleLabel + ' · ' + (userStore.phone || '未填写手机号') }}</span></div>
           <button type="button" aria-label="关闭" @click="mobileAccountOpen = false">×</button>
         </div>
         <div class="mobile-account-list">
-          <button type="button" @click="accountAction('wechat')"><span>公众号消息通知</span><small>绑定当前账号的微信</small><b>›</b></button>
-          <button type="button" @click="accountAction('notices')"><span>系统通知</span><small>查看审核、订单和售后消息</small><b>›</b></button>
+          <button v-if="!demoMode" type="button" @click="accountAction('wechat')"><span>公众号消息通知</span><small>绑定当前账号的微信</small><b>›</b></button>
+          <button v-if="!demoMode" type="button" @click="accountAction('notices')"><span>系统通知</span><small>查看审核、订单和售后消息</small><b>›</b></button>
           <button type="button" @click="openPc"><span>电脑版</span><small>返回 PC 后台</small><b>›</b></button>
-          <button type="button" @click="accountAction('profile')"><span>编辑资料</span><b>›</b></button>
-          <button type="button" @click="accountAction('password')"><span>修改密码</span><b>›</b></button>
+          <button v-if="!demoMode" type="button" @click="accountAction('profile')"><span>编辑资料</span><b>›</b></button>
+          <button v-if="!demoMode" type="button" @click="accountAction('password')"><span>修改密码</span><b>›</b></button>
           <button type="button" class="danger" @click="accountAction('logout')"><span>退出登录</span><b>›</b></button>
         </div>
         <p class="mobile-account-foot">H5 工作台 · {{ siteStore.siteName || siteStore.adminTitle || 'Delta' }}</p>
@@ -61,8 +66,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Bell, ChatDotRound, HomeFilled, Tickets, UserFilled } from '@element-plus/icons-vue'
-import { can } from '@/utils/staff-permissions'
+import { ArrowLeft, Bell, ChatDotRound, HomeFilled, Menu, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { can, isDemoSession } from '@/utils/staff-permissions'
+import { buildNavigation } from '@/utils/navigation'
+import SidebarNavigation from './SidebarNavigation.vue'
+import DemoReadOnlyPage from '@/components/DemoReadOnlyPage.vue'
 import { loadPlatformFeatureVisibility, platformFeatureError } from '@/utils/platform-feature-visibility'
 import { loadingFeedback } from '@/utils/loading-feedback'
 import { installMobileTableCards } from '@/utils/mobile-table-cards'
@@ -79,6 +87,9 @@ import StaffAvatar from '@/components/StaffAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const demoMode = computed(isDemoSession)
+const demoMenu = ref(false)
+const demoGroups = computed(() => buildNavigation(router.options.routes, 'admin', () => true))
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const workbench = useWorkbenchStore()
@@ -113,6 +124,7 @@ onErrorCaptured(error => { if (error?.requestHandled) return false })
 
 const mobileBottomItems = computed(() => {
   const items = [{ key: 'dashboard', label: '工作台', icon: HomeFilled }]
+  if (demoMode.value) return [...items, { key: 'menu', label: '全部功能', icon: Menu }, { key: 'account', label: '我的', icon: UserFilled }]
   if (can('order.read')) items.push({ key: 'orders', label: '订单', icon: Tickets })
   items.push({ key: 'tasks', label: '待办', icon: Bell, badge: workbench.summary?.unread || 0 })
   items.push({ key: 'messages', label: '消息', icon: ChatDotRound, badge: can('chat.manage') ? (workbench.summary?.chatUnread || 0) : (workbench.summary?.systemUnread || 0) })
@@ -132,6 +144,7 @@ function runMobileTab(key) {
   else if (key === 'orders') router.push(adminPath('/order/list'))
   else if (key === 'tasks') openCenter('tasks')
   else if (key === 'messages') can('chat.manage') ? router.push(adminPath('/chat/service')) : openCenter('notices')
+  else if (key === 'menu') demoMenu.value = true
   else if (key === 'account') mobileAccountOpen.value = true
 }
 function openPc() { window.location.assign('/') }
@@ -162,8 +175,8 @@ async function onPasswordChanged() {
 }
 function onProfileSaved(data) { userStore.updateProfile(data) }
 
-watch(() => route.fullPath, () => workbench.changed())
-watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => workbench.changed())
+watch(() => route.fullPath, () => { if (!demoMode.value) workbench.changed() })
+watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => { if (!demoMode.value) workbench.changed() })
 watch(() => route.path, async () => {
   await nextTick()
   if (main.value) { main.value.scrollTop = 0; main.value.scrollLeft = 0; main.value.focus({ preventScroll: true }) }
@@ -172,6 +185,7 @@ watch(() => route.path, async () => {
 let stopMobileTables = () => {}
 onMounted(() => {
   document.documentElement.dataset.adminShell = 'h5'
+  if (demoMode.value) return
   workbench.start()
   if (role.value === 'admin' && ['system.manage', 'user.manage', 'finance.read'].some(can)) loadPlatformFeatureVisibility()
   if (can('chat.manage')) chatStore.start()

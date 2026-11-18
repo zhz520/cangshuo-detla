@@ -57,11 +57,11 @@ public class ChatServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSession>
     }
 
     /** 标记会话中非当前用户发送的未读消息为已读，userKey 格式 "USER:123" / "PLAYER:456" / "CS:1" */
-    public void markRead(Long sessionId, String userKey) {
+    public int markRead(Long sessionId, String userKey) {
         String[] parts = userKey.split(":", 2);
-        if (parts.length != 2) return;
+        if (parts.length != 2) return 0;
         String senderType = parts[0];
-        chatMessageMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ChatMessage>()
+        return chatMessageMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ChatMessage>()
                 .eq(ChatMessage::getSessionId, sessionId)
                 .eq(ChatMessage::getIsRead, 0)
                 .ne(ChatMessage::getSenderType, senderType)

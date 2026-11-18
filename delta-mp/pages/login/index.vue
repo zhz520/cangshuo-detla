@@ -1,442 +1,236 @@
 <template>
-  <view class="login-page">
-    <view class="logo-area">
-      <AppImage class="logo" :src="siteStore.logo || '/static/images/logo.png'" mode="aspectFit" />
-      <text class="title">{{ siteStore.siteName }}</text>
-      <text class="subtitle">{{ siteStore.subtitle }}</text>
-    </view>
-
-    <!-- 登录方式切换 -->
-    <view v-if="!setupToken && showLoginTabs" class="tab-bar">
-      <view v-if="quickLoginEnabled" class="tab-item" :class="{ active: loginMode === 'wechat' }" @click="switchWechatMode">{{ quickLoginTitle }}</view>
-      <view v-if="passwordEnabled" class="tab-item" :class="{ active: loginMode === 'password' }" @click="loginMode = 'password';loadCaptcha()">密码登录</view>
-    </view>
-
-    <view v-if="setupToken" class="login-area setup-area">
-      <text class="setup-title">设置登录密码</text>
-      <text class="setup-hint">手机号已验证。设置后可使用手机号和密码登录。</text>
-      <input v-model="newPassword" :password="true" maxlength="32" placeholder="请输入8～32位密码，包含字母和数字" class="input" />
-      <input v-model="confirmPassword" :password="true" maxlength="32" placeholder="请再次输入密码" class="input" />
-      <view class="login-btn account-btn" @click="submitPasswordSetup">{{ loggingIn?'设置中...':'设置密码并登录' }}</view>
-      <view class="setup-back" @click="restartPhoneLogin">重新验证手机号</view>
-    </view>
-    <view v-else-if="resetting" class="login-area">
-      <text class="setup-title">重置登录密码</text><text class="setup-hint">使用绑定手机号验证。重置后原有登录会话将失效。</text>
-      <input v-model="phone" type="number" maxlength="11" class="input" placeholder="绑定手机号"/>
-      <view class="verification-row"><input v-model="captchaCode" class="input" maxlength="6" placeholder="图形验证码"/><AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha"/></view>
-      <view class="verification-row"><input v-model="verifyCode" class="input" type="number" maxlength="6" placeholder="短信验证码"/><button :disabled="sendingCode||codeCountdown>0" class="send-code" @click="sendCode">{{codeCountdown?codeCountdown+'秒后重试':'获取验证码'}}</button></view>
-      <input v-model="newPassword" class="input" :password="true" maxlength="32" placeholder="新密码：8～32位，包含字母和数字"/><input v-model="confirmPassword" class="input" :password="true" maxlength="32" placeholder="再次输入新密码"/>
-      <view class="login-btn account-btn" @click="submitReset">{{loggingIn?'重置中…':'确认重置'}}</view><view class="setup-back" @click="resetting=false">返回登录</view>
-    </view>
-    <view v-else class="login-area">
-      <!-- 快速登录 -->
-      <template v-if="loginMode === 'wechat'">
-        <template v-if="wechatTicket">
-          <view class="wechat-tip">微信授权已完成，请确认协议后完成登录。</view>
-          <view class="login-btn wechat-btn" @click="finishWechatTicket">{{ loggingIn ? '登录中...' : '完成微信登录' }}</view>
-        </template>
-        <template v-else-if="canUseWechatLogin">
-          <button v-if="!needPhoneAuth" class="login-btn wechat-btn" @click="handleWechatLogin">快速登录</button>
-          <button v-else class="login-btn wechat-btn" open-type="getPhoneNumber" @getphonenumber="handlePhoneAuthorize">
-            首次登录请授权手机号
-          </button>
-          <view v-if="needPhoneAuth" class="wechat-tip">检测到是首次登录，授权手机号后即可完成注册</view>
-        </template>
-        <template v-else>
-          <view v-if="wechatLoginEnabled" class="login-btn wechat-btn" @click="startWechatLogin">
-            {{ wechatStarting ? '正在跳转...' : '微信登录' }}
-          </view>
-          <view v-if="wechatLoginEnabled" class="wechat-tip">将在微信中完成授权，返回后继续登录</view>
-          <template v-if="phoneLoginEnabled">
-            <input v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" class="input" />
-            <view class="verification-row">
-              <input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" />
-              <AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha" />
-            </view>
-            <view class="verification-row">
-              <input v-model="verifyCode" type="number" maxlength="6" placeholder="请输入短信验证码" class="input" />
-              <button class="send-code" :disabled="sendingCode || codeCountdown > 0" @click="sendCode">{{ codeCountdown ? `${codeCountdown}秒后重试` : '获取验证码' }}</button>
-            </view>
-            <view class="login-btn wechat-btn" @click="handleH5Login">登录</view>
-          </template>
-          <view v-if="!quickLoginEnabled" class="wechat-tip">暂无可用登录方式，请联系管理员</view>
-        </template>
-      </template>
-
-      <template v-else-if="loginMode === 'password'">
-        <input v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" class="input" />
-        <input v-model="userPassword" :password="true" maxlength="72" placeholder="请输入登录密码" class="input" />
-        <view class="verification-row"><input v-model="captchaCode" maxlength="6" placeholder="请输入图形验证码" class="input" /><AppImage :src="captchaImage" class="captcha-image" mode="aspectFit" @click="loadCaptcha" /></view>
-        <view class="login-btn account-btn" @click="handleUserPasswordLogin">{{ loggingIn?'登录中...':'登录' }}</view>
-        <view class="setup-back" @click="resetting=true;newPassword='';confirmPassword='';verifyCode='';smsRequestId='';loadCaptcha()">忘记密码？验证手机号重置</view>
-      </template>
-      <view class="agreement">
-        <view class="agree-row">
-          <view class="checkbox" :class="{ checked: agreed }" @click="toggleAgree">
-            <text v-if="agreed" class="check-icon">✔</text>
-          </view>
-          <text class="text">我已阅读并同意</text>
-          <text class="link" @click="goPage('/pages/agreement/user')">《用户协议》</text>
-          <text class="text">和</text>
-          <text class="link" @click="goPage('/pages/agreement/privacy')">《隐私政策》</text>
-        </view>
+  <view class="auth-shell" :class="{ 'login-reference': !mini }">
+    <view class="auth-content" :class="{ 'login-wechat': !mini && ready && mode === 'WECHAT' }" :data-login-mode="ready ? mode.toLowerCase() : 'loading'">
+      <view class="login-heading-group">
+        <text class="auth-heading" role="heading" aria-level="1">{{ ready ? title : '登录 / 注册' }}</text>
+        <text v-if="ready && description" class="login-description">{{ description }}</text>
       </view>
+      <text v-if="loadingPolicy || exchanging" class="auth-caption" aria-live="polite">{{ exchanging ? '正在验证微信授权…' : '正在加载登录方式…' }}</text>
+      <template v-else-if="policyError">
+        <text class="auth-error" role="alert">登录方式加载失败</text>
+        <button class="auth-primary" @click="loadPolicy">重试</button>
+      </template>
+      <template v-else>
+        <view class="auth-form">
+          <template v-if="mode === 'WECHAT'">
+            <!-- #ifdef MP-WEIXIN -->
+            <button v-if="needPhoneAuth && agreed" class="auth-primary" open-type="getPhoneNumber" @getphonenumber="authorizeMiniPhone">授权手机号并登录</button>
+            <button v-else class="auth-primary" :disabled="busy" @click="startWechat">微信登录</button>
+            <!-- #endif -->
+            <!-- #ifdef H5 -->
+            <button class="auth-primary login-wechat-action" :disabled="busy" @click="startWechat">
+              <svg class="login-wechat-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                <path fill-rule="evenodd" d="M10 3C5.6 3 2 5.9 2 9.5c0 1.9 1 3.5 2.6 4.7l-.7 2.1 2.7-1.1c.8.3 1.6.5 2.5.6a6.6 6.6 0 0 1-.3-2c0-3.3 3.2-6 7.2-6l1.7.2C16.9 5.1 13.8 3 10 3ZM7.2 7.6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm5.4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
+                <path fill-rule="evenodd" d="M16.1 9.1c-3.3 0-5.9 2.1-5.9 4.8s2.6 4.8 5.9 4.8c.8 0 1.6-.1 2.3-.4l2.2 1-.6-1.8c1.2-.9 2-2.2 2-3.6 0-2.7-2.6-4.8-5.9-4.8Zm-2.1 3.3a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6Zm4.2 0a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6Z" />
+              </svg>
+              <text>{{ busy ? '正在打开微信…' : '微信快捷登录' }}</text>
+            </button>
+            <text class="login-hint login-hint-center">授权后自动识别账号身份</text>
+            <!-- #endif -->
+          </template>
+          <template v-else>
+            <PhoneVerificationFields :key="mode" ref="fields" :captcha-only="mode === 'PASSWORD'"
+              :send-code="mode === 'RESET' ? sendResetCode : sendLoginCode" :initial-phone="retainedPhone" :disabled="busy">
+              <view v-if="mode === 'PASSWORD'" class="login-password-row">
+                <input v-model="password" class="auth-input" :password="!showPassword"
+                  maxlength="72" autocomplete="current-password" placeholder="登录密码" aria-label="登录密码" :disabled="busy" />
+                <button class="plain login-field-action" :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                  :disabled="busy" @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</button>
+              </view>
+            </PhoneVerificationFields>
+            <template v-if="mode === 'RESET'">
+              <input v-model="password" class="auth-input" :password="true" maxlength="32"
+                autocomplete="new-password" placeholder="新密码（8～32 位，含字母和数字）" aria-label="新密码" :disabled="busy" />
+              <input v-model="confirmation" class="auth-input" :password="true" maxlength="32"
+                autocomplete="new-password" placeholder="再次输入新密码" aria-label="确认密码" :disabled="busy" />
+            </template>
+            <view v-if="mode === 'PASSWORD'" class="login-forgot">
+              <button class="plain auth-alt login-forgot-link" :disabled="busy" @click="switchMode('RESET')">忘记密码？</button>
+            </view>
+            <button class="auth-primary login-submit" :disabled="busy" @click="submit">{{ submitLabel }}</button>
+            <text v-if="mode === 'PHONE' && !mini" class="login-hint login-hint-center">验证码验证后直接进入系统</text>
+            <text v-if="mode === 'PASSWORD' && policy?.phoneEnabled && !mini" class="login-hint">尚未设置密码？请使用手机号验证码登录</text>
+          </template>
+        </view>
+
+        <view class="login-footer">
+          <view v-if="alternatives.length" class="login-modes">
+            <text v-if="mode === 'WECHAT' && !mini" class="login-alt-caption">其他登录方式</text>
+            <view class="auth-alternatives">
+              <template v-for="(item, index) in alternatives" :key="item">
+                <view v-if="index" class="login-alt-divider" aria-hidden="true" />
+                <button class="plain auth-alt" :disabled="busy" @click="switchMode(item)">{{ mode === 'RESET' && item === 'PASSWORD' ? '返回密码登录' : labels[item] }}</button>
+              </template>
+            </view>
+          </view>
+          <view v-if="mode !== 'RESET'" class="auth-agreement">
+            <checkbox-group class="auth-consent-toggle" @change="agreed = $event.detail.value.includes('accept')">
+              <checkbox color="#171717" value="accept" :checked="agreed" aria-label="同意用户协议和隐私政策" />
+            </checkbox-group>
+            <view class="auth-agreement-copy">
+              <text>我已阅读并同意</text>
+              <button class="plain auth-link" @click="openTerms('user')">《用户协议》</button>
+              <button class="plain auth-link" @click="openTerms('privacy')">《隐私政策》</button>
+            </view>
+          </view>
+        </view>
+      </template>
     </view>
   </view>
 </template>
 
 <script setup>
-import { clientStorage } from '@/utils/client-storage'
-import AppImage from '@/components/AppImage.vue'
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import PhoneVerificationFields from '@/components/auth/PhoneVerificationFields.vue'
+import { getLoginPolicy, getWechatLoginUrl, sendLoginCode, sendResetCode, resetPassword } from '@/api/auth'
 import { useUserStore } from '@/store/user'
-import { useAppStore } from '@/store/app'
-import { useSiteStore } from '@/store/site'
-import { useChatStore } from '@/store/chat'
-import { getLoginCaptcha, getLoginPolicy, getWechatLoginUrl, sendLoginCode, sendResetCode, resetPassword } from '@/api/auth'
+import { clientStorage } from '@/utils/client-storage'
+import { enterAfterLogin, home, removeWechatTicketFromUrl, safeLoginReturn } from '@/utils/web-login-flow'
 import { isMpWeixin } from '@/utils/platform'
 
-const userStore = useUserStore()
-const chatStore = useChatStore()
-const appStore = useAppStore()
-const siteStore = useSiteStore()
-
-const loginMode = ref('wechat')
-const redirectUrl=ref('/pages/index/index')
-const resetting=ref(false)
-const phone = ref('')
-const setupToken=ref(''),newPassword=ref(''),confirmPassword=ref(''),userPassword=ref(''),loggingIn=ref(false)
-const verifyCode = ref('')
-const captchaCode=ref(''),captchaId=ref(''),captchaImage=ref(''),smsRequestId=ref('')
-const sendingCode=ref(false),codeCountdown=ref(0)
-const wechatTicket=ref('')
-const wechatLoginEnabled=ref(false)
-const phoneLoginEnabled=ref(true)
-const passwordEnabled=ref(true)
-const wechatStarting=ref(false)
-let countdownTimer
-async function loadCaptcha() {
-  // Password recovery also uses the captcha in WeChat.
-  try {const {data}=await getLoginCaptcha();captchaId.value=data.captchaId;captchaImage.value=data.image;captchaCode.value=''} catch (_) {}
-}
-async function sendCode() {
-  if(sendingCode.value || codeCountdown.value) return
-  if(!/^1\d{10}$/.test(phone.value) || !captchaCode.value) return uni.showToast({title:'请填写手机号和图形验证码',icon:'none'})
-  sendingCode.value=true
-  try {
-    const {data}=await (resetting.value?sendResetCode:sendLoginCode)({phone:phone.value,captchaId:captchaId.value,captchaCode:captchaCode.value})
-    smsRequestId.value=data.requestId;codeCountdown.value=data.retryAfter||60
-    clearInterval(countdownTimer);countdownTimer=setInterval(()=>{if(--codeCountdown.value<=0)clearInterval(countdownTimer)},1000)
-    uni.showToast({title:'验证码已发送',icon:'none'})
-  } catch (_) {
-    // A failed send consumes the entered challenge; only refresh it on failure.
-    await loadCaptcha()
-  } finally {sendingCode.value=false}
-}
-async function submitReset(){
-  if(loggingIn.value)return
-  if(!smsRequestId.value||!verifyCode.value||newPassword.value!==confirmPassword.value)return uni.showToast({title:'请填写验证码并确认两次密码一致',icon:'none'})
-  loggingIn.value=true;try{await resetPassword({phone:phone.value,code:verifyCode.value,requestId:smsRequestId.value,password:newPassword.value,confirmation:confirmPassword.value});userStore.logout();resetting.value=false;loginMode.value='password';userPassword.value='';newPassword.value='';confirmPassword.value='';smsRequestId.value='';uni.showToast({title:'密码已重置，请重新登录',icon:'none'});loadCaptcha()}catch(_){}finally{loggingIn.value=false}
-}
-onMounted(()=>{loadCaptcha();loadLoginPolicy()})
-onLoad(options=>{
-  const target=decodeURIComponent(options?.redirect||'')
-  if(/^\/(pages|pages-player)\//.test(target))redirectUrl.value=target
-  const ticket=String(options?.wechat_ticket||'')
-  if(/^[a-f0-9]{32}$/.test(ticket)){wechatTicket.value=ticket;loginMode.value='wechat'}
-  const invited=String(options?.invite||options?.inviteCode||'').trim().toUpperCase()
-  if(/^[A-Z2-9]{8}$/.test(invited))clientStorage.set('invite_code',invited)
-  if(options?.expired==='1')uni.showToast({title:'登录已过期，请重新登录',icon:'none'})
+const users = useUserStore()
+const mini = isMpWeixin()
+const labels = { PHONE: '手机号登录', WECHAT: '微信登录', PASSWORD: '密码登录' }
+const policy = ref(null), loadingPolicy = ref(true), policyError = ref(false), mode = ref('PHONE')
+const agreed = ref(false), busy = ref(false), exchanging = ref(false), needPhoneAuth = ref(false)
+const fields = ref(null), retainedPhone = ref(''), password = ref(''), confirmation = ref(''), showPassword = ref(false)
+const target = ref(home)
+const toast = title => uni.showToast({ title, icon: 'none' })
+const ready = computed(() => !loadingPolicy.value && !exchanging.value && !policyError.value)
+const title = computed(() => ({ WECHAT: mini ? '登录 / 注册' : '欢迎回来', PHONE: '手机号登录 / 注册', PASSWORD: '密码登录', RESET: '重置密码' })[mode.value])
+const description = computed(() => ({
+  WECHAT: mini ? '' : '登录 / 注册',
+  PHONE: '未注册手机号验证成功后自动创建账号',
+  PASSWORD: '仅用于已设置密码的账号',
+  RESET: '验证手机号后即可重置密码'
+})[mode.value])
+const submitLabel = computed(() => busy.value ? '提交中…' : ({ RESET: '重置密码', PASSWORD: '登录', PHONE: mini ? '登录' : '继续' })[mode.value])
+const alternatives = computed(() => {
+  if (mode.value === 'RESET') return policy.value?.passwordEnabled ? ['PASSWORD'] : ['PHONE']
+  const enabled = { PHONE: policy.value?.phoneEnabled, WECHAT: mini || policy.value?.wechatEnabled, PASSWORD: policy.value?.passwordEnabled }
+  return [mini ? 'WECHAT' : policy.value?.primaryMethod, 'PHONE', 'WECHAT', 'PASSWORD']
+    .filter((item, index, all) => enabled[item] && item !== mode.value && all.indexOf(item) === index)
 })
-onUnmounted(()=>clearInterval(countdownTimer))
-const agreed = ref(false)
-const needPhoneAuth = ref(false)
-const canUseWechatLogin = isMpWeixin()
-const quickLoginEnabled = computed(() => phoneLoginEnabled.value || wechatLoginEnabled.value || canUseWechatLogin.value)
-const showLoginTabs = computed(() => [quickLoginEnabled.value, passwordEnabled.value].filter(Boolean).length > 1)
-const quickLoginTitle = computed(() => canUseWechatLogin.value ? '快速登录' : phoneLoginEnabled.value ? '手机登录' : '微信登录')
 
-async function handleWechatLogin() {
-  if (!agreed.value) {
-    return uni.showToast({ title: '请先阅读并勾选同意协议', icon: 'none' })
-  }
-  const result = await userStore.login()
-  if (result.success) {
-    completeWechatLogin()
-    return
-  }
-  if (result.code === 1006) {
-    needPhoneAuth.value = true
-  }
-}
-
-async function loadLoginPolicy(){
+async function loadPolicy() {
+  policyError.value = false
+  loadingPolicy.value = true
   try {
-    const {data}=await getLoginPolicy()
-    phoneLoginEnabled.value=Boolean(data?.phoneEnabled)
-    passwordEnabled.value=Boolean(data?.passwordEnabled)
-    wechatLoginEnabled.value=Boolean(data?.wechatEnabled)
-    if(data?.primaryMethod==='PASSWORD'&&passwordEnabled.value)loginMode.value='password'
-    else if(data?.primaryMethod==='WECHAT'&&wechatLoginEnabled.value)loginMode.value='wechat'
-    else if(!quickLoginEnabled.value&&passwordEnabled.value)loginMode.value='password'
-    else if(loginMode.value==='password'&&!passwordEnabled.value)loginMode.value='wechat'
-  } catch (_) { wechatLoginEnabled.value=false }
+    const { data } = await getLoginPolicy()
+    policy.value = data
+    mode.value = mini ? 'WECHAT' : data.primaryMethod === 'WECHAT' ? 'WECHAT' : 'PHONE'
+    if (!mini && data.reason) toast(data.reason)
+  } catch (_) { policyError.value = true } finally { loadingPolicy.value = false }
+}
+function switchMode(next) {
+  retainedPhone.value = fields.value?.phone() || retainedPhone.value
+  password.value = ''
+  confirmation.value = ''
+  showPassword.value = false
+  mode.value = next
+}
+function openTerms(type) { uni.navigateTo({ url: '/pages/agreement/' + type }) }
+function consent() {
+  if (agreed.value) return true
+  toast('请先同意用户协议和隐私政策')
+  return false
 }
 
-async function startWechatLogin(){
-  if(wechatStarting.value)return
-  if(!agreed.value)return uni.showToast({title:'请先阅读并勾选同意协议',icon:'none'})
-  if(typeof window==='undefined')return uni.showToast({title:'请在微信或浏览器中打开',icon:'none'})
-  wechatStarting.value=true
-  try{
-    const inviteCode=clientStorage.get('invite_code')||''
-    const {data}=await getWechatLoginUrl('/pages/login/index',inviteCode)
-    if(!data?.authorizeUrl)throw new Error('未获取到微信授权地址')
+async function startWechat() {
+  if (busy.value || !consent()) return
+  busy.value = true
+  try {
+    if (mini) {
+      const result = await users.login()
+      if (result.success) enterAfterLogin(target.value)
+      else if (result.code === 1006) needPhoneAuth.value = true
+      return
+    }
+    // #ifdef H5
+    if (!/MicroMessenger/i.test(navigator.userAgent)) {
+      toast('请在微信内打开，或使用手机号登录')
+      return
+    }
+    const back = '/pages/login/index?redirect=' + encodeURIComponent(target.value)
+    const { data } = await getWechatLoginUrl(back, clientStorage.get('invite_code') || '')
     window.location.assign(data.authorizeUrl)
-  }catch(e){uni.showToast({title:e?.message||'微信登录暂不可用',icon:'none'});wechatStarting.value=false}
+    // #endif
+  } catch (_) {
+    await loadPolicy()
+  } finally { busy.value = false }
 }
-
-async function finishWechatTicket(){
-  if(loggingIn.value||!wechatTicket.value)return
-  if(!agreed.value)return uni.showToast({title:'请先阅读并勾选同意协议',icon:'none'})
-  loggingIn.value=true
-  try{
-    const result=await userStore.exchangeWechatLogin(wechatTicket.value)
-    if(!result.success)return uni.showToast({title:result.msg||'微信登录失败',icon:'none'})
-    wechatTicket.value=''
-    try{
-      const url=new URL(window.location.href);url.searchParams.delete('wechat_ticket');window.history.replaceState(null,'',url.pathname+url.search+url.hash)
-    }catch(_){}
-    completeWechatLogin()
-  }finally{loggingIn.value=false}
-}
-
-async function handlePhoneAuthorize(e) {
-  if (!agreed.value) {
-    return uni.showToast({ title: '请先阅读并勾选同意协议', icon: 'none' })
-  }
-  if (e.detail.errMsg && e.detail.errMsg.indexOf('deny') > -1) {
-    return uni.showToast({ title: '首次登录需授权手机号', icon: 'none' })
-  }
-  const phoneCode = e.detail.code || ''
-  const result = await userStore.login(phoneCode)
-  if (result.success) completeWechatLogin()
-}
-
-async function handleH5Login() {
-  if(loggingIn.value)return
-  if (!agreed.value) {
-    return uni.showToast({ title: '请先阅读并勾选同意协议', icon: 'none' })
-  }
-  if (!/^1\d{10}$/.test(phone.value)) {
-    return uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
-  }
-  if (!verifyCode.value) {
-    return uni.showToast({ title: '请输入验证码', icon: 'none' })
-  }
-  if(!smsRequestId.value) return uni.showToast({title:'请先获取短信验证码',icon:'none'})
-  loggingIn.value=true
+async function authorizeMiniPhone(event) {
+  if (busy.value || !consent()) return
+  if (!event.detail?.code) return toast('请授权手机号')
+  busy.value = true
   try {
-    const result = await userStore.loginByPhone(phone.value, verifyCode.value, smsRequestId.value)
-    if(result.passwordSetupRequired){setupToken.value=result.data.setupToken;newPassword.value='';confirmPassword.value='';smsRequestId.value='';verifyCode.value='';return}
-    if (result.success) completeWechatLogin()
-  } finally {loggingIn.value=false}
+    const result = await users.login(event.detail.code)
+    if (result.success) enterAfterLogin(target.value)
+  } finally { busy.value = false }
 }
-
-async function submitPasswordSetup(){
-  if(loggingIn.value)return
-  if(!/^(?=.*[A-Za-z])(?=.*[0-9]).{8,32}$/.test(newPassword.value))return uni.showToast({title:'密码需8～32位，包含字母和数字',icon:'none'})
-  if(newPassword.value!==confirmPassword.value)return uni.showToast({title:'两次输入的密码不一致',icon:'none'})
-  loggingIn.value=true
-  try{await userStore.completePasswordSetup({setupToken:setupToken.value,password:newPassword.value,confirmation:confirmPassword.value});setupToken.value='';newPassword.value='';confirmPassword.value='';completeWechatLogin()}
-  catch(e){if(e?.code===401||e?.code===403||e?.code===409)restartPhoneLogin()}
-  finally{loggingIn.value=false}
+async function finishWechat(ticket) {
+  exchanging.value = true
+  removeWechatTicketFromUrl()
+  try {
+    const result = await users.exchangeWechatLogin(ticket)
+    if (result.bindTicket) {
+      users.beginWechatPhoneBinding(result.bindTicket, target.value)
+      uni.reLaunch({ url: '/pages/login/bind-phone' })
+      return true
+    }
+    if (result.success) {
+      enterAfterLogin(target.value)
+      return true
+    }
+    toast(result.msg || '微信登录失败，请重新授权')
+    return false
+  } finally { exchanging.value = false }
 }
-function restartPhoneLogin(){setupToken.value='';newPassword.value='';confirmPassword.value='';loginMode.value='wechat';smsRequestId.value='';verifyCode.value='';loadCaptcha()}
-async function handleUserPasswordLogin(){
-  if(loggingIn.value)return
-  if(!agreed.value)return uni.showToast({title:'请先阅读并同意协议',icon:'none'})
-  if(!/^1\d{10}$/.test(phone.value)||!userPassword.value||!captchaCode.value)return uni.showToast({title:'请填写手机号、密码和图形验证码',icon:'none'})
-  loggingIn.value=true
-  try{await userStore.loginWithPassword({phone:phone.value,password:userPassword.value,captchaId:captchaId.value,captchaCode:captchaCode.value});userPassword.value='';completeWechatLogin()}
-  catch(_){await loadCaptcha()}
-  finally{loggingIn.value=false}
+async function submit() {
+  if (busy.value || (mode.value !== 'RESET' && !consent())) return
+  let data
+  try { data = fields.value?.answer(); if (!data) return } catch (error) { return toast(error.message) }
+  if (mode.value === 'PASSWORD' && !password.value) return toast('请输入登录密码')
+  if (mode.value === 'RESET' && (!password.value || password.value !== confirmation.value))
+    return toast('请填写新密码并确认两次输入一致')
+  busy.value = true
+  try {
+    if (mode.value === 'RESET') {
+      await resetPassword({ ...data, password: password.value, confirmation: confirmation.value })
+      switchMode('PASSWORD')
+      toast('密码已重置，请登录')
+      return
+    }
+    if (mode.value === 'PASSWORD') await users.loginWithPassword({ ...data, password: password.value })
+    else {
+      const result = await users.loginByPhone(data.phone, data.code, data.requestId)
+      if (!result.success) return
+    }
+    enterAfterLogin(target.value)
+  } catch (_) {
+    if (mode.value === 'PASSWORD') await fields.value?.refresh()
+  } finally { busy.value = false }
 }
-
-function goPage(url) {
-  uni.navigateTo({ url })
-}
-
-function switchWechatMode() {
-  loginMode.value = 'wechat'
-}
-
-function completeWechatLogin() {
-  needPhoneAuth.value = false
-  clientStorage.remove('invite_code')
-  clientStorage.set('app_role','user');appStore.restoreRole();chatStore.disconnect()
-  chatStore.connect()
-  if (userStore.userInfo?.phoneBound === false) {
-    uni.redirectTo({ url: '/pages/login/bind-phone?redirect=' + encodeURIComponent(redirectUrl.value) })
+onLoad(async options => {
+  target.value = safeLoginReturn(options?.redirect)
+  const invite = String(options?.invite || options?.inviteCode || '').trim().toUpperCase()
+  if (/^[A-Z2-9]{8}$/.test(invite)) clientStorage.set('invite_code', invite)
+  const ticket = String(options?.wechat_ticket || '')
+  if (/^[a-f0-9]{32}$/.test(ticket) && await finishWechat(ticket)) return
+  if (users.wechatPhoneBinding?.until <= Date.now()) users.clearWechatPhoneBinding()
+  if (users.wechatPhoneBinding && !users.wechatPhoneBinding.accountBinding) {
+    uni.reLaunch({ url: '/pages/login/bind-phone' })
     return
   }
-  uni.reLaunch({ url: redirectUrl.value })
-}
-
-function toggleAgree() {
-  agreed.value = !agreed.value
-}
+  await loadPolicy()
+  if (options?.panel === 'reset' && policy.value?.passwordEnabled) switchMode('RESET')
+  if (options?.panel === 'wechat' && policy.value?.wechatEnabled) switchMode('WECHAT')
+  if (options?.wechat_error === '1') toast('微信授权未完成，请重新登录')
+  if (options?.expired === '1') toast('登录已过期，请重新登录')
+})
 </script>
 
-<style lang="scss" scoped>
-.setup-title{display:block;font-size:34rpx;font-weight:700;margin-bottom:20rpx}.setup-hint{display:block;font-size:24rpx;color:#777777;line-height:1.7;margin:16rpx 0 28rpx}.setup-back{text-align:center;color:#777777;font-size:25rpx;padding:24rpx}
-.verification-row { display:flex; align-items:center; gap:12rpx; margin-bottom:24rpx; .input {flex:1;min-width:0;margin-bottom:0;} }
-.captcha-image {width:180rpx;height:70rpx;flex-shrink:0;}
-.send-code {padding:0 16rpx;line-height:70rpx;font-size:24rpx;color:#111111;background:#eceef0;white-space:nowrap;}
-.login-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--app-page-height, 100vh);
-  background: #f7f7f7;
-  padding: 0 60rpx;
-  position: relative;
-}
-
-.logo-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 80rpx;
-  position: relative;
-  z-index: 1;
-
-  .logo { width: 160rpx; height: 160rpx; margin-bottom: 24rpx; border-radius: 24rpx; }
-  .title { font-size: 44rpx; font-weight: bold; color: #111111; }
-  .subtitle { font-size: 26rpx; color: #777777; margin-top: 12rpx; }
-}
-
-.tab-bar {
-  display: flex;
-  width: 100%;
-  margin-bottom: 60rpx;
-  border-bottom: 2rpx solid #eeeeee;
-  position: relative;
-  z-index: 1;
-
-  .tab-item {
-    flex: 1;
-    text-align: center;
-    font-size: 30rpx;
-    color: #777777;
-    padding-bottom: 20rpx;
-    position: relative;
-    transition: color 0.2s;
-
-    &.active {
-      color: #111111;
-      font-weight: bold;
-
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 48rpx;
-        height: 4rpx;
-        background: #171717;
-        border-radius: 2rpx;
-      }
-    }
-  }
-}
-
-.login-area {
-  width: 100%;
-  position: relative;
-  z-index: 1;
-
-  .input {
-    height: 88rpx;
-    background: #f7f7f7;
-    border: 1rpx solid #eeeeee;
-    border-radius: 12rpx;
-    padding: 0 32rpx;
-    font-size: 30rpx;
-    color: #111111;
-    margin-bottom: 32rpx;
-  }
-
-  .login-btn {
-    width: 100%;
-    height: 88rpx;
-    line-height: 88rpx;
-    text-align: center;
-    color: #ffffff;
-    font-size: 32rpx;
-    font-weight: bold;
-    border-radius: 999rpx;
-    border: none;
-
-    &::after { border: none; }
-  }
-
-  .wechat-btn {
-    background: #171717;
-    color: #ffffff;
-  }
-
-  .wechat-tip {
-    margin-top: 20rpx;
-    font-size: 24rpx;
-    line-height: 1.6;
-    color: #777777;
-    text-align: center;
-  }
-
-  .account-btn {
-    background: #171717;
-    margin-top: 8rpx;
-  }
-
-  .agreement {
-    margin-top: 32rpx;
-    font-size: 24rpx;
-    display: flex;
-    justify-content: center;
-
-    .agree-row {
-      display: flex;
-      align-items: center;
-      gap: 8rpx;
-    }
-
-    .checkbox {
-      width: 32rpx;
-      height: 32rpx;
-      border-radius: 6rpx;
-      border: 2rpx solid rgba(23, 25, 28, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-
-    .checkbox.checked {
-      background: #171717;
-      border-color: transparent;
-    }
-
-    .check-icon {
-      font-size: 22rpx;
-      color: #ffffff;
-    }
-
-    .text { color: #777777; }
-    .link { color: #111111; }
-  }
-}
+<style lang="scss">
+@import '@/styles/auth-flow.scss';
 </style>

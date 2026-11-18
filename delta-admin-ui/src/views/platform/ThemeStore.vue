@@ -6,8 +6,11 @@
           <h2>主题商店</h2>
           <p>主题由授权中心统一销售。购买并启用后，客户 H5 与打手 H5 会使用对应主题；授权失效时自动回退默认主题。</p>
         </div>
-        <el-button :loading="loading" @click="load">刷新</el-button>
+        <div class="theme-settings"><el-switch :model-value="userSwitch" :loading="savingPreference" :disabled="loading" active-text="允许用户自行切换明暗" @change="value => savePreference(value, userOptions)" /><el-button :loading="loading" @click="load">刷新</el-button></div>
       </div>
+      <el-checkbox-group v-if="userSwitch" :model-value="userOptions" :disabled="savingPreference" :min="1" @change="choices => savePreference(userSwitch, choices)">
+        <el-checkbox value="default">浅色</el-checkbox><el-checkbox value="dark">暗黑</el-checkbox>
+      </el-checkbox-group>
     </el-card>
 
     <el-alert
@@ -45,7 +48,7 @@
         <div class="theme-title-row">
           <h3>{{ theme.name }}</h3>
           <el-tag v-if="theme.active" type="success" effect="plain">当前使用</el-tag>
-          <el-tag v-else-if="theme.id === 'default'" type="info" effect="plain">基础</el-tag>
+          <el-tag v-else-if="['default', 'dark'].includes(theme.id)" type="info" effect="plain">系统自带</el-tag>
           <el-tag v-else-if="theme.entitled" type="warning" effect="plain">已购买</el-tag>
           <el-tag v-else type="info" effect="plain">未购买</el-tag>
         </div>
@@ -79,7 +82,7 @@
           </el-button>
           <el-button v-else disabled>正在使用</el-button>
           <el-button
-            v-if="theme.id !== 'default' && theme.entitled"
+            v-if="theme.id === 'neumorphism' && theme.entitled"
             link
             type="primary"
             @click="$router.push('/platform/features')"
@@ -104,19 +107,23 @@ import { ElMessage } from 'element-plus'
 import {
   createPlatformCheckout,
   getThemeSettings,
-  setActiveTheme
+  setActiveTheme,
+  setThemePreferences
 } from '@/api/platform'
 
 const themes = ref([])
 const activeTheme = ref('default')
 const loading = ref(false)
+const userSwitch = ref(false)
+const userOptions = ref(['default', 'dark'])
+const savingPreference = ref(false)
 const buying = ref('')
 const changing = ref('')
 const error = ref('')
 
 function statusText(theme) {
   if (theme.active) return '当前站点正在使用此主题。'
-  if (theme.id === 'default') return '无需购买，随时可切回。'
+  if (['default', 'dark'].includes(theme.id)) return '无需购买，随时可切换。'
   if (theme.entitled && !theme.enabled) return '已获得授权，请在功能商城启用此模块。'
   if (theme.entitled) return '已获得授权，可以直接启用。'
   return theme.reason || '请在授权中心购买此主题。'
@@ -129,6 +136,8 @@ async function load() {
     const response = await getThemeSettings()
     activeTheme.value = response.data?.activeTheme || 'default'
     themes.value = Array.isArray(response.data?.themes) ? response.data.themes : []
+    userSwitch.value = response.data?.userSwitchEnabled === true
+    userOptions.value = response.data?.userThemeOptions || ['default', 'dark']
   } catch (requestError) {
     error.value = requestError?.message || '主题设置暂时无法读取'
   } finally {
@@ -142,12 +151,24 @@ async function activate(theme) {
     const response = await setActiveTheme(theme.id)
     activeTheme.value = response.data?.activeTheme || 'default'
     themes.value = Array.isArray(response.data?.themes) ? response.data.themes : themes.value
-    ElMessage.success(theme.id === 'default' ? '已恢复默认主题' : '主题已启用，客户 H5 刷新后生效')
+    window.dispatchEvent(new Event('delta:theme-changed'))
+    ElMessage.success(theme.id === 'default' ? '已恢复默认主题' : '主题已启用')
   } catch (requestError) {
     if (requestError?.message) ElMessage.error(requestError.message)
   } finally {
     changing.value = ''
   }
+}
+
+async function savePreference(enabled, choices) {
+  if (savingPreference.value) return
+  savingPreference.value = true
+  try {
+    const { data } = await setThemePreferences(enabled, choices)
+    userSwitch.value = data?.userSwitchEnabled === true
+    userOptions.value = data?.userThemeOptions || ['default', 'dark']
+    ElMessage.success('已保存')
+  } finally { savingPreference.value = false }
 }
 
 async function buy(theme) {
@@ -177,6 +198,9 @@ onMounted(load)
 .page-heading h2, .page-heading p { margin: 0; }
 .page-heading h2 { font-size: 20px; }
 .page-heading p { margin-top: 8px; color: #73777e; line-height: 1.7; max-width: 760px; }
+.theme-settings { display:flex; align-items:center; flex-wrap:wrap; gap:12px }
+.preview-dark { background:#19191c; border-color:#333 }
+.preview-dark :is(.preview-block,.preview-line,.preview-top) { background:#333338; border-color:#393940 }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px; }
 .theme-card { border: 1px solid #e7e9ed; }
 .theme-card.active { border-color: #17191c; box-shadow: 0 10px 30px rgba(23, 25, 28, 0.08); }

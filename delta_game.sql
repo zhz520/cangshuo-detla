@@ -447,6 +447,8 @@ CREATE TABLE `order_player` (
   `split_ratio` decimal(5,2) DEFAULT NULL COMMENT '分成比例(%，如50.00表示50%)',
   `split_amount` decimal(10,2) DEFAULT NULL COMMENT '自定义金额(仅CUSTOM时有值)',
   `invited_by` bigint DEFAULT NULL COMMENT '邀请人ID(队友记录时为主接打手ID)',
+  `invited_by_type` varchar(16) DEFAULT NULL,
+  `replaces_participant_id` bigint DEFAULT NULL,
   `invited_at` datetime DEFAULT NULL COMMENT '邀请时间',
   `invite_deadline` datetime DEFAULT NULL COMMENT '邀请响应截止时间',
   `accepted_at` datetime DEFAULT NULL COMMENT '接受时间',

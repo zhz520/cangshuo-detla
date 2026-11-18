@@ -38,6 +38,12 @@ export function adminPlayerDetail(id) {
 export function adminPlayerTransactions(id, params) {
   return request({ url: `/admin/player/${id}/transactions`, method: 'get', params })
 }
+export function adminPlayerDeposits(id) {
+  return request({ url: `/admin/player/${id}/deposits`, method: 'get' })
+}
+export function adminPlayerDepositList(params) {
+  return request({ url: '/admin/player/deposits', method: 'get', params })
+}
 export function adminPlayerApprove(id, levelId) {
   return request({ url: `/admin/player/${id}/approve`, method: 'put', params: levelId == null ? undefined : { levelId } })
 }
@@ -192,6 +198,15 @@ export function adminWithdrawProcess(id, data) {
 }
 export function adminWithdrawReject(id, reason) {
   return request({ url: `/admin/withdraw/${id}/reject`, method: 'put', params: { reason } })
+}
+export function depositRefundList(params) {
+  return request({ url: '/cs/deposit-refunds/list', method: 'get', params })
+}
+export function depositRefundReview(id, data) {
+  return request({ url: `/cs/deposit-refunds/${id}/review`, method: 'put', data })
+}
+export function depositRefundRetry(id) {
+  return request({ url: `/cs/deposit-refunds/${id}/retry`, method: 'post' })
 }
 export function csWithdrawList(params) {
   return request({ url: '/cs/withdraw/list', method: 'get', params })

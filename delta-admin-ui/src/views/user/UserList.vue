@@ -58,17 +58,24 @@
       </el-form><template #footer><el-button @click="userEditorVisible=false">取消</el-button><el-button type="primary" :loading="userSaving" @click="saveUser">保存</el-button></template>
     </el-dialog>
     <!-- 用户详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="用户详情" width="550px">
-      <el-descriptions :column="isNarrow ? 1 : 2" border v-if="detailData" v-loading="detailLoading">
-        <el-descriptions-item label="ID">{{ detailData.user?.id }}</el-descriptions-item>
-        <el-descriptions-item label="昵称">{{ detailData.user?.nickname }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ detailData.user?.phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="登录密码">{{ detailData.user?.passwordSet?'已设置':'待设置' }}</el-descriptions-item>
-        <el-descriptions-item label="状态"><el-tag :type="detailData.user?.status === 1 ? 'success' : 'danger'" size="small">{{ detailData.user?.status === 1 ? '正常' : '封禁' }}</el-tag></el-descriptions-item>
-        <el-descriptions-item label="余额">¥{{ detailData.wallet?.balance || 0 }}</el-descriptions-item>
-        <el-descriptions-item label="订单数">{{ detailData.orderCount || 0 }}</el-descriptions-item>
-        <el-descriptions-item label="注册时间" :span="2">{{ detailData.user?.createdAt }}</el-descriptions-item>
-      </el-descriptions>
+    <el-dialog v-model="detailVisible" title="用户详情" width="min(760px, 96vw)" @closed="detailTab='basic'">
+      <el-tabs v-model="detailTab">
+        <el-tab-pane label="基本信息" name="basic">
+          <el-descriptions :column="isNarrow ? 1 : 2" border v-if="detailData" v-loading="detailLoading">
+            <el-descriptions-item label="ID">{{ detailData.user?.id }}</el-descriptions-item>
+            <el-descriptions-item label="昵称">{{ detailData.user?.nickname }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ detailData.user?.phone || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="登录密码">{{ detailData.user?.passwordSet?'已设置':'待设置' }}</el-descriptions-item>
+            <el-descriptions-item label="状态"><el-tag :type="detailData.user?.status === 1 ? 'success' : 'danger'" size="small">{{ detailData.user?.status === 1 ? '正常' : '封禁' }}</el-tag></el-descriptions-item>
+            <el-descriptions-item label="余额">¥{{ detailData.wallet?.balance || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="订单数">{{ detailData.orderCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="注册时间" :span="2">{{ detailData.user?.createdAt }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane v-if="identityFeature" label="实名认证" name="identity">
+          <IdentityReviewPanel v-if="detailUserId" :user-id="detailUserId" @reviewed="onIdentityReviewed" />
+        </el-tab-pane>
+      </el-tabs>
     </el-dialog>
 
     <!-- 用户订单弹窗 -->
@@ -124,6 +131,7 @@
 <script setup>
 import { useResponsive } from '@/utils/responsive'
 import { computed, ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { adminUserList, adminUserDetail, adminUserUpdateStatus, adminUserAdjustBalance, adminOrderList, csUserList, csUserDetail, csUserUpdateStatus, csOrderList } from '@/api/business'
 import { adminUserCreate,adminUserUpdate,adminUserDelete,adminUserBatchStatus,adminUserBatchDelete } from '@/api/business'
 import ImageUpload from '@/components/ImageUpload.vue'
@@ -134,8 +142,11 @@ import BatchActionBar from '@/components/BatchActionBar.vue'
 import { showBatchResult } from '@/utils/batch-result'
 import { can } from '@/utils/staff-permissions'
 import {thumbnailUrl} from '@/utils/image'
+import { loadPlatformFeatureVisibility, platformFeatureAllowed } from '@/utils/platform-feature-visibility'
+import IdentityReviewPanel from '@/components/IdentityReviewPanel.vue'
 
 const { isCompact, isNarrow } = useResponsive()
+const route = useRoute()
 
 const userStore = useUserStore()
 const isAdmin = userStore.role === 'admin'
@@ -213,13 +224,16 @@ async function handleToggleStatus(row) {
 }
 
 const detailVisible = ref(false), detailData = ref(null), detailLoading = ref(false)
+const detailTab = ref('basic'), detailUserId = ref(null)
+const identityFeature = computed(() => isAdmin && can('user.manage') && platformFeatureAllowed('identity_verification'))
 async function showDetail(id) {
-  detailVisible.value = true; detailLoading.value = true; detailData.value = null
+  detailVisible.value = true; detailLoading.value = true; detailData.value = null; detailUserId.value = id; detailTab.value = 'basic'
   try {
     const res = isAdmin ? await adminUserDetail(id) : await csUserDetail(id)
     detailData.value = res.data
   } finally { detailLoading.value = false }
 }
+function onIdentityReviewed() { /* the embedded panel reloads itself */ }
 
 const ordersVisible = ref(false), ordersLoading = ref(false)
 const userOrders = ref([]), ordersTotal = ref(0), ordersUserName = ref('')
@@ -293,7 +307,15 @@ async function handleBalanceSubmit() {
   }
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  if (isAdmin) await loadPlatformFeatureVisibility().catch(() => null)
+  await fetchData()
+  const userId = Number(route.query.userId || route.query.taskId)
+  if (userId) {
+    await showDetail(userId)
+    if (route.query.tab === 'identity' && identityFeature.value) detailTab.value = 'identity'
+  }
+})
 </script>
 
 <style scoped>

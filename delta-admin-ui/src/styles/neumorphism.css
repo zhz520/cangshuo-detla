@@ -278,3 +278,75 @@ html:root[data-theme='neumorphism'] :is(.rank:not(.rank-top), .notification-guid
 html:root[data-theme='neumorphism'] .rank-top { color: #fff; }
 html:root[data-theme='neumorphism'] .proof-empty { color: var(--app-text-muted); }
 html:root[data-theme='neumorphism'] .mobile-account-list button.danger span { color: var(--el-color-danger); }
+
+/* Scoped editor, login and conversation pages keep the same soft-tactile surfaces. */
+html:root[data-theme='neumorphism'] .login-container {
+  background: radial-gradient(ellipse at 50% 18%, #f8fbff 0%, #e9eef5 64%, #dfe7f1 100%) !important;
+}
+html:root[data-theme='neumorphism'] .login-box {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+  box-shadow: var(--app-shadow) !important;
+}
+html:root[data-theme='neumorphism'] :is(.login-title,.login-box .el-input__inner) { color: var(--app-text) !important; }
+html:root[data-theme='neumorphism'] :is(.login-subtitle,.login-switch a,.login-box .el-input__prefix .el-icon) { color: var(--app-text-regular) !important; }
+html:root[data-theme='neumorphism'] .login-box .el-input__wrapper {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+  box-shadow: var(--neu-shadow-inset) !important;
+}
+html:root[data-theme='neumorphism'] .captcha-image {
+  background: var(--app-surface-soft) !important;
+  border-color: var(--app-border-soft) !important;
+  color: var(--app-text-muted) !important;
+}
+html:root[data-theme='neumorphism'] :is(.product-form-card,.form-section,.product-form) {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+}
+html:root[data-theme='neumorphism'] .section-title {
+  background: var(--app-surface-soft) !important;
+  border-color: var(--app-border-soft) !important;
+}
+html:root[data-theme='neumorphism'] :is(.section-title strong,.is-parent-node,.form-section .el-form-item__label) { color: var(--app-text) !important; }
+html:root[data-theme='neumorphism'] :is(.product-form-header p,.form-tip,.inline-tip,.section-title span) { color: var(--app-text-regular) !important; }
+html:root[data-theme='neumorphism'] :is(.inline-tip,.img-item) {
+  background: var(--app-surface-soft) !important;
+  border-color: var(--app-border-soft) !important;
+}
+html:root[data-theme='neumorphism'] .form-actions {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+  box-shadow: var(--neu-shadow-small) !important;
+}
+html:root[data-theme='neumorphism'] .rich-text-editor { border-color: var(--app-border-soft) !important; }
+html:root[data-theme='neumorphism'] .rich-text-editor .editor-content {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+}
+html:root[data-theme='neumorphism'] .rich-text-editor .toolbar {
+  background: var(--app-surface-soft) !important;
+  border-color: var(--app-border-soft) !important;
+  color: var(--app-text-regular) !important;
+}
+html:root[data-theme='neumorphism'] .rich-text-editor :is(.toolbar-field,.toolbar-field select,.toolbar-field input) {
+  color: var(--app-text) !important;
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+}
+html:root[data-theme='neumorphism'] :is(.chat-service,.session-panel,.chat-panel,.panel-header,.chat-header) {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border-soft) !important;
+  color: var(--app-text) !important;
+}
+html:root[data-theme='neumorphism'] .chat-messages { background: var(--app-bg) !important; }
+html:root[data-theme='neumorphism'] .session-item { border-color: var(--app-border-soft) !important; }
+html:root[data-theme='neumorphism'] .session-item:hover { background: var(--app-primary-soft) !important; }
+html:root[data-theme='neumorphism'] .session-item.active { background: var(--app-primary-soft) !important; border-left-color: var(--app-primary) !important; }
+html:root[data-theme='neumorphism'] :is(.session-name,.chat-header,.panel-header) { color: var(--app-text) !important; }
+html:root[data-theme='neumorphism'] :is(.session-last-msg,.order-link,.session-time,.msg-time,.card-sub) { color: var(--app-text-muted) !important; }
+html:root[data-theme='neumorphism'] :is(.msg-bubble,.msg-row.self .msg-bubble) {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  box-shadow: var(--neu-shadow-small) !important;
+}

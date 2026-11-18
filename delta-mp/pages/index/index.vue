@@ -12,7 +12,7 @@
       </view>
       <view class="screen-icon-btn" role="button" aria-label="消息通知" @click="goMessages">
         <image src="/static/icons/header-bell.svg" mode="aspectFit" />
-        <view v-if="unreadCount > 0 || hasNoticeDot" class="screen-dot" />
+        <view v-if="unreadCount > 0" class="screen-dot" />
       </view>
     </ScreenHeader>
 
@@ -113,6 +113,7 @@
               <AppImage
                 :width="160"
                 class="category-icon"
+                :class="{ 'bundled-category-icon': !cat.icon || cat.icon.startsWith('/static/icons/') }"
                 :style="{ width: (Number(cat.iconSize) || 56) + 'rpx', height: (Number(cat.iconSize) || 56) + 'rpx' }"
                 :src="cat.icon || '/static/icons/分类.svg'"
                 mode="aspectFit"
@@ -230,17 +231,14 @@ import { getActiveNotices } from '@/api/notice'
 import { getCategoryTree } from '@/api/category'
 import { getPurchaseFeed } from '@/api/display'
 import { openCustomerService } from '@/utils/customer-service'
-import { getRemind } from '@/api/message'
 import { useUserStore } from '@/store/user'
-import { useChatStore } from '@/store/chat'
 import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 const userStore = useUserStore()
 const siteStore = useSiteStore()
-const chatStore = useChatStore()
 const remindStore = useRemindStore()
 const isNeo = computed(() => siteStore.themeId === 'neumorphism')
-const unreadCount = computed(() => Number(remindStore.systemUnread || 0) + Number(chatStore.messageUnread || 0))
+const unreadCount = computed(() => Number(remindStore.systemUnread || 0) + Number(remindStore.messageUnread || 0))
 const heroTitle = computed(() => siteStore.siteName || '')
 const heroSubtitle = computed(() => siteStore.subtitle || '')
 const storefrontBanner = '/static/images/home-hero-operator.jpg'
@@ -279,7 +277,6 @@ onShareTimeline(() => ({
 const banners = ref([])
 const categories = ref([])
 const notices = ref([])
-const hasNoticeDot = computed(() => notices.value.length > 0)
 const purchaseFeed = ref([])
 const purchaseFeedEnabled = ref(false)
 const recommendProducts = ref([])
@@ -358,13 +355,7 @@ async function loadData() {
 onShow(() => {
   loadData()
   loadPurchaseFeed()
-  if (userStore.token) {
-    getRemind({ loading: false }).then(res => {
-      const d = res.data || {}
-      useChatStore().setUnreadFromServer(d.messageUnread ?? 0)
-      useChatStore().setSystemUnreadFromServer(d.systemUnread ?? 0)
-    }).catch(() => {})
-  }
+  remindStore.refreshBadges()
 })
 
 async function loadPurchaseFeed() {
@@ -486,7 +477,7 @@ async function goCustomerService() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f7f7f7;
+  background: var(--store-soft);
 }
 .home-scroll {
   flex: 1;
@@ -515,7 +506,7 @@ async function goCustomerService() {
   height: 100%;
 }
 .hero-feature {
-  background: #f7f7f7;
+  background: var(--store-soft);
 }
 .hero-feature .hero-bg {
   left: 0;
@@ -543,7 +534,7 @@ async function goCustomerService() {
 }
 .hero-title {
   display: block;
-  color: #111111;
+  color: var(--store-text);
   font-size: 48rpx;
   font-weight: 800;
   line-height: 1.22;
@@ -552,7 +543,7 @@ async function goCustomerService() {
 .hero-sub {
   display: block;
   margin-top: 10rpx;
-  color: #444444;
+  color: var(--store-regular);
   font-size: 25rpx;
   line-height: 1.45;
 }
@@ -564,7 +555,7 @@ async function goCustomerService() {
   min-height: 66rpx;
   padding: 0 26rpx;
   border-radius: 999rpx;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   font-size: 25rpx;
   font-weight: 650;
@@ -582,11 +573,11 @@ async function goCustomerService() {
   padding: 0 26rpx;
   border: 0;
   border-radius: 999rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   box-shadow: none;
 }
 .search-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; opacity: 0.78; }
-.search-placeholder { color: #666666; font-size: 26rpx; }
+.search-placeholder { color: var(--store-regular); font-size: 26rpx; }
 
 .notice-bar {
   display: flex;
@@ -594,7 +585,7 @@ async function goCustomerService() {
   margin: 14rpx 0 0;
   padding: 0 20rpx;
   height: 72rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   border: 0;
   border-radius: 18rpx;
   overflow: hidden;
@@ -606,28 +597,28 @@ async function goCustomerService() {
   flex-shrink: 0;
   margin-right: 16rpx;
   padding-right: 16rpx;
-  border-right: 1rpx solid #eeeeee;
+  border-right: 1rpx solid var(--store-line);
   .notice-label-icon { width: 30rpx; height: 30rpx; filter: grayscale(1) brightness(0.3); }
-  .notice-label-text { font-size: 24rpx; color: #171717; font-weight: 750; }
+  .notice-label-text { font-size: 24rpx; color: var(--store-text); font-weight: 750; }
 }
 .notice-swiper { flex: 1; min-width: 0; height: 100%; }
 .notice-swiper-item { display: flex; align-items: center; height: 100%; min-width: 0; }
 .notice-title {
   min-width: 0;
   font-size: 24rpx;
-  color: #777777;
+  color: var(--store-regular);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.notice-more { flex-shrink: 0; font-size: 22rpx; color: #aaaaaa; margin-left: 12rpx; }
+.notice-more { flex-shrink: 0; font-size: 22rpx; color: var(--store-muted); margin-left: 12rpx; }
 
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 24rpx 8rpx;
   padding: 24rpx 8rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   margin: 16rpx 0 0;
   border: 0;
   border-radius: 24rpx;
@@ -652,7 +643,7 @@ async function goCustomerService() {
 .category-icon { width: 60rpx; height: 60rpx; }
 .category-name {
   max-width: 100%;
-  color: #111111;
+  color: var(--store-text);
   font-size: 24rpx;
   font-weight: 650;
   text-align: center;
@@ -675,11 +666,11 @@ async function goCustomerService() {
   min-height: 62rpx;
   padding: 0 20rpx;
   font-size: 24rpx;
-  color: #777777;
+  color: var(--store-regular);
   background: transparent;
   border-radius: 999rpx;
   margin-right: 4rpx;
-  &.active { color: #ffffff; background: #171717; font-weight: 750; }
+  &.active { color: #ffffff; background: var(--store-primary); font-weight: 750; }
 }
 .section-actions {
   display: flex;
@@ -693,10 +684,10 @@ async function goCustomerService() {
   gap: 10rpx;
   min-height: 62rpx;
   padding: 0 18rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   border: 0;
   border-radius: 999rpx;
-  color: #444444;
+  color: var(--store-regular);
   font-size: 23rpx;
   white-space: nowrap;
 }
@@ -722,11 +713,11 @@ async function goCustomerService() {
   margin-top: 18rpx;
   border: 1rpx dashed #dddddd;
   border-radius: 24rpx;
-  color: #aaaaaa;
+  color: var(--store-muted);
   font-size: 23rpx;
-  background: #ffffff;
+  background: var(--store-surface);
 }
-.recommend-empty-link { color: #171717; font-weight: 700; }
+.recommend-empty-link { color: var(--store-text); font-weight: 700; }
 
 .home-sheet-mask {
   position: fixed;
@@ -740,7 +731,7 @@ async function goCustomerService() {
   width: 100%;
   padding: 8rpx 28rpx calc(28rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
   border-radius: 28rpx 28rpx 0 0;
-  background: #ffffff;
+  background: var(--store-surface);
   box-sizing: border-box;
 }
 .home-sheet-head {
@@ -748,23 +739,23 @@ async function goCustomerService() {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 4rpx 14rpx;
-  color: #111111;
+  color: var(--store-text);
   font-size: 30rpx;
   font-weight: 800;
 }
-.home-sheet-close { color: #aaaaaa; font-size: 30rpx; font-weight: 400; }
+.home-sheet-close { color: var(--store-muted); font-size: 30rpx; font-weight: 400; }
 .home-sheet-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: 82rpx;
   padding: 0 4rpx;
-  border-top: 1rpx solid #eeeeee;
-  color: #777777;
+  border-top: 1rpx solid var(--store-line);
+  color: var(--store-regular);
   font-size: 25rpx;
-  &.active { color: #111111; font-weight: 750; }
+  &.active { color: var(--store-text); font-weight: 750; }
 }
-.home-sheet-check { color: #171717; font-size: 26rpx; }
+.home-sheet-check { color: var(--store-text); font-size: 26rpx; }
 .home-sheet-all {
   display: flex;
   align-items: center;
@@ -773,7 +764,7 @@ async function goCustomerService() {
   min-height: 88rpx;
   margin-top: 10rpx;
   border-radius: 14rpx;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   font-size: 25rpx;
   font-weight: 750;
@@ -795,7 +786,7 @@ async function goCustomerService() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--store-surface);
   border-radius: 30rpx 30rpx 0 0;
 }
 .notice-list-header {
@@ -803,36 +794,36 @@ async function goCustomerService() {
   align-items: center;
   justify-content: space-between;
   padding: 30rpx 34rpx 20rpx;
-  border-bottom: 1rpx solid #eeeeee;
-  .notice-list-title { font-size: 33rpx; font-weight: 800; color: #171717; }
-  .notice-list-close { font-size: 34rpx; color: #777777; padding: 0 8rpx; }
+  border-bottom: 1rpx solid var(--store-line);
+  .notice-list-title { font-size: 33rpx; font-weight: 800; color: var(--store-text); }
+  .notice-list-close { font-size: 34rpx; color: var(--store-regular); padding: 0 8rpx; }
 }
 .notice-list-body { height: 50vh; padding: 8rpx 0; }
 .notice-list-item {
   display: flex;
   align-items: center;
   padding: 26rpx 34rpx;
-  border-bottom: 1rpx solid #f1f2f4;
+  border-bottom: 1rpx solid var(--store-line);
 }
 .notice-list-dot {
   width: 10rpx;
   height: 10rpx;
   border-radius: 50%;
-  background: #171717;
+  background: var(--store-primary);
   flex-shrink: 0;
   margin-right: 18rpx;
 }
 .notice-list-info { flex: 1; overflow: hidden; }
 .notice-list-name {
   display: block;
-  color: #171717;
+  color: var(--store-text);
   font-size: 27rpx;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.notice-list-time { display: block; margin-top: 6rpx; color: #aaaaaa; font-size: 21rpx; }
-.notice-list-arrow { flex-shrink: 0; margin-left: 12rpx; color: #aaaaaa; font-size: 30rpx; }
+.notice-list-time { display: block; margin-top: 6rpx; color: var(--store-muted); font-size: 21rpx; }
+.notice-list-arrow { flex-shrink: 0; margin-left: 12rpx; color: var(--store-muted); font-size: 30rpx; }
 
 .notice-popup {
   position: fixed;
@@ -848,7 +839,7 @@ async function goCustomerService() {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--store-surface);
     border-radius: 28rpx;
     box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
   }
@@ -857,37 +848,37 @@ async function goCustomerService() {
     align-items: center;
     justify-content: space-between;
     padding: 28rpx 32rpx;
-    border-bottom: 1rpx solid #eeeeee;
-    .popup-title { font-size: 31rpx; font-weight: 800; color: #171717; }
-    .popup-close { font-size: 34rpx; color: #777777; padding: 0 8rpx; }
+    border-bottom: 1rpx solid var(--store-line);
+    .popup-title { font-size: 31rpx; font-weight: 800; color: var(--store-text); }
+    .popup-close { font-size: 34rpx; color: var(--store-regular); padding: 0 8rpx; }
   }
   .popup-body {
     min-height: 0;
     max-height: 50vh;
     padding: 32rpx 32rpx 44rpx;
-    .popup-notice-title { display: block; margin-bottom: 18rpx; color: #171717; font-size: 29rpx; font-weight: 800; }
+    .popup-notice-title { display: block; margin-bottom: 18rpx; color: var(--store-text); font-size: 29rpx; font-weight: 800; }
   }
   .popup-footer {
     flex-shrink: 0;
     padding: 32rpx 32rpx calc(28rpx + var(--app-safe-bottom, env(safe-area-inset-bottom)));
-    border-top: 1rpx solid #eeeeee;
-    background: #ffffff;
+    border-top: 1rpx solid var(--store-line);
+    background: var(--store-surface);
     box-shadow: 0 -6rpx 20rpx rgba(0, 0, 0, 0.03);
     .popup-nav { display: flex; justify-content: center; gap: 28rpx; margin-bottom: 18rpx; }
     .popup-nav-btn {
       padding: 8rpx 22rpx;
-      border: 1rpx solid #e6e8eb;
+      border: 1rpx solid var(--store-line);
       border-radius: 999rpx;
-      color: #171717;
+      color: var(--store-text);
       font-size: 24rpx;
-      &.disabled { color: #aaaaaa; border-color: #eef0f2; }
+      &.disabled { color: var(--store-muted); border-color: var(--store-line); }
     }
     .popup-btn {
       height: 78rpx;
       line-height: 78rpx;
       text-align: center;
       border-radius: 999rpx;
-      background: #171717;
+      background: var(--store-primary);
       color: #ffffff;
       font-size: 27rpx;
       font-weight: 750;

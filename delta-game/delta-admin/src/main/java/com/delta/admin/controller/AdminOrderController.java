@@ -116,6 +116,7 @@ public class AdminOrderController {
     @OpLog(module = "order", operation = "改派归属客服")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/cs")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public R<Void> assignCs(@PathVariable Long id, @RequestBody Map<String, Long> body) {
         Order order = orderService.getById(id);
         if (order == null) return R.fail(404, "订单不存在");

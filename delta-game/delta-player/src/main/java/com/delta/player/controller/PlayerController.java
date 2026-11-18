@@ -95,7 +95,7 @@ public class PlayerController {
     }
 
     @PostMapping("/apply")
-    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class, isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public R<Void> apply(@RequestBody Player player) {
         Player supplied=player;player=new Player();
         if(!Boolean.TRUE.equals(supplied.getPrivacyAccepted()))return R.fail(400,"请同意用户协议和隐私政策");
@@ -106,25 +106,21 @@ public class PlayerController {
         player.setLevel(null); // Platform levels can only be assigned by an administrator.
         if (player.getIntroduction() != null && player.getIntroduction().length() > 1000) return R.fail("个人简介不能超过1000字");
         Long userId = SecurityUtils.getUserId();
-        String depositMode = sysConfigService.getConfigValue("player.deposit_mode",
-                "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required", "true")) ? "REQUIRED" : "NONE");
-        boolean depositRequired = "REQUIRED".equalsIgnoreCase(depositMode);
-        String depositPaymentNo = player.getDepositPaymentNo();
-        if (depositRequired) {
-            if (depositPaymentNo == null || depositPaymentNo.isBlank()) {
-                return R.fail("请先支付押金");
-            }
-            if (!paymentService.verifyPlayerDepositPayment(depositPaymentNo, userId)) {
-                return R.fail("押金支付无效或未到账，请完成支付后再提交");
-            }
-        } else {
-            depositPaymentNo = null;
-        }
         User applicant=userService.getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>().eq(User::getId,userId).last("FOR UPDATE"));
         if(applicant==null) return R.fail(404,"用户不存在");
         if(applicant.getPhone()==null||!applicant.getPhone().matches("1[0-9]{10}"))return R.fail(400,"请先验证并绑定手机号");
         Player existing = playerService.getByOpenid(applicant.getOpenid());
         if(existing!=null && !"REJECTED".equals(existing.getStatus())) return R.fail(409,"已有入驻记录，请查看当前状态");
+        String depositPaymentNo = null;
+        if (enrollmentRequiresDeposit()) {
+            BigDecimal required = paymentService.playerDepositRequiredAmount(userId);
+            if (required.signum() > 0) {
+                // Recover the receipt from the current user's ledger, never from browser storage.
+                depositPaymentNo = paymentService.latestPaidPlayerDepositNo(userId);
+                if (depositPaymentNo == null || paymentService.playerDepositPaidAmount(userId).compareTo(required) < 0)
+                    return R.fail(409, "押金未到账或未缴足，请到账后再提交");
+            }
+        }
         player.setPhone(applicant.getPhone());
         player.setProofImages(ImageListUtils.normalizeLocal(player.getProofImages(), 4));
         if (existing == null) {
@@ -156,6 +152,12 @@ public class PlayerController {
         return R.ok();
     }
 
+    private boolean enrollmentRequiresDeposit() {
+        String fallback = "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required", "true")) ? "REQUIRED" : "NONE";
+        return "REQUIRED".equalsIgnoreCase(java.util.Objects.toString(
+                sysConfigService.getConfigValue("player.deposit_mode", fallback), fallback).trim());
+    }
+
     /** Read-only application lookup for a normal user before switching to a player token. */
     @GetMapping("/apply/status")
     public R<Map<String, Object>> applicationStatus() {
@@ -165,6 +167,11 @@ public class PlayerController {
                 ? null : playerService.getByOpenid(applicant.getOpenid());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("registered", existing != null);
+        if (enrollmentRequiresDeposit()) {
+            BigDecimal required = paymentService.playerDepositRequiredAmount(applicant.getId());
+            result.put("depositSatisfied", required.signum() <= 0
+                    || paymentService.playerDepositPaidAmount(applicant.getId()).compareTo(required) >= 0);
+        }
         if (existing != null) {
             result.put("status", existing.getStatus());
             result.put("rejectReason", existing.getRejectReason());

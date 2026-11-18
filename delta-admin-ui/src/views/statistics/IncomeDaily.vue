@@ -155,8 +155,10 @@ async function fetchData() {
     const [startDate, endDate] = query.dateRange || []
     const res = await getStatisticsIncomeDaily({ startDate, endDate })
     const data = res.data || {}
-    tableData.value = data.list || []
+    tableData.value = Array.isArray(data.list) ? data.list : []
     summary.value = data.summary || {}
+  } catch {
+    // Shared request feedback handles errors; do not leak a rejected event callback.
   } finally {
     loading.value = false
   }

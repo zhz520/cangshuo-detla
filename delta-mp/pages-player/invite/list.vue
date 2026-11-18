@@ -12,9 +12,10 @@
           <view class="info">
             <text class="name">{{ tab === 'received' ? item.fromNickname : item.toNickname }}</text>
             <text class="order-no">订单：{{ item.orderNo || item.orderId }}</text>
+            <text v-if="item.replacesParticipantId && item.status === 'INVITED'" class="split-info">协同接替邀请</text>
             <text class="split-info">分成：{{ SPLIT_TYPE_TEXT[item.splitType] || '平分' }}{{ item.splitType === 'CUSTOM' && item.splitAmount ? ' ¥' + item.splitAmount : '' }}</text>
           </view>
-          <view class="status-label" :style="{color: INVITE_STATUS_COLOR[item.status] || '#999'}">{{ INVITE_STATUS_TEXT[item.status] || item.status }}</view>
+          <view class="status-label" :style="{color: INVITE_STATUS_COLOR[item.status] || 'var(--store-muted)'}">{{ INVITE_STATUS_TEXT[item.status] || item.status }}</view>
         </view>
         <view v-if="tab==='received' && item.status==='INVITED'" class="card-actions">
           <button class="btn-accept" :disabled="!!pendingActions[item.orderId]" :loading="pendingActions[item.orderId] === 'accept'" @click="doAccept(item)">接受</button>
@@ -35,7 +36,7 @@ import PageState from '@/components/PageState.vue'
 import { getInviteList, acceptInvite, rejectInvite } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
-const INVITE_STATUS_TEXT = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废' }
+const INVITE_STATUS_TEXT = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废', EXPIRED: '已过期', REPLACED: '已退出' }
 const INVITE_STATUS_COLOR = { INVITED: '#996b30', ACCEPTED: '#347a5b', REJECTED: '#b84b55', CANCELLED: '#777777' }
 const SPLIT_TYPE_TEXT = { FIFTY_FIFTY: '五五开', FORTY_SIXTY: '四六开', THIRTY_SEVENTY: '三七开', CUSTOM: '自定义' }
 const pendingActions = ref({})
@@ -118,22 +119,22 @@ async function doReject(item) {
 }
 </script>
 <style lang="scss" scoped>
-.invite-list-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
-.tabs { display: flex; background: #fff; border-bottom: 1rpx solid #edf0f2;
-  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #777777; position: relative;
-    &.active { color: #111111; &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: #171717; border-radius: 2rpx; } }
+.invite-list-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
+.tabs { display: flex; background: var(--store-surface); border-bottom: 1rpx solid var(--store-line);
+  .tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: var(--store-regular); position: relative;
+    &.active { color: var(--store-text); &::after { content: ''; position: absolute; bottom: 0; left: 30%; right: 30%; height: 4rpx; background: var(--store-primary); border-radius: 2rpx; } }
   }
 }
 .list { height: calc(var(--app-page-height, 100vh) - 100rpx); box-sizing: border-box; padding: 20rpx 24rpx calc(24rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
-.invite-card { background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;
+.invite-card { background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx;
   .card-top { display: flex; align-items: center; gap: 16rpx; }
   .avatar { width: 72rpx; height: 72rpx; border-radius: 50%; }
-  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } }
+  .info { flex: 1; .name { font-size: 28rpx; font-weight: bold; display: block; } .order-no { font-size: 22rpx; color: var(--store-regular); display: block; margin-top: 4rpx; } .split-info { font-size: 22rpx; color: var(--store-regular); display: block; margin-top: 4rpx; } }
   .status-label { font-size: 24rpx; font-weight: 500; white-space: nowrap; }
   .card-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f7f7f7; }
   .btn-accept, .btn-reject { margin: 0; line-height: 1.6; padding: 10rpx 32rpx; font-size: 26rpx; border-radius: 999rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
-  .btn-accept { background: #111111; color: #fff; font-weight: bold; }
-  .btn-reject { background: #fff; border: 1rpx solid #b84b55; color: #b84b55; }
+  .btn-accept { background: var(--store-primary); color: #fff; font-weight: bold; }
+  .btn-reject { background: var(--store-surface); border: 1rpx solid #b84b55; color: #b84b55; }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-regular); }
 </style>

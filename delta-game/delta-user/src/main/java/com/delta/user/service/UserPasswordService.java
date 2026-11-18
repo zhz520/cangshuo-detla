@@ -58,6 +58,25 @@ public class UserPasswordService {
         update.setAuthVersion((user.getAuthVersion()==null?0:user.getAuthVersion())+1);
         if(!users.updateById(update))throw new IllegalStateException("密码重置失败");
     }
+    @Transactional(rollbackFor = Exception.class)
+    public User change(Long userId, String currentPassword, String password, String confirmation) {
+        PasswordPolicy.validateUser(password);
+        if (!password.equals(confirmation)) throw new BusinessException(400, "两次输入的密码不一致");
+        User user = users.getOne(new LambdaQueryWrapper<User>().eq(User::getId, userId).last("FOR UPDATE"));
+        if (user == null || !Integer.valueOf(1).equals(user.getStatus()) || Integer.valueOf(1).equals(user.getIsGuest()))
+            throw new BusinessException(403, "账号暂不可用");
+        if (user.getPhone() == null || !user.getPhone().matches("1[0-9]{10}"))
+            throw new BusinessException(409, "请先绑定手机号");
+        if (user.isPasswordSet() && (currentPassword == null || !encoder.matches(currentPassword, user.getPassword())))
+            throw new BusinessException(400, "当前密码不正确，可用短信验证码找回");
+        User update = new User();
+        update.setId(user.getId());
+        update.setPassword(encoder.encode(password));
+        update.setAuthVersion((user.getAuthVersion() == null ? 0L : user.getAuthVersion()) + 1);
+        if (!users.updateById(update)) throw new IllegalStateException("密码保存失败");
+        return user;
+    }
+
     private String key(String ticket) {
         try{
             String key="auth:password-setup:"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(ticket.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));

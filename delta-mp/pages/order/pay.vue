@@ -262,18 +262,18 @@ async function handlePay() {
 }
 </script>
 <style lang="scss" scoped>
-.pay-page { padding: 40rpx 24rpx; background: #f7f7f7; min-height: var(--app-page-height, 100vh); }
+.pay-page { padding: 40rpx 24rpx; background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
 .amount-area { text-align: center; padding: 60rpx 0;
-  .label { font-size: 28rpx; color: #777777; display: block; margin-bottom: 20rpx; }
+  .label { font-size: 28rpx; color: var(--store-regular); display: block; margin-bottom: 20rpx; }
   .countdown { font-size: 26rpx; color: #996b30; display: block; margin-top: 16rpx; &.expired { color: #d44955; } }
 }
-.pay-methods { background: #ffffff; border: 1rpx solid #eeeeee; border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
-.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid #eeeeee; gap: 16rpx;
+.pay-methods { background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 12rpx; overflow: hidden; margin-bottom: 60rpx; }
+.method { display: flex; align-items: center; padding: 32rpx 24rpx; border-bottom: 1rpx solid var(--store-line); gap: 16rpx;
   .method-icon { width: 40rpx; height: 40rpx; flex-shrink: 0; }
-  .method-name { font-size: 28rpx; color: #111111; flex: 1; }
-  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; } }
-  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #aaaaaa; border-radius: 50%; &.checked { border-color: #111111; background: #111111; } }
+  .method-name { font-size: 28rpx; color: var(--store-text); flex: 1; }
+  .method-info { flex: 1; .balance-text { font-size: 22rpx; color: var(--store-regular); display: block; margin-top: 4rpx; } }
+  .radio { width: 36rpx; height: 36rpx; border: 2rpx solid #aaaaaa; border-radius: 50%; &.checked { border-color: var(--store-text); background: var(--store-primary); } }
 }
-.guest-pay-tip { margin: -30rpx 0 30rpx; padding: 18rpx 22rpx; border-radius: 12rpx; background: #fff8e8; color: #725c2d; font-size: 24rpx; line-height: 1.6; }
-.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: #171717; color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: #eeeeee; color: #777777; } }
+.guest-pay-tip { margin: -30rpx 0 30rpx; padding: 18rpx 22rpx; border-radius: 12rpx; background: var(--store-surface)8e8; color: #725c2d; font-size: 24rpx; line-height: 1.6; }
+.btn-pay { height: 88rpx; line-height: 88rpx; text-align: center; background: var(--store-primary); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; &.disabled { background: var(--store-soft); color: var(--store-regular); } }
 </style>

@@ -60,4 +60,19 @@ public class Player extends BaseEntity {
     /** 进行中订单数（非DB字段） */
     @TableField(exist = false)
     private Integer activeOrders;
+    /** Admin-only deposit summary; never persisted on the player row. */
+    @TableField(exist = false)
+    private String depositMode;
+    @TableField(exist = false)
+    private BigDecimal depositRequiredAmount;
+    @TableField(exist = false)
+    private BigDecimal depositPaidAmount;
+    @TableField(exist = false)
+    private BigDecimal depositOutstandingAmount;
+    @TableField(exist = false)
+    private String depositStatus;
+    @TableField(exist = false)
+    private Integer depositPaymentCount;
+    @TableField(exist = false)
+    private String depositLastPaidAt;
 }

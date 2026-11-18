@@ -106,6 +106,11 @@ public class NotificationEventListener {
             case "ORDER_REFUNDED" -> "订单已退款";
             case "ORDER_COMPLETED" -> "服务已完成";
             case "TEAMMATE_INVITED" -> "收到组队邀请";
+            case "TEAMMATE_INVITED_STAFF" -> "后台已发出协同邀请";
+            case "TEAMMATE_INVITE_REVOKED" -> "协同邀请已撤回";
+            case "TEAMMATE_ACCEPTED" -> "协同邀请已接受";
+            case "TEAMMATE_REJECTED" -> "协同邀请已拒绝";
+            case "TEAMMATE_REMOVED", "TEAMMATE_REMOVED_STAFF" -> "协同队伍已调整";
             case "COMPLAINT_RESOLVED" -> "投诉处理结果";
             case "COMPLAINT_APPEALED" -> "投诉申诉待处理";
             case "COMPLAINT_REFUND_PENDING" -> "投诉退款待终审";

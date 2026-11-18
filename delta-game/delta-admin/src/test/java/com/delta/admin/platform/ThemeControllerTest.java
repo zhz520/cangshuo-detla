@@ -33,7 +33,7 @@ class ThemeControllerTest {
 
         assertThat(state.activeTheme()).isEqualTo(ThemeController.DEFAULT_THEME);
         assertThat(state.themes()).extracting(ThemeController.ThemeOption::id)
-                .containsExactly(ThemeController.DEFAULT_THEME, ThemeController.NEUMORPHISM_THEME);
+                .containsExactly(ThemeController.DEFAULT_THEME, ThemeController.NEUMORPHISM_THEME, ThemeController.DARK_THEME);
         assertThat(state.themes().get(1).entitled()).isTrue();
         assertThat(state.themes().get(1).enabled()).isFalse();
         assertThat(state.themes().get(1).active()).isFalse();

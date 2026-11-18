@@ -8,7 +8,7 @@
       <el-tab-pane label="短信通知" name="sms"/>
     </el-tabs>
     <el-alert
-      :title="active==='wechat' ? '接收人须先关注公众号并在对应客户端或工作人员后台完成身份绑定；已知失败最多重试5次，投递结果未知的记录需人工确认后再重试。' : '短信按角色和事件独立模板发送；已知失败自动重试，网络中断导致结果未知的记录需人工确认后再重试。'"
+      :title="active==='wechat' ? '接收人须先关注公众号并绑定账号。' : '短信受理后等待运营商回执，最终状态以授权中心为准。'"
       :closable="false"/>
     <el-alert v-if="platformFeatureError" :title="platformFeatureError" type="warning" :closable="false" />
     <div class="notice-summary">
@@ -53,7 +53,7 @@
       <el-table-column prop="attempts" label="尝试次数" width="90"/>
       <el-table-column prop="created_at" label="创建时间" min-width="180"/>
       <el-table-column label="操作" width="96" fixed="right">
-        <template #default="{row}"><el-button v-if="['RETRY','FAILED','DELIVERY_UNKNOWN'].includes(row.status)" link @click="confirmRetry(row)">{{ row.status==='DELIVERY_UNKNOWN' ? '确认重发' : '重试' }}</el-button></template>
+        <template #default="{row}"><el-button v-if="['RETRY','FAILED'].includes(row.status) || (active==='wechat' && row.status==='DELIVERY_UNKNOWN')" link @click="confirmRetry(row)">{{ row.status==='DELIVERY_UNKNOWN' ? '确认重发' : '重试' }}</el-button></template>
       </el-table-column>
     </el-table>
     <el-pagination
@@ -92,8 +92,13 @@ function statusType(status){return status==='SENT'?'success':status==='FAILED'||
 function roleLabel(role){return ({USER:'用户',PLAYER:'打手',ADMIN:'管理员',CS:'客服'})[role]||role||'-'}
 async function load(){
   busy.value=true
-  try{rows.value=(await request.get(active.value==='wechat'?'/admin/wechat/notifications':'/admin/sms/notifications')).data||[]}
-  finally{busy.value=false}
+  const channel=active.value
+  try {
+    const {data}=await request.get(channel==='wechat'?'/admin/wechat/notifications':'/admin/sms/notifications')
+    if (channel===active.value) rows.value=Array.isArray(data)?data:[]
+  } catch {
+    if (channel===active.value) rows.value=[]
+  } finally { if(channel===active.value) busy.value=false }
 }
 async function retry(id){await request.post(`/admin/${active.value==='wechat'?'wechat':'sms'}/notifications/${id}/retry`);await load()}
 async function confirmRetry(row){

@@ -25,7 +25,7 @@
         <ul><li v-for="capability in feature.capabilities" :key="capability">{{ capability }}</li></ul>
         <p class="commercial-terms">{{ purchaseTermsFor(feature) }}</p>
         <p v-if="feature.paid" class="license-period">{{ validityText(feature) }}</p>
-        <p class="muted">最低版本 {{ feature.minVersion }}<span v-if="feature.dependencies.length"> · 依赖基础业务系统</span></p>
+        <p class="muted">最低版本 {{ feature.minVersion }}<span v-if="feature.dependencies?.length"> · 依赖基础业务系统</span></p>
         <div class="feature-actions">
           <el-button v-if="feature.enabled" type="primary" @click="$router.push(feature.entryPath)">进入功能</el-button>
           <el-button v-else-if="!feature.entitled && !isPurchased(feature)" type="primary" :disabled="syncing || loading || !!changing || !!buying" :loading="buying===feature.id" @click="buy(feature)">立即购买</el-button>

@@ -5,8 +5,8 @@
       <el-card shadow="never" class="settings-card">
         <template #header>
           <div class="card-header">
-            <div><h2>邮件通知</h2><p>通过客户自有 SMTP 邮箱接收重要业务通知。</p></div>
-            <div class="header-actions"><el-tag :type="form.enabled ? 'success' : 'info'">{{ form.enabled ? '运行中' : '已停用' }}</el-tag><el-button :loading="testing" :disabled="saving || !form.enabled" @click="sendTest">发送测试邮件</el-button><el-button type="primary" :loading="saving" @click="save">保存配置</el-button></div>
+            <div><h2>{{ embedded ? 'SMTP 设置' : '邮件通知' }}</h2><p v-if="!embedded">通过客户自有 SMTP 邮箱接收重要业务通知。</p></div>
+            <div class="header-actions"><el-tag :type="form.enabled ? 'success' : 'info'">{{ form.enabled ? '运行中' : '已停用' }}</el-tag><el-button :loading="testing" :disabled="saving || !form.enabled" @click="sendTest">发送测试邮件</el-button><el-button v-if="!embedded" type="primary" :loading="saving" :disabled="embedded && !dirty" @click="save">保存配置</el-button></div>
           </div>
         </template>
 
@@ -51,20 +51,27 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { getEmailNotificationRecords, getEmailNotificationSettings, retryEmailNotification, saveEmailNotificationSettings, sendEmailNotificationTest } from '@/api/email-notifications'
 
+const props = defineProps({ embedded: Boolean })
+const emit = defineEmits(['dirty', 'saved', 'busy'])
+const baseline = ref(null)
 const form = ref(null), availableEvents = ref([]), loading = ref(false), loadError = ref('')
 const records = ref([]), recordsLoading = ref(false), recordsError = ref('')
 const saving = ref(false), testing = ref(false), retrying = ref(''), recipientDraft = ref('')
+const dirty = computed(() => baseline.value !== null && (JSON.stringify(form.value) !== baseline.value || Boolean(recipientDraft.value.trim())))
+watch(dirty, value => emit('dirty', value), { immediate: true })
+watch([saving, testing], ([isSaving, isTesting]) => emit('busy', isSaving || isTesting), { immediate:true })
 const statusLabels = { PENDING: '等待发送', SENDING: '发送中', SENT: '已发送', RETRY: '等待重试', FAILED: '发送失败', EXPIRED: '已过期' }
 const emailPattern = /^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/
 
 function applySettings(value) {
   form.value = { enabled: false, host: '', port: 465, security: 'TLS', username: '', fromAddress: '', senderName: '见高山电竞', recipients: [], events: [], password: '', passwordConfigured: false, ...value, recipients: Array.isArray(value?.recipients) ? value.recipients : [], events: Array.isArray(value?.events) ? value.events : [] }
   availableEvents.value = Array.isArray(value?.availableEvents) ? value.availableEvents : availableEvents.value
+  baseline.value = JSON.stringify(form.value)
 }
 function addRecipient() {
   const candidates = String(recipientDraft.value || '').split(/[,;\n]+/).map(value => value.trim()).filter(Boolean)
@@ -94,13 +101,20 @@ async function loadRecords() {
   catch { recordsError.value = '发送记录加载失败，请重试。' }
   finally { recordsLoading.value = false }
 }
+function discard() {
+  if (baseline.value === null || saving.value) return
+  recipientDraft.value = ''
+  applySettings(JSON.parse(baseline.value))
+}
+defineExpose({ save, discard })
+
 async function save() {
   if (saving.value || !form.value) return
   if (!addRecipient()) return
   if (form.value.enabled && !form.value.events.length) return ElMessage.warning('启用前至少选择一个通知事件')
   if (form.value.enabled && !form.value.recipients.length) return ElMessage.warning('启用前至少添加一个收件邮箱')
   saving.value = true
-  try { applySettings((await saveEmailNotificationSettings(form.value)).data); ElMessage.success('邮件通知配置已保存') }
+  try { applySettings((await saveEmailNotificationSettings(form.value)).data); emit('saved'); ElMessage.success('邮件通知配置已保存') }
   finally { saving.value = false }
 }
 async function sendTest() {

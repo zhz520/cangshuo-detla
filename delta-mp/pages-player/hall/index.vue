@@ -123,16 +123,16 @@ function incomeAmount(order) {
 function doAccept(id) { grabDialog.value?.open(id) }
 </script>
 <style lang="scss" scoped>
-.hall-page { background: #ffffff; position: relative; }
-.filter-bar { white-space: nowrap; padding: 16rpx 24rpx; background: #f7f7f7; border-bottom: 1rpx solid #f7f7f7; }
-.filter-item { display: inline-block; padding: 12rpx 24rpx; margin-right: 16rpx; font-size: 26rpx; color: #777777; background: rgba(0,0,0,0.05); border-radius: 999rpx; &.active { background: #171717; color: #ffffff; font-weight:bold; } }
+.hall-page { background: var(--store-surface); position: relative; }
+.filter-bar { white-space: nowrap; padding: 16rpx 24rpx; background: var(--store-soft); border-bottom: 1rpx solid #f7f7f7; }
+.filter-item { display: inline-block; padding: 12rpx 24rpx; margin-right: 16rpx; font-size: 26rpx; color: var(--store-regular); background: var(--store-soft); border-radius: 999rpx; &.active { background: var(--store-primary); color: #ffffff; font-weight:bold; } }
 .list { height: calc(var(--app-page-height, 100vh) - 190rpx - var(--app-safe-bottom, env(safe-area-inset-bottom))); padding: 20rpx 24rpx; overflow-x: hidden; box-sizing: border-box; }
-.order-card-wrap { margin-bottom: 20rpx; overflow: hidden; border-radius: 16rpx; background: #eeeeee; border: 1rpx solid #aaaaaa; }
-.accept-bar { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx; background: #eeeeee; border-radius: 0 0 16rpx 16rpx; width: 100%; box-sizing: border-box; }
+.order-card-wrap { margin-bottom: 20rpx; overflow: hidden; border-radius: 16rpx; background: var(--store-soft); border: 1rpx solid #aaaaaa; }
+.accept-bar { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx; background: var(--store-soft); border-radius: 0 0 16rpx 16rpx; width: 100%; box-sizing: border-box; }
 .amount-block { display: flex; flex-direction: column; gap: 4rpx; }
-.order-amount { font-size: 28rpx; color: #111111; font-weight: 600; display: block; }
+.order-amount { font-size: 28rpx; color: var(--store-text); font-weight: 600; display: block; }
 .income-line { font-size: 28rpx; color: #d44955; font-weight: bold; display: block; }
-.commission-hint { font-size: 22rpx; color: #777777; display: block; }
-.btn-accept { padding: 12rpx 32rpx; background: #171717; color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
+.commission-hint { font-size: 22rpx; color: var(--store-regular); display: block; }
+.btn-accept { padding: 12rpx 32rpx; background: var(--store-primary); color: #ffffff; font-weight:bold; font-size: 26rpx; border-radius: 999rpx; flex-shrink: 0; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-regular); }
 </style>

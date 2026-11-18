@@ -23,4 +23,4 @@ async function start(){
 }
 async function remove(){const result=await uni.showModal({title:'解除通知绑定',content:'解除后将不再接收此身份的公众号服务通知。'});if(!result.confirm)return;busy.value=true;try{await del('/common/wechat/binding',{}, {role});await load()}catch(_){}finally{busy.value=false}}
 </script>
-<style scoped>.binding-page{padding:40rpx;background:#fff;min-height:100vh}.title{font-size:36rpx;font-weight:700;display:block}.tip{display:block;color:#aaaaaa;font-size:26rpx;line-height:1.8;margin:32rpx 0}button{margin-top:36rpx;font-size:28rpx}</style>
+<style scoped>.binding-page{padding:40rpx;background:var(--store-surface);min-height:100vh}.title{font-size:36rpx;font-weight:700;display:block}.tip{display:block;color:var(--store-muted);font-size:26rpx;line-height:1.8;margin:32rpx 0}button{margin-top:36rpx;font-size:28rpx}</style>

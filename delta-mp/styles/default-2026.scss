@@ -1,4 +1,4 @@
-/* KK storefront default theme. Neumorphism keeps its own scoped data-theme skin. */
+/* KK storefront default layout. Neumorphism keeps its own scoped data-theme skin. */
 html:root:not([data-theme='neumorphism']) {
   --store-bg: #f7f7f7;
   --store-surface: #ffffff;
@@ -8,6 +8,8 @@ html:root:not([data-theme='neumorphism']) {
   --store-muted: #aaaaaa;
   --store-line: #eeeeee;
   --store-primary: #171717;
+  --store-primary-2: #30343a;
+  --store-success: #347a5b;
   --store-radius: 24rpx;
   --store-shadow: none;
   --store-title-size: 40rpx;
