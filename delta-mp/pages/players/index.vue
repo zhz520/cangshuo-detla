@@ -201,7 +201,7 @@ function loadMore() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f7f7f7;
+  background: var(--store-soft);
 }
 
 .search-bar {
@@ -216,13 +216,13 @@ function loadMore() {
     height: 70rpx;
     padding: 0 24rpx;
     border-radius: 999rpx;
-    background: #ffffff;
-    color: #171717;
+    background: var(--store-surface);
+    color: var(--store-text);
     font-size: 24rpx;
   }
   text {
     flex-shrink: 0;
-    color: #171717;
+    color: var(--store-text);
     font-size: 23rpx;
     font-weight: 750;
   }
@@ -249,12 +249,12 @@ function loadMore() {
   padding: 12rpx 22rpx;
   border: 1rpx solid transparent;
   border-radius: 999rpx;
-  color: #777777;
+  color: var(--store-regular);
   font-size: 22rpx;
   white-space: nowrap;
   &.active {
-    border-color: #171717;
-    background: #171717;
+    border-color: var(--store-text);
+    background: var(--store-primary);
     color: #ffffff;
     font-weight: 750;
   }
@@ -275,15 +275,15 @@ function loadMore() {
   height: 56rpx;
   padding: 0 15rpx;
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #777777;
+  background: var(--store-surface);
+  color: var(--store-regular);
   font-size: 19rpx;
   white-space: nowrap;
 }
-.filter-chevron { color: #aaaaaa; font-size: 16rpx; }
+.filter-chevron { color: var(--store-muted); font-size: 16rpx; }
 .filter-total {
   margin-left: auto;
-  color: #aaaaaa;
+  color: var(--store-muted);
   font-size: 18rpx;
   white-space: nowrap;
 }
@@ -321,7 +321,7 @@ function loadMore() {
 .hint {
   display: block;
   padding: 38rpx 0;
-  color: #aaaaaa;
+  color: var(--store-muted);
   font-size: 23rpx;
   text-align: center;
 }

@@ -32,3 +32,11 @@ test('site config separates mini program, official account and external H5 switc
   assert.match(store, /wx_pay_official_enabled/)
   assert.match(store, /wx_pay_h5_enabled/)
 })
+
+test('deposit QR payment refreshes the withdrawal guard after the callback arrives', async () => {
+  const withdraw = await read('../pages-player/withdraw/index.vue')
+  assert.match(withdraw, /<PaymentQrDialog[^>]*@closed="onDepositQrClosed"/)
+  assert.match(withdraw, /pollDepositStatus\(attempts = 40, interval = 3000\)/)
+  assert.match(withdraw, /if \(!result\.data\.needsPayment\)[\s\S]*qrVisible\.value = false/)
+  assert.match(withdraw, /depositStatus\.value = result\.data/)
+})

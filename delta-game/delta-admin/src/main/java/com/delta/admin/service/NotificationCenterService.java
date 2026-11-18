@@ -1,8 +1,10 @@
 package com.delta.admin.service;
 
+import com.delta.admin.platform.PlatformService;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.event.OrderConfirmedEvent;
 import com.delta.common.security.service.StaffPermissions;
+import com.delta.common.sms.service.SmsGatewayClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,6 +50,8 @@ public class NotificationCenterService {
     private final OfficialWechatService wechat;
     private final SmsNoticeService sms;
     private final StaffPermissions permissions;
+    private final PlatformService platform;
+    private final SmsGatewayClient smsGateway;
 
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT,fallbackExecution=true)
     @Transactional(propagation=Propagation.REQUIRES_NEW)
@@ -111,10 +115,12 @@ public class NotificationCenterService {
                     scope="event:"+eventStamp+"|"+defaultMessage;
                 }
                 String dedupe=digest(scope+"|"+eventType+"|"+orderId+"|"+recipient.type+"|"+recipient.id);
-                wechat.enqueue(eventType,recipient.type,recipient.id,orderId,message,dedupe);
+                if(platform.featureEnabled("official_wechat_notifications"))
+                    wechat.enqueue(eventType,recipient.type,recipient.id,orderId,message,dedupe);
                 String phone=recipient.phone==null?sms.phoneFor(recipient.type,recipient.id):recipient.phone;
                 if(phone==null)phone="";
-                sms.enqueue(eventType,group,recipient.type,recipient.id,orderId,phone,message,digest("sms|"+dedupe));
+                if(smsGateway!=null&&smsGateway.enabled())
+                    sms.enqueue(eventType,group,recipient.type,recipient.id,orderId,phone,message,digest("sms|"+dedupe));
             }catch(Exception error){
                 log.error("通知接收人入队失败: event={}, recipient={}:{}",eventType,recipient.type,recipient.id,error);
             }

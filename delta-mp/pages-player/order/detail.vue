@@ -51,6 +51,13 @@
         <AppImage :width="160" class="t-avatar" :src="t.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <text class="t-name">{{ t.nickname }}</text>
         <StatusTag :status="t.status" :textMap="teammateStatusText" :colorMap="teammateStatusColor" />
+        <view v-if="canInvite && canReplace(t)" class="team-controls">
+          <button v-if="!replacementFor(t)" class="teammate-replace text" :disabled="actionDisabled" @click="replaceActiveTeammate(t)">更换</button>
+          <text v-else class="replace-pending">等待新队友接受</text>
+          <button class="teammate-replace text" :disabled="actionDisabled" @click="openTeamRemove(t)">立即移除</button>
+        </view>
+        <button v-if="canInvite && t.status === 'INVITED'" class="teammate-replace text" :disabled="actionDisabled" @click="revokeTeamInvite(t)">撤回</button>
+        <text v-if="t.status === 'INVITED' && t.replacesParticipantId" class="replace-pending">接替邀请</text>
       </view>
     </view>
     <!-- 进度历史 -->
@@ -73,9 +80,21 @@
       <view v-if="['ACCEPTED','WAITING_TEAMMATE'].includes(order.status)" class="btn" @click="doStart">开始服务</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="goProgress">提交进度</view>
       <view v-if="order.status==='IN_PROGRESS'" class="btn btn-success" @click="doComplete">完成服务</view>
-      <view v-if="order.status==='IN_PROGRESS'" class="btn" @click="openReplaceModal">换人</view>
-      <view v-if="['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS'].includes(order.status) && order.playerId" class="btn" @click="goInvite">邀请队友</view>
+      <view v-if="isPrimary && order.status==='IN_PROGRESS'" class="btn" @click="openReplaceModal">退出订单</view>
+      <view v-if="canInvite && !teamFull" class="btn" @click="goInvite">邀请队友</view>
       <view v-if="['ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED'].includes(order.status)" class="btn-ghost" @click="goChat">聊天</view>
+    </view>
+    <view v-if="removeTarget" class="modal-mask" @click="closeTeamRemove">
+      <view class="modal-box" @click.stop>
+        <text class="modal-title">立即移除队友</text>
+        <text class="modal-sub">确认后 {{ removeTarget.nickname || '原队友' }} 退出本单及分成。</text>
+        <textarea v-model="removeReason" maxlength="200" class="remove-reason" placeholder="填写移除原因" :disabled="!!actionBusy" />
+        <PageState v-if="actionError" :error="actionError" @retry="submitTeamRemove" />
+        <view class="modal-actions">
+          <view class="modal-cancel" @click="closeTeamRemove">取消</view>
+          <view class="btn" @click="submitTeamRemove">确认移除</view>
+        </view>
+      </view>
     </view>
     <!-- 完成服务弹窗 -->
     <view v-if="showCompleteModal" class="modal-mask" @click="closeCompleteModal">
@@ -96,20 +115,15 @@
     <!-- 换人弹窗 -->
     <view v-if="showReplaceModal" class="modal-mask" @click="closeReplaceModal">
       <view class="modal-box" @click.stop>
-        <text class="modal-title">换人</text>
-        <text class="modal-sub">选择换人方式</text>
+        <text class="modal-title">退出订单</text>
         <view class="replace-options" :class="{ 'actions-disabled': !!actionBusy }">
           <view v-if="hasTeammate" class="replace-opt" @click="doReplace('all')">
-            <text class="opt-label">两个都换</text>
+            <text class="opt-label">全队退出</text>
             <text class="opt-desc">主接单员和队友都退出，订单回到接单大厅</text>
           </view>
           <view v-if="!hasTeammate" class="replace-opt" @click="doReplace('self')">
             <text class="opt-label">换自己</text>
             <text class="opt-desc">自己退出不拿钱，订单回到接单大厅</text>
-          </view>
-          <view v-if="hasTeammate" class="replace-opt" @click="doReplace('teammate')">
-            <text class="opt-label">换队友</text>
-            <text class="opt-desc">踢掉队友，可重新选择分成方式邀请新队友</text>
           </view>
         </view>
         <PageState v-if="actionError" :error="actionError" @retry="retryAction" />
@@ -131,12 +145,14 @@ import StatusTag from '@/components/StatusTag.vue'
 import PriceText from '@/components/PriceText.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import PageState from '@/components/PageState.vue'
-import { startOrder, completeOrder, getPlayerOrderProgress, rejectAssign, replaceSelf, replaceAll, replaceTeammate } from '@/api/player'
+import { startOrder, completeOrder, getPlayerOrderProgress, rejectAssign, replaceSelf, replaceAll, revokeOrderTeammate, removeOrderTeammate } from '@/api/player'
 import { getPlayerOrderDetail as getOrderDetail } from '@/api/player'
 import { requestPlayerSubscribe } from '@/utils/subscribe'
+import { usePlayerStore } from '@/store/player'
 
 const order = ref(null)
 const orderId = ref(0)
+const playerStore = usePlayerStore()
 const progressList = ref([])
 const loading = ref(true)
 const error = ref('')
@@ -169,17 +185,23 @@ const parsedExtra = computed(() => {
 const showReplaceModal = ref(false)
 const showCompleteModal = ref(false)
 const endServiceImages = ref([])
-const hasTeammate = computed(() => {
-  const t = order.value?.teammates
-  return t && t.some(m => m.status === 'ACCEPTED' || m.status === 'INVITED')
-})
+const isPrimary = computed(() => Boolean(order.value?.playerId) && Number(order.value.playerId) === Number(playerStore.playerId))
+const canInvite = computed(() => isPrimary.value && ['ACCEPTED', 'WAITING_TEAMMATE', 'IN_PROGRESS'].includes(order.value?.status))
+const canReplace = teammate => teammate?.playerId && teammate.status === 'ACCEPTED'
+const team = computed(() => order.value?.teammates || [])
+const hasTeammate = computed(() => team.value.some(t => ['ACCEPTED', 'INVITED'].includes(t.status)))
+const replacementFor = teammate => team.value.find(row => row.status === 'INVITED' && String(row.replacesParticipantId) === String(teammate.id))
+const teamFull = computed(() => team.value.filter(t => t.status === 'ACCEPTED' || (t.status === 'INVITED' && !t.replacesParticipantId)).length
+  >= Math.max(1, (Number(order.value?.requiredPlayerCount) || 1) - 1))
+const removeTarget = ref(null), removeReason = ref('')
 
-const teammateStatusText = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废', REPLACED: '已更换' }
+const teammateStatusText = { INVITED: '待处理', ACCEPTED: '已接受', REJECTED: '已拒绝', CANCELLED: '已作废', REPLACED: '已退出', EXPIRED: '已过期' }
 const teammateStatusColor = { INVITED: '#e6a23c', ACCEPTED: '#07c160', REJECTED: '#ee0a24', CANCELLED: '#999', REPLACED: '#909399' }
 
 onLoad((opts) => { orderId.value = opts?.id || 0 })
 onShow(() => {
   unlockH5TabbarPageScroll()
+  if (!playerStore.playerInfo) playerStore.fetchProfile()
   loadDetail()
 })
 onHide(() => {
@@ -353,39 +375,69 @@ function copyDetailItem(item) {
 }
 function openReplaceModal() { if (!actionDisabled.value) { actionError.value = ''; showReplaceModal.value = true } }
 function closeReplaceModal() { if (!actionBusy.value) showReplaceModal.value = false }
+function replaceActiveTeammate(teammate) {
+  if (!canInvite.value || !canReplace(teammate) || replacementFor(teammate) || actionDisabled.value) return
+  const teammateId = encodeURIComponent(String(teammate.playerId))
+  uni.navigateTo({ url: '/pages-player/invite/teammate?orderId=' + orderId.value + '&replacedTeammateId=' + teammateId })
+}
+function openTeamRemove(teammate) {
+  if (!canInvite.value || !canReplace(teammate) || actionDisabled.value) return
+  removeTarget.value = teammate; removeReason.value = ''; actionError.value = ''
+}
+function closeTeamRemove() {
+  if (!actionBusy.value) { removeTarget.value = null; actionError.value = ''; failedAction = null }
+}
+function submitTeamRemove() {
+  if (!canInvite.value || !removeTarget.value?.id || actionDisabled.value) return
+  const reason = removeReason.value.trim()
+  if (!reason) { actionError.value = '请填写移除原因'; return }
+  const id = removeTarget.value.id
+  return runAction('remove-teammate', async () => {
+    await removeOrderTeammate(orderId.value, id, reason)
+    if (disposed) return
+    removeTarget.value = null
+    uni.showToast({ title: '队友已移除', icon: 'none' })
+    await loadDetail({ force: true })
+  }, submitTeamRemove)
+}
+function revokeTeamInvite(teammate) {
+  if (!canInvite.value || teammate?.status !== 'INVITED' || !teammate.id || actionDisabled.value) return
+  return runAction('revoke-teammate', async () => {
+    if (!await confirmAction({ title: '撤回邀请', content: '确定撤回给 ' + (teammate.nickname || '该队友') + ' 的邀请？' }) || disposed) return
+    await revokeOrderTeammate(orderId.value, teammate.id)
+    if (disposed) return
+    uni.showToast({ title: '邀请已撤回', icon: 'none' })
+    await loadDetail({ force: true })
+  }, () => revokeTeamInvite(teammate))
+}
 function doReplace(type) {
   const msgs = {
     all: '确定两个都换？主接单员和队友都将退出，订单回到接单大厅。',
     self: '确定换自己？你将退出该订单且不参与分成，订单回到接单大厅。',
-    teammate: '确定换队友？队友将被移除且不参与分成，你可以重新邀请新队友。'
   }
   if (!msgs[type]) return Promise.resolve(false)
   return runAction('replace', async () => {
     if (!await confirmAction({ title: '确认换人', content: msgs[type] }) || disposed) return
     if (type === 'all') await replaceAll(orderId.value)
     else if (type === 'self') await replaceSelf(orderId.value)
-    else await replaceTeammate(orderId.value)
     if (disposed) return
     showReplaceModal.value = false
-    if (type === 'teammate') {
-      uni.showToast({ title: '队友已移除' })
-      await loadDetail({ force: true })
-    } else leaveWithToast('已退出订单', 1500)
+    leaveWithToast('已退出订单', 1500)
   }, () => doReplace(type))
 }
 </script>
 <style lang="scss" scoped>
-.detail { background: #f5f6f7; min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
+.detail { background: var(--store-soft); min-height: var(--app-page-height, 100vh); padding-bottom: 40rpx; }
 .status-bar {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 28rpx 32rpx; background: #fff;
+  padding: 28rpx 32rpx; background: var(--store-surface);
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
   .status-right { display: flex; align-items: center; gap: 16rpx; }
-  .order-no { font-size: 24rpx; color: #777777; }
+  .order-no { font-size: 24rpx; color: var(--store-regular); }
 }
 .card {
   margin: 20rpx 24rpx 0; padding: 28rpx 28rpx 24rpx;
-  background: #fff; border-radius: 16rpx;
+  background: var(--store-surface); border-radius: 16rpx;
   box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.04);
 }
 .card-header {
@@ -393,14 +445,14 @@ function doReplace(type) {
 }
 .title-bar {
   width: 6rpx; height: 28rpx; border-radius: 3rpx;
-  background: #171717;
+  background: var(--store-primary);
   margin-right: 12rpx;
 }
-.card-title { font-size: 28rpx; font-weight: bold; color: #111111; }
+.card-title { font-size: 28rpx; font-weight: bold; color: var(--store-text); }
 .copy-link {
   padding: 8rpx 18rpx;
   font-size: 22rpx;
-  color: #111111;
+  color: var(--store-text);
   border: 1rpx solid rgba(23, 25, 28, 0.28);
   border-radius: 999rpx;
   flex-shrink: 0;
@@ -411,47 +463,53 @@ function doReplace(type) {
 }
 .info-row {
   display: flex; align-items: center; padding: 12rpx 0;
-  .label { font-size: 26rpx; color: #777777; width: 140rpx; flex-shrink: 0; }
-  .value { font-size: 26rpx; color: #111111; flex: 1; &.bold { font-weight: 600; } }
+  .label { font-size: 26rpx; color: var(--store-regular); width: 140rpx; flex-shrink: 0; }
+  .value { font-size: 26rpx; color: var(--store-text); flex: 1; &.bold { font-weight: 600; } }
 }
 .info-row-copy .value { min-width: 0; margin-right: 12rpx; }
-.divider { height: 1rpx; background: #f7f7f7; margin: 16rpx 0; }
+.divider { height: 1rpx; background: var(--store-soft); margin: 16rpx 0; }
 .income-block {
   background: linear-gradient(135deg, rgba(23, 25, 28, 0.06), rgba(23, 25, 28, 0.02));
   border-radius: 12rpx; padding: 20rpx 24rpx;
 }
 .income-main { display: flex; align-items: baseline; gap: 12rpx; }
-.income-label { font-size: 26rpx; color: #777777; }
+.income-label { font-size: 26rpx; color: var(--store-regular); }
 .income-val { font-size: 36rpx; color: #d44955; font-weight: bold; }
-.income-hint { font-size: 22rpx; color: #777777; margin-top: 6rpx; display: block; }
-.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7; .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; font-size: 26rpx; color: #111111; } }
+.income-hint { font-size: 22rpx; color: var(--store-regular); margin-top: 6rpx; display: block; }
+.teammate-row { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 0; border-bottom: 1rpx solid var(--store-line); .t-avatar { width: 60rpx; height: 60rpx; border-radius: 50%; } .t-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--store-text); } }
+.teammate-replace { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: transparent; color: var(--app-text, var(--store-text)); font-size: 24rpx; line-height: 68rpx; }
+.teammate-replace::after { border: 0; }
+.team-controls { display: flex; align-items: center; flex-wrap: wrap; }
+.replace-pending { color: var(--app-text-secondary, #777); font-size: 22rpx; }
+.teammate-row { flex-wrap: wrap; }
+.remove-reason { width: 100%; min-height: 132rpx; box-sizing: border-box; margin-top: 20rpx; padding: 16rpx; border: 1rpx solid #ccc; border-radius: 12rpx; font-size: 28rpx; }
 .progress-item {
-  padding: 16rpx 0; border-bottom: 1rpx solid #f5f6f7;
-  .p-content { font-size: 26rpx; color: #111111; display: block; }
-  .p-time { font-size: 22rpx; color: #777777; display: block; margin-top: 6rpx; }
+  padding: 16rpx 0; border-bottom: 1rpx solid var(--store-line);
+  .p-content { font-size: 26rpx; color: var(--store-text); display: block; }
+  .p-time { font-size: 22rpx; color: var(--store-regular); display: block; margin-top: 6rpx; }
   .p-images { display: flex; gap: 12rpx; margin-top: 12rpx; }
   .p-img { width: 120rpx; height: 120rpx; border-radius: 12rpx; }
 }
 .actions { display: flex; gap: 20rpx; padding: 40rpx 24rpx; flex-wrap: wrap; justify-content: flex-end; }
-.btn { padding: 16rpx 40rpx; background: #171717; color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; &.btn-success { background: #2d7a56; } }
-.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid rgba(23, 25, 28, 0.4); color: #111111; font-size: 28rpx; border-radius: 999rpx; }
+.btn { padding: 16rpx 40rpx; background: var(--store-primary); color: #ffffff; font-weight:bold; font-size: 28rpx; border-radius: 999rpx; &.btn-success { background: #2d7a56; } }
+.btn-ghost { padding: 16rpx 40rpx; border: 1rpx solid var(--store-line); color: var(--store-text); font-size: 28rpx; border-radius: 999rpx; }
 .btn-warn { padding: 16rpx 40rpx; border: 1rpx solid rgba(201, 79, 89, 0.4); color: #d44955; font-size: 28rpx; border-radius: 999rpx; }
-.user-row { display: flex; align-items: center; gap: 16rpx; .u-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; border: 2rpx solid #f7f7f7; } .u-name { font-size: 28rpx; color: #111111; font-weight: 500; } }
+.user-row { display: flex; align-items: center; gap: 16rpx; .u-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; border: 2rpx solid #f7f7f7; } .u-name { font-size: 28rpx; color: var(--store-text); font-weight: 500; } }
 /* 换人弹窗 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.modal-box { width: 85%; background: #ffffff; border-radius: 16rpx; padding: 40rpx 32rpx; border: 1rpx solid #eeeeee; }
-.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: #111111; }
-.modal-sub { font-size: 24rpx; color: #777777; display: block; text-align: center; margin-top: 8rpx; }
+.modal-box { width: 85%; background: var(--store-surface); border-radius: 16rpx; padding: 40rpx 32rpx; border: 1rpx solid var(--store-line); }
+.modal-title { font-size: 32rpx; font-weight: bold; display: block; text-align: center; color: var(--store-text); }
+.modal-sub { font-size: 24rpx; color: var(--store-regular); display: block; text-align: center; margin-top: 8rpx; }
 .complete-block { margin-top: 24rpx; }
-.complete-label { font-size: 26rpx; color: #111111; display: block; margin-bottom: 16rpx; }
+.complete-label { font-size: 26rpx; color: var(--store-text); display: block; margin-bottom: 16rpx; }
 .replace-options { margin-top: 24rpx; }
-.replace-opt { display: flex; flex-direction: column; padding: 24rpx; margin-bottom: 16rpx; background: #f7f7f7; border-radius: 12rpx;
+.replace-opt { display: flex; flex-direction: column; padding: 24rpx; margin-bottom: 16rpx; background: var(--store-soft); border-radius: 12rpx;
   &:active { background: rgba(23, 25, 28, 0.1); }
-  .opt-label { font-size: 28rpx; font-weight: bold; color: #111111; }
-  .opt-desc { font-size: 22rpx; color: #777777; margin-top: 6rpx; }
+  .opt-label { font-size: 28rpx; font-weight: bold; color: var(--store-text); }
+  .opt-desc { font-size: 22rpx; color: var(--store-regular); margin-top: 6rpx; }
 }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 32rpx; }
-.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #aaaaaa; border-radius: 999rpx; font-size: 28rpx; color: #777777; }
+.modal-cancel { flex: 1; text-align: center; padding: 20rpx 0; border: 1rpx solid #aaaaaa; border-radius: 999rpx; font-size: 28rpx; color: var(--store-regular); }
 .complete-submit { flex: 1; text-align: center; }
 .actions-disabled { opacity: .6; pointer-events: none; }
 </style>

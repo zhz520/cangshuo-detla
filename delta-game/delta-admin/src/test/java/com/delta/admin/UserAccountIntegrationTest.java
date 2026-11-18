@@ -16,6 +16,7 @@ import com.delta.system.service.impl.OperationLogServiceImpl;
 import com.delta.system.service.SysConfigService;
 import com.delta.user.controller.UserAuthController;
 import com.delta.user.service.UserPasswordService;
+import com.delta.user.service.WebLoginPolicy;
 import com.delta.user.service.impl.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
@@ -56,7 +57,7 @@ class UserAccountIntegrationTest {
     @Configuration @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
     @MapperScan({"com.delta.user.mapper","com.delta.player.mapper","com.delta.common.mapper","com.delta.system.mapper"})
     @Import({UserServiceImpl.class,WalletServiceImpl.class,PlayerServiceImpl.class,PlayerWalletServiceImpl.class,OperationLogServiceImpl.class,
-            com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,UserPasswordService.class,UserManagementService.class,UserAuthController.class,AdminUserController.class,
+            com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,UserPasswordService.class,WebLoginPolicy.class,UserManagementService.class,UserAuthController.class,AdminUserController.class,
             com.delta.user.controller.InviteController.class,
             SecurityConfig.class,JwtAuthenticationFilter.class,TokenService.class,com.delta.common.security.controller.LogoutController.class,
             AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class})
@@ -79,6 +80,7 @@ class UserAccountIntegrationTest {
     final Map<String,Object> sessions=new ConcurrentHashMap<>();
     private static final String PASSWORD="SecureUserPass123";
     @BeforeEach void cache() {
+        when(configs.getConfigValue("auth.primary_method", "PHONE")).thenReturn("PHONE");
         when(configs.getConfigValue("auth.phone.enabled", "true")).thenReturn("true");
         when(configs.getConfigValue("auth.password.enabled", "true")).thenReturn("true");
         setupCache.clear();sessions.clear();ValueOperations<String,String> values=mock(ValueOperations.class);
@@ -91,43 +93,61 @@ class UserAccountIntegrationTest {
     }
     private RequestPostProcessor role(String type,long id){return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId",id,"userType",type),null,List.of(new SimpleGrantedAuthority("ROLE_"+type))));}
     private Map<?,?> data(MvcResult result)throws Exception{return (Map<?,?>)json.readValue(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8),Map.class).get("data");}
-    private String setupTicket(String phone)throws Exception{
-        var result=mvc.perform(post("/user/auth/h5-login").contentType("application/json").content(json.writeValueAsString(Map.of("phone",phone,"code","123456","requestId","verified-by-test","privacyAccepted",true))))
-                .andExpect(jsonPath("$.data.passwordSetupRequired").value(true)).andExpect(jsonPath("$.data.token").isEmpty()).andReturn();
-        return (String)data(result).get("setupToken");
+    private ResultActions smsLogin(String phone)throws Exception {
+        return mvc.perform(post("/user/auth/h5-login").contentType("application/json")
+                .content(json.writeValueAsString(Map.of("phone",phone,"code","123456","requestId","verified-by-test","privacyAccepted",true))));
     }
-    private String setupBody(String ticket,String password,String confirmation)throws Exception{return json.writeValueAsString(Map.of("setupToken",ticket,"password",password,"confirmation",confirmation,"userId",8));}
+    private String passwordBody(String current,String password,String confirmation)throws Exception {
+        return json.writeValueAsString(Map.of("currentPassword",current,"password",password,"confirmation",confirmation,"userId",8));
+    }
     private String adminBody(String phone,String password)throws Exception{return json.writeValueAsString(Map.of("phone",phone,"nickname","后台用户","avatar","","status",1,"password",password));}
     private String loginBody(String phone,String password)throws Exception{return json.writeValueAsString(Map.of("phone",phone,"password",password,"captchaId","11111111-1111-1111-1111-111111111111","captchaCode","123456"));}
 
-    @Test void smsLoginMustSetPasswordBeforeReceivingBusinessToken()throws Exception{
-        String ticket=setupTicket("13900000007");
-        mvc.perform(get("/user/profile").header("Authorization","Bearer "+ticket)).andExpect(jsonPath("$.code").value(401));
-        var result=mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,PASSWORD,PASSWORD)))
-                .andExpect(jsonPath("$.data.passwordSetupRequired").value(false)).andExpect(jsonPath("$.data.userId").value(7)).andExpect(jsonPath("$.data.token").isNotEmpty()).andReturn();
-        String hash=jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class);
-        assertThat(hash).isNotEqualTo(PASSWORD);assertThat(encoder.matches(PASSWORD,hash)).isTrue();
+    @Test void smsLoginWithoutPasswordReturnsBusinessTokenImmediately()throws Exception {
+        var result=smsLogin("13900000007").andExpect(jsonPath("$.data.passwordSetupRequired").value(false))
+                .andExpect(jsonPath("$.data.setupToken").isEmpty()).andExpect(jsonPath("$.data.token").isNotEmpty()).andReturn();
         assertThat(tokens.authenticate((String)data(result).get("token"))).isNotNull();
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,PASSWORD,PASSWORD))).andExpect(jsonPath("$.code").value(401));
-        assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=8",String.class)).isNull();
-    }
-    @Test void weakMismatchedExpiredOrChangedAccountSetupCannotSetPassword()throws Exception{
-        String ticket=setupTicket("13900000007");
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,"abc123","abc123"))).andExpect(jsonPath("$.code").value(400));
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,PASSWORD,"different123456"))).andExpect(jsonPath("$.code").value(400));
-        jdbc.update("UPDATE `user` SET auth_version=1 WHERE id=7");
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,PASSWORD,PASSWORD))).andExpect(jsonPath("$.code").value(403));
-        ticket=setupTicket("13900000007");setupCache.clear();
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,PASSWORD,PASSWORD))).andExpect(jsonPath("$.code").value(401));
         assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class)).isNull();
     }
-    @Test void userPasswordBoundaryAcceptsEightAndRejectsSevenOrThirtyThree()throws Exception{
-        String ticket=setupTicket("13900000007");
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,"Abcd123","Abcd123"))).andExpect(jsonPath("$.code").value(400));
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,"A12345678901234567890123456789012","A12345678901234567890123456789012"))).andExpect(jsonPath("$.code").value(400));
-        mvc.perform(post("/user/auth/set-password").contentType("application/json").content(setupBody(ticket,"Abcd1234","Abcd1234")))
-                .andExpect(jsonPath("$.data.token").isNotEmpty());
-        assertThat(encoder.matches("Abcd1234",jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class))).isTrue();
+
+    @Test void existingSessionIsNotRevokedWhenWebLoginSettingsChange() throws Exception {
+        jdbc.update("UPDATE `user` SET openid='oa-legacy-fixture',phone='' WHERE id=7");
+        String previousSession = tokens.createToken(7L, com.delta.common.enums.UserTypeEnum.USER);
+        assertThat(tokens.authenticate(previousSession)).isNotNull();
+        when(configs.getConfigValue("auth.primary_method", "PHONE")).thenReturn("WECHAT");
+        when(configs.getConfigValue("auth.password.enabled", "true")).thenReturn("false");
+        assertThat(tokens.authenticate(previousSession)).isNotNull();
+        jdbc.update("UPDATE `user` SET status=0 WHERE id=7");
+        assertThat(tokens.authenticate(previousSession)).isNull();
+    }
+
+    @Test void authenticatedUserCanSetAndChangePasswordButTicketCannot()throws Exception {
+        String oldToken=(String)data(smsLogin("13900000007").andReturn()).get("token");
+        mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer 0123456789abcdef0123456789abcdef")
+                .contentType("application/json").content(passwordBody("",PASSWORD,PASSWORD))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/user/profile").header("Authorization","Bearer 0123456789abcdef0123456789abcdef")).andExpect(status().isUnauthorized());
+        var result=mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer "+oldToken)
+                .contentType("application/json").content(passwordBody("",PASSWORD,PASSWORD)))
+                .andExpect(jsonPath("$.data.userId").value(7)).andExpect(jsonPath("$.data.token").isNotEmpty()).andReturn();
+        assertThat(tokens.authenticate(oldToken)).isNull();
+        String token=(String)data(result).get("token");
+        assertThat(tokens.authenticate(token)).isNotNull();
+        assertThat(encoder.matches(PASSWORD,jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class))).isTrue();
+        assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=8",String.class)).isNull();
+        mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer "+token)
+                .contentType("application/json").content(passwordBody("wrong","NewSecure123","NewSecure123"))).andExpect(jsonPath("$.code").value(400));
+        mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer "+token)
+                .contentType("application/json").content(passwordBody(PASSWORD,"NewSecure123","NewSecure123"))).andExpect(jsonPath("$.data.token").isNotEmpty());
+        assertThat(tokens.authenticate(token)).isNull();
+    }
+
+    @Test void weakOrMismatchedPasswordCannotBeSaved()throws Exception {
+        String token=(String)data(smsLogin("13900000007").andReturn()).get("token");
+        mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer "+token)
+                .contentType("application/json").content(passwordBody("","Abcd123","Abcd123"))).andExpect(jsonPath("$.code").value(400));
+        mvc.perform(put("/user/auth/account-password").header("Authorization","Bearer "+token)
+                .contentType("application/json").content(passwordBody("",PASSWORD,"Different123"))).andExpect(jsonPath("$.code").value(400));
+        assertThat(jdbc.queryForObject("SELECT password FROM `user` WHERE id=7",String.class)).isNull();
     }
     @Test void sharedPasswordPolicyAlsoAppliesToAdministratorsAndCustomerService(){
         org.assertj.core.api.Assertions.assertThatCode(()->com.delta.common.security.utils.PasswordPolicy.validate("Abcd1234")).doesNotThrowAnyException();
@@ -152,7 +172,7 @@ class UserAccountIntegrationTest {
                 .andExpect(jsonPath("$.code").value(403));
         jdbc.update("UPDATE `user` SET status=1,deleted=1 WHERE id=7");
         mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13900000007\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
-                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(true));
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(false)).andExpect(jsonPath("$.data.token").isNotEmpty());
         assertThat(jdbc.queryForObject("SELECT deleted FROM `user` WHERE id=7",Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT phone FROM `user` WHERE id=7",String.class)).isEmpty();
         assertThat(jdbc.queryForObject("SELECT openid FROM `user` WHERE id=7",String.class)).isEqualTo("closed:7");
@@ -174,7 +194,7 @@ class UserAccountIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT phone FROM `user` WHERE id=?",String.class,id)).isEmpty();
         assertThat(jdbc.queryForObject("SELECT openid FROM `user` WHERE id=?",String.class,id)).isEqualTo("closed:"+id);
         mvc.perform(post("/user/auth/h5-login").contentType("application/json").content("{\"phone\":\"13800000101\",\"code\":\"123456\",\"requestId\":\"verified-by-test\",\"privacyAccepted\":true}"))
-                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(true));
+                .andExpect(jsonPath("$.code").value(200)).andExpect(jsonPath("$.data.passwordSetupRequired").value(false)).andExpect(jsonPath("$.data.token").isNotEmpty());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone='13800000101' AND deleted=0",Integer.class)).isEqualTo(1);
         String audit=jdbc.queryForObject("SELECT GROUP_CONCAT(detail) FROM operation_log WHERE module='user'",String.class);assertThat(audit).doesNotContain(PASSWORD).doesNotContain("$2a$");
     }

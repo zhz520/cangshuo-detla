@@ -66,7 +66,7 @@ function placeOrder() {
   padding: 22rpx;
   border: 0;
   border-radius: 24rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   box-shadow: none;
   box-sizing: border-box;
 }
@@ -80,7 +80,7 @@ function placeOrder() {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: #f1f2f4;
+  background: var(--store-line);
 }
 .presence-dot {
   position: absolute;
@@ -110,7 +110,7 @@ function placeOrder() {
 .name {
   min-width: 0;
   overflow: hidden;
-  color: #171717;
+  color: var(--store-text);
   font-size: 25rpx;
   font-weight: 800;
   line-height: 1.25;
@@ -121,8 +121,8 @@ function placeOrder() {
   flex-shrink: 0;
   padding: 3rpx 9rpx;
   border-radius: 999rpx;
-  background: #f2f3f5;
-  color: #777777;
+  background: var(--store-soft);
+  color: var(--store-regular);
   font-size: 16rpx;
   line-height: 1.4;
 }
@@ -135,7 +135,7 @@ function placeOrder() {
   font-size: 19rpx;
   line-height: 1.35;
 }
-.rating { color: #777777; font-weight: 700; }
+.rating { color: var(--store-regular); font-weight: 700; }
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -143,8 +143,8 @@ function placeOrder() {
   text {
     padding: 4rpx 10rpx;
     border-radius: 999rpx;
-    background: #f5f6f7;
-    color: #777777;
+    background: var(--store-soft);
+    color: var(--store-regular);
     font-size: 16rpx;
     line-height: 1.35;
   }
@@ -169,7 +169,7 @@ function placeOrder() {
   width: 82rpx;
   height: 44rpx;
   border-radius: 999rpx;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   font-size: 19rpx;
   font-weight: 750;

@@ -122,10 +122,10 @@ test('every template-content variable has a matching field mapping', () => {
 })
 
 test('notification settings use direct event forms and keep JSON automatic', () => {
-  const config = readFileSync(new URL('../src/views/system/SysConfig.vue', import.meta.url), 'utf8')
+  const config = readFileSync(new URL('../src/components/SystemConfigField.vue', import.meta.url), 'utf8')
   const editor = readFileSync(new URL('../src/components/NotificationTemplateEditor.vue', import.meta.url), 'utf8')
-  assert.match(config, /<NotificationTemplateEditor v-if="isNotificationTemplateKey\(/)
-  assert.match(editor, /自动生成后台使用的 JSON/)
+  assert.match(config, /<NotificationTemplateEditor v-if="template" compact/)
+  assert.doesNotMatch(editor, /查看自动生成的 JSON|复制 JSON/)
   assert.match(editor, /使用推荐字段/)
   assert.match(editor, /消息点击链接/)
   assert.match(editor, /小程序 AppID/)

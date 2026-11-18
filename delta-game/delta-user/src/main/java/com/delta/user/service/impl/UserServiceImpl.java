@@ -75,28 +75,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User loginOrRegisterByPhone(String phone) {
         User user = getByPhone(phone);
         if (user == null) {
-            // Release the verified phone from a deleted account before checking reservations.
-            // The deleted row and its order history stay in place; only login identifiers are archived.
-            baseMapper.releaseDeletedPhone(phone);
-            if(baseMapper.countReservedPhone(phone,null)>0) throw new com.delta.common.exception.BusinessException(403,"账号暂不可用，请联系客服");
-            user = new User();
-            user.setOpenid("h5:" + phone);
-            user.setNickname(generateRandomNickname());
-            user.setAvatar("");
-            user.setPhone(phone);
-            user.setStatus(1);
-            user.setIsGuest(0);
             try {
-                save(user);
-                walletService.initWallet(user.getId());
+                user = registerNewPhone(phone);
             } catch (DuplicateKeyException race) {
                 user = getByPhone(phone);
-                if (user == null) throw race;
+                if (user == null) throw new com.delta.common.exception.BusinessException(403,"账号暂不可用，请联系客服");
             }
         } else if (user.getPhone() == null || user.getPhone().isEmpty()) {
             user.setPhone(phone);
             updateById(user);
         }
+        return user;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public User registerNewPhone(String phone) {
+        baseMapper.releaseDeletedPhone(phone);
+        if (baseMapper.countReservedPhone(phone, null) > 0)
+            throw new DuplicateKeyException("Phone identity already exists");
+        User user = new User();
+        user.setOpenid("h5:" + phone);
+        user.setNickname(generateRandomNickname());
+        user.setAvatar("");
+        user.setPhone(phone);
+        user.setStatus(1);
+        user.setIsGuest(0);
+        save(user);
+        walletService.initWallet(user.getId());
         return user;
     }
 

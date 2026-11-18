@@ -2,6 +2,7 @@ package com.delta.admin.controller;
 
 import com.delta.admin.platform.PlatformService;
 import com.delta.admin.service.IdentityBillingClient;
+import com.delta.admin.service.IdentityAttemptLimitService;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
@@ -53,6 +54,7 @@ public class IdentityVerificationController {
     private final com.delta.common.security.service.RateLimitService limits;
     private final com.delta.system.service.SysConfigService configs;
     private final IdentityBillingClient identityBilling;
+    private final IdentityAttemptLimitService attemptLimits;
 
     @Value("${identity.hash-pepper}")
     private String hashPepper;
@@ -68,6 +70,7 @@ public class IdentityVerificationController {
                                 boolean privacyAccepted) {}
     public record ReviewRequest(boolean approved, @Size(max = 500) String note) {}
     public record AutoVerifyView(boolean matched, String status, String message) {}
+    public record LimitRequest(Boolean enabled, Integer maxAttempts, Integer windowHours, Integer lockHours) {}
     private record EncodedImage(String base64, String mimeType) {}
     private record FeatureAccess(boolean available, String reason) {}
 
@@ -84,6 +87,23 @@ public class IdentityVerificationController {
                 Objects.toString(value(row, "review_note"), ""), time(value(row, "submitted_at")), time(value(row, "reviewed_at")),
                 number(value(row, "has_front")) > 0, number(value(row, "has_back")) > 0,
                 autoAvailable(), autoReason()));
+    }
+
+    @GetMapping("/admin/identity-service/limits")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<IdentityAttemptLimitService.Settings> limits(HttpServletRequest request) {
+        requireAccess(request);
+        return R.ok(attemptLimits.settings());
+    }
+
+    @PutMapping("/admin/identity-service/limits")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "identity", operation = "修改实名失败次数限制")
+    public R<IdentityAttemptLimitService.Settings> saveLimits(@RequestBody LimitRequest body, HttpServletRequest request) {
+        requireAccess(request);
+        if (body.enabled() == null || body.maxAttempts() == null || body.windowHours() == null || body.lockHours() == null)
+            throw new BusinessException(400, "请完整填写实名失败次数限制");
+        return R.ok(attemptLimits.save(body.enabled(), body.maxAttempts(), body.windowHours(), body.lockHours()));
     }
 
     @PostMapping("/user/identity/image")
@@ -151,16 +171,26 @@ public class IdentityVerificationController {
         String idNumber = validateIdNumber(body.idNumber());
         Long userId = SecurityUtils.getUserId();
         limits.check("identity-auto:" + userId, 10, 3600);
+        attemptLimits.ensureAllowed(userId);
         String idHash = hash(idNumber);
         var duplicate = jdbc.queryForList("SELECT user_id FROM identity_verification WHERE id_number_hash=? AND user_id<>? LIMIT 1", idHash, userId);
         if (!duplicate.isEmpty()) throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
-        var existing = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=? FOR UPDATE", userId);
+        // Do not hold a row lock while the authority call runs: a mismatch is
+        // recorded in a separate transaction so the failure counter survives
+        // the 422 response.
+        var existing = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=?", userId);
         if (!existing.isEmpty() && Set.of("PENDING", "APPROVED").contains(String.valueOf(value(existing.get(0), "status"))))
             throw new BusinessException(409, "实名资料正在审核或已通过，请勿重复提交");
 
-        String requestKey = "identity-" + userId + "-" + hash(realName + ":" + idNumber);
+        // Authority idempotency keys are limited to 64 characters; keep a stable
+        // user+identity digest so retries cannot be charged twice.
+        String requestKey = "identity-" + hash(userId + ":" + realName + ":" + idNumber).substring(0, 48);
         IdentityBillingClient.Result result = identityBilling.verify(realName, idNumber, requestKey);
-        if (!result.matched()) throw new BusinessException(422, "姓名与证件号码不一致，请核对后重试");
+        if (!result.matched()) {
+            attemptLimits.recordFailure(userId);
+            throw new BusinessException(422, "姓名与证件号码不一致，请核对后重试");
+        }
+        attemptLimits.reset(userId);
 
         try {
             if (existing.isEmpty()) {

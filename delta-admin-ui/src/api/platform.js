@@ -11,6 +11,7 @@ export const setPlatformFeatureEnabled = (id, enabled) => request.put(`/admin/pl
 export const createPlatformCheckout = moduleId => request.post('/admin/platform/checkout', { moduleId }, { timeout: 55000 })
 export const getThemeSettings = () => request.get('/admin/platform/themes')
 export const setActiveTheme = themeId => request.put('/admin/platform/themes/active', { themeId })
+export const setThemePreferences = (enabled, choices) => request.put('/admin/platform/themes/preferences', { enabled, choices })
 export const getPublicTheme = () => request.get('/system/config/theme', { silent: true })
 export const getIncomeComparison = params => request.get('/admin/platform/reports/income', { params })
 

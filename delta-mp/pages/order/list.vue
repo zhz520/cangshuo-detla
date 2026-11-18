@@ -88,7 +88,7 @@ function selectTab(key) {
 </script>
 <style lang="scss" scoped>
 .order-list-page {
-  background: #f7f7f7;
+  background: var(--store-soft);
   height: var(--app-page-height, 100vh);
   position: relative;
   display: flex;
@@ -105,12 +105,12 @@ function selectTab(key) {
 .order-filter {
   flex-shrink: 0;
   padding: 10rpx 20rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--store-line);
   border-radius: 999rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   color: #777c83;
   font-size: 21rpx;
-  &.active { border-color: #111111; background: #111111; color: #ffffff; font-weight: 750; }
+  &.active { border-color: var(--store-text); background: var(--store-primary); color: #ffffff; font-weight: 750; }
 }
 .list {
   flex: 1;
@@ -122,14 +122,14 @@ function selectTab(key) {
   box-sizing: border-box;
 }
 .list :deep(.order-card) {
-  background: #ffffff;
-  border: 1rpx solid #eeeeee;
+  background: var(--store-surface);
+  border: 1rpx solid var(--store-line);
 }
 .loading-tip {
   text-align: center;
   padding: 32rpx;
   font-size: 24rpx;
-  color: #777777;
+  color: var(--store-regular);
 }
 .error-tip { color: #c94f59; cursor: pointer; }
 .order-list-bottom-space {

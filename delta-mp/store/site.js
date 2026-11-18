@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getSiteConfig, getThemeConfig } from '@/api/config'
+import { clientStorage as themeStorage } from '@/utils/client-storage'
 
 export const useSiteStore = defineStore('site', () => {
   const siteName = ref('三角洲')
@@ -34,7 +35,12 @@ export const useSiteStore = defineStore('site', () => {
   /** 管理员与客服后台站点，客户 H5 只负责把旧工作人员入口安全转交过去。 */
   const staffWebUrl = ref('')
   const customerWebUrl = ref('')
-  const themeId = ref('default')
+  const tenantThemeId = ref('default')
+  const userTheme = ref('')
+  const userThemeAllowed = ref(false)
+  const userThemeOptions = ref([])
+  let pendingTheme
+  const themeId = computed(() => (userThemeAllowed.value && userTheme.value) || tenantThemeId.value)
   const externalCustomerServiceEnabled = computed(() =>
     customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
   )
@@ -117,15 +123,28 @@ export const useSiteStore = defineStore('site', () => {
     return pendingConfigRequest
   }
 
-  async function fetchThemeConfig() {
-    try {
-      const res = await getThemeConfig()
-      const id = String(res.data?.id || 'default')
-      themeId.value = ['default', 'neumorphism'].includes(id) ? id : 'default'
-    } catch (e) {
-      themeId.value = 'default'
-    }
-    return themeId.value
+  function fetchThemeConfig() {
+    if (pendingTheme) return pendingTheme
+    pendingTheme = (async () => {
+      try {
+        const { data } = await getThemeConfig()
+        tenantThemeId.value = ['default','neumorphism','dark'].includes(data?.id) ? data.id : 'default'
+        const allowed = data?.userSwitchEnabled === 'true'
+        userThemeAllowed.value = allowed
+        userThemeOptions.value = allowed ? String(data?.userThemeOptions || 'default,dark').split(',').filter(id => ['default','dark'].includes(id)) : []
+        const cached = allowed ? themeStorage.get('h5-theme-preference') : ''
+        userTheme.value = userThemeOptions.value.includes(cached) ? cached : ''
+        if (!allowed) themeStorage.remove('h5-theme-preference')
+      } catch (_) { /* Keep the last working theme if config is temporarily unavailable. */ }
+      return themeId.value
+    })().finally(() => { pendingTheme = null })
+    return pendingTheme
+  }
+
+  function setUserTheme(id) {
+    if (!userThemeAllowed.value || (id !== '' && !userThemeOptions.value.includes(id))) return
+    userTheme.value = id
+    try { themeStorage.set('h5-theme-preference', id) } catch (_) {}
   }
 
   function hasShownNoticePopupThisSession() {
@@ -136,5 +155,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, customerWebUrl, themeId, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, customerWebUrl, themeId, userTheme, userThemeAllowed, userThemeOptions, setUserTheme, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })

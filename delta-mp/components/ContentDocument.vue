@@ -38,7 +38,7 @@ async function load() {
 load()
 </script>
 <style lang="scss" scoped>
-.content-document { min-height: var(--app-page-height, 100vh); padding: 32rpx 30rpx calc(48rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); background: #f7f7f7; color: #333333; font-size: 27rpx; line-height: 1.85; overflow-wrap: anywhere; }
-.content-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20rpx; min-height: 420rpx; color: #999999; font-size: 25rpx; text-align: center; }
-.content-retry { padding: 12rpx 28rpx; border-radius: 999rpx; background: #171717; color: #ffffff; font-size: 24rpx; }
+.content-document { min-height: var(--app-page-height, 100vh); padding: 32rpx 30rpx calc(48rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); background: var(--store-soft); color: #333333; font-size: 27rpx; line-height: 1.85; overflow-wrap: anywhere; }
+.content-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20rpx; min-height: 420rpx; color: var(--store-muted); font-size: 25rpx; text-align: center; }
+.content-retry { padding: 12rpx 28rpx; border-radius: 999rpx; background: var(--store-primary); color: #ffffff; font-size: 24rpx; }
 </style>

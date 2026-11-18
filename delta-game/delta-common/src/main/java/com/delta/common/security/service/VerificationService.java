@@ -2,7 +2,7 @@ package com.delta.common.security.service;
 
 import com.delta.common.exception.BusinessException;
 import com.delta.common.mapper.CrossModuleMapper;
-import com.delta.common.sms.service.AliyunSmsService;
+import com.delta.common.sms.service.SmsGatewayClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,7 +21,7 @@ public class VerificationService {
     private final StringRedisTemplate redis;
     private final RateLimitService limits;
     private final CrossModuleMapper configs;
-    private final AliyunSmsService sms;
+    @Autowired(required = false) private SmsGatewayClient smsGateway;
     @Autowired(required = false) private TenantKeyEncoder tenantKeys;
     @Value("${jwt.secret}") private String secret;
     private static final SecureRandom RANDOM=new SecureRandom();
@@ -83,14 +83,10 @@ public class VerificationService {
 
     public Map<String,Object> send(String phone,String purpose,String subject,String captchaId,String captchaCode,String ip) {
         requirePhone(phone);
-        if(!Set.of("LOGIN","RESET","BIND_OLD","BIND_NEW").contains(purpose)) throw new BusinessException(400,"验证码用途无效");
-        if(!"true".equalsIgnoreCase(configs.selectConfigValue("sms.aliyun.enabled"))
-                || !"true".equalsIgnoreCase(configs.selectConfigValue("sms.aliyun.otp_enabled")))
+        if(!Set.of("LOGIN","RESET","BIND_OLD","BIND_NEW","WECHAT_BIND").contains(purpose)) throw new BusinessException(400,"验证码用途无效");
+        boolean gateway = smsGateway != null && smsGateway.enabled();
+        if(!gateway || !"true".equalsIgnoreCase(configs.selectConfigValue("sms.aliyun.otp_enabled")))
             throw new BusinessException(503,"短信登录暂未开放，请联系平台客服");
-        String template=value("sms.aliyun.template_code.verification");
-        String access=value("sms.aliyun.access_key_id"),key=value("sms.aliyun.access_key_secret"),sign=value("sms.aliyun.sign_name");
-        if(template.isBlank() || access.isBlank() || key.isBlank() || sign.isBlank()
-                || access.startsWith("YOUR_") || key.startsWith("YOUR_")) throw new BusinessException(503,"短信验证码服务暂不可用");
         limits.check("otp-ip:"+ip,30,3600);
         consume("captcha:"+safeId(captchaId),digest("CAPTCHA",captchaId,"",captchaCode));
         limits.check("otp-minute:"+phone,1,60);limits.check("otp-hour:"+phone,5,3600);limits.check("otp-day:"+phone,10,86400);
@@ -102,9 +98,25 @@ public class VerificationService {
         if(previous!=null&&previous.matches("[a-f0-9-]{36}"))redis.delete(namespaced("otp:"+purpose+":"+previous));
         redis.expire(activeKey,Duration.ofMinutes(5));
         redis.opsForValue().set(redisKey,digest(purpose,subject,phone,code),Duration.ofMinutes(5));
-        try {sms.sendTemplate("dysmsapi.aliyuncs.com",access,key,sign,template,phone,Map.of("code",code));}
+        try {
+            smsGateway.send(gatewayTemplateKey(purpose),phone,Map.of("code",code),"otp:"+id);
+        }
+        catch(SmsGatewayClient.SmsGatewayUnknownException e){
+            // The provider may already have accepted the message. Keep the code so a delayed
+            // delivery can still be verified instead of silently invalidating the user's SMS.
+        }
         catch(RuntimeException e){redis.delete(redisKey);throw new BusinessException(503,"验证码发送失败，请稍后重试");}
         return Map.of("requestId",id,"expiresIn",300,"retryAfter",60);
+    }
+    private static String gatewayTemplateKey(String purpose){
+        return switch(purpose){
+            case "LOGIN" -> "otp_login";
+            case "RESET" -> "otp_reset";
+            case "BIND_OLD" -> "otp_bind_old";
+            case "BIND_NEW" -> "otp_bind_new";
+            case "WECHAT_BIND" -> "otp_wechat_bind";
+            default -> "otp_login";
+        };
     }
 
     public void verify(String phone,String purpose,String subject,String id,String code) {

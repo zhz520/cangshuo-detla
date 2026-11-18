@@ -2,7 +2,7 @@ package com.delta.admin.service;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.delta.common.sms.service.AliyunSmsService;
+import com.delta.common.sms.service.SmsGatewayClient;
 import com.delta.system.service.SysConfigService;
 import com.delta.common.tenant.TenantRegistry;
 import com.delta.common.tenant.TenantScheduler;
@@ -25,12 +25,11 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SmsNoticeService {
-    private static final String ROLE_TEMPLATE_PREFIX="sms.notification.templates.";
     private final JdbcTemplate jdbc;
-    private final SysConfigService configs;
-    private final AliyunSmsService sms;
+    private final SmsGatewayClient smsGateway;
     private final NotificationTemplateDataService templateData;
     @Autowired(required=false) private TenantRegistry tenantRegistry;
+    @Autowired private SysConfigService configs;
 
     public String phoneFor(String userType,Long userId){
         if(userId==null)return "";
@@ -49,14 +48,15 @@ public class SmsNoticeService {
 
     public void enqueue(String eventType,String eventGroup,String userType,Long userId,Long orderId,
                         String phone,String message,String dedupeKey){
+        if (!smsGateway.enabled()) return;
         if(userId==null||dedupeKey==null||dedupeKey.isBlank())return;
         Integer exists=jdbc.queryForObject("SELECT COUNT(*) FROM sms_notice_queue WHERE dedupe_key=?",Integer.class,dedupeKey);
         if(exists!=null&&exists>0)return;
         String safeMessage=message==null?"":message.substring(0,Math.min(1000,message.length()));
         try{
-            jdbc.update("INSERT INTO sms_notice_queue(id,dedupe_key,event_type,event_group,user_type,user_id,order_id,phone,message,status,last_error) " +
-                            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    UUID.randomUUID().toString(),dedupeKey,eventType,eventGroup,userType,userId,orderId,
+            jdbc.update("INSERT INTO sms_notice_queue(id,dedupe_key,delivery_key,event_type,event_group,user_type,user_id,order_id,phone,message,status,last_error) " +
+                            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    UUID.randomUUID().toString(),dedupeKey,UUID.randomUUID().toString(),eventType,eventGroup,userType,userId,orderId,
                     phone==null?"":phone.trim(),safeMessage,
                     phone==null||phone.isBlank()?"FAILED":"PENDING",
                     phone==null||phone.isBlank()?"SMS_PHONE_MISSING":null);
@@ -79,7 +79,7 @@ public class SmsNoticeService {
         }catch(Exception error){
             log.warn("业务短信队列清理失败",error);
         }
-        if(!"true".equals(configs.getConfigValue("sms.aliyun.enabled","false")))return;
+        if(smsGateway==null||!smsGateway.enabled())return;
         jdbc.update("UPDATE sms_notice_queue SET status='DELIVERY_UNKNOWN',last_error='SMS_DELIVERY_UNKNOWN' WHERE status='SENDING' AND next_at<CURRENT_TIMESTAMP");
         for(Map<String,Object> row:jdbc.queryForList(
                 "SELECT * FROM sms_notice_queue WHERE status IN ('PENDING','RETRY') AND next_at<=CURRENT_TIMESTAMP ORDER BY created_at LIMIT 20")){
@@ -95,45 +95,42 @@ public class SmsNoticeService {
         try{
             String userType=String.valueOf(row.get("user_type"));
             String group=String.valueOf(row.get("event_group"));
-            JSONObject template=templateFor(userType,group);
-            String templateCode=template.getString("templateCode");
-            JSONObject fields=template.getJSONObject("fields");
-            if(templateCode==null||templateCode.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("SMS_TEMPLATE_NOT_CONFIGURED");
-
+            String role=roleKey(userType);
+            if(role==null)throw new DeliveryError("SMS_TEMPLATE_NOT_CONFIGURED");
             Map<String,String> values=templateData.resolve(row);
             Map<String,String> params=new LinkedHashMap<>();
-            for(String field:fields.keySet()){
-                String value=values.get(String.valueOf(fields.get(field)));
-                if(value==null)throw new DeliveryError("SMS_TEMPLATE_INVALID");
-                params.put(field,value);
+            if (smsGateway.legacyEnabled()) {
+                JSONObject templates=JSON.parseObject(configs.getConfigValue("sms.notification.templates."+role,"{}"));
+                JSONObject template=templates==null?null:templates.getJSONObject(group);
+                JSONObject fields=template==null?null:template.getJSONObject("fields");
+                String code=template==null?null:template.getString("templateCode");
+                if (fields==null || fields.isEmpty() || code==null || code.isBlank()) throw new DeliveryError("SMS_TEMPLATE_NOT_CONFIGURED");
+                for (String field : fields.keySet()) {
+                    String value=values.get(fields.getString(field));
+                    if (value==null) throw new DeliveryError("SMS_TEMPLATE_INVALID");
+                    params.put(field,value);
+                }
+                smsGateway.sendLegacyTemplate(code,String.valueOf(row.get("phone")),params);
+                jdbc.update("UPDATE sms_notice_queue SET status='SENT',last_error=NULL,sent_at=CURRENT_TIMESTAMP WHERE id=?",id);
+                return;
             }
-            sms.sendTemplate(
-                    configs.getConfigValue("sms.aliyun.endpoint","dysmsapi.aliyuncs.com"),
-                    configs.getConfigValue("sms.aliyun.access_key_id",""),
-                    configs.getConfigValue("sms.aliyun.access_key_secret",""),
-                    configs.getConfigValue("sms.aliyun.sign_name",""),
-                    templateCode,String.valueOf(row.get("phone")),params);
+            for (String key : java.util.Set.of("orderNo","status","orderStatus","time","eventType","productName",
+                    "amount","orderAmount","refundAmount","withdrawAmount","payDeadline")) {
+                String value = values.get(key);
+                if (value != null && !value.isBlank()) params.put(key, value);
+            }
+            String deliveryKey=java.util.Objects.toString(row.get("delivery_key"), id);
+            smsGateway.send("notice_"+role+"_"+group.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_.-]","_"),
+                    String.valueOf(row.get("phone")),params,"notice:"+deliveryKey+":"+attempts);
             jdbc.update("UPDATE sms_notice_queue SET status='SENT',last_error=NULL,sent_at=CURRENT_TIMESTAMP WHERE id=?",id);
         }catch(Exception error){
-            String code=error instanceof DeliveryError?error.getMessage():"SMS_SEND_FAILED";
-            boolean ambiguous=!(error instanceof DeliveryError);
-            String status=ambiguous?"DELIVERY_UNKNOWN":attempts>=5?"FAILED":"RETRY";
+            boolean definitive=error instanceof DeliveryError||error instanceof SmsGatewayClient.SmsGatewayRejectedException;
+            String code=error instanceof DeliveryError?error.getMessage():definitive?"SMS_PROVIDER_REJECTED":"SMS_SEND_FAILED";
+            String status=!definitive?"DELIVERY_UNKNOWN":attempts>=5?"FAILED":"RETRY";
             jdbc.update("UPDATE sms_notice_queue SET status=?,last_error=?,next_at=? WHERE id=?",
                     status,code,
                     LocalDateTime.now().plusSeconds(Math.min(3600,30L*(1<<attempts))),id);
             log.warn("业务短信发送失败 id={} code={}",id,code);
-        }
-    }
-
-    JSONObject templateFor(String userType,String group){
-        String role=roleKey(userType);
-        if(role==null)throw new DeliveryError("SMS_TEMPLATE_NOT_CONFIGURED");
-        try{
-            JSONObject templates=JSON.parseObject(configs.getConfigValue(ROLE_TEMPLATE_PREFIX+role,"{}"));
-            Object node=templates.get(group);
-            return node instanceof JSONObject template?template:new JSONObject();
-        }catch(Exception error){
-            throw new DeliveryError("SMS_TEMPLATE_INVALID");
         }
     }
 

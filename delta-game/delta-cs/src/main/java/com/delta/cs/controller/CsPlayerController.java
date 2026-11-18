@@ -12,6 +12,7 @@ import com.delta.player.entity.Player;
 import com.delta.player.entity.PlayerWallet;
 import com.delta.player.service.PlayerService;
 import com.delta.player.service.PlayerWalletService;
+import com.delta.player.service.PlayerDepositService;
 import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ public class CsPlayerController {
     private final CrossModuleMapper crossModuleMapper;
     private final TransactionService transactionService;
     private final SysConfigService sysConfigService;
+    private final PlayerDepositService playerDeposits;
 
     @GetMapping("/list")
     public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
@@ -51,6 +53,7 @@ public class CsPlayerController {
         for (Player p : page.getRecords()) {
             p.setCompletedOrders(crossModuleMapper.selectPlayerCompletedOrders(p.getId()));
             p.setActiveOrders(crossModuleMapper.selectPlayerActiveOrders(p.getId()));
+            fillDeposit(p);
         }
         return R.ok(page);
     }
@@ -72,6 +75,7 @@ public class CsPlayerController {
         for (Player p : page.getRecords()) {
             p.setCompletedOrders(crossModuleMapper.selectPlayerCompletedOrders(p.getId()));
             p.setActiveOrders(crossModuleMapper.selectPlayerActiveOrders(p.getId()));
+            fillDeposit(p);
         }
         int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "1"));
         Map<String, Object> result = new HashMap<>();
@@ -88,8 +92,25 @@ public class CsPlayerController {
             p.setActiveOrders(crossModuleMapper.selectPlayerActiveOrders(id));
             PlayerWallet wallet = playerWalletService.getByPlayerId(id);
             p.setBalance(wallet != null ? wallet.getBalance() : BigDecimal.ZERO);
+            fillDeposit(p);
         }
         return R.ok(p);
+    }
+
+    @GetMapping("/{id}/deposits")
+    public R<java.util.List<PlayerDepositService.PaymentView>> deposits(@PathVariable Long id) {
+        return R.ok(playerDeposits.payments(id));
+    }
+
+    private void fillDeposit(Player player) {
+        PlayerDepositService.Summary summary = playerDeposits.summary(player.getId());
+        player.setDepositMode(summary.mode());
+        player.setDepositRequiredAmount(summary.requiredAmount());
+        player.setDepositPaidAmount(summary.paidAmount());
+        player.setDepositOutstandingAmount(summary.outstandingAmount());
+        player.setDepositStatus(summary.status());
+        player.setDepositPaymentCount(summary.paymentCount());
+        player.setDepositLastPaidAt(summary.lastPaidAt());
     }
 
     @OpLog(module="shift",operation="客服操作打手下班")

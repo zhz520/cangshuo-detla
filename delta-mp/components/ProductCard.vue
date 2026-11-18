@@ -50,13 +50,13 @@ function goDetail() {
   overflow: hidden;
   border: 0;
   border-radius: 24rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   box-shadow: none;
 
   .cover {
     display: block;
     width: 100%;
-    background: #f1f2f4;
+    background: var(--store-line);
   }
 
   .info {
@@ -67,7 +67,7 @@ function goDetail() {
     .name {
       display: -webkit-box;
       overflow: hidden;
-      color: #111111;
+      color: var(--store-text);
       font-size: 26rpx;
       font-weight: 800;
       line-height: 1.3;
@@ -82,7 +82,7 @@ function goDetail() {
     }
     .subtitle {
       display: block;
-      color: #777777;
+      color: var(--store-regular);
       font-size: 21rpx;
       line-height: 1.4;
     }
@@ -95,7 +95,7 @@ function goDetail() {
       margin-top: 14rpx;
     }
     .price {
-      color: #111111;
+      color: var(--store-text);
       font-size: 32rpx;
       font-weight: 850;
       line-height: 1;
@@ -109,7 +109,7 @@ function goDetail() {
       height: 44rpx;
       flex-shrink: 0;
       border-radius: 50%;
-      background: #f3f4f5;
+      background: var(--store-soft);
       image { width: 22rpx; height: 22rpx; }
     }
   }

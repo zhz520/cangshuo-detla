@@ -2,14 +2,43 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserToken, getPlayerToken, getGuestToken, getGuestInfo, setGuestSession as saveGuestSession, removeGuestSession as clearGuestStorage, setUserToken, removeUserToken, removePlayerToken } from '@/utils/auth'
 import { clientStorage } from '@/utils/client-storage'
-import { userLogin, h5Login, setupUserPassword, userPasswordLogin, exchangeWechatTicket, revokeSession } from '@/api/auth'
-import { linkWechatAccount as linkWechatAccountApi } from '@/api/user'
+import { userLogin, h5Login, userPasswordLogin, exchangeWechatTicket, revokeSession } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useChatStore } from '@/store/chat'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(getUserToken())
   const userInfo = ref(null)
+  // Binding/confirmation tickets live only for this H5 tab, never in the bearer-token store.
+  const key = 'delta.wechat-phone-binding'
+  function resume() {
+    // #ifdef H5
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(key) || 'null')
+      if (saved?.until > Date.now()) return saved
+      sessionStorage.removeItem(key)
+    } catch (_) {}
+    // #endif
+    return null
+  }
+  const wechatPhoneBinding = ref(resume())
+  function setBinding(value) {
+    wechatPhoneBinding.value = value
+    // #ifdef H5
+    try {
+      if (value) sessionStorage.setItem(key, JSON.stringify(value))
+      else sessionStorage.removeItem(key)
+    } catch (_) {}
+    // #endif
+  }
+  function beginWechatPhoneBinding(ticket, target, { accountBinding = false, takeover = false, phone = '' } = {}) {
+    setBinding({ ticket, target, accountBinding, takeover, phone, until: Date.now() + 600000 })
+  }
+  function confirmWechatPhoneBinding(confirmationTicket) {
+    const { ticket, ...binding } = wechatPhoneBinding.value || {}
+    setBinding({ ...binding, confirmationTicket, until: Date.now() + 300000 })
+  }
+  function clearWechatPhoneBinding() { setBinding(null) }
   const guestToken = ref(getGuestToken())
   const guestInfo = ref(getGuestInfo())
 
@@ -40,7 +69,6 @@ export const useUserStore = defineStore('user', () => {
     try {
       const inviteCode = clientStorage.get('invite_code') || ''
       const { data } = await h5Login({ phone, code, requestId, privacyAccepted:true, inviteCode })
-      if(data.passwordSetupRequired) {token.value='';userInfo.value=null;removeUserToken();removePlayerToken();useChatStore().disconnect();return { success:false, passwordSetupRequired:true, data }}
       applyLoginResult(data)
       if(inviteCode) clientStorage.remove('invite_code')
       return { success: true, code: 200, data }
@@ -55,6 +83,7 @@ export const useUserStore = defineStore('user', () => {
 
   function applyLoginResult(data) {
     if(!data?.token) throw new Error('登录凭据无效')
+    clearWechatPhoneBinding()
     const previousGuest = getGuestToken()
     token.value = data.token
     setUserToken(data.token)
@@ -89,9 +118,6 @@ export const useUserStore = defineStore('user', () => {
       uni.reLaunch({ url: '/pages/index/index' })
     }
   }
-  async function completePasswordSetup(data) {
-    const response=await setupUserPassword(data);applyLoginResult(response.data);return response.data
-  }
   async function loginWithPassword(data) {
     const response=await userPasswordLogin(data);applyLoginResult(response.data);return response.data
   }
@@ -99,17 +125,12 @@ export const useUserStore = defineStore('user', () => {
   async function exchangeWechatLogin(ticket) {
     try {
       const { data } = await exchangeWechatTicket(ticket)
+      if (data?.bindTicket) return { success: false, bindTicket: data.bindTicket }
       applyLoginResult(data)
       return { success: true, code: 200, data }
     } catch (e) {
       return { success: false, code: e?.code || 500, msg: e?.msg || e?.message || '微信登录失败' }
     }
-  }
-
-  async function linkWechatAccount(data) {
-    const response = await linkWechatAccountApi(data)
-    applyLoginResult(response.data)
-    return response.data
   }
 
   /** 获取用户资料 */
@@ -134,6 +155,7 @@ export const useUserStore = defineStore('user', () => {
       removeUserToken()
       removePlayerToken()
       clearGuestSession()
+      clearWechatPhoneBinding()
       uni.reLaunch({ url: '/pages/login/index' })
     }
   }
@@ -167,10 +189,13 @@ export const useUserStore = defineStore('user', () => {
     phone,
     login,
     loginByPhone,
-    completePasswordSetup,
+    wechatPhoneBinding,
+    beginWechatPhoneBinding,
+    confirmWechatPhoneBinding,
+    clearWechatPhoneBinding,
+    acceptWebLogin: applyLoginResult,
     loginWithPassword,
     exchangeWechatLogin,
-    linkWechatAccount,
     fetchProfile,
     setGuestSession,
     clearGuestSession,

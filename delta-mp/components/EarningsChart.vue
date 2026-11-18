@@ -56,8 +56,8 @@ function formatAmount(val) {
 
 <style lang="scss" scoped>
 .earnings-chart {
-  background: #f7f7f7;
-  border: 1rpx solid #eeeeee;
+  background: var(--store-soft);
+  border: 1rpx solid var(--store-line);
   border-radius: 12rpx;
   padding: 24rpx;
 }
@@ -67,7 +67,7 @@ function formatAmount(val) {
   .chart-title {
     font-size: 28rpx;
     font-weight: bold;
-    color: #111111;
+    color: var(--store-text);
   }
 }
 
@@ -101,13 +101,13 @@ function formatAmount(val) {
 
 .bar-value {
   font-size: 20rpx;
-  color: #777777;
+  color: var(--store-regular);
   margin-top: 8rpx;
 }
 
 .bar-label {
   font-size: 22rpx;
-  color: #777777;
+  color: var(--store-regular);
   margin-top: 8rpx;
 }
 
@@ -117,6 +117,6 @@ function formatAmount(val) {
   justify-content: center;
   height: 200rpx;
   font-size: 26rpx;
-  color: #777777;
+  color: var(--store-regular);
 }
 </style>

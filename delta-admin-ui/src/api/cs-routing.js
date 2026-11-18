@@ -9,6 +9,9 @@ export function csRoutingRules() {
 export function saveCsRoutingRule(data) {
   return request({ url: '/admin/cs-routing/rules', method: 'post', data })
 }
+export function saveCsRoutingRules(data) {
+  return request({ url: '/admin/cs-routing/rules/batch', method: 'post', data })
+}
 export function deleteCsRoutingRule(id) {
   return request({ url: '/admin/cs-routing/rules/' + id, method: 'delete' })
 }

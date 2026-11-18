@@ -55,13 +55,13 @@ function parseRemark(remark) {
 
 </script>
 <style lang="scss" scoped>
-.detail-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
+.detail-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
 .list { height: var(--app-page-height, 100vh); box-sizing: border-box; padding-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom)); }
-.record-item { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; margin: 20rpx 24rpx 0; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx;
-  .left { flex: 1; .desc { font-size: 28rpx; color: #111111; display: block; } .time { font-size: 22rpx; color: #777777; display: block; margin-top: 4rpx; }
-    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: #777777; line-height: 1.6; } }
+.record-item { display: flex; justify-content: space-between; align-items: center; gap: 20rpx; margin: 20rpx 24rpx 0; padding: 24rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx;
+  .left { flex: 1; .desc { font-size: 28rpx; color: var(--store-text); display: block; } .time { font-size: 22rpx; color: var(--store-regular); display: block; margin-top: 4rpx; }
+    .remark-info { margin-top: 8rpx; text { display: block; font-size: 22rpx; color: var(--store-regular); line-height: 1.6; } }
   }
-  .amount { font-size: 30rpx; color: #111111; font-weight: bold; &.income { color: #347a5b; } }
+  .amount { font-size: 30rpx; color: var(--store-text); font-weight: bold; &.income { color: #347a5b; } }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: #777777; }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-regular); }
 </style>

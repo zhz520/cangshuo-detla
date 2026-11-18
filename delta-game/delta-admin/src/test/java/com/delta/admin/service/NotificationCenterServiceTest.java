@@ -28,7 +28,13 @@ class NotificationCenterServiceTest {
     private NotificationCenterService service;
 
     @BeforeEach
-    void setUp(){service=new NotificationCenterService(jdbc,wechat,sms,permissions);}
+    void setUp(){
+        var platform=mock(com.delta.admin.platform.PlatformService.class);
+        var gateway=mock(com.delta.common.sms.service.SmsGatewayClient.class);
+        lenient().when(platform.featureEnabled("official_wechat_notifications")).thenReturn(true);
+        lenient().when(gateway.enabled()).thenReturn(true);
+        service=new NotificationCenterService(jdbc,wechat,sms,permissions,platform,gateway);
+    }
 
     @Test
     void unassignedPaidOrderQueuesOnDutyStaffAndAllPlayersWhenNobodyIsOnline(){

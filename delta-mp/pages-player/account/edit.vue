@@ -141,21 +141,21 @@ async function doSave() {
 }
 </script>
 <style lang="scss" scoped>
-.edit-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 1rpx 0 var(--app-safe-bottom, env(safe-area-inset-bottom)); }
-.form-card { margin: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx; padding: 0 24rpx; }
+.edit-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); box-sizing: border-box; padding: 1rpx 0 var(--app-safe-bottom, env(safe-area-inset-bottom)); }
+.form-card { margin: 24rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx; padding: 0 24rpx; }
 .form-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid rgba(0,0,0,0.04);
-  .label { font-size: 28rpx; color: rgba(0,0,0,0.85); width: 160rpx; flex-shrink: 0; } .input { flex: 1; font-size: 28rpx; }
+  .label { font-size: 28rpx; color: var(--store-text); width: 160rpx; flex-shrink: 0; } .input { flex: 1; font-size: 28rpx; }
 }
 .form-item-col { flex-direction: column; align-items: flex-start; }
 .qrcode-upload { margin-top: 12rpx; }
-.qrcode-preview, .qrcode-placeholder { width: 200rpx; height: 200rpx; border: 2rpx dashed rgba(0,0,0,0.15); border-radius: 12rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f7f7f7; }
+.qrcode-preview, .qrcode-placeholder { width: 200rpx; height: 200rpx; border: 2rpx dashed rgba(0,0,0,0.15); border-radius: 12rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--store-soft); }
 .qrcode-img { width: 180rpx; height: 180rpx; }
-.qrcode-tip { font-size: 22rpx; color: #777777; margin-top: 8rpx; }
+.qrcode-tip { font-size: 22rpx; color: var(--store-regular); margin-top: 8rpx; }
 .placeholder-icon { font-size: 48rpx; margin-bottom: 8rpx; }
-.placeholder-text { font-size: 24rpx; color: #777777; }
+.placeholder-text { font-size: 24rpx; color: var(--store-regular); }
 .type-selector { display: flex; flex-wrap: wrap; gap: 12rpx; flex: 1; }
-.type-opt { padding: 12rpx 20rpx; background: rgba(0,0,0,0.05); border-radius: 8rpx; font-size: 24rpx; &.active { background: #171717; color: #ffffff; font-weight:bold; } }
+.type-opt { padding: 12rpx 20rpx; background: var(--store-soft); border-radius: 8rpx; font-size: 24rpx; &.active { background: var(--store-primary); color: #ffffff; font-weight:bold; } }
 .btn-area { padding: 40rpx 24rpx; }
 .submit-error { display: block; color: #b84b55; font-size: 25rpx; line-height: 1.6; margin-bottom: 20rpx; }
-.submit-btn { background: #111111; color: #fff; font-weight:bold; text-align: center; line-height: 1.6; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
+.submit-btn { background: var(--store-primary); color: #fff; font-weight:bold; text-align: center; line-height: 1.6; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; &::after { border: 0; } &[disabled] { opacity: .5; } }
 </style>

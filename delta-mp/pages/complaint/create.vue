@@ -72,11 +72,11 @@ async function submit() {
 }
 </script>
 <style lang="scss" scoped>
-.complaint-page { padding: 24rpx; background: #f7f7f7; min-height: var(--app-page-height, 100vh); }
-.order-card { background: #ffffff; border: 1rpx solid #eeeeee; padding: 24rpx; border-radius: 12rpx; margin-bottom: 24rpx; }
-.card-title { font-size: 28rpx; font-weight: bold; color: #111111; display: block; margin-bottom: 16rpx; }
-.info-row { display: flex; align-items: center; padding: 6rpx 0; .label { font-size: 26rpx; color: #777777; width: 100rpx; } .value { font-size: 26rpx; color: #111111; flex: 1; } .price { color: #111111; font-weight: bold; } }
-.form-item { background: #ffffff; border: 1rpx solid #eeeeee; padding: 24rpx; border-radius: 16rpx; margin-bottom: 20rpx; .label { font-size: 26rpx; color: #777777; margin-bottom: 12rpx; display: block; } .picker { height: 60rpx; line-height: 60rpx; background: #f7f7f7; padding: 0 24rpx; border-radius: 8rpx; color: #111111; } }
-.content-input { width: 100%; height: 200rpx; background: #f7f7f7; border: none; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; color: #111111; }
-.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: #171717; color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; margin-top: 40rpx; &.disabled { opacity: 0.6; } }
+.complaint-page { padding: 24rpx; background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
+.order-card { background: var(--store-surface); border: 1rpx solid var(--store-line); padding: 24rpx; border-radius: 12rpx; margin-bottom: 24rpx; }
+.card-title { font-size: 28rpx; font-weight: bold; color: var(--store-text); display: block; margin-bottom: 16rpx; }
+.info-row { display: flex; align-items: center; padding: 6rpx 0; .label { font-size: 26rpx; color: var(--store-regular); width: 100rpx; } .value { font-size: 26rpx; color: var(--store-text); flex: 1; } .price { color: var(--store-text); font-weight: bold; } }
+.form-item { background: var(--store-surface); border: 1rpx solid var(--store-line); padding: 24rpx; border-radius: 16rpx; margin-bottom: 20rpx; .label { font-size: 26rpx; color: var(--store-regular); margin-bottom: 12rpx; display: block; } .picker { height: 60rpx; line-height: 60rpx; background: var(--store-soft); padding: 0 24rpx; border-radius: 8rpx; color: var(--store-text); } }
+.content-input { width: 100%; height: 200rpx; background: var(--store-soft); border: none; border-radius: 8rpx; padding: 20rpx; font-size: 28rpx; color: var(--store-text); }
+.btn { height: 88rpx; line-height: 88rpx; text-align: center; background: var(--store-primary); color: #ffffff; font-weight: bold; font-size: 32rpx; border-radius: 999rpx; margin-top: 40rpx; &.disabled { opacity: 0.6; } }
 </style>

@@ -36,6 +36,7 @@
     <view class="links">
       <text class="link" @click="goList">提现记录</text>
       <text class="link" @click="goAccounts">管理账户</text>
+      <text class="link" @click="goDepositRefund">押金退款</text>
     </view>
     <!-- 账户选择弹窗 -->
     <view v-if="showAccountPicker" class="mask" @click="showAccountPicker=false">
@@ -47,7 +48,7 @@
 <EmptyState v-if="accounts.length===0" text="暂无账户，请先添加" image="/pages-player/static/icons/暂无地址.svg" button-text="添加账户" @action="goAccounts" />
       </view>
     </view>
-    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="押金支付二维码" />
+    <PaymentQrDialog v-model:visible="qrVisible" :url="paymentQrUrl" title="押金支付二维码" @closed="onDepositQrClosed" />
   </view>
 </template>
 <script setup>
@@ -69,6 +70,7 @@ const showAccountPicker = ref(false)
 const depositStatus = ref(null),payingDeposit=ref(false)
 const loading = ref(false), ready = ref(false), loadError = ref(''), submitting = ref(false)
 const qrVisible = ref(false), paymentQrUrl = ref('')
+let depositPollToken = 0
 const siteStore = useSiteStore()
 
 onShow(load)
@@ -105,6 +107,7 @@ async function payDeposit(){
       if (!result.data?.authorizeUrl) throw new Error('未获取到微信支付地址')
       paymentQrUrl.value = result.data.authorizeUrl
       qrVisible.value = true
+      pollDepositStatus()
       return
     }
     if (channel === 'OFFICIAL') {
@@ -128,10 +131,35 @@ async function payDeposit(){
     await new Promise((resolve,reject)=>uni.requestPayment({provider:'wxpay',timeStamp,nonceStr,package:pkg,signType:signType||'RSA',paySign,success:resolve,fail:reject}))
     uni.showToast({title:'支付已提交，正在确认',icon:'none'})
     await new Promise(resolve=>setTimeout(resolve,2000))
-    depositStatus.value=(await getWithdrawDepositStatus()).data
+    await pollDepositStatus(6, 1500)
   }catch(e){
     if(!e?.errMsg?.includes('cancel'))uni.showToast({title:e?.msg||e?.message||'补交押金失败',icon:'none'})
   }finally{payingDeposit.value=false}
+}
+
+async function pollDepositStatus(attempts = 40, interval = 3000) {
+  const token = ++depositPollToken
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const result = await getWithdrawDepositStatus({ loading: false })
+      if (token !== depositPollToken) return
+      if (result?.data) {
+        depositStatus.value = result.data
+        if (!result.data.needsPayment) {
+          qrVisible.value = false
+          uni.showToast({ title: '押金已到账', icon: 'none' })
+          return
+        }
+      }
+    } catch (_) {}
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+}
+
+function onDepositQrClosed() {
+  if (!depositStatus.value?.needsPayment) return
+  // QR payment callbacks can arrive just after the dialog is dismissed.
+  pollDepositStatus(8, 1500)
 }
 
 function accountDisplay(a) { return `${a.type === 'ALIPAY' ? '支付宝' : a.type === 'WECHAT' ? '微信' : a.type === 'BANK' ? '银行卡' : a.type} ${(a.accountNo || a.account || '').replace(/(.{3}).*(.{4})/, '$1****$2')}` }
@@ -151,25 +179,26 @@ async function doSubmit() {
 }
 function goList() { uni.navigateTo({ url: '/pages-player/withdraw/list' }) }
 function goAccounts() { uni.navigateTo({ url: '/pages-player/account/list' }) }
+function goDepositRefund() { uni.navigateTo({ url: '/pages-player/deposit/refund' }) }
 </script>
 <style lang="scss" scoped>
-.withdraw-page { background: #ffffff; min-height: var(--app-page-height, 100vh); }
-.balance-card { background: #171717; color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
+.withdraw-page { background: var(--store-surface); min-height: var(--app-page-height, 100vh); }
+.balance-card { background: var(--store-primary); color: #ffffff; font-weight:bold; margin: 24rpx; border-radius: 16rpx; padding: 40rpx 32rpx;
   .label { font-size: 26rpx; opacity: 0.85; display: block; } .amount { font-size: 56rpx; font-weight: bold; display: block; margin-top: 12rpx; }
 }
-.deposit-card{margin:24rpx;padding:24rpx;border:1rpx solid #ead8bd;border-radius:12rpx;background:#fff8ed;display:flex;flex-direction:column;gap:20rpx}.deposit-title{display:block;font-size:28rpx;font-weight:700;color:#111111}.deposit-tip{display:block;margin-top:8rpx;color:#777777;font-size:24rpx;line-height:1.7}.deposit-button{align-self:flex-start;margin:0;padding:14rpx 28rpx;border-radius:999rpx;background:#111111;color:#fff;font-size:26rpx}
-.form-card { margin: 24rpx; background: #f7f7f7; border-radius: 12rpx; padding: 0 24rpx; }
+.deposit-card{margin:24rpx;padding:24rpx;border:1rpx solid #ead8bd;border-radius:12rpx;background:var(--store-surface)8ed;display:flex;flex-direction:column;gap:20rpx}.deposit-title{display:block;font-size:28rpx;font-weight:700;color:var(--store-text)}.deposit-tip{display:block;margin-top:8rpx;color:var(--store-regular);font-size:24rpx;line-height:1.7}.deposit-button{align-self:flex-start;margin:0;padding:14rpx 28rpx;border-radius:999rpx;background:var(--store-primary);color:#fff;font-size:26rpx}
+.form-card { margin: 24rpx; background: var(--store-soft); border-radius: 12rpx; padding: 0 24rpx; }
 .form-item { display: flex; align-items: center; padding: 28rpx 0; border-bottom: 1rpx solid #f7f7f7;
-  .item-label { font-size: 28rpx; color: #111111; width: 160rpx; } .input { flex: 1; font-size: 28rpx; }
-  .pick-text { flex: 1; font-size: 28rpx; color: #111111; &.placeholder { color: #aaaaaa; } } .arrow { color: #aaaaaa; } .all-btn { font-size: 26rpx; color: #111111; }
+  .item-label { font-size: 28rpx; color: var(--store-text); width: 160rpx; } .input { flex: 1; font-size: 28rpx; }
+  .pick-text { flex: 1; font-size: 28rpx; color: var(--store-text); &.placeholder { color: var(--store-muted); } } .arrow { color: var(--store-muted); } .all-btn { font-size: 26rpx; color: var(--store-text); }
 }
 .btn-area { padding: 40rpx 24rpx 16rpx; }
-.submit-btn { background: #171717; color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
-.links { display: flex; justify-content: center; gap: 48rpx; padding: 24rpx; .link { font-size: 26rpx; color: #111111; } }
+.submit-btn { background: var(--store-primary); color: #ffffff; font-weight:bold; text-align: center; padding: 24rpx; border-radius: 999rpx; font-size: 30rpx; }
+.links { display: flex; justify-content: center; gap: 48rpx; padding: 24rpx; .link { font-size: 26rpx; color: var(--store-text); } }
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 999; }
-.picker-popup { width: 100%; background: #ffffff; border-radius: 24rpx 24rpx 0 0; border-top: 1rpx solid #eeeeee; padding: 32rpx 24rpx; max-height: 60vh; overflow-y: auto;
+.picker-popup { width: 100%; background: var(--store-surface); border-radius: 24rpx 24rpx 0 0; border-top: 1rpx solid var(--store-line); padding: 32rpx 24rpx; max-height: 60vh; overflow-y: auto;
   .picker-title { font-size: 30rpx; font-weight: bold; display: block; margin-bottom: 24rpx; text-align: center; }
 }
-.account-option { padding: 24rpx; border-bottom: 1rpx solid #f7f7f7; font-size: 28rpx; &.active { color: #111111; background: #f7f7f8; border-radius: 8rpx; } }
+.account-option { padding: 24rpx; border-bottom: 1rpx solid #f7f7f7; font-size: 28rpx; &.active { color: var(--store-text); background: var(--store-soft); border-radius: 8rpx; } }
 .balance-card .pending { display:block; margin-top:10rpx; font-size:22rpx; font-weight:400; color:rgba(255,255,255,.72); }
 </style>

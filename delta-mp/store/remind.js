@@ -20,6 +20,8 @@ export const useRemindStore = defineStore('remind', () => {
   let identity = ''
   let pending
   let generation = 0
+  let badgeRevision = 0
+  const badgeCache = { systemUnread: 'systemUnread', chatUnread: 'chatUnread' }
 
   function refresh(role = getCurrentRole()) {
     const token = getTokenByRole(role)
@@ -33,6 +35,7 @@ export const useRemindStore = defineStore('remind', () => {
     }
     if (pending) return pending
     const current = generation
+    const revision = badgeRevision
     pending = getWorkbench(role).then(res => {
       if (current !== generation || role !== getCurrentRole() || token !== getTokenByRole(role)) return
       const previous = count('RELAY', 'pending')
@@ -41,12 +44,34 @@ export const useRemindStore = defineStore('remind', () => {
         playMessageNotification()
         uni.showToast({ title: '收到新的接力申请', icon: 'none' })
       }
-      summary.value = res.data
+      if (revision === badgeRevision) summary.value = res.data
     }).catch(error => {
       if (current === generation && error?.code === 401) { summary.value = null; stopPolling() }
       // Preserve the last confirmed badges during a network interruption.
     }).finally(() => { if (current === generation) pending = null })
     return pending
+  }
+
+  // Ignore reads already in flight before a confirmed write, then reconcile from the server.
+  function readConfirmed(kind, count) {
+    if (identity !== getCurrentRole() + ':' + getTokenByRole(getCurrentRole())) {
+      changed()
+      return
+    }
+    const key = badgeCache[kind]
+    if (key && summary.value && Number.isFinite(count)) {
+      summary.value = { ...summary.value, [key]: Math.max(0, count) }
+    }
+    badgeRevision++
+    changed()
+  }
+
+  async function refreshBadges() {
+    const role = getCurrentRole()
+    const token = getTokenByRole(role)
+    if (!token) return
+    // Multiple reads triggered by page show are still coalesced.
+    await refresh(role)
   }
 
   function changed() {
@@ -82,7 +107,7 @@ export const useRemindStore = defineStore('remind', () => {
 
   return {
     summary, count, complaintUnread, relayUnread, replaceUnread, inviteCount, messageUnread, systemUnread, workbenchUnread,
-    refresh, changed, fetchCsRemind: () => refresh('cs'), fetchPlayerRemind: () => refresh('player'),
+    refresh, changed, readConfirmed, refreshBadges, fetchCsRemind: () => refresh('cs'), fetchPlayerRemind: () => refresh('player'),
     startPolling, stopPolling, clear
   }
 })

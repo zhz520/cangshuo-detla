@@ -10,8 +10,8 @@ test('staff WeChat binding has one desktop and one mobile account entry', () => 
   const navigation = read('utils/navigation.js')
 
   assert.doesNotMatch(navigation, /path:\s*['"]\/wechat-binding['"]/)
-  assert.match(layout, /<el-dropdown-item command="wechat">公众号消息通知<\/el-dropdown-item>/)
-  assert.match(h5, /<button type="button" @click="accountAction\('wechat'\)"><span>公众号消息通知<\/span>/)
+  assert.match(layout, /<el-dropdown-item v-if="!demoMode" command="wechat">公众号消息通知<\/el-dropdown-item>/)
+  assert.match(h5, /<button v-if="!demoMode" type="button" @click="accountAction\('wechat'\)"><span>公众号消息通知<\/span>/)
   assert.equal(((layout + h5).match(/公众号消息通知/g) || []).length, 2)
 })
 

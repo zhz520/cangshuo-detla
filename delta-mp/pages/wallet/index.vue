@@ -60,9 +60,9 @@ async function loadData() {
 function loadMore() { if (!loading.value && !finished.value) { pageNum.value++; loadData() } }
 </script>
 <style lang="scss" scoped>
-.wallet-page { background: #f7f7f7; min-height: var(--app-page-height, 100vh); }
-.balance-card { position:relative; background:#171717; color:#ffffff; padding:48rpx 32rpx; border-radius:20rpx; margin:24rpx; box-shadow:0 12rpx 28rpx rgba(23, 25, 28, .18); .label { font-size:26rpx; display:block; margin-bottom:16rpx; opacity:0.9; } .amount { font-size:56rpx; font-weight:bold; } .recharge-btn { position:absolute; right:28rpx; bottom:28rpx; padding:12rpx 22rpx; border:1rpx solid rgba(255,255,255,.65); border-radius:999rpx; font-size:24rpx; } }
-.section-title { padding:24rpx; font-size:30rpx; font-weight:bold; color:#111111; }
-.tx-item { display:flex; justify-content:space-between; padding:24rpx; background:#ffffff; border-bottom:1rpx solid #eeeeee; .tx-type { font-size:28rpx; color:#111111; } .tx-remark { font-size:22rpx; color:#777777; margin-left:12rpx; } .tx-amount { font-size:28rpx; color:#111111; &.income { color:#347a5b; } } .tx-time { font-size:22rpx; color:#777777; display:block; text-align:right; } }
+.wallet-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
+.balance-card { position:relative; background:var(--store-primary); color:#ffffff; padding:48rpx 32rpx; border-radius:20rpx; margin:24rpx; box-shadow:0 12rpx 28rpx rgba(23, 25, 28, .18); .label { font-size:26rpx; display:block; margin-bottom:16rpx; opacity:0.9; } .amount { font-size:56rpx; font-weight:bold; } .recharge-btn { position:absolute; right:28rpx; bottom:28rpx; padding:12rpx 22rpx; border:1rpx solid rgba(255,255,255,.65); border-radius:999rpx; font-size:24rpx; } }
+.section-title { padding:24rpx; font-size:30rpx; font-weight:bold; color:var(--store-text); }
+.tx-item { display:flex; justify-content:space-between; padding:24rpx; background:var(--store-surface); border-bottom:1rpx solid var(--store-line); .tx-type { font-size:28rpx; color:var(--store-text); } .tx-remark { font-size:22rpx; color:var(--store-regular); margin-left:12rpx; } .tx-amount { font-size:28rpx; color:var(--store-text); &.income { color:#347a5b; } } .tx-time { font-size:22rpx; color:var(--store-regular); display:block; text-align:right; } }
 .list { height:calc(var(--app-page-height, 100vh) - 400rpx); }
 </style>

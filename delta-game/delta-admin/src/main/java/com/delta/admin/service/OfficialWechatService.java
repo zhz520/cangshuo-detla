@@ -40,6 +40,8 @@ public class OfficialWechatService {
  private final NotificationTemplateDataService templateData;
  private final StaffPermissions permissions;
  private final PlatformService platform;
+ @org.springframework.beans.factory.annotation.Autowired(required=false)
+ private com.delta.common.sms.service.SmsGatewayClient smsGateway;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  @Autowired(required = false) private TenantKeyEncoder tenantKeys;
  @Autowired(required = false) private TenantProperties tenantProperties;
@@ -143,6 +145,14 @@ public class OfficialWechatService {
    @Override public void afterCompletion(int status){releaseBindingLock(lockKey,lockValue);}
   });
   try{
+   // Login, transfer and detach lock a USER before changing the shared binding row.
+   if ("USER".equals(type)) {
+    if (jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 AND status=1 FOR UPDATE", Long.class, id).isEmpty())
+     throw new BusinessException(403,"账号暂不可用，请联系客服");
+    var current = jdbc.queryForList("SELECT openid FROM wechat_official_binding WHERE user_type='USER' AND user_id=? FOR UPDATE", String.class, id);
+    if (!current.isEmpty() && !current.get(0).equals(openid))
+     throw new BusinessException(409,"当前账号已绑定其他微信，请在账号安全中管理绑定");
+   }
    saveBinding(type,id,openid);
   }finally{
    if(!synchronizationActive)releaseBindingLock(lockKey,lockValue);
@@ -170,9 +180,22 @@ public class OfficialWechatService {
    throw new BusinessException(409,"该微信或当前账号刚完成其他绑定，请刷新后重试");
   }
  }
+ @Transactional(rollbackFor=Exception.class)
  public void removeBinding(String rawType,Long id){
   String type=canonicalUserType(rawType);
+  if ("USER".equals(type)) {
+   var phones=jdbc.query("SELECT phone FROM `user` WHERE id=? AND deleted=0 FOR UPDATE",
+       (rs,n)->rs.getString("phone"),id);
+   if (phones.isEmpty() || phones.get(0)==null || !phones.get(0).matches("1[0-9]{10}"))
+    throw new BusinessException(409,"请先绑定手机号，再解绑微信");
+   var policy = new com.delta.user.service.WebLoginPolicy(configs);
+   if (policy.wechatEnabled() && (!policy.phoneEnabled() || !smsConfigured()))
+    throw new BusinessException(409,"手机验证码登录暂不可用，请先联系平台开启，再解绑微信");
+  }
   jdbc.update("DELETE FROM wechat_official_binding WHERE user_type=? AND user_id=?",type,id);
+ }
+ private boolean smsConfigured() {
+  return smsGateway!=null && smsGateway.enabled() && "true".equalsIgnoreCase(configs.getConfigValue("sms.aliyun.otp_enabled","false"));
  }
  private void releaseBindingLock(String key,String value){
   try{redis.execute(RELEASE_BINDING_LOCK,List.of(namespaced(key)),value);}catch(Exception error){log.warn("释放公众号绑定锁失败",error);}

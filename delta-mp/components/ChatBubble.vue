@@ -117,15 +117,15 @@ function goOrder(d) {
     max-width: 70%;
     margin: 0 16rpx;
     padding: 20rpx 24rpx;
-    background: #eeeeee;
+    background: var(--store-soft);
     border: 1rpx solid #f7f7f7;
     border-radius: 12rpx;
     font-size: 28rpx;
-    color: #111111;
+    color: var(--store-text);
     word-break: break-all;
 
     &.self {
-      background: #171717;
+      background: var(--store-primary);
       border-color: transparent;
       color: #ffffff;
 
@@ -136,12 +136,12 @@ function goOrder(d) {
       }
       .system-msg { color: #ffffff; opacity: 0.82; }
 
-      .card-msg { background: #ffffff !important; border-color: transparent !important; }
-      .card-name { color: #111111; }
-      .card-price { color: #111111; }
-      .card-status { color: #777777; }
-      .card-order-no { color: #777777; }
-      .card-tag { background: #eeeeee; color: #777777; }
+      .card-msg { background: var(--store-surface) !important; border-color: transparent !important; }
+      .card-name { color: var(--store-text); }
+      .card-price { color: var(--store-text); }
+      .card-status { color: var(--store-regular); }
+      .card-order-no { color: var(--store-regular); }
+      .card-tag { background: var(--store-soft); color: var(--store-regular); }
     }
     &.has-card,
     &.has-card.self {
@@ -165,7 +165,7 @@ function goOrder(d) {
     }
 
     .system-msg {
-      color: #777777;
+      color: var(--store-regular);
       font-size: 24rpx;
     }
   }
@@ -175,7 +175,7 @@ function goOrder(d) {
 .card-msg {
   display: flex;
   padding: 0;
-  background: #ffffff;
+  background: var(--store-surface);
   border: 0;
   border-radius: 18rpx;
   overflow: hidden;
@@ -203,7 +203,7 @@ function goOrder(d) {
 }
 .card-name {
   font-size: 26rpx;
-  color: #111111;
+  color: var(--store-text);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,7 +211,7 @@ function goOrder(d) {
 }
 .card-price {
   font-size: 28rpx;
-  color: #111111;
+  color: var(--store-text);
   font-weight: bold;
   margin-top: 8rpx;
 }
@@ -223,11 +223,11 @@ function goOrder(d) {
 }
 .card-status {
   font-size: 22rpx;
-  color: #777777;
+  color: var(--store-regular);
 }
 .card-order-no {
   font-size: 20rpx;
-  color: #777777;
+  color: var(--store-regular);
   margin-top: 4rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,8 +239,8 @@ function goOrder(d) {
   right: 0;
   font-size: 18rpx;
   padding: 2rpx 12rpx;
-  background: #eeeeee;
-  color: #111111;
+  background: var(--store-soft);
+  color: var(--store-text);
   border-radius: 0 12rpx 0 8rpx;
 }
 </style>

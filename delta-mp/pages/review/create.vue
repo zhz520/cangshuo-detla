@@ -31,10 +31,10 @@ async function submit() {
 }
 </script>
 <style lang="scss" scoped>
-.review-page { padding:24rpx; background:#ffffff; min-height:var(--app-page-height, 100vh); }
-.rating-area { display:flex; align-items:center; gap:20rpx; margin-bottom:24rpx; background:#ffffff; border:1rpx solid #eeeeee; padding:24rpx; border-radius:16rpx; color:#111111; }
+.review-page { padding:24rpx; background:var(--store-surface); min-height:var(--app-page-height, 100vh); }
+.rating-area { display:flex; align-items:center; gap:20rpx; margin-bottom:24rpx; background:var(--store-surface); border:1rpx solid var(--store-line); padding:24rpx; border-radius:16rpx; color:var(--store-text); }
 .stars { display:flex; gap:8rpx; }
-.star { font-size:48rpx; color:#aaaaaa; &.active { color:#996b30; } }
-textarea { width:100%; height:240rpx; background:#f7f7f7; border:1rpx solid #eeeeee; border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; color:#111111; }
-.btn { height:88rpx; line-height:88rpx; text-align:center; background:#171717; color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
+.star { font-size:48rpx; color:var(--store-muted); &.active { color:#996b30; } }
+textarea { width:100%; height:240rpx; background:var(--store-soft); border:1rpx solid var(--store-line); border-radius:12rpx; padding:24rpx; font-size:28rpx; margin-bottom:24rpx; color:var(--store-text); }
+.btn { height:88rpx; line-height:88rpx; text-align:center; background:var(--store-primary); color:#ffffff; font-weight:bold; font-size:32rpx; border-radius:999rpx; margin-top:40rpx; }
 </style>

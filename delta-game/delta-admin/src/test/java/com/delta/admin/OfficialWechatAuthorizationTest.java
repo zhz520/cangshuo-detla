@@ -40,7 +40,7 @@ class OfficialWechatAuthorizationTest {
         var service = mock(OfficialWechatService.class);
         var platform = mock(PlatformService.class);
         var jdbc = mock(JdbcTemplate.class);
-        var controller = new OfficialWechatController(service, jdbc, platform);
+        var controller = new OfficialWechatController(service, jdbc, platform, mock(com.delta.common.sms.service.SmsGatewayClient.class));
         var request = new MockHttpServletRequest();
         request.setServerName("shop.example.com");
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
@@ -50,12 +50,12 @@ class OfficialWechatAuthorizationTest {
 
         controller.start(request);
         controller.complete(Map.of("code", "code", "state", "state"), request);
-        controller.notices();
-        controller.retry("notice-1");
+        controller.notices(request);
+        controller.retry("notice-1", request);
 
         verify(service).startBinding("USER", 7L, "shop.example.com");
         verify(service).finishBinding("USER", 7L, "code", "state", "shop.example.com");
-        verifyNoInteractions(platform);
+        verify(platform, times(2)).requireFeature(OfficialWechatService.FEATURE_ID, "shop.example.com");
     }
 
     @Test void bindingServiceRequiresThePaidFeatureForTheRequestDomain() {
@@ -79,7 +79,7 @@ class OfficialWechatAuthorizationTest {
         var service = mock(OfficialWechatService.class);
         var jdbc = mock(JdbcTemplate.class);
         var platform = mock(PlatformService.class);
-        var controller = new OfficialWechatController(service, jdbc, platform);
+        var controller = new OfficialWechatController(service, jdbc, platform, mock(com.delta.common.sms.service.SmsGatewayClient.class));
         var request = new MockHttpServletRequest();
         request.setServerName("staff.example.com");
 

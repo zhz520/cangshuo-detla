@@ -1,112 +1,190 @@
 package com.delta.admin;
 
 import com.delta.admin.service.OfficialWechatService;
+import com.delta.admin.service.WechatIdentityService;
 import com.delta.admin.service.WechatWebLoginService;
-import com.delta.common.enums.UserTypeEnum;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.redis.service.RedisService;
-import com.delta.common.security.service.TokenService;
+import com.delta.common.security.service.VerificationService;
 import com.delta.system.service.SysConfigService;
 import com.delta.user.entity.User;
-import com.delta.user.service.UserService;
-import com.delta.user.controller.InviteController;
-import jakarta.servlet.http.HttpServletRequest;
+import com.delta.user.service.WebLoginPolicy;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class WechatWebLoginServiceTest {
-    @Mock OfficialWechatService officialWechat;
-    @Mock SysConfigService configs;
-    @Mock RedisService redis;
-    @Mock JdbcTemplate jdbc;
-    @Mock UserService users;
-    @Mock TokenService tokens;
-    @Mock InviteController invites;
-    @InjectMocks WechatWebLoginService service;
+    static final String PHONE = "13800000001";
+    static final String OPENID = "openid-test-01";
+    final Map<String,Object> cache = new ConcurrentHashMap<>();
+    final RedisService redis = mock(RedisService.class);
+    final OfficialWechatService official = mock(OfficialWechatService.class);
+    final SysConfigService configs = mock(SysConfigService.class);
+    final WebLoginPolicy policy = mock(WebLoginPolicy.class);
+    final WechatIdentityService identity = mock(WechatIdentityService.class);
+    final VerificationService verification = mock(VerificationService.class);
+    final WechatWebLoginService service = new WechatWebLoginService(official, configs, policy, redis, identity, verification);
 
-    @Test
-    void startRequiresExplicitEnablement() {
-        when(configs.getConfigValue("auth.wechat.enabled", "false")).thenReturn("false");
-        assertThatThrownBy(() -> service.startUrl("/pages/login/index", "", mock(HttpServletRequest.class)))
-                .isInstanceOf(BusinessException.class).hasMessageContaining("尚未启用");
+    @BeforeEach void initialize() throws Exception {
+        when(policy.wechatEnabled()).thenReturn(true);
+        when(policy.customerOrigin()).thenReturn("https://shop.example.com");
+        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx-test");
+        when(official.exchangeOpenid("test-code")).thenReturn(OPENID);
+        doAnswer(call -> {cache.put(call.getArgument(0), call.getArgument(1)); return null;})
+                .when(redis).set(anyString(), any(), anyLong(), any(TimeUnit.class));
+        when(redis.get(anyString())).thenAnswer(call -> cache.get(call.getArgument(0)));
+        when(redis.getAndDelete(anyString())).thenAnswer(call -> cache.remove(call.getArgument(0)));
+    }
+
+    String ticket() throws Exception {
+        var auth = service.start("/pages/login/index?redirect=%2Fpages%2Fmine%2Findex", "", null);
+        assertThat(auth.url()).contains("scope=snsapi_base",
+                "redirect_uri=https%3A%2F%2Fshop.example.com%2Fapi%2Fuser%2Fauth%2Fwechat%2Fcallback");
+        String callback = service.complete("test-code", auth.state(), auth.state());
+        return callback.substring(callback.indexOf("wechat_ticket=") + "wechat_ticket=".length());
+    }
+
+    String accountTicket(long id) throws Exception {
+        var auth = service.start(null, null, id);
+        return service.complete("test-code", auth.state(), auth.state()).split("wechat_ticket=", 2)[1];
     }
 
     @Test
-    void startBuildsAnEncodedOfficialAccountCallback() {
-        when(configs.getConfigValue("auth.wechat.enabled", "false")).thenReturn("true");
-        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx-public-app");
-        when(configs.getConfigValue("wechat.official.app_secret", "")).thenReturn("test-secret");
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
-        when(request.getServerName()).thenReturn("shop.example.com");
-        when(request.getServerPort()).thenReturn(443);
-
-        String url = service.startUrl("/pages/login/index?from=web", "ABCD2345", request);
-
-        assertThat(url).contains("appid=wx-public-app", "scope=snsapi_base", "state=");
-        assertThat(url).contains("redirect_uri=https%3A%2F%2Fshop.example.com%2Fuser%2Fauth%2Fwechat%2Fcallback");
-        verify(redis).set(startsWith("wechat:web-login:state:"), eq("/pages/login/index?from=web\nABCD2345"), eq(5L), any());
+    void oauthStateMustMatchBrowserAndCannotBeReplayed() throws Exception {
+        var auth = service.start(null, "", null);
+        assertThatThrownBy(() -> service.complete("test-code", auth.state(), "00000000000000000000000000000000"))
+                .isInstanceOf(BusinessException.class);
+        verifyNoInteractions(official);
+        service.complete("test-code", auth.state(), auth.state());
+        assertThatThrownBy(() -> service.complete("test-code", auth.state(), auth.state()))
+                .isInstanceOf(BusinessException.class);
+        verify(official, times(1)).exchangeOpenid("test-code");
     }
 
     @Test
-    void exchangeConsumesTheTicketAndIssuesAUserToken() {
-        String ticket = "0123456789abcdef0123456789abcdef";
-        when(redis.getAndDelete("wechat:web-login:ticket:" + ticket)).thenReturn("7");
-        User user = new User();
-        user.setId(7L); user.setStatus(1); user.setNickname("客户甲");
-        when(users.getById(7L)).thenReturn(user);
-        when(tokens.createToken(7L, UserTypeEnum.USER)).thenReturn("signed-token");
-
-        var response = service.exchange(ticket);
-
-        assertThat(response.getToken()).isEqualTo("signed-token");
-        assertThat(response.getUserId()).isEqualTo(7L);
-        assertThat(response.getNickname()).isEqualTo("客户甲");
+    void unboundAccountGetsOnlyBindingTicketAndVerificationIsBoundToIt() throws Exception {
+        String oauth = ticket();
+        var pending = service.exchange(oauth);
+        assertThat(pending.phoneBound()).isFalse();
+        assertThat(pending.token()).isNull();
+        assertThat(pending.bindTicket()).matches("[a-f0-9]{32}");
+        assertThatThrownBy(() -> service.exchange(oauth)).isInstanceOf(BusinessException.class);
+        service.sendCode(pending.bindTicket(), PHONE, "captcha-id", "123456", "127.0.0.1", null);
+        verify(verification).send(PHONE, "WECHAT_BIND", pending.bindTicket(), "captcha-id", "123456", "127.0.0.1");
+        verify(identity, never()).bindNewPhone(anyMap(), anyString());
     }
 
     @Test
-    void callbackRequiresAConfiguredCustomerH5OriginBeforeRedirecting() throws Exception {
-        when(redis.getAndDelete("wechat:web-login:state:0123456789abcdef0123456789abcdef"))
-                .thenReturn("/pages/login/index\n");
-        when(officialWechat.exchangeOpenid("code")).thenReturn("openid-example");
-        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(java.util.List.of(Map.of("user_id", 7L)));
-        User user = new User();
-        user.setId(7L); user.setStatus(1);
-        when(users.getById(7L)).thenReturn(user);
-        when(configs.getConfigValue("site.customer_web_url", "")).thenReturn("");
-
-        assertThatThrownBy(() -> service.complete("code", "0123456789abcdef0123456789abcdef",
-                mock(HttpServletRequest.class)))
-                .isInstanceOf(BusinessException.class).hasMessageContaining("客户 H5 站点地址");
+    void legacyWechatIdentityAlsoReceivesOnlyATicketOnNewLogin() throws Exception {
+        User legacy = new User();
+        legacy.setId(42L);
+        legacy.setOpenid("oa-legacy-fixture");
+        legacy.setPhone("");
+        legacy.setStatus(1);
+        when(identity.findWechatAccount(OPENID)).thenReturn(legacy);
+        var pending = service.exchange(ticket());
+        assertThat(pending.phoneBound()).isFalse();
+        assertThat(pending.token()).isNull();
+        assertThat(pending.bindTicket()).matches("[a-f0-9]{32}");
     }
 
     @Test
-    void newOfficialAccountUserReceivesTheInviteAttributionBeforeTicketExchange() throws Exception {
-        String state = "0123456789abcdef0123456789abcdef";
-        when(redis.getAndDelete("wechat:web-login:state:" + state)).thenReturn("/pages/login/index\nABCD2345");
-        when(officialWechat.exchangeOpenid("code")).thenReturn("openid-new-user");
-        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(java.util.List.of());
-        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx-public-app");
-        when(configs.getConfigValue("site.customer_web_url", "")).thenReturn("https://shop.example.com");
-        User user = new User();
-        user.setId(9L); user.setStatus(1);
-        when(users.loginOrRegister(anyString(), eq(""), eq(""))).thenReturn(user);
+    void existingPhoneRequiresAnotherExplicitStepBeforeBinding() throws Exception {
+        var pending = service.exchange(ticket());
+        User target = new User();
+        target.setId(7L); target.setPhone(PHONE); target.setStatus(1);
+        when(identity.findPhoneAccount(PHONE)).thenReturn(target);
+        var confirmation = service.bindPhone(pending.bindTicket(), PHONE, "sms-id", "123456", null);
+        verify(verification).verify(PHONE, "WECHAT_BIND", pending.bindTicket(), "sms-id", "123456");
+        assertThat(confirmation.token()).isNull();
+        verify(identity, never()).merge(anyMap());
+        when(identity.merge(anyMap())).thenReturn(new WechatWebLoginService.Completion("token",7L,"name",null,true,null,null));
+        assertThat(service.confirm(confirmation.confirmationTicket(), null).token()).isEqualTo("token");
+        assertThatThrownBy(() -> service.confirm(confirmation.confirmationTicket(), null)).isInstanceOf(BusinessException.class);
+        verify(identity).merge(argThat(map -> "7".equals(map.get("target")) && PHONE.equals(map.get("phone"))));
+    }
 
-        String redirect = service.complete("code", state, mock(HttpServletRequest.class));
+    @Test void personalCenterRequiresItsOwnSessionAndVerifiedPhoneBeforeIssuingConfirmation() throws Exception {
+        User target = new User(); target.setId(7L); target.setPhone(PHONE); target.setAuthVersion(3L);
+        User source = new User(); source.setId(42L); source.setOpenid("oa-test");
+        when(identity.requireAccount(7L)).thenReturn(target);
+        when(identity.attachToExisting(7L, "3", OPENID)).thenReturn(source);
+        String oauth = accountTicket(7L);
+        assertThatThrownBy(() -> service.bindExisting(8L, oauth)).isInstanceOf(BusinessException.class);
+        var pending = service.bindExisting(7L, oauth);
+        assertThat(pending.maskedPhone()).isEqualTo("138****0001");
+        String ticket = pending.bindTicket();
+        assertThatThrownBy(() -> service.bindExisting(7L, oauth)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.sendCode(ticket, PHONE, "captcha", "123456", "localhost", null))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.bindPhone(ticket, PHONE, "sms", "123456", 8L))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.bindPhone(ticket, "13800000008", "sms", "123456", 7L))
+                .isInstanceOf(BusinessException.class);
+        verifyNoInteractions(verification);
+        service.sendCode(ticket, PHONE, "captcha", "123456", "localhost", 7L);
+        verify(verification).send(PHONE, "WECHAT_BIND", ticket, "captcha", "123456", "localhost");
+        doThrow(new BusinessException(400, "验证码错误")).when(verification).verify(PHONE, "WECHAT_BIND", ticket, "sms", "111111");
+        assertThatThrownBy(() -> service.bindPhone(ticket, PHONE, "sms", "111111", 7L)).hasMessage("验证码错误");
+        assertThat(cache.keySet()).noneMatch(key -> key.contains(":confirm:"));
+        var confirmed = service.bindPhone(ticket, PHONE, "sms", "123456", 7L);
+        verify(identity, never()).merge(anyMap());
+        assertThatThrownBy(() -> service.confirm(confirmed.confirmationTicket(), 8L)).isInstanceOf(BusinessException.class);
+        service.confirm(confirmed.confirmationTicket(), 7L);
+        verify(identity).merge(argThat(proof -> "42".equals(proof.get("source")) && "7".equals(proof.get("target"))
+                && "3".equals(proof.get("targetVersion")) && PHONE.equals(proof.get("phone")) && "".equals(proof.get("targetWechat"))));
+    }
 
-        assertThat(redirect).startsWith("https://shop.example.com/pages/login/index?wechat_ticket=");
-        verify(invites).bindCode(9L, "ABCD2345");
+    @Test void protectedLoginSourceCanStillVerifyAnUnusedPhoneOnTheSameTicket() throws Exception {
+        User source = new User(); source.setId(42L);
+        User target = new User(); target.setId(7L); target.setPhone(PHONE);
+        when(identity.findWechatAccount(OPENID)).thenReturn(source);
+        when(identity.findPhoneAccount(PHONE)).thenReturn(target);
+        doThrow(new BusinessException(422, "原微信账号受保护")).when(identity).checkTransferSource(anyMap());
+        String ticket = service.exchange(ticket()).bindTicket();
+        assertThatThrownBy(() -> service.bindPhone(ticket, PHONE, "first-otp", "123456", null))
+                .isInstanceOfSatisfying(BusinessException.class, blocked -> assertThat(blocked.getCode()).isEqualTo(422));
+        assertThat(cache.keySet()).noneMatch(key -> key.contains(":confirm:"));
+        verify(identity, never()).merge(anyMap());
+        verify(identity, never()).bindNewPhone(anyMap(), anyString());
+
+        String unused = "13800000009";
+        service.bindPhone(ticket, unused, "new-otp", "654321", null);
+        var order = inOrder(verification, identity);
+        order.verify(verification).verify(PHONE, "WECHAT_BIND", ticket, "first-otp", "123456");
+        order.verify(identity).checkTransferSource(anyMap());
+        order.verify(verification).verify(unused, "WECHAT_BIND", ticket, "new-otp", "654321");
+        order.verify(identity).bindNewPhone(argThat(proof -> "42".equals(proof.get("source"))), eq(unused));
+    }
+
+    @Test void competingVerifiedSubmissionsCanConsumeTheSameBindTicketOnlyOnce() throws Exception {
+        String ticket = service.exchange(ticket()).bindTicket();
+        var barrier = new CyclicBarrier(2);
+        doAnswer(call -> { barrier.await(5, TimeUnit.SECONDS); return null; })
+                .when(verification).verify(eq(PHONE), eq("WECHAT_BIND"), eq(ticket), anyString(), eq("123456"));
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var submissions = executor.invokeAll(java.util.List.of(
+                    () -> consumeBinding(ticket, "otp-1"), () -> consumeBinding(ticket, "otp-2")), 10, TimeUnit.SECONDS);
+            assertThat(java.util.List.of(submissions.get(0).get(), submissions.get(1).get())).containsExactlyInAnyOrder(true, false);
+            verify(identity, times(1)).bindNewPhone(anyMap(), eq(PHONE));
+        } finally { executor.shutdownNow(); }
+    }
+
+    private boolean consumeBinding(String ticket, String requestId) {
+        try { service.bindPhone(ticket, PHONE, requestId, "123456", null); return true; }
+        catch (BusinessException rejected) {
+            assertThat(rejected.getCode()).isEqualTo(401);
+            return false;
+        }
     }
 }

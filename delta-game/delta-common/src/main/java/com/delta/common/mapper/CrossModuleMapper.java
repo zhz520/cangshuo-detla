@@ -26,6 +26,10 @@ public interface CrossModuleMapper {
     @Select("SELECT level FROM player WHERE id=#{id} AND deleted=0")
     Integer selectPlayerLevel(@Param("id") Long id);
 
+    // A current read under the player lock, even if this transaction has already opened a snapshot.
+    @Select("SELECT level FROM player WHERE id=#{id} AND deleted=0 FOR UPDATE")
+    Integer selectPlayerLevelForUpdate(@Param("id") Long id);
+
     @Select("SELECT is_online FROM player WHERE id=#{id} AND deleted=0")
     Integer selectPlayerOnline(@Param("id") Long id);
 

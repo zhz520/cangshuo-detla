@@ -34,6 +34,7 @@ public class StaffPermissionConfig implements WebMvcConfigurer {
             else if(path.startsWith("/admin/player")||path.startsWith("/cs/player"))permission="player.manage";
             else if(path.startsWith("/admin/user")||path.startsWith("/cs/user"))permission=read?"user.read":"user.manage";
             else if(path.startsWith("/admin/withdraw")||path.startsWith("/cs/withdraw"))permission="withdraw.review";
+            else if(path.startsWith("/cs/deposit-refunds"))permission="withdraw.review";
             else if(path.startsWith("/admin/statistics")||path.startsWith("/admin/analytics"))permission="finance.read";
             else if(path.startsWith("/cs/analytics"))permission="order.read";
             else if(path.startsWith("/admin/rewards"))permission=read?"finance.read":"finance.manage";

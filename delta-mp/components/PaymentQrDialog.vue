@@ -21,7 +21,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import QRCode from 'qrcode'
+import { createPaymentQr } from '../utils/payment-qr.js'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -40,12 +40,7 @@ watch(() => [props.visible, props.url], async ([visible, url]) => {
   qrError.value = ''
   if (!visible || !url) return
   try {
-    const image = await QRCode.toDataURL(url, {
-      width: 560,
-      margin: 1,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#111111ff', light: '#ffffffff' }
-    })
+    const image = await createPaymentQr(url)
     if (current === generation) qrImage.value = image
   } catch (_) {
     if (current === generation) qrError.value = '二维码生成失败，请使用下方按钮复制链接'
@@ -65,16 +60,16 @@ function close() {
 
 <style lang="scss" scoped>
 .qr-overlay{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:32rpx;background:rgba(17,19,22,.58);box-sizing:border-box}
-.qr-panel{width:100%;max-width:640rpx;padding:30rpx;border-radius:28rpx;background:#fff;box-sizing:border-box;box-shadow:0 24rpx 80rpx rgba(0,0,0,.2)}
+.qr-panel{width:100%;max-width:640rpx;padding:30rpx;border-radius:28rpx;background:var(--store-surface);box-sizing:border-box;box-shadow:0 24rpx 80rpx rgba(0,0,0,.2)}
 .qr-header{display:flex;align-items:center;justify-content:space-between;gap:20rpx}
-.qr-title{font-size:32rpx;font-weight:800;color:#111111}
-.qr-close{width:56rpx;height:56rpx;line-height:52rpx;text-align:center;font-size:42rpx;color:#777777}
-.qr-stage{display:flex;align-items:center;justify-content:center;margin:24rpx auto 18rpx;padding:18rpx;border:1rpx solid #eceef1;border-radius:20rpx;background:#fff}
+.qr-title{font-size:32rpx;font-weight:800;color:var(--store-text)}
+.qr-close{width:56rpx;height:56rpx;line-height:52rpx;text-align:center;font-size:42rpx;color:var(--store-regular)}
+.qr-stage{display:flex;align-items:center;justify-content:center;margin:24rpx auto 18rpx;padding:18rpx;border:1rpx solid #eceef1;border-radius:20rpx;background:var(--store-surface)}
 .qr-image{width:480rpx;height:480rpx}
-.qr-placeholder{display:flex;align-items:center;justify-content:center;width:480rpx;height:480rpx;color:#aaaaaa;font-size:24rpx;text-align:center;line-height:1.6}
+.qr-placeholder{display:flex;align-items:center;justify-content:center;width:480rpx;height:480rpx;color:var(--store-muted);font-size:24rpx;text-align:center;line-height:1.6}
 .qr-tip,.qr-hint{display:block;text-align:center}
-.qr-tip{font-size:27rpx;font-weight:700;color:#111111}
-.qr-hint{margin-top:10rpx;font-size:22rpx;color:#aaaaaa}
+.qr-tip{font-size:27rpx;font-weight:700;color:var(--store-text)}
+.qr-hint{margin-top:10rpx;font-size:22rpx;color:var(--store-muted)}
 .qr-actions{display:flex;gap:16rpx;margin-top:26rpx}
-.qr-button{flex:1;height:78rpx;line-height:78rpx;text-align:center;border-radius:999rpx;font-size:26rpx;font-weight:700;&.secondary{background:#f1f2f4;color:#343a43}&.primary{background:#111111;color:#fff}}
+.qr-button{flex:1;height:78rpx;line-height:78rpx;text-align:center;border-radius:999rpx;font-size:26rpx;font-weight:700;&.secondary{background:var(--store-line);color:var(--store-text)}&.primary{background:var(--store-primary);color:#fff}}
 </style>

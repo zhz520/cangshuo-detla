@@ -34,7 +34,7 @@ defineEmits(['action'])
 
   .empty-text {
     font-size: 28rpx;
-    color: #777777;
+    color: var(--store-regular);
   }
 
   .empty-btn {
@@ -42,7 +42,7 @@ defineEmits(['action'])
     padding: 16rpx 48rpx;
     font-size: 28rpx;
     color: #fff;
-    background: #171717;
+    background: var(--store-primary);
     border: none;
     border-radius: 999rpx;
   }

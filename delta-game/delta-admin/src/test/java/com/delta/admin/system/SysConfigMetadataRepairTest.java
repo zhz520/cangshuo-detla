@@ -27,6 +27,13 @@ class SysConfigMetadataRepairTest {
     }
 
     @Test
+    void restoresDepositSettingsOnExistingSitesWithMissingDisplayMetadata() {
+        assertEquals("押金政策", SysConfigMetadataRepair.name("player.deposit_mode", ""));
+        assertEquals("入驻押金金额（元）", SysConfigMetadataRepair.name("player.deposit_amount", null));
+        assertEquals("打手配置", SysConfigMetadataRepair.group("player.deposit_amount", "短信配置"));
+    }
+
+    @Test
     void keepsGenericRepairForUnknownKeys() {
         assertEquals("公众号通知", SysConfigMetadataRepair.group("custom.key", fromHex(
                 "C3A5E280A6C2ACC3A4C2BCE28094C3A5C28FC2B7C3A9E282ACC5A1C3A7C5B8C2A5")));

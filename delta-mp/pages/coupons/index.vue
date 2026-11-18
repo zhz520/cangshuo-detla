@@ -69,16 +69,16 @@ onMounted(load)
 </script>
 
 <style lang="scss" scoped>
-.coupon-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: #f7f7f7; box-sizing: border-box; }
-.tabs { display: flex; padding: 8rpx; border-radius: 16rpx; background: #eceef0; margin-bottom: 24rpx; }
-.tab { flex: 1; padding: 20rpx; text-align: center; border-radius: 12rpx; color: #777777; font-size: 26rpx; }
-.tab.active { background: #fff; color: #111111; font-weight: 700; }
+.coupon-page { min-height: var(--app-page-height, 100vh); padding: 28rpx; background: var(--store-soft); box-sizing: border-box; }
+.tabs { display: flex; padding: 8rpx; border-radius: 16rpx; background: var(--store-soft); margin-bottom: 24rpx; }
+.tab { flex: 1; padding: 20rpx; text-align: center; border-radius: 12rpx; color: var(--store-regular); font-size: 26rpx; }
+.tab.active { background: var(--store-surface); color: var(--store-text); font-weight: 700; }
 .list { display: grid; gap: 16rpx; }
-.coupon-card { display: flex; align-items: center; gap: 20rpx; padding: 26rpx; border-radius: 18rpx; background: #fff; }
-.value { width: 150rpx; text-align: center; font-size: 36rpx; font-weight: 700; color: #111111; }
+.coupon-card { display: flex; align-items: center; gap: 20rpx; padding: 26rpx; border-radius: 18rpx; background: var(--store-surface); }
+.value { width: 150rpx; text-align: center; font-size: 36rpx; font-weight: 700; color: var(--store-text); }
 .info { flex: 1; min-width: 0; display: grid; gap: 6rpx; }
-.name { font-size: 27rpx; color: #111111; font-weight: 600; }
-.meta, .status { font-size: 23rpx; color: #777777; }
-.claim { width: 120rpx; margin: 0; padding: 0; height: 64rpx; line-height: 64rpx; border-radius: 32rpx; background: #111111; color: #fff; font-size: 24rpx; }
-.empty { padding: 150rpx 0; text-align: center; color: #777777; font-size: 25rpx; }
+.name { font-size: 27rpx; color: var(--store-text); font-weight: 600; }
+.meta, .status { font-size: 23rpx; color: var(--store-regular); }
+.claim { width: 120rpx; margin: 0; padding: 0; height: 64rpx; line-height: 64rpx; border-radius: 32rpx; background: var(--store-primary); color: #fff; font-size: 24rpx; }
+.empty { padding: 150rpx 0; text-align: center; color: var(--store-regular); font-size: 25rpx; }
 </style>

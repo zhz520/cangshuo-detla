@@ -27,7 +27,7 @@ export const getSessionDetail = (sessionId, opts = {}) => {
 /** 标记会话已读；接单员端传 opts.chatRole='PLAYER' */
 export const markMessageRead = (sessionId, opts = {}) => {
   const q = opts.chatRole ? `&chatRole=${encodeURIComponent(opts.chatRole)}` : ''
-  return post(`/common/chat/message/read?sessionId=${sessionId}${q}`, {})
+  return post(`/common/chat/message/read?sessionId=${encodeURIComponent(sessionId)}${q}`, {}, opts)
 }
 
 /** 发起客服会话（自动分配客服） */

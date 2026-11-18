@@ -20,6 +20,7 @@ function pageHarness(kind, overrides = {}) {
   const hooks = Object.fromEntries(['onLoad', 'onShow', 'onHide', 'onUnload'].map(name => [name, []]))
   const toasts = [], confirmations = [], timers = new Map()
   let navigations = 0, timerId = 0
+  const navigationUrls = []
   const modules = {
     vue: { ref, computed },
     '@dcloudio/uni-app': Object.fromEntries(Object.entries(hooks).map(([name, callbacks]) => [name, fn => callbacks.push(fn)])),
@@ -30,7 +31,14 @@ function pageHarness(kind, overrides = {}) {
       replaceSelf: async () => ({}), replaceAll: async () => ({}), replaceTeammate: async () => ({}),
       submitWorkProgress: async () => ({}), ...overrides.player
     },
-    '@/utils/subscribe': { requestPlayerSubscribe: overrides.subscribe || (async () => ({})) }
+    '@/utils/subscribe': { requestPlayerSubscribe: overrides.subscribe || (async () => ({})) },
+    '@/store/player': {
+      usePlayerStore: () => ({
+        playerInfo: overrides.playerInfo === undefined ? { id: 10 } : overrides.playerInfo,
+        playerId: overrides.playerInfo === undefined ? 10 : overrides.playerInfo?.id || null,
+        fetchProfile: async () => ({})
+      })
+    }
   }
   const imports = babelParse(compiled.content, { sourceType: 'module' }).program.body.filter(node => node.type === 'ImportDeclaration')
   let code = compiled.content
@@ -46,7 +54,7 @@ function pageHarness(kind, overrides = {}) {
   }
   const uni = {
     showToast(options) { toasts.push(options.title) }, showModal(options) { confirmations.push(options) },
-    navigateBack() { navigations++ }, navigateTo() { navigations++ },
+    navigateBack() { navigations++ }, navigateTo(options) { navigations++; navigationUrls.push(options?.url) },
     previewImage() {}, setClipboardData() {}
   }
   const element = { classList: { remove() {} } }
@@ -55,7 +63,7 @@ function pageHarness(kind, overrides = {}) {
     fn => { const id = ++timerId; timers.set(id, fn); return id }, id => timers.delete(id)
   )
   const state = component.setup({}, { expose() {} })
-  return { state, toasts, confirmations, timers, navigations: () => navigations,
+  return { state, toasts, confirmations, timers, navigations: () => navigations, navigationUrls: () => navigationUrls,
     async fire(name, args) { await Promise.all(hooks[name].map(fn => fn(args))); await setImmediate() },
     runTimers() { for (const [id, fn] of timers) { timers.delete(id); fn() } }
   }
@@ -223,13 +231,12 @@ test('reject confirmation is locked before the modal and cancellation releases t
   assert.equal(page.navigations(), 1)
 })
 
-for (const type of ['all', 'self', 'teammate']) {
+for (const type of ['all', 'self']) {
   test(`replacement ${type} retains its business endpoint and prevents repeated confirmation`, async () => {
     const writes = []
     const page = await loadedDetail({ player: {
       async replaceAll(id) { writes.push(['all', id]) },
-      async replaceSelf(id) { writes.push(['self', id]) },
-      async replaceTeammate(id) { writes.push(['teammate', id]) }
+      async replaceSelf(id) { writes.push(['self', id]) }
     } })
     page.state.openReplaceModal()
     const replace = page.state.doReplace(type)
@@ -241,15 +248,36 @@ for (const type of ['all', 'self', 'teammate']) {
     await replace
     assert.deepEqual(writes, [[type, '7']])
     assert.equal(page.state.showReplaceModal.value, false)
-    if (type === 'teammate') assert.equal(page.timers.size, 0)
-    else {
-      assert.equal(page.timers.size, 1)
-      await page.fire('onUnload')
-      page.runTimers()
-      assert.equal(page.navigations(), 0, 'leaving the page must cancel delayed navigateBack')
-    }
+    assert.equal(page.timers.size, 1)
+    await page.fire('onUnload')
+    page.runTimers()
+    assert.equal(page.navigations(), 0, 'leaving the page must cancel delayed navigateBack')
   })
 }
+
+test('primary can select a specific teammate without prematurely removing anyone', async () => {
+  const a = { id: 501, playerId: 20, status: 'ACCEPTED' }
+  const b = { id: 502, playerId: 30, status: 'ACCEPTED' }
+  const page = await loadedDetail({ playerInfo: { id: 10 }, player: {
+    async getPlayerOrderDetail() {
+      return { data: { id: 7, status: 'ACCEPTED', playerId: 10, teammates: [a, b] } }
+    }
+  } })
+  page.state.replaceActiveTeammate(b)
+  assert.equal(page.navigationUrls().at(-1), '/pages-player/invite/teammate?orderId=7&replacedTeammateId=30')
+  assert.deepEqual(page.toasts, [])
+})
+
+test('a teammate cannot open the replacement flow', async () => {
+  const target = { id: 501, playerId: 20, status: 'ACCEPTED' }
+  const page = await loadedDetail({ playerInfo: { id: 99 }, player: {
+    async getPlayerOrderDetail() {
+      return { data: { id: 7, status: 'ACCEPTED', playerId: 10, teammates: [target] } }
+    }
+  } })
+  page.state.replaceActiveTeammate(target)
+  assert.deepEqual(page.navigationUrls(), [])
+})
 
 test('unload during a write suppresses follow-up toasts and detail requests', async () => {
   const write = deferred()

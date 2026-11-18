@@ -95,6 +95,7 @@ class PlayerDirectoryIntegrationTest {
     @MockBean(name = "staffPermissions") StaffPermissions permissions;
     @MockBean com.delta.player.service.PlayerGovernanceService governance;
     @MockBean com.delta.system.service.FeatureAuditService featureAudit;
+    @MockBean com.delta.player.service.PlayerDepositService playerDeposits;
 
     private RequestPostProcessor role(String role,long id) {
         return authentication(new UsernamePasswordAuthenticationToken(Map.of("userId",id,"userType",role),null,

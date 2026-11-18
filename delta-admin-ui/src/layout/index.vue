@@ -23,11 +23,11 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <button class="chat-notify" type="button" title="待办中心" :aria-label="`待办中心，${workbench.summary?.unread || 0}项未读`" @click="openCenter('tasks')">
+          <button v-if="!demoMode" class="chat-notify" type="button" title="待办中心" :aria-label="`待办中心，${workbench.summary?.unread || 0}项未读`" @click="openCenter('tasks')">
             <el-icon :size="20"><List /></el-icon>
             <span v-if="workbench.summary?.unread" class="notify-badge task-badge">{{ badge(workbench.summary.unread) }}</span>
           </button>
-          <button class="chat-notify" type="button" title="系统通知" :aria-label="`系统通知，${workbench.summary?.systemUnread || 0}条未读`" @click="openCenter('notices')">
+          <button v-if="!demoMode" class="chat-notify" type="button" title="系统通知" :aria-label="`系统通知，${workbench.summary?.systemUnread || 0}条未读`" @click="openCenter('notices')">
             <el-icon :size="20"><Bell /></el-icon>
             <span v-if="workbench.summary?.systemUnread" class="notify-badge">{{ badge(workbench.summary.systemUnread) }}</span>
           </button>
@@ -36,7 +36,7 @@
             <span v-if="workbench.summary?.chatUnread > 0" class="notify-badge chat-badge">{{ badge(workbench.summary?.chatUnread) }}</span>
           </button>
           <el-tag :type="role === 'admin' ? 'danger' : 'warning'" size="small" class="role-tag">
-            {{ role === 'admin' ? '管理员' : '客服' }}
+            {{ demoMode ? '演示' : role === 'admin' ? '管理员' : '客服' }}
           </el-tag>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
@@ -46,12 +46,12 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item v-if="isCompact" command="h5">切换到手机版</el-dropdown-item>
-                <el-dropdown-item v-if="isCompact" command="tasks">待办中心</el-dropdown-item>
-                <el-dropdown-item v-if="isCompact" command="notices">系统通知</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact && !demoMode" command="tasks">待办中心</el-dropdown-item>
+                <el-dropdown-item v-if="isCompact && !demoMode" command="notices">系统通知</el-dropdown-item>
                 <el-dropdown-item v-if="isCompact && can('chat.manage')" command="chat">客服消息</el-dropdown-item>
-                <el-dropdown-item command="wechat">公众号消息通知</el-dropdown-item>
-                <el-dropdown-item command="profile">编辑资料</el-dropdown-item>
-                <el-dropdown-item command="password">修改密码</el-dropdown-item>
+                <el-dropdown-item v-if="!demoMode" command="wechat">公众号消息通知</el-dropdown-item>
+                <el-dropdown-item v-if="!demoMode" command="profile">编辑资料</el-dropdown-item>
+                <el-dropdown-item v-if="!demoMode" command="password">修改密码</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -65,7 +65,9 @@
         <router-view v-slot="{ Component, route: pageRoute }">
           <transition name="page-fade" mode="out-in">
             <div :key="`${pageRoute.path}:${pageVersion}`" class="layout-page-frame">
-              <component :is="Component" />
+              <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :is="Component" read-only />
+              <DemoReadOnlyPage v-else-if="demoMode && !pageRoute.meta.errorPage" />
+              <component v-else :is="Component" />
             </div>
           </transition>
         </router-view>
@@ -87,7 +89,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onErrorCaptured } from 'vue'
-import {can} from '@/utils/staff-permissions'
+import {can, isDemoSession} from '@/utils/staff-permissions'
+import DemoReadOnlyPage from '@/components/DemoReadOnlyPage.vue'
 import {buildNavigation} from '@/utils/navigation'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAllowed,platformFeatureError} from '@/utils/platform-feature-visibility'
 import { loadingFeedback } from '@/utils/loading-feedback'
@@ -110,6 +113,7 @@ import StaffAvatar from '@/components/StaffAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const demoMode = computed(isDemoSession)
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const workbench = useWorkbenchStore()
@@ -127,8 +131,8 @@ const menuBadges = computed(() => {
   }
   return result
 })
-watch(() => route.fullPath, () => workbench.changed())
-watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => workbench.changed())
+watch(() => route.fullPath, () => { if (!demoMode.value) workbench.changed() })
+watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => { if (!demoMode.value) workbench.changed() })
 const siteStore = useSiteStore()
 
 const isCollapse = ref(false)
@@ -167,7 +171,8 @@ const currentPageTitle = computed(() => {
 
 const menuGroups = computed(() => {
   void enabledPlatformFeatures.value
-  return buildNavigation(router.options.routes, role.value, can, platformFeatureAllowed)
+  return demoMode.value ? buildNavigation(router.options.routes, 'admin', () => true)
+    : buildNavigation(router.options.routes, role.value, can, platformFeatureAllowed)
 })
 
 const profileDialogVisible = ref(false)
@@ -210,6 +215,7 @@ function goChat() {
 }
 
 onMounted(() => {
+  if (demoMode.value) return
   workbench.start()
   if (role.value === 'admin' && ['system.manage', 'user.manage', 'finance.read'].some(can)) loadPlatformFeatureVisibility()
   if (can('chat.manage')) chatStore.start()

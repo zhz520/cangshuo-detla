@@ -155,10 +155,10 @@
       </el-tabs>
     </el-card>
 
-    <el-dialog v-model="ruleVisible" :title="ruleForm.id ? '编辑分配规则' : '新增分配规则'" width="560px" destroy-on-close>
+    <el-dialog v-model="ruleVisible" :title="ruleForm.id ? '编辑分配规则' : '新增分配规则'" width="min(560px, calc(100vw - 32px))" destroy-on-close>
       <el-form label-position="top">
         <el-form-item label="匹配方式">
-          <el-radio-group v-model="ruleForm.matchType" @change="ruleForm.targetId = null">
+          <el-radio-group v-model="ruleForm.matchType" @change="resetRuleTargets">
             <el-radio-button label="PRODUCT">指定商品</el-radio-button>
             <el-radio-button label="CATEGORY">商品分类</el-radio-button>
             <el-radio-button label="DEFAULT">默认规则</el-radio-button>
@@ -176,17 +176,34 @@
             <el-option v-for="p in productOptions" :key="p.id" :label="p.name + '（ID ' + p.id + '）'" :value="p.id" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="ruleForm.matchType === 'CATEGORY'" label="选择分类" required>
+        <el-form-item v-if="ruleForm.matchType === 'CATEGORY' && ruleForm.id" label="选择分类" required>
           <el-tree-select
             v-model="ruleForm.targetId"
             :data="categoryTree"
             node-key="id"
             :props="{ label: 'name', children: 'children' }"
             check-strictly
-            default-expand-all
             placeholder="选择商品分类"
             style="width:100%"
           />
+        </el-form-item>
+        <el-form-item v-if="ruleForm.matchType === 'CATEGORY' && !ruleForm.id" label="选择分类（可多选）" required>
+          <el-tree-select
+            v-model="ruleForm.targetIds"
+            :data="categoryTree"
+            node-key="id"
+            :props="{ label: 'name', children: 'children' }"
+            multiple
+            show-checkbox
+            check-strictly
+            default-expand-all
+            collapse-tags
+            collapse-tags-tooltip
+            :max-collapse-tags="3"
+            placeholder="可同时选择大分类和小分类"
+            style="width:100%"
+          />
+          <div class="field-hint">小分类没有独立规则时，沿用上级规则。已有规则的分类请在列表里单独编辑。</div>
         </el-form-item>
         <el-form-item label="分配给" required>
           <el-radio-group v-model="ruleForm.assigneeType" @change="ruleForm.assigneeId = null">
@@ -258,7 +275,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getProductList, getCategoryTree } from '@/api/product'
 import {
-  csRoutingStaff, csRoutingRules, saveCsRoutingRule, deleteCsRoutingRule,
+  csRoutingStaff, csRoutingRules, saveCsRoutingRule, saveCsRoutingRules, deleteCsRoutingRule,
   csRoutingGroups, saveCsRoutingGroup, deleteCsRoutingGroup, csRatingStats
 } from '@/api/cs-routing'
 
@@ -280,7 +297,7 @@ const ratingStaff = computed(() => ratingStats.value.staff || [])
 const ratingRecent = computed(() => ratingStats.value.recent || [])
 
 const ruleForm = reactive({
-  id: null, matchType: 'PRODUCT', targetId: null,
+  id: null, matchType: 'PRODUCT', targetId: null, targetIds: [],
   assigneeType: 'GROUP', assigneeId: null, enabled: 1, remark: ''
 })
 const groupForm = reactive({
@@ -351,11 +368,17 @@ async function searchProducts(keyword) {
   }
 }
 
+function resetRuleTargets() {
+  ruleForm.targetId = null
+  ruleForm.targetIds = []
+}
+
 function openRule(row = null) {
   Object.assign(ruleForm, {
     id: row?.id || null,
     matchType: row?.matchType || 'PRODUCT',
     targetId: row?.targetId ?? null,
+    targetIds: [],
     assigneeType: row?.assigneeType || (enabledGroups.value.length ? 'GROUP' : 'CS'),
     assigneeId: row?.assigneeId ?? null,
     enabled: row?.enabled ?? 1,
@@ -368,7 +391,12 @@ function openRule(row = null) {
 }
 
 async function saveRule() {
-  if (ruleForm.matchType !== 'DEFAULT' && !ruleForm.targetId) {
+  const batch = ruleForm.matchType === 'CATEGORY' && !ruleForm.id
+  if (batch && !ruleForm.targetIds.length) {
+    ElMessage.warning('请至少选择一个分类')
+    return
+  }
+  if (!batch && ruleForm.matchType !== 'DEFAULT' && !ruleForm.targetId) {
     ElMessage.warning('请选择要匹配的商品或分类')
     return
   }
@@ -378,15 +406,26 @@ async function saveRule() {
   }
   saving.value = true
   try {
-    await saveCsRoutingRule({
-      id: ruleForm.id,
-      matchType: ruleForm.matchType,
-      targetId: ruleForm.matchType === 'DEFAULT' ? 0 : ruleForm.targetId,
-      assigneeType: ruleForm.assigneeType,
-      assigneeId: ruleForm.assigneeId,
-      enabled: ruleForm.enabled,
-      remark: ruleForm.remark
-    })
+    if (batch) {
+      await saveCsRoutingRules({
+        matchType: 'CATEGORY',
+        targetIds: ruleForm.targetIds,
+        assigneeType: ruleForm.assigneeType,
+        assigneeId: ruleForm.assigneeId,
+        enabled: ruleForm.enabled,
+        remark: ruleForm.remark
+      })
+    } else {
+      await saveCsRoutingRule({
+        id: ruleForm.id,
+        matchType: ruleForm.matchType,
+        targetId: ruleForm.matchType === 'DEFAULT' ? 0 : ruleForm.targetId,
+        assigneeType: ruleForm.assigneeType,
+        assigneeId: ruleForm.assigneeId,
+        enabled: ruleForm.enabled,
+        remark: ruleForm.remark
+      })
+    }
     ElMessage.success('分配规则已保存')
     ruleVisible.value = false
     rules.value = (await csRoutingRules()).data || []
@@ -469,6 +508,7 @@ async function removeGroup(row) {
 onMounted(() => { loadAll(); loadRatings() })
 </script>
 <style scoped>
+.field-hint { margin-top: 6px; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.5; }
 .cs-routing-page .card-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .header-copy span { color: #171717; font-size: 16px; font-weight: 800; }
 .header-copy small { display: block; margin-top: 4px; color: #909399; font-size: 12px; font-weight: 400; }

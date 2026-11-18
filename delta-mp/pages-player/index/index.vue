@@ -45,17 +45,17 @@ async function load() {
 function go(url) { if (['/pages-player/hall/index', '/pages-player/order/list'].includes(url)) uni.redirectTo({ url }); else uni.navigateTo({ url }) }
 </script>
 <style lang="scss" scoped>
-.player-home { background: #f7f7f7; position: relative; }
+.player-home { background: var(--store-soft); position: relative; }
 .stat-cards { display: flex; gap: 20rpx; padding: 24rpx;
-  .card { flex: 1; background: rgba(0,0,0,0.04); padding: 24rpx; border-radius: 12rpx; text-align: center;
-    .num { font-size: 36rpx; font-weight: bold; color: #111111; display: block; }
-    .label { font-size: 24rpx; color: rgba(0,0,0,0.3); margin-top: 8rpx; display: block; }
+  .card { flex: 1; background: var(--store-soft); padding: 24rpx; border-radius: 12rpx; text-align: center;
+    .num { font-size: 36rpx; font-weight: bold; color: var(--store-text); display: block; }
+    .label { font-size: 24rpx; color: var(--store-muted); margin-top: 8rpx; display: block; }
   }
 }
 .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20rpx; padding: 0 24rpx;
-  .action { background: rgba(0,0,0,0.04); padding: 24rpx 0; text-align: center; border-radius: 12rpx; font-size: 24rpx; color: rgba(0,0,0,0.85); position: relative; display: flex; flex-direction: column; align-items: center; gap: 8rpx; .action-icon { width: 48rpx; height: 48rpx; } }
+  .action { background: var(--store-soft); padding: 24rpx 0; text-align: center; border-radius: 12rpx; font-size: 24rpx; color: var(--store-text); position: relative; display: flex; flex-direction: column; align-items: center; gap: 8rpx; .action-icon { width: 48rpx; height: 48rpx; } }
   .pending-badge { position: absolute; top: 8rpx; right: 8rpx; min-width: 32rpx; height: 32rpx; line-height: 32rpx; padding: 0 8rpx; font-size: 20rpx; color: #fff; background: #d44955; border-radius: 32rpx; text-align: center; }
 }
 .section { padding: 24rpx; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; .section-title { font-size: 28rpx; font-weight: bold; } .more { font-size: 24rpx; color: rgba(0,0,0,0.3); } }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; .section-title { font-size: 28rpx; font-weight: bold; } .more { font-size: 24rpx; color: var(--store-muted); } }
 </style>

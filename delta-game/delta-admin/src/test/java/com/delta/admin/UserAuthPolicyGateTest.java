@@ -12,6 +12,7 @@ import com.delta.user.dto.H5LoginRequest;
 import com.delta.user.dto.PasswordLoginRequest;
 import com.delta.user.service.UserPasswordService;
 import com.delta.user.service.UserService;
+import com.delta.user.service.WebLoginPolicy;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,6 +28,11 @@ class UserAuthPolicyGateTest {
     void disabledPhoneLoginRejectsSmsAndH5LoginOnTheServer() {
         SysConfigService configs = mock(SysConfigService.class);
         when(configs.getConfigValue("auth.phone.enabled", "true")).thenReturn("false");
+        when(configs.getConfigValue("auth.primary_method", "PHONE")).thenReturn("WECHAT");
+        when(configs.getConfigValue("auth.wechat.enabled", "false")).thenReturn("true");
+        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx-test");
+        when(configs.getConfigValue("wechat.official.app_secret", "")).thenReturn("test-secret");
+        when(configs.getConfigValue("site.customer_web_url", "")).thenReturn("https://shop.example.com");
         VerificationService verification = mock(VerificationService.class);
         UserAuthController controller = controller(configs, verification);
         H5LoginRequest login = new H5LoginRequest();
@@ -60,6 +66,6 @@ class UserAuthPolicyGateTest {
         ObjectProvider<TenantWxMaServiceProvider> provider = mock(ObjectProvider.class);
         return new UserAuthController(provider, mock(UserService.class), mock(TokenService.class),
                 mock(CrossModuleMapper.class), verification, limits, mock(UserPasswordService.class),
-                mock(InviteController.class), configs, mock(PasswordEncoder.class));
+                mock(InviteController.class), new WebLoginPolicy(configs), mock(PasswordEncoder.class));
     }
 }

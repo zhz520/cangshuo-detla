@@ -28,10 +28,11 @@ public class PlatformController {
                              boolean authorityConfigured, String lastSync) {}
 
     @GetMapping("/market")
-    public R<MarketView> market() { return R.ok(marketView()); }
+    public R<MarketView> market(HttpServletRequest request) { platform.requireLicenseDomain(request.getServerName()); return R.ok(marketView()); }
 
     @PostMapping("/market/sync")
-    public R<MarketView> syncMarket() {
+    public R<MarketView> syncMarket(HttpServletRequest request) {
+        platform.requireLicenseDomain(request.getServerName());
         remote.syncFeatureMarket();
         return R.ok(marketView());
     }
@@ -43,7 +44,8 @@ public class PlatformController {
 
     @GetMapping("/overview") public R<PlatformService.Overview> overview() { return R.ok(platform.overview()); }
     @GetMapping("/features")
-    public R<List<PlatformService.FeatureView>> features() {
+    public R<List<PlatformService.FeatureView>> features(HttpServletRequest request) {
+        platform.requireLicenseDomain(request.getServerName());
         return R.ok(withCommercialMetadata(platform.features()));
     }
     List<PlatformService.FeatureView> withCommercialMetadata(List<PlatformService.FeatureView> source) {
@@ -94,7 +96,8 @@ public class PlatformController {
     }
     @PutMapping("/features/{id}/enabled")
     @OpLog(module="platform", operation="调整扩展功能启用状态")
-    public R<List<PlatformService.FeatureView>> enabled(@PathVariable String id, @Valid @RequestBody EnableRequest body) {
+    public R<List<PlatformService.FeatureView>> enabled(@PathVariable String id, @Valid @RequestBody EnableRequest body, HttpServletRequest request) {
+        platform.requireLicenseDomain(request.getServerName());
         return R.ok(withCommercialMetadata(platform.setEnabled(id, body.enabled())));
     }
     @GetMapping("/reports/income")

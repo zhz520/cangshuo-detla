@@ -91,8 +91,8 @@ export function deleteBanner(id) {
 }
 
 // ==================== 系统配置 ====================
-export function getSysConfigList() {
-  return request({ url: '/system/config/list', method: 'get' })
+export function getSysConfigList(options = {}) {
+  return request({ url: '/system/config/list', method: 'get', ...options })
 }
 export function batchUpdateSysConfig(data) {
   return request({ url: '/system/config/batch', method: 'put', data })
@@ -113,6 +113,34 @@ export function uploadWxPayCertificate(configKey, file) {
     data: formData,
     headers: { 'Content-Type': 'multipart/form-data' }
   })
+}
+
+export function getSmsGatewayAccount() {
+  return request({ url: '/admin/sms/account', method: 'get', silent: true })
+}
+
+export function checkoutSmsPackage(packageId) {
+  return request({ url: `/admin/sms/packages/${encodeURIComponent(packageId)}/checkout`, method: 'post', silent: true })
+}
+
+const authorityServicePath = kind => kind === 'identity' ? '/admin/identity-service' : '/admin/sms'
+export function getAuthoritySettings(kind) {
+  return request({ url: authorityServicePath(kind) + '/settings', method: 'get', silent: true })
+}
+export function saveAuthoritySettings(kind, data) {
+  return request({ url: authorityServicePath(kind) + '/settings', method: 'put', data, silent: true })
+}
+export function getIdentityLimits() {
+  return request({ url: '/admin/identity-service/limits', method: 'get', silent: true })
+}
+export function saveIdentityLimits(data) {
+  return request({ url: '/admin/identity-service/limits', method: 'put', data, silent: true })
+}
+export function getIdentityGatewayAccount() {
+  return request({ url: authorityServicePath('identity') + '/account', method: 'get', silent: true })
+}
+export function checkoutIdentityPackage(packageId) {
+  return request({ url: `/admin/identity-service/packages/${encodeURIComponent(packageId)}/checkout`, method: 'post', silent: true })
 }
 
 // ==================== 操作日志 ====================

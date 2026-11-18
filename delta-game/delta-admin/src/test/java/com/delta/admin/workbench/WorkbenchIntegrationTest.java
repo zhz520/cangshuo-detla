@@ -187,6 +187,17 @@ class WorkbenchIntegrationTest {
         assertThat(service.summary(admin).pending()).isZero();
     }
 
+    @Test void newTeammateSeesAnInvitationEvenWhenServiceHasStarted() {
+        order(40, 100, 70L, "IN_PROGRESS");
+        jdbc.update("INSERT INTO order_player(id,order_id,player_id,status,created_at,invite_deadline) "
+                + "VALUES(81,40,71,'INVITED',CURRENT_TIMESTAMP,TIMESTAMPADD(MINUTE,5,CURRENT_TIMESTAMP))");
+        var invitee = scope("PLAYER", 71);
+        assertThat(service.tasks(invitee, "INVITE", WorkbenchService.Filter.ALL, 1, 5).tasks()).hasSize(1);
+        assertThat(service.tasks(scope("PLAYER", 72), "INVITE", WorkbenchService.Filter.ALL, 1, 5).tasks()).isEmpty();
+        jdbc.update("UPDATE \u0060order\u0060 SET status='COMPLETED' WHERE id=40");
+        assertThat(service.tasks(invitee, "INVITE", WorkbenchService.Filter.ALL, 1, 5).tasks()).isEmpty();
+    }
+
     @Test void depositTaskUsesExistingPaymentRulesAndDisappearsAfterTopUp() {
         jdbc.update("INSERT INTO `user`(id,openid) VALUES(44,'fixture')");
         jdbc.update("INSERT INTO player(id,openid,status) VALUES(70,'fixture','ACTIVE')");

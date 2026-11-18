@@ -8,6 +8,10 @@ public final class SysConfigMetadataRepair {
     }
 
     private static final Map<String, Metadata> CANONICAL = Map.of(
+            "player.deposit_mode", new Metadata(
+                    "押金政策", "打手配置", "选择押金适用阶段；提现补缴金额在打手等级分类中设置。"),
+            "player.deposit_amount", new Metadata(
+                    "入驻押金金额（元）", "打手配置", "仅选择入驻时缴押金时生效。"),
             "site.staff_web_url", new Metadata(
                     "工作人员后台地址",
                     "站点配置",

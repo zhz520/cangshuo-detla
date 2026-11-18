@@ -41,12 +41,12 @@ function accountTypeText(type) { return { ALIPAY: '支付宝', WECHAT: '微信',
 function goDetail(id) { if (id != null) uni.navigateTo({ url: '/pages-player/withdraw/detail?id=' + encodeURIComponent(id) }) }
 </script>
 <style lang="scss" scoped>
-.list-page { background: #f7f8fa; min-height: var(--app-page-height, 100vh); }
+.list-page { background: var(--store-soft); min-height: var(--app-page-height, 100vh); }
 .list { height: var(--app-page-height, 100vh); box-sizing: border-box; padding-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom)); }
-.record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: #fff; border: 1rpx solid #edf0f2; border-radius: 20rpx;
+.record-item { margin: 20rpx 24rpx 0; padding: 24rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 20rpx;
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-  .amount { font-size: 34rpx; font-weight: bold; color: rgba(0,0,0,0.85); }
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; .account { font-size: 24rpx; color: #777777; word-break: break-all; } .time { font-size: 22rpx; color: #777777; } }
+  .amount { font-size: 34rpx; font-weight: bold; color: var(--store-text); }
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12rpx; .account { font-size: 24rpx; color: var(--store-regular); word-break: break-all; } .time { font-size: 22rpx; color: var(--store-regular); } }
 }
-.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: rgba(0,0,0,0.3); }
+.loading-tip { text-align: center; padding: 32rpx; font-size: 24rpx; color: var(--store-muted); }
 </style>

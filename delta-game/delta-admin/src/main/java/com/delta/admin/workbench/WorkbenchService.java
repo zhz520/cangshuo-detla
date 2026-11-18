@@ -97,7 +97,7 @@ public class WorkbenchService {
                 "COALESCE(t.completed_at,t.admin_decided_at)", "t.status IN ('REFUNDED','ADMIN_REJECTED','REJECTED')"),
         INVITE("待接受组队邀请", null, "order_player t JOIN `order` o ON o.id=t.order_id", "t.id",
                 "t.order_id", "t.status", "t.created_at",
-                "t.player_id=? AND t.status='INVITED' AND o.status='WAITING_TEAMMATE' AND (t.invite_deadline IS NULL OR t.invite_deadline>CURRENT_TIMESTAMP)",
+                "t.player_id=? AND t.status='INVITED' AND o.status IN ('ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS') AND (t.invite_deadline IS NULL OR t.invite_deadline>CURRENT_TIMESTAMP)",
                 "0", null, null),
         ACCEPT("待确认指派", null, "`order` t", "t.id", "NULL", "t.status",
                 "COALESCE(t.assign_time,t.updated_at)", "t.player_id=? AND t.status='ASSIGNED'", "15", null, null),
@@ -212,11 +212,15 @@ public class WorkbenchService {
         if (staff && !scope.kinds.contains(Kind.CHAT)) return 0;
         long participant = ChatParticipantId.encode(scope.type, scope.id);
         String senders = staff ? "'CS','ADMIN'" : "'"+scope.type+"'";
+        String visible = staff ? "s.status='ACTIVE'" : """
+                (s.status='ACTIVE' OR (s.status='CLOSED' AND s.rating IS NULL AND
+                  (s.id1 BETWEEN 3000000000 AND 3999999999 OR s.id2 BETWEEN 3000000000 AND 3999999999)))
+                """;
         return jdbc.queryForObject("""
             SELECT COUNT(*) FROM chat_session s JOIN chat_message m ON m.session_id=s.id
-            WHERE s.status='ACTIVE' AND (s.id1=? OR s.id2=?)
+            WHERE %s AND (s.id1=? OR s.id2=?)
               AND m.is_read=0 AND m.sender_type NOT IN (%s)
-            """.formatted(senders), Long.class, participant, participant);
+            """.formatted(visible, senders), Long.class, participant, participant);
     }
 
     private long handledToday(Scope scope) {

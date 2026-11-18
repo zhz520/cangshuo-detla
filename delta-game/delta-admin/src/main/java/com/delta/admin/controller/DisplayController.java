@@ -48,13 +48,17 @@ public class DisplayController {
         if (!enabled("display.purchase_feed.enabled")) return R.ok(disabled());
         int size = Math.max(1, Math.min(limit, 30));
         LocalDateTime since = LocalDateTime.now().minusHours(24);
-        List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT u.nickname,u.avatar,o.product_name,o.created_at FROM `order` o JOIN `user` u ON u.id=o.user_id " +
+        List<Map<String, Object>> rows = jdbc.query(
+                "SELECT u.nickname,o.product_name FROM `order` o JOIN `user` u ON u.id=o.user_id " +
                         "JOIN display_privacy dp ON dp.user_id=u.id AND dp.purchase_feed_consent=1 " +
-                        "WHERE o.status IN ('PAID','ASSIGNED','ACCEPTED','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED') " +
+                        "WHERE COALESCE(u.deleted,0)=0 AND o.status IN ('PAID','ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED') " +
                         "AND COALESCE(u.is_guest,0)=0 AND o.created_at>=? ORDER BY o.created_at DESC LIMIT ?",
-                since, size);
-        for (Map<String, Object> row : rows) row.put("nickname", mask(String.valueOf(row.get("nickname"))));
+                (row, index) -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("nickname", mask(row.getString(1)));
+                    item.put("product_name", row.getString(2));
+                    return item;
+                }, since, size);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("enabled", true);
         result.put("items", rows);

@@ -3,6 +3,7 @@ import {getToken} from './auth'
 export {permissionFor} from './permission-policy.js'
 export const staffGrants=ref([])
 let cachedToken='',checkedAt=0
+export function isDemoSession(){const token=getToken();return Boolean(token && cachedToken===token && staffGrants.value.includes('demo.read'))}
 const pending = new Map()
 export function can(code){return staffGrants.value.includes(code)||(code!=='order.refund'&&staffGrants.value.includes('*'))}
 export async function loadStaffPermissions(force=false){

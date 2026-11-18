@@ -97,6 +97,7 @@ public class CsOrderController {
 
     @GetMapping("/{id}/progress")
     public R<List<OrderProgress>> progress(@PathVariable Long id) {
+        csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         return R.ok(orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
                 .eq(OrderProgress::getOrderId, id).orderByAsc(OrderProgress::getCreatedAt)));
     }

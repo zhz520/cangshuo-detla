@@ -46,8 +46,8 @@ function goBack() {
   background: transparent;
 }
 .screen-header.with-border {
-  border-bottom: 1rpx solid #eeeeee;
-  background: #ffffff;
+  border-bottom: 1rpx solid var(--store-line);
+  background: var(--store-surface);
 }
 .screen-header__left {
   display: flex;
@@ -62,7 +62,7 @@ function goBack() {
 }
 .screen-title {
   display: block;
-  color: #111111;
+  color: var(--store-text);
   font-size: 40rpx;
   font-weight: 850;
   line-height: 1.15;
@@ -86,7 +86,7 @@ function goBack() {
 .screen-subtitle {
   display: block;
   margin-top: 5rpx;
-  color: #aaaaaa;
+  color: var(--store-muted);
   font-size: 22rpx;
   line-height: 1.3;
 }
@@ -101,12 +101,10 @@ function goBack() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  color: #111111;
-  background: #ffffff;
-  box-shadow: 0 4rpx 16rpx rgba(17, 19, 22, 0.04);
+  width: max(44px, 64rpx);
+  height: max(44px, 64rpx);
+  color: var(--store-text);
+  background: transparent;
 }
 .screen-back .back-icon {
   display: block;

@@ -344,9 +344,9 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .voice-editor { min-width: 0; max-width: 100%; }
 .voice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20rpx; margin: 20rpx 0;
-  button { margin: 0; max-width: 100%; border-radius: 999rpx; background: #f2f3f5; color: #111111; font-size: 24rpx; }
+  button { margin: 0; max-width: 100%; border-radius: 999rpx; background: var(--store-soft); color: var(--store-text); font-size: 24rpx; }
   text { font-size: 24rpx; color: #c94f59; }
 }
-.voice-tip { display: block; font-size: 22rpx; line-height: 1.6; color: #aaaaaa; overflow-wrap: anywhere; }
+.voice-tip { display: block; font-size: 22rpx; line-height: 1.6; color: var(--store-muted); overflow-wrap: anywhere; }
 .voice-fallback { margin-top: 8rpx; }
 </style>

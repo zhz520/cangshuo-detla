@@ -237,7 +237,7 @@ function loadMoreProducts() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f7f7f7;
+  background: var(--store-soft);
 }
 
 .category-body {
@@ -276,8 +276,8 @@ function loadMoreProducts() {
   }
 
   &.active {
-    background: #ffffff;
-    color: #171717;
+    background: var(--store-surface);
+    color: var(--store-text);
     font-weight: 800;
   }
 }
@@ -318,17 +318,17 @@ function loadMoreProducts() {
   justify-content: center;
   flex-shrink: 0;
   padding: 13rpx 24rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--store-line);
   border-radius: 999rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   color: #6d7279;
   font-size: 22rpx;
   white-space: nowrap;
   box-sizing: border-box;
 
   &.active {
-    border-color: #171717;
-    background: #171717;
+    border-color: var(--store-text);
+    background: var(--store-primary);
     color: #ffffff;
     font-weight: 750;
   }
@@ -344,8 +344,8 @@ function loadMoreProducts() {
     padding: 17rpx 24rpx;
     border: 0;
     border-radius: 18rpx;
-    background: #ffffff;
-    color: #171717;
+    background: var(--store-surface);
+    color: var(--store-text);
     font-size: 24rpx;
   }
 }
@@ -359,7 +359,7 @@ function loadMoreProducts() {
   margin-bottom: 16rpx;
   border: 0;
   border-radius: 24rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   box-shadow: none;
   overflow: hidden;
 }
@@ -368,7 +368,7 @@ function loadMoreProducts() {
   height: 140rpx;
   flex-shrink: 0;
   border-radius: 18rpx;
-  background: #f1f2f4;
+  background: var(--store-line);
 }
 .product-info {
   flex: 1;
@@ -383,7 +383,7 @@ function loadMoreProducts() {
 .product-name {
   display: -webkit-box;
   overflow: hidden;
-  color: #171717;
+  color: var(--store-text);
   font-size: 28rpx;
   font-weight: 800;
   line-height: 1.35;
@@ -394,7 +394,7 @@ function loadMoreProducts() {
   display: block;
   width: 100%;
   overflow: hidden;
-  color: #777777;
+  color: var(--store-regular);
   font-size: 22rpx;
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -407,7 +407,7 @@ function loadMoreProducts() {
   margin-top: 2rpx;
 }
 .product-price {
-  color: #171717;
+  color: var(--store-text);
   font-size: 34rpx;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
@@ -420,19 +420,19 @@ function loadMoreProducts() {
   height: 44rpx;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #f3f4f5;
+  background: var(--store-soft);
   image { width: 24rpx; height: 24rpx; }
 }
 .loading-tip {
   padding: 30rpx;
-  color: #777777;
+  color: var(--store-regular);
   font-size: 23rpx;
   text-align: center;
 }
 .empty-tip {
   width: 100%;
   padding: 58rpx 20rpx;
-  color: #777777;
+  color: var(--store-regular);
   font-size: 24rpx;
   text-align: center;
 }

@@ -9,8 +9,6 @@ import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.utils.ImageListUtils;
 import com.delta.common.security.utils.SecurityUtils;
-import com.delta.common.chat.service.ChatSessionService;
-import com.delta.common.chat.util.ChatParticipantId;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderPlayer;
 import com.delta.order.entity.OrderProgress;
@@ -19,6 +17,7 @@ import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import com.delta.player.entity.Player;
 import com.delta.player.service.PlayerService;
+import com.delta.player.service.OrderTeamService;
 import com.delta.system.service.SysConfigService;
 import com.delta.common.mapper.CrossModuleMapper;
 import lombok.Data;
@@ -28,8 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,12 +43,14 @@ public class PlayerOrderController {
     private final OrderPlayerService orderPlayerService;
     private final OrderProgressService orderProgressService;
     private final PlayerService playerService;
-    private final ChatSessionService chatSessionService;
+    private final OrderTeamService teamwork;
     private final ApplicationEventPublisher eventPublisher;
     private final SysConfigService sysConfigService;
     private final CrossModuleMapper crossModuleMapper;
     private final com.delta.common.security.service.VerificationService verification;
     private final com.delta.system.service.RewardGrabRulesService grabRules;
+
+    public record ReplaceTeammateRequest(Long teammatePlayerId) {}
 
     public record AcceptRequest(String captchaId,String captchaCode,String deviceId) {}
 
@@ -116,15 +115,21 @@ public class PlayerOrderController {
                 .eq(OrderPlayer::getRole, "TEAMMATE")
                 .orderByDesc(OrderPlayer::getInvitedAt);
         if ("sent".equals(type)) {
-            w.eq(OrderPlayer::getInvitedBy, playerId);
+            w.eq(OrderPlayer::getInvitedBy, playerId).and(actor -> actor.isNull(OrderPlayer::getInvitedByType)
+                    .or().eq(OrderPlayer::getInvitedByType, "PLAYER"));
         } else {
             w.eq(OrderPlayer::getPlayerId, playerId);
         }
         List<OrderPlayer> list = orderPlayerService.list(w);
         // 富化展示字段
+        LocalDateTime now = LocalDateTime.now();
         for (OrderPlayer op : list) {
+            if ("INVITED".equals(op.getStatus()) && op.getInviteDeadline() != null && !op.getInviteDeadline().isAfter(now))
+                op.setStatus("EXPIRED");
             // 邀请人信息
-            if (op.getInvitedBy() != null) {
+            if ("ADMIN".equals(op.getInvitedByType()) || "CS".equals(op.getInvitedByType())) {
+                op.setFromNickname("平台工作人员");
+            } else if (op.getInvitedBy() != null) {
                 Player from = playerService.getById(op.getInvitedBy());
                 if (from != null) {
                     op.setFromNickname(from.getNickname());
@@ -154,10 +159,12 @@ public class PlayerOrderController {
         Order order=orderService.getById(orderId);Long id=SecurityUtils.getUserId();
         boolean teammate=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>().eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getPlayerId,id).eq(OrderPlayer::getStatus,"ACCEPTED"))>0;
         if(order==null || !id.equals(order.getPlayerId()) && !teammate) return R.fail(404,"订单不存在");
-        return R.ok(orderProgressService.list(
-                new LambdaQueryWrapper<OrderProgress>()
-                        .eq(OrderProgress::getOrderId, orderId)
-                        .orderByAsc(OrderProgress::getCreatedAt)));
+        List<OrderProgress> history = orderProgressService.list(new LambdaQueryWrapper<OrderProgress>()
+                .eq(OrderProgress::getOrderId, orderId).orderByAsc(OrderProgress::getCreatedAt));
+        history.forEach(entry -> {
+            if (entry.getType() != null && entry.getType().startsWith("TEAMMATE_")) entry.setRemark(null);
+        });
+        return R.ok(history);
     }
 
     /**
@@ -190,247 +197,28 @@ public class PlayerOrderController {
         return R.ok();
     }
 
-    /**
-     * 邀请队友
-     */
     @PostMapping("/{orderId}/invite-teammate")
-    @Transactional(rollbackFor = Exception.class)
-    public R<Void> inviteTeammate(@PathVariable Long orderId, @RequestBody InviteRequest req) {
-        Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
-        if (order == null) return R.fail("订单不存在");
-        if (!"true".equalsIgnoreCase(sysConfigService.getConfigValue("order.cooperation.enabled", "true")))
-            return R.fail(403, "协同打单功能已关闭，暂不接受新的队友邀请");
-        String st = order.getStatus();
-        // 接单后（ACCEPTED）、等待队友（WAITING_TEAMMATE）以及服务进行中（IN_PROGRESS）均允许邀请队友
-        if (!OrderStatusEnum.ACCEPTED.name().equals(st)
-                && !OrderStatusEnum.WAITING_TEAMMATE.name().equals(st)
-                && !OrderStatusEnum.IN_PROGRESS.name().equals(st)) {
-            return R.fail("当前状态不允许邀请队友");
-        }
-        if (!playerId.equals(order.getPlayerId())) return R.fail("只有主打手可以邀请队友");
-        if (req == null || req.getInviteePlayerId() == null) return R.fail(400,"请选择要邀请的打手");
-
-        // 校验不能邀请自己
-        if (req.getInviteePlayerId().equals(playerId)) {
-            return R.fail("不能邀请自己作为队友");
-        }
-
-        // 校验被邀请打手
-        Player invitee = playerService.getById(req.getInviteePlayerId());
-        if (invitee == null || !"ACTIVE".equals(invitee.getStatus()) || !Integer.valueOf(1).equals(invitee.getIsOnline())) {
-            return R.fail("被邀请打手不可用");
-        }
-
-        // 自定义分成金额校验
-        String splitType=req.getSplitType();
-        if(!java.util.Set.of("FIFTY_FIFTY","FORTY_SIXTY","THIRTY_SEVENTY","CUSTOM").contains(splitType))
-            return R.fail(400,"请选择有效的分成方式");
-        if ("CUSTOM".equals(splitType)) {
-            try{com.delta.common.utils.Money.positive(req.getCustomAmount());}
-            catch(BusinessException error){return R.fail(error.getCode(),error.getMessage());}
-            // 校验不超过打手总收入（订单金额 * (1 - 抽成比例)）
-            java.math.BigDecimal rate = order.getCommissionRate() != null
-                    ? order.getCommissionRate()
-                    : new java.math.BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
-            java.math.BigDecimal playerTotal = order.getAmount()
-                    .multiply(java.math.BigDecimal.ONE.subtract(rate));
-            if (req.getCustomAmount().compareTo(playerTotal) > 0) {
-                return R.fail("自定义金额不可超过打手总收入");
-            }
-        }
-
-        LocalDateTime now=LocalDateTime.now();
-        List<OrderPlayer> pending=orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
-                .eq(OrderPlayer::getStatus,"INVITED"));
-        for(OrderPlayer item:pending)if(item.getInviteDeadline()!=null&&item.getInviteDeadline().isBefore(now)){
-            item.setStatus("EXPIRED");item.setRejectedAt(now);orderPlayerService.updateById(item);
-        }
-        int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
-        int maxTeam=Math.max(1,requiredTeam);
-        long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
-                .in(OrderPlayer::getStatus,"INVITED","ACCEPTED"));
-        if(occupiedTeam>=maxTeam)return R.fail(409,"当前订单队伍人数已满");
-
-        // 检查是否已邀请
-        long existing = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getPlayerId, req.getInviteePlayerId()));
-        if (existing > 0) return R.fail(409, "已邀请过该打手");
-
-        validateTeamAllocation(order, splitType, req.getCustomAmount());
-
-        OrderPlayer op = new OrderPlayer();
-        op.setOrderId(orderId);
-        op.setPlayerId(req.getInviteePlayerId());
-        op.setRole("TEAMMATE");
-        op.setStatus("INVITED");
-        op.setSplitType(splitType);
-        op.setSplitAmount("CUSTOM".equals(splitType)?req.getCustomAmount():null);
-        op.setInvitedBy(playerId);
-        op.setInvitedAt(LocalDateTime.now());
-        // 队友邀请有效期：5分钟内未接受则自动失效
-        op.setInviteDeadline(now.plusMinutes(5));
-        op.setCreatedAt(now);
-        orderPlayerService.save(op);
-
-        // 如果当前是 ACCEPTED，自动转入 WAITING_TEAMMATE
-        if (OrderStatusEnum.ACCEPTED.name().equals(order.getStatus()) && requiredTeam > 0) {
-            order.setStatus(OrderStatusEnum.WAITING_TEAMMATE.name());
-            order.setTeammateDeadline(now.plusHours(2));
-            order.setUpdatedAt(now);
-            orderService.updateById(order);
-        }
-
-        // 记录进度（分成方式用中文）
-        java.util.Map<String, String> splitNames = java.util.Map.of(
-                "FIFTY_FIFTY", "五五开", "FORTY_SIXTY", "四六开",
-                "THIRTY_SEVENTY", "三七开", "CUSTOM", "自定义金额");
-        String splitCn = splitNames.getOrDefault(req.getSplitType(), "平分");
-        addProgress(orderId, "TEAMMATE_INVITED", "PLAYER", playerId,
-                "邀请队友 " + invitee.getNickname() + "，分成方式: " + splitCn);
-        // 通知被邀请队友
-        eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_INVITED",
-                "PLAYER", req.getInviteePlayerId(), orderId,
-                "您收到一份组队邀请，请尽快确认"));
+    public R<Void> inviteTeammate(@PathVariable Long orderId, @RequestBody OrderTeamService.Invite request) {
+        teamwork.invite(orderId, playerActor(), request);
         return R.ok();
     }
 
-    /**
-     * 接受队友邀请
-     */
     @PostMapping("/{orderId}/accept-invite")
-    @Transactional(rollbackFor = Exception.class)
     public R<Void> acceptInvite(@PathVariable Long orderId) {
-        Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
-        if (order == null || !java.util.Set.of("ACCEPTED", "WAITING_TEAMMATE", "IN_PROGRESS").contains(order.getStatus())) {
-            throw new BusinessException(409, "当前订单状态不允许接受队友邀请");
-        }
-        OrderPlayer op = orderPlayerService.getOne(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getPlayerId, playerId)
-                .eq(OrderPlayer::getRole, "TEAMMATE")
-                .eq(OrderPlayer::getStatus, "INVITED").last("FOR UPDATE"));
-        if (op == null) return R.fail("未找到邀请记录");
-        if (op.getInviteDeadline() != null && op.getInviteDeadline().isBefore(LocalDateTime.now())) {
-            return R.fail("邀请已过期");
-        }
-        if (crossModuleMapper.lockActivePlayer(playerId) == null) {
-            throw new BusinessException(403, "打手未上班、未通过审核或账号已冻结，无法接单");
-        }
-        int requiredTeam=Math.max(0,(order.getRequiredPlayerCount()==null?1:order.getRequiredPlayerCount())-1);
-        int maxTeam=Math.max(1,requiredTeam);
-        long occupiedTeam=orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId,orderId).eq(OrderPlayer::getRole,"TEAMMATE")
-                .eq(OrderPlayer::getStatus,"ACCEPTED"));
-        if(occupiedTeam>=maxTeam)throw new BusinessException(409,"当前订单队伍人数已满");
-        int max = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
-        if (crossModuleMapper.countActivePlayerOrders(playerId) >= max) {
-            throw new BusinessException(400, "您当前进行中的订单已达上限(" + max + "单)");
-        }
-        op.setStatus("ACCEPTED");
-        op.setAcceptedAt(LocalDateTime.now());
-        orderPlayerService.updateById(op);
-
-        // 记录进度
-        addProgress(orderId, "TEAMMATE_ACCEPTED", "PLAYER", playerId, "队友确认邀请时的分成方案并接受邀请");
-
-        // 创建打手-队友私聊会话（编码ID：PLAYER=2e9+id）
-        chatSessionService.findOrCreate(ChatParticipantId.encodePlayer(order.getPlayerId()), ChatParticipantId.encodePlayer(playerId));
-
-        long acceptedTeam = orderPlayerService.count(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getRole, "TEAMMATE")
-                .eq(OrderPlayer::getStatus, "ACCEPTED"));
-        boolean teamReady = acceptedTeam >= requiredTeam;
-        if (!OrderStatusEnum.IN_PROGRESS.name().equals(order.getStatus())) {
-            order.setStatus(teamReady ? OrderStatusEnum.ACCEPTED.name() : OrderStatusEnum.WAITING_TEAMMATE.name());
-            order.setUpdatedAt(LocalDateTime.now());
-            orderService.updateById(order);
-        }
-        eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_ACCEPTED",
-                "PLAYER", order.getPlayerId(), orderId,
-                teamReady ? "队友已加入，队伍已满员，可以开始服务"
-                        : "队友已加入，队伍还需" + (requiredTeam - acceptedTeam) + "名队友"));
-        if (teamReady && !OrderStatusEnum.IN_PROGRESS.name().equals(order.getStatus())) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "TEAM_READY",
-                    "USER", order.getUserId(), orderId, "打手已组队完成"));
-        }
+        teamwork.accept(orderId, SecurityUtils.getUserId());
         return R.ok();
     }
 
-    /**
-     * 拒绝队友邀请
-     */
     @PostMapping("/{orderId}/reject-invite")
     public R<Void> rejectInvite(@PathVariable Long orderId) {
-        Long playerId = SecurityUtils.getUserId();
-        OrderPlayer op = orderPlayerService.getOne(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getPlayerId, playerId)
-                .eq(OrderPlayer::getStatus, "INVITED"));
-        if (op == null) return R.fail("未找到邀请记录");
-        op.setStatus("REJECTED");
-        op.setRejectedAt(LocalDateTime.now());
-        orderPlayerService.updateById(op);
-
-        // 记录进度
-        addProgress(orderId, "TEAMMATE_REJECTED", "PLAYER", playerId, "队友拒绝邀请");
-        // 通知主接打手
-        Order order = orderService.getById(orderId);
-        if (order != null && order.getPlayerId() != null) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_REJECTED",
-                    "PLAYER", order.getPlayerId(), orderId, "队友已拒绝邀请，请邀请其他队友"));
-        }
+        teamwork.reject(orderId, SecurityUtils.getUserId());
         return R.ok();
     }
 
-    /**
-     * 查询可邀请的队友列表（复用派单页面查询模式）
-     */
     @GetMapping("/teammate/available")
-    public R<java.util.Map<String, Object>> availableTeammates(
-            PageQuery query,
-            @RequestParam Long orderId,
-            @RequestParam(value = "keyword", required = false) String keyword) {
-        Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
-        if (order == null) return R.fail("订单不存在");
-        if (!playerId.equals(order.getPlayerId())) return R.fail("只有主接打手可查看");
-
-        // 查出该订单已邀请过的打手ID
-        List<Long> invitedPlayerIds = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .select(OrderPlayer::getPlayerId))
-                .stream().map(OrderPlayer::getPlayerId).toList();
-
-        // 查询ACTIVE打手，排除自己和已邀请的，支持搜索
-        LambdaQueryWrapper<Player> w = new LambdaQueryWrapper<Player>()
-                .eq(Player::getStatus, "ACTIVE").eq(Player::getIsOnline,1)
-                .ne(Player::getId, playerId);
-        if (!invitedPlayerIds.isEmpty()) {
-            w.notIn(Player::getId, invitedPlayerIds);
-        }
-        if (keyword != null && !keyword.isEmpty()) {
-            if(keyword.length()>50)return R.fail(400,"搜索内容过长");
-            w.and(qw -> qw.like(Player::getNickname, keyword));
-        }
-        w.orderByDesc(Player::getAvgRating);
-        Page<Player> page = playerService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
-        // 填充统计数据（和派单页面一样）
-        for (Player p : page.getRecords()) {
-            p.setCompletedOrders(crossModuleMapper.selectPlayerCompletedOrders(p.getId()));
-            p.setActiveOrders(crossModuleMapper.selectPlayerActiveOrders(p.getId()));
-        }
-        int maxConcurrent = Integer.parseInt(sysConfigService.getConfigValue("order.max_active_per_player", "5"));
-        java.util.Map<String, Object> result = new java.util.HashMap<>();
-        for(Player p:page.getRecords()){p.setOpenid(null);p.setRealName(null);p.setPhone(null);p.setProofImages(null);p.setDepositPaymentNo(null);p.setBalance(null);}
-        result.put("players", page);
-        result.put("maxConcurrent", maxConcurrent);
-        return R.ok(result);
+    public R<OrderTeamService.Candidates> availableTeammates(PageQuery query, @RequestParam Long orderId,
+            @RequestParam(required = false) String keyword) {
+        return R.ok(teamwork.candidates(orderId, playerActor(), query.getPageNum(), query.getPageSize(), keyword));
     }
 
     /**
@@ -532,26 +320,29 @@ public class PlayerOrderController {
         return replaceSelf(orderId);
     }
 
-    /**
-     * 换人—换队友：踢掉队友，主接单员继续，可重新邀请
-     */
+    /** Compatibility for older H5 assets that only provide an immediate removal action. */
     @PostMapping("/{orderId}/replace-teammate")
-    @Transactional(rollbackFor = Exception.class)
-    public R<Void> replaceTeammate(@PathVariable Long orderId) {
-        Long playerId = SecurityUtils.getUserId();
-        Order order = orderService.getById(orderId);
-        if (order == null) return R.fail("订单不存在");
-        if (!"IN_PROGRESS".equals(order.getStatus())) return R.fail("当前状态不允许换人");
-        if (!playerId.equals(order.getPlayerId())) return R.fail("只有主接单员可以操作");
-        // 只标记队友为 REPLACED，主接单员保留
-        List<OrderPlayer> replaced = markTeammatesReplaced(orderId);
-        addProgress(orderId, "TEAMMATE_REPLACED", "PLAYER", playerId, "主接单员更换队友，可重新邀请");
-        // 通知被踢的队友
-        for (OrderPlayer op : replaced) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "TEAMMATE_REMOVED",
-                    "PLAYER", op.getPlayerId(), orderId, "您已被主接单员从订单中移除"));
-        }
+    public R<Void> replaceTeammate(@PathVariable Long orderId,
+                                   @RequestBody(required = false) ReplaceTeammateRequest request) {
+        teamwork.legacyRemove(orderId, playerActor(), request == null ? null : request.teammatePlayerId());
         return R.ok();
+    }
+
+    @PostMapping("/{orderId}/teammates/{memberId}/revoke")
+    public R<Void> revokeTeammate(@PathVariable Long orderId, @PathVariable Long memberId) {
+        teamwork.revoke(orderId, playerActor(), memberId, null);
+        return R.ok();
+    }
+
+    @PostMapping("/{orderId}/teammates/{memberId}/remove")
+    public R<Void> removeTeammate(@PathVariable Long orderId, @PathVariable Long memberId,
+                                  @RequestBody OrderTeamService.Reason request) {
+        teamwork.remove(orderId, playerActor(), memberId, request == null ? null : request.reason());
+        return R.ok();
+    }
+
+    private OrderTeamService.Actor playerActor() {
+        return new OrderTeamService.Actor("PLAYER", SecurityUtils.getUserId());
     }
 
     /** 标记所有参与者为 REPLACED（replaceSelf/replaceAll 用） */
@@ -565,19 +356,6 @@ public class PlayerOrderController {
         }
     }
 
-    /** 只标记队友为 REPLACED，返回被标记的列表（replaceTeammate 用） */
-    private List<OrderPlayer> markTeammatesReplaced(Long orderId) {
-        List<OrderPlayer> teammates = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, orderId)
-                .eq(OrderPlayer::getRole, "TEAMMATE")
-                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
-        for (OrderPlayer op : teammates) {
-            op.setStatus("REPLACED");
-            orderPlayerService.updateById(op);
-        }
-        return teammates;
-    }
-
     private void addProgress(Long orderId, String type, String operatorType, Long operatorId, String content) {
         OrderProgress progress = new OrderProgress();
         progress.setOrderId(orderId);
@@ -587,43 +365,6 @@ public class PlayerOrderController {
         progress.setContent(content);
         progress.setCreatedAt(LocalDateTime.now());
         orderProgressService.save(progress);
-    }
-
-    private void validateTeamAllocation(Order order, String splitType, BigDecimal customAmount) {
-        int requiredTeam = Math.max(0, (order.getRequiredPlayerCount() == null ? 1 : order.getRequiredPlayerCount()) - 1);
-        BigDecimal commissionRate = order.getCommissionRate() != null
-                ? order.getCommissionRate()
-                : new BigDecimal(sysConfigService.getConfigValue("settlement.commission_rate", "0.2"));
-        if (commissionRate.signum() < 0 || commissionRate.compareTo(BigDecimal.ONE) > 0)
-            throw new BusinessException("抽佣比例无效");
-        BigDecimal playerTotal = order.getAmount()
-                .multiply(BigDecimal.ONE.subtract(commissionRate))
-                .setScale(2, RoundingMode.HALF_UP);
-        if (playerTotal.signum() <= 0) throw new BusinessException(409, "订单没有可分配的收益");
-
-        List<OrderPlayer> participants = orderPlayerService.list(new LambdaQueryWrapper<OrderPlayer>()
-                .eq(OrderPlayer::getOrderId, order.getId())
-                .in(OrderPlayer::getRole, "TEAMMATE", "RELAY_OUT")
-                .in(OrderPlayer::getStatus, "INVITED", "ACCEPTED"));
-        long relayOutCount = participants.stream().filter(item -> "RELAY_OUT".equals(item.getRole())).count();
-        int sharingPeople = Math.max(1, requiredTeam) + (int) relayOutCount;
-        BigDecimal reserved = participants.stream()
-                .map(item -> estimatedShare(item.getSplitType(), item.getSplitAmount(), playerTotal, sharingPeople))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        reserved = reserved.add(estimatedShare(splitType, customAmount, playerTotal, sharingPeople));
-        if (reserved.compareTo(playerTotal) > 0)
-            throw new BusinessException(409, "队伍分成总额超过可结算收益");
-    }
-
-    private BigDecimal estimatedShare(String splitType, BigDecimal customAmount,
-                                      BigDecimal playerTotal, int sharingPeople) {
-        if ("CUSTOM".equals(splitType))
-            return customAmount == null ? BigDecimal.ZERO : customAmount.setScale(2, RoundingMode.HALF_UP);
-        if ("FORTY_SIXTY".equals(splitType))
-            return playerTotal.multiply(new BigDecimal("0.4")).setScale(2, RoundingMode.HALF_UP);
-        if ("THIRTY_SEVENTY".equals(splitType))
-            return playerTotal.multiply(new BigDecimal("0.3")).setScale(2, RoundingMode.HALF_UP);
-        return playerTotal.divide(BigDecimal.valueOf(sharingPeople + 1L), 2, RoundingMode.HALF_UP);
     }
 
     /** 解析逗号分隔的分类 id 为 List，忽略无效值 */
@@ -640,15 +381,6 @@ public class PlayerOrderController {
             if(list.size()>=100) break;
         }
         return list;
-    }
-
-    @Data
-    public static class InviteRequest {
-        private Long inviteePlayerId;
-        /** 分成方式: FIFTY_FIFTY / FORTY_SIXTY / THIRTY_SEVENTY / CUSTOM */
-        private String splitType;
-        /** 自定义金额（仅splitType=CUSTOM时有效） */
-        private java.math.BigDecimal customAmount;
     }
 
     @Data

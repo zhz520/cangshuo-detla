@@ -1,4 +1,5 @@
 import { permissionFor } from './permission-policy.js'
+import { legacyConfigTabs } from './config-sections.js'
 
 // Navigation order is independent of route registration; URLs and bookmarks stay intact.
 const sections = [
@@ -12,18 +13,18 @@ const sections = [
     { id: 'marketing', title: '营销活动', icon: 'Present', paths: ['/marketing/coupons', '/marketing/invites', '/marketing/membership'] }
   ] },
   { id: 'people', title: '人员管理', items: [
-    { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/user/identity-review', '/privacy-requests'] },
-    { id: 'players', title: '打手与审核', icon: 'Avatar', paths: ['/player', '/player-level', '/invitations', '/material-review', '/staff-shifts'] }
+    { id: 'users', title: '用户与隐私', icon: 'User', paths: ['/user/list', '/user/spending-rank', '/privacy-requests'] },
+    { id: 'players', title: '打手与审核', icon: 'Avatar', paths: ['/player', '/player/deposits', '/player-level', '/invitations', '/material-review', '/staff-shifts'] }
   ] },
   { id: 'finance', title: '财务结算', items: [
-    { id: 'finance', title: '结算与统计', icon: 'DataAnalysis', paths: ['/statistics/income-daily', '/settlements', '/withdraw', '/rewards', '/platform/income-analysis', '/system/recharge-packages'] }
+    { id: 'finance', title: '结算与统计', icon: 'DataAnalysis', paths: ['/statistics/income-daily', '/settlements', '/withdraw', '/deposit-refunds', '/rewards', '/platform/income-analysis', '/system/recharge-packages'] }
   ] },
   { id: 'settings', title: '平台设置', items: [
     { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/content', '/system/reward-grab', '/system/player-layout'] },
-    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/sensitive-words', '/system/operation-log'] }
+    { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/sms-account', '/system/identity-account', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/sensitive-words', '/system/operation-log'] }
   ] },
   { id: 'updates', title: '功能更新', items: [
-    { id: 'updates', title: '功能与更新', icon: 'Box', paths: ['/platform/features', '/platform/updates'] }
+    { id: 'updates', title: '功能与更新', icon: 'Box', paths: ['/platform/features', '/platform/themes', '/platform/updates'] }
   ] }
 ]
 
@@ -49,6 +50,11 @@ export function visibleNavigationRoutes(routes, role, allowed, featureAllowed = 
 
 export function buildNavigation(routes, role, allowed, featureAllowed = () => true) {
   const available = visibleNavigationRoutes(routes, role, allowed, featureAllowed), used = new Set()
+  if (role === 'admin' && available.has('/system/config') && allowed('system.manage')) {
+    for (const [path, tab] of Object.entries(legacyConfigTabs)) {
+      if (tab !== 'invitation' || allowed('player.manage')) available.delete(path)
+    }
+  }
   function take(path) {
     const entry = available.get(path)
     if (!entry || used.has(path)) return null

@@ -1,29 +1,22 @@
 package com.delta.admin.service;
 
-import com.delta.common.sms.service.AliyunSmsService;
-import com.delta.system.service.SysConfigService;
+import com.delta.common.sms.service.SmsGatewayClient;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class SmsNoticeServiceTest {
-    @Test
-    void eachRoleResolvesItsOwnSmsTemplateGroup(){
-        JdbcTemplate jdbc=mock(JdbcTemplate.class);
-        SysConfigService configs=mock(SysConfigService.class);
-        AliyunSmsService sms=mock(AliyunSmsService.class);
-        for(String role:new String[]{"user","player","admin","cs"}){
-            when(configs.getConfigValue("sms.notification.templates."+role,"{}"))
-                    .thenReturn("{\"order_status\":{\"templateCode\":\"SMS_"+role.toUpperCase()+"\",\"fields\":{\"orderNo\":\"orderNo\"}}}");
-        }
-        SmsNoticeService service=new SmsNoticeService(jdbc,configs,sms,new NotificationTemplateDataService(jdbc));
-
-        assertThat(service.templateFor("USER","order_status").getString("templateCode")).isEqualTo("SMS_USER");
-        assertThat(service.templateFor("PLAYER","order_status").getString("templateCode")).isEqualTo("SMS_PLAYER");
-        assertThat(service.templateFor("ADMIN","order_status").getString("templateCode")).isEqualTo("SMS_ADMIN");
-        assertThat(service.templateFor("CS","order_status").getString("templateCode")).isEqualTo("SMS_CS");
+    @Test void eligibleNoticeUsesAuthorityTemplateAndStableDeliveryKey() {
+        var jdbc = mock(JdbcTemplate.class);
+        var gateway = mock(SmsGatewayClient.class);
+        var facts = mock(NotificationTemplateDataService.class);
+        var row = Map.<String,Object>of("id", "record", "delivery_key", "attempt-group", "attempts", 0,
+                "user_type", "PLAYER", "event_group", "order_status", "phone", "13800138000");
+        when(facts.resolve(row)).thenReturn(Map.of("orderNo", "test-order"));
+        when(jdbc.update(contains("SET status='SENDING'"), eq(1), any(), eq("record"))).thenReturn(1);
+        new SmsNoticeService(jdbc, gateway, facts).deliverOne(row);
+        verify(gateway).send("notice_player_order_status", "13800138000", Map.of("orderNo", "test-order"), "notice:attempt-group:1");
     }
 }

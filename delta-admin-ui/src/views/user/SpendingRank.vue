@@ -49,7 +49,9 @@ async function fetchData() {
   loading.value = true
   try {
     const res = await getSpendingRank({ limit: limit.value }, userStore.role)
-    list.value = res.data || []
+    list.value = Array.isArray(res.data) ? res.data : []
+  } catch {
+    // The shared request layer displays the actionable error. Keep the previous result on refresh.
   } finally { loading.value = false }
 }
 

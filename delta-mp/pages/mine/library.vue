@@ -121,26 +121,26 @@ onShow(() => { if (!activeRequest) load() })
 </script>
 
 <style lang="scss" scoped>
-.library-page { min-height: var(--app-page-height, 100vh); background: #f7f8fa; }
-.library-head { padding: 20rpx 24rpx 12rpx; background: #fff; }
-.library-tabs { display: flex; gap: 12rpx; padding: 6rpx; background: #f3f5f7; border-radius: 14rpx; }
-.library-tab { flex: 1; padding: 18rpx 0; border-radius: 10rpx; text-align: center; font-size: 27rpx; color: #777777; }
-.library-tab.active { background: #111111; color: #fff; font-weight: 700; }
+.library-page { min-height: var(--app-page-height, 100vh); background: var(--store-soft); }
+.library-head { padding: 20rpx 24rpx 12rpx; background: var(--store-surface); }
+.library-tabs { display: flex; gap: 12rpx; padding: 6rpx; background: var(--store-soft); border-radius: 14rpx; }
+.library-tab { flex: 1; padding: 18rpx 0; border-radius: 10rpx; text-align: center; font-size: 27rpx; color: var(--store-regular); }
+.library-tab.active { background: var(--store-primary); color: #fff; font-weight: 700; }
 .library-list { height: calc(var(--app-page-height, 100vh) - 104rpx); box-sizing: border-box; padding: 20rpx 24rpx; }
-.library-card { display: flex; align-items: center; gap: 20rpx; padding: 22rpx; margin-bottom: 18rpx; border: 1rpx solid #edf0f2; border-radius: 18rpx; background: #fff; }
-.library-cover { width: 128rpx; height: 128rpx; border-radius: 14rpx; flex: 0 0 auto; background: #f7f7f7; }
+.library-card { display: flex; align-items: center; gap: 20rpx; padding: 22rpx; margin-bottom: 18rpx; border: 1rpx solid var(--store-line); border-radius: 18rpx; background: var(--store-surface); }
+.library-cover { width: 128rpx; height: 128rpx; border-radius: 14rpx; flex: 0 0 auto; background: var(--store-soft); }
 .library-cover.round { width: 108rpx; height: 108rpx; border-radius: 50%; }
 .library-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .library-title-row { display: flex; align-items: center; gap: 12rpx; }
-.library-name { font-size: 29rpx; font-weight: 700; color: #111111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.library-sub { font-size: 23rpx; color: #7b879a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-name { font-size: 29rpx; font-weight: 700; color: var(--store-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-sub { font-size: 23rpx; color: var(--store-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .library-sub.intro { max-width: 100%; }
 .library-meta { display: flex; align-items: center; gap: 16rpx; }
-.library-price { font-size: 28rpx; color: #111111; font-weight: 700; }
-.library-status { font-size: 21rpx; color: #7b879a; }
-.online-dot { font-size: 20rpx; color: #8b919b; }
+.library-price { font-size: 28rpx; color: var(--store-text); font-weight: 700; }
+.library-status { font-size: 21rpx; color: var(--store-muted); }
+.online-dot { font-size: 20rpx; color: var(--store-muted); }
 .online-dot.online { color: #347a5b; }
 .remove-link { flex: 0 0 auto; padding: 12rpx 8rpx; color: #a04b55; font-size: 23rpx; }
-.load-tip { padding: 24rpx; text-align: center; color: #8b919b; font-size: 23rpx; }
+.load-tip { padding: 24rpx; text-align: center; color: var(--store-muted); font-size: 23rpx; }
 .list-bottom-space { height: calc(80rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); }
 </style>

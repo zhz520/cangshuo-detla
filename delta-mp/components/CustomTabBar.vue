@@ -142,8 +142,8 @@ function switchTab(tab, index) {
   align-items: center;
   height: 110rpx;
   box-sizing: content-box;
-  background: #ffffff;
-  border-top: 1rpx solid #eeeeee;
+  background: var(--store-surface);
+  border-top: 1rpx solid var(--store-line);
   box-shadow: none;
   z-index: 999;
 }
@@ -193,16 +193,16 @@ function switchTab(tab, index) {
 
   .tabbar-text {
     font-size: 20rpx;
-      color: #aaaaaa;
+      color: var(--store-muted);
     margin-top: 4rpx;
   }
 
   &.active {
     .tabbar-icon {
-      color: #111111;
+      color: var(--store-text);
     }
     .tabbar-text {
-      color: #111111;
+      color: var(--store-text);
       font-weight: bold;
     }
   }

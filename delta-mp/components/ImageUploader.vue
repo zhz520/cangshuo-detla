@@ -123,13 +123,13 @@ function previewImage(index) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border: 2rpx dashed rgba(23, 25, 28, 0.3);
+    border: 2rpx dashed var(--store-line);
     border-radius: 8rpx;
 
     &.uploading { opacity: 0.6; cursor: wait; }
 
     .add-icon { font-size: 48rpx; color: rgba(23, 25, 28, 0.5); }
-    .add-text { font-size: 22rpx; color: #777777; margin-top: 4rpx; }
+    .add-text { font-size: 22rpx; color: var(--store-regular); margin-top: 4rpx; }
   }
 }
 </style>

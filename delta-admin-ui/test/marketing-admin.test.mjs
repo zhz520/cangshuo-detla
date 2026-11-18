@@ -18,7 +18,7 @@ test('marketing routes expose coupons, invite operations and membership tiers to
 test('coupon editor exposes per-user multi-claim and both operating switches are documented', async () => {
   const page = await read('src/views/marketing/Coupons.vue')
   assert.match(page, /perUserLimit/)
-  assert.match(page, /系统管理 → 系统配置 → 营销配置/)
+  assert.match(page, /系统管理 → 系统配置 → 营销策略/)
   assert.match(page, /发放与核销总开关/)
   assert.match(page, /最近领取与核销/)
   assert.match(page, /getCouponRecords/)

@@ -9,12 +9,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
 
 @Service
-public class PlatformService {
+public class PlatformService implements com.delta.common.sms.service.InstanceIdentityProvider {
     private final PlatformProperties properties;
     private final PlatformCatalog catalog;
     private final PlatformStateStore legacyStore;
@@ -236,13 +237,35 @@ public class PlatformService {
             throw new BusinessException(403, "当前访问域名未获得此模块授权，请使用购买时登记的域名");
     }
 
+    public synchronized void requireLicenseDomain(String requestDomain) {
+        var claims = claims(store().load());
+        if (!domainAllowed(claims, requestDomain))
+            throw new BusinessException(403, "当前访问域名未获得授权，请使用购买时登记的域名");
+    }
+
     synchronized String currentCustomerId() {
         return configuredCustomerId();
     }
 
-    synchronized String currentInstanceId() {
+    @Override
+    public synchronized String currentInstanceId() {
         return store().load().instanceId();
     }
+
+    @Override
+    public String authorityOrigin() {
+        String raw = properties.getReportUrl();
+        if (raw == null || raw.isBlank()) return "";
+        try {
+            URI uri = URI.create(raw.trim());
+            if (uri.getScheme() == null || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null) return "";
+            return uri.getScheme().toLowerCase(Locale.ROOT) + "://" + uri.getRawAuthority();
+        } catch (Exception error) {
+            return "";
+        }
+    }
+
 
     private boolean sharedMode(){
         return tenantProperties!=null&&tenantProperties.isEnabled();

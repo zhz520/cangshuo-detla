@@ -17,6 +17,6 @@ function change(event) { emit('update:modelValue', options[Number(event.detail.v
 </script>
 <style scoped>
 .product-sort-picker { flex-shrink: 0; min-width: 0; }
-.sort-label { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 17rpx 24rpx; background: #fff; border: 0; border-radius: 18rpx; color: #111111; font-size: 24rpx; }
-.sort-chevron { color: #999999; }
+.sort-label { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 17rpx 24rpx; background: var(--store-surface); border: 0; border-radius: 18rpx; color: var(--store-text); font-size: 24rpx; }
+.sort-chevron { color: var(--store-muted); }
 </style>

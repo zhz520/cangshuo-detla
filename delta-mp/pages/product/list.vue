@@ -114,20 +114,20 @@ function loadMore() {
   height: var(--app-page-height, 100vh);
   display: flex;
   flex-direction: column;
-  background: #f7f7f7;
-  color: #111111;
+  background: var(--store-soft);
+  color: var(--store-text);
   overflow: hidden;
 }
 .product-list-header {
   position: relative;
   flex: 0 0 auto;
-  background: #ffffff;
+  background: var(--store-surface);
 }
 .designation-note {
   margin: 16rpx 28rpx 0;
   padding: 18rpx 22rpx;
   border-radius: 18rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   color: #555555;
   font-size: 23rpx;
 }
@@ -140,7 +140,7 @@ function loadMore() {
   margin: 18rpx 28rpx 0;
   padding: 0 24rpx;
   border-radius: 999rpx;
-  background: #ffffff;
+  background: var(--store-surface);
   box-sizing: border-box;
 }
 .search-icon { width: 38rpx; height: 38rpx; flex-shrink: 0; opacity: .78; }
@@ -152,7 +152,7 @@ function loadMore() {
   border: 0;
   outline: none;
   background: transparent;
-  color: #111111;
+  color: var(--store-text);
   font-size: 26rpx;
   line-height: 1;
 }
@@ -163,7 +163,7 @@ function loadMore() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999999;
+  color: var(--store-muted);
   font-size: 34rpx;
   line-height: 1;
 }
@@ -181,11 +181,11 @@ function loadMore() {
   padding: 17rpx 24rpx;
   border: 0;
   border-radius: 18rpx;
-  background: #ffffff;
-  color: #111111;
+  background: var(--store-surface);
+  color: var(--store-text);
   font-size: 24rpx;
 }
-.sort-bar :deep(.sort-chevron) { color: #999999; }
+.sort-bar :deep(.sort-chevron) { color: var(--store-muted); }
 .list {
   flex: 1;
   height: 0;
@@ -200,7 +200,7 @@ function loadMore() {
   align-items: center;
   justify-content: center;
   padding: 100rpx 24rpx;
-  color: #999999;
+  color: var(--store-muted);
   font-size: 23rpx;
 }
 .loading-dot {
@@ -208,13 +208,13 @@ function loadMore() {
   height: 34rpx;
   margin-bottom: 16rpx;
   border: 3rpx solid #dddddd;
-  border-top-color: #171717;
+  border-top-color: var(--store-text);
   border-radius: 50%;
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-icon { width: 100rpx; height: 100rpx; opacity: .45; margin-bottom: 18rpx; }
-.empty-title { color: #111111; font-size: 28rpx; font-weight: 800; }
-.empty-desc { margin-top: 8rpx; color: #aaaaaa; font-size: 22rpx; }
-.loading-more { padding: 28rpx; color: #aaaaaa; font-size: 22rpx; text-align: center; }
+.empty-title { color: var(--store-text); font-size: 28rpx; font-weight: 800; }
+.empty-desc { margin-top: 8rpx; color: var(--store-muted); font-size: 22rpx; }
+.loading-more { padding: 28rpx; color: var(--store-muted); font-size: 22rpx; text-align: center; }
 </style>

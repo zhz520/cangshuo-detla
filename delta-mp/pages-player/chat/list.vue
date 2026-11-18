@@ -70,7 +70,7 @@ function goRoom(s) {
 </script>
 <style lang="scss" scoped>
 .chat-list {
-  background: #f7f7f7;
+  background: var(--store-soft);
   height: var(--app-page-height, 100vh);
   position: relative;
   overflow: hidden;
@@ -87,8 +87,8 @@ function goRoom(s) {
   display: flex;
   align-items: center;
   padding: 24rpx 28rpx;
-  background: #ffffff;
-  border: 1rpx solid #eeeeee;
+  background: var(--store-surface);
+  border: 1rpx solid var(--store-line);
   border-radius: 16rpx;
   margin-bottom: 20rpx;
   position: relative;
@@ -102,7 +102,7 @@ function goRoom(s) {
   border-radius: 50%;
   margin-right: 20rpx;
   flex-shrink: 0;
-  border: 2rpx solid rgba(23, 25, 28, 0.1);
+  border: 2rpx solid var(--store-line);
 }
 .avatar-placeholder {
   display: flex;
@@ -118,15 +118,15 @@ function goRoom(s) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  .name { font-size: 28rpx; color: #111111; font-weight: 500; flex: 1; }
-  .time { font-size: 22rpx; color: #777777; flex-shrink: 0; margin-left: 16rpx; }
+  .name { font-size: 28rpx; color: var(--store-text); font-weight: 500; flex: 1; }
+  .time { font-size: 22rpx; color: var(--store-regular); flex-shrink: 0; margin-left: 16rpx; }
 }
 .bottom-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 8rpx;
-  .last-msg { font-size: 24rpx; color: #777777; flex: 1; }
+  .last-msg { font-size: 24rpx; color: var(--store-regular); flex: 1; }
 }
 .badge {
   min-width: 32rpx;

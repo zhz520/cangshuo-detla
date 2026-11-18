@@ -2,6 +2,7 @@ package com.delta.admin.controller;
 
 import com.delta.admin.service.UserManagementService;
 import com.delta.common.annotation.OpLog;
+import com.delta.message.service.SystemNotificationService;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.security.utils.SecurityUtils;
@@ -19,8 +20,22 @@ import java.util.*;
 public class PrivacyController {
     private final JdbcTemplate jdbc;
     private final UserManagementService management;
+    private final SystemNotificationService notifications;
     public record Request(@NotBlank @Pattern(regexp="ERASE_IDENTITY|CLOSE_ACCOUNT") String kind,@Size(max=500) String note){}
-    @GetMapping("/user/privacy/requests") public R<List<Map<String,Object>>> mine(){return R.ok(jdbc.queryForList("SELECT id,kind,status,note,created_at,reviewed_at FROM privacy_request WHERE user_id=? ORDER BY created_at DESC LIMIT 30",SecurityUtils.getUserId()));}
+    public record RequestView(String id, String kind, String status, String note,
+                              @com.fasterxml.jackson.annotation.JsonProperty("review_note") String reviewNote,
+                              @com.fasterxml.jackson.annotation.JsonProperty("created_at") java.time.LocalDateTime createdAt,
+                              @com.fasterxml.jackson.annotation.JsonProperty("reviewed_at") java.time.LocalDateTime reviewedAt) {}
+
+    @GetMapping("/user/privacy/requests")
+    public R<List<RequestView>> mine() {
+        return R.ok(jdbc.query("""
+                SELECT id,kind,status,note,review_note,created_at,reviewed_at
+                FROM privacy_request WHERE user_id=? ORDER BY created_at DESC LIMIT 30
+                """, (row, index) -> new RequestView(row.getString("id"), row.getString("kind"), row.getString("status"),
+                row.getString("note"), row.getString("review_note"), row.getObject("created_at", java.time.LocalDateTime.class),
+                row.getObject("reviewed_at", java.time.LocalDateTime.class)), SecurityUtils.getUserId()));
+    }
     @PostMapping("/user/privacy/requests")
     @Transactional(rollbackFor=Exception.class)
     @OpLog(module="privacy",operation="用户申请注销或删除实名资料")
@@ -55,6 +70,10 @@ public class PrivacyController {
                 jdbc.update("DELETE FROM wechat_official_binding WHERE user_type='PLAYER' AND user_id IN (SELECT id FROM player WHERE openid=?)",openid);
             }else jdbc.update("UPDATE player SET real_name='' WHERE openid=?",openid);
         }
-        jdbc.update("UPDATE privacy_request SET status=?,note=?,reviewer_id=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?",body.approved()?"APPROVED":"REJECTED",body.note(),SecurityUtils.getUserId(),id);return R.ok();
+        jdbc.update("UPDATE privacy_request SET status=?,review_note=?,reviewer_id=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?",body.approved()?"APPROVED":"REJECTED",body.note(),SecurityUtils.getUserId(),id);
+        if (!body.approved() || !"CLOSE_ACCOUNT".equals(row.get("kind"))) {
+            notifications.send("USER", userId, "隐私申请已处理", "请在隐私与注销页面查看审核结果。", "PRIVACY_REQUEST", null);
+        }
+        return R.ok();
     }
 }

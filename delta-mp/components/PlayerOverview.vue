@@ -32,9 +32,9 @@ function money(value) { const number = Number(value); return Number.isFinite(num
 .overview-header { display: flex; align-items: center; gap: 20rpx; padding: 8rpx 0 32rpx; }
 .overview-avatar { width: 104rpx; height: 104rpx; border-radius: 32rpx; flex-shrink: 0; border: 4rpx solid #fff; }
 .overview-identity { display: flex; flex-direction: column; gap: 6rpx; min-width: 0; flex: 1; }
-.overview-eyebrow { font-size: 22rpx; color: #777777; letter-spacing: 2rpx; }
+.overview-eyebrow { font-size: 22rpx; color: var(--store-regular); letter-spacing: 2rpx; }
 .overview-name { font-size: 36rpx; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.overview-tag { font-size: 21rpx; color: #777777; background: #e9ecef; padding: 9rpx 15rpx; border-radius: 999rpx; max-width: 190rpx; }
+.overview-tag { font-size: 21rpx; color: var(--store-regular); background: var(--store-soft); padding: 9rpx 15rpx; border-radius: 999rpx; max-width: 190rpx; }
 .overview-income { background: #202328; color: #fff; border-radius: 28rpx; padding: 30rpx; box-shadow: 0 12rpx 28rpx rgba(23,25,28,.09); }
 .income-heading { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #cbd0d7; font-size: 24rpx; }
 .income-link { font-size: 22rpx; }
@@ -42,8 +42,8 @@ function money(value) { const number = Number(value); return Number.isFinite(num
 .income-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-top: 1rpx solid rgba(255,255,255,.13); padding-top: 24rpx; gap: 12rpx; }
 .stat-value { display: block; font-size: 29rpx; font-weight: 600; overflow-wrap: anywhere; }
 .stat-caption { display: block; font-size: 21rpx; color: #b5bdc8; margin-top: 8rpx; }
-.overview-shortcuts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12rpx; background: #fff; border: 1rpx solid #edf0f3; border-radius: 24rpx; margin-top: 24rpx; padding: 22rpx 8rpx; }
-.action { display: flex; flex-direction: column; align-items: center; gap: 12rpx; font-size: 23rpx; color: #343a43; padding: 8rpx 0; }
-.shortcut-icon { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; background: #f4f6f8; border-radius: 22rpx; }
+.overview-shortcuts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12rpx; background: var(--store-surface); border: 1rpx solid var(--store-line); border-radius: 24rpx; margin-top: 24rpx; padding: 22rpx 8rpx; }
+.action { display: flex; flex-direction: column; align-items: center; gap: 12rpx; font-size: 23rpx; color: var(--store-text); padding: 8rpx 0; }
+.shortcut-icon { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; background: var(--store-soft); border-radius: 22rpx; }
 .shortcut-icon image { width: 40rpx; height: 40rpx; filter: grayscale(1) brightness(.3); }
 </style>

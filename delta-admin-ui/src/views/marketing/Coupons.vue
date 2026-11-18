@@ -5,7 +5,7 @@
         <div class="card-header">
           <div>
             <strong>优惠券模板</strong>
-            <p class="subtitle">发放与核销总开关在“系统管理 → 系统配置 → 营销配置”。关闭发放后现有有效券仍可使用；紧急停用核销会阻止新订单用券。</p>
+            <p class="subtitle">发放与核销总开关在“系统管理 → 系统配置 → 营销策略”。关闭发放后现有有效券仍可使用；紧急停用核销会阻止新订单用券。</p>
           </div>
           <el-button type="primary" @click="openCreate">新建优惠券</el-button>
         </div>
@@ -92,13 +92,19 @@ const rules = {
 
 async function load() {
   loading.value = true
-  try { rows.value = (await getCouponTemplates()).data || [] }
+  try {
+    const { data } = await getCouponTemplates()
+    rows.value = Array.isArray(data) ? data : []
+  } catch { /* Shared request feedback handles failed loads. */ }
   finally { loading.value = false }
 }
 
 async function loadRecords() {
   recordsLoading.value = true
-  try { records.value = (await getCouponRecords()).data || [] }
+  try {
+    const { data } = await getCouponRecords()
+    records.value = Array.isArray(data) ? data : []
+  } catch { /* Shared request feedback handles failed loads. */ }
   finally { recordsLoading.value = false }
 }
 

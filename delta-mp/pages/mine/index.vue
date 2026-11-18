@@ -209,16 +209,16 @@ async function goCustomerService() {
 }
 </script>
 <style lang="scss" scoped>
-.mine-page { height: var(--app-page-height, 100vh); min-height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; background: #f7f7f7; }
+.mine-page { height: var(--app-page-height, 100vh); min-height: var(--app-page-height, 100vh); display: flex; flex-direction: column; overflow: hidden; background: var(--store-soft); }
 .mine-scroll { flex: 1; height: 0; min-height: 0; width: 100%; }
 .mine-content { padding: 10rpx 28rpx calc(196rpx + var(--app-safe-bottom, env(safe-area-inset-bottom))); box-sizing: border-box; }
 .profile-row { display: flex; align-items: center; gap: 22rpx; padding: 10rpx 2rpx 28rpx; }
-.avatar { width: 120rpx; height: 120rpx; flex-shrink: 0; border-radius: 28rpx; background: #eef0f2; }
+.avatar { width: 120rpx; height: 120rpx; flex-shrink: 0; border-radius: 28rpx; background: var(--store-soft); }
 .profile-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10rpx; }
-.profile-name { color: #111111; font-size: 40rpx; font-weight: 850; line-height: 1.2; letter-spacing: -0.02em; }
+.profile-name { color: var(--store-text); font-size: 40rpx; font-weight: 850; line-height: 1.2; letter-spacing: -0.02em; }
 .profile-meta-row { display: flex; align-items: center; gap: 14rpx; min-width: 0; }
-.profile-meta { overflow: hidden; color: #777777; font-size: 23rpx; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
-.copy-uid { display: inline-flex; align-items: center; gap: 4rpx; flex-shrink: 0; color: #777777; font-size: 20rpx; }
+.profile-meta { overflow: hidden; color: var(--store-regular); font-size: 23rpx; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.copy-uid { display: inline-flex; align-items: center; gap: 4rpx; flex-shrink: 0; color: var(--store-regular); font-size: 20rpx; }
 .copy-uid image { width: 28rpx; height: 28rpx; }
 .profile-arrow { flex-shrink: 0; color: #bbbbbb; font-size: 40rpx; line-height: 1; }
 .balance-card {
@@ -226,7 +226,7 @@ async function goCustomerService() {
   overflow: hidden;
   padding: 30rpx 28rpx 28rpx;
   border-radius: 28rpx;
-  background: #171717;
+  background: var(--store-primary);
   color: #ffffff;
   box-sizing: border-box;
 }
@@ -254,12 +254,12 @@ async function goCustomerService() {
   height: 60rpx;
   padding: 0 20rpx;
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #171717;
+  background: var(--store-surface);
+  color: var(--store-text);
   font-size: 23rpx;
   font-weight: 800;
 }
-.panel { margin-top: 18rpx; border: 0; border-radius: 26rpx; background: #ffffff; box-shadow: none; }
+.panel { margin-top: 18rpx; border: 0; border-radius: 26rpx; background: var(--store-surface); box-shadow: none; }
 .orders-panel { padding: 26rpx 0; }
 .order-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .order-shortcut {
@@ -269,7 +269,7 @@ async function goCustomerService() {
   align-items: center;
   gap: 10rpx;
   padding: 2rpx;
-  color: #555b63;
+  color: var(--store-regular);
   font-size: 23rpx;
 }
 .order-shortcut::after {
@@ -279,7 +279,7 @@ async function goCustomerService() {
   right: 0;
   bottom: 8rpx;
   width: 1rpx;
-  background: #f0f0f0;
+  background: var(--store-soft);
 }
 .order-shortcut:last-child::after { display: none; }
 .shortcut-icon { display: flex; align-items: center; justify-content: center; width: 48rpx; height: 48rpx; background: transparent; }
@@ -295,10 +295,10 @@ async function goCustomerService() {
   &:active { opacity: .7; }
 }
 .menu-icon { width: 44rpx; height: 44rpx; flex-shrink: 0; }
-.menu-text { flex: 1; min-width: 0; color: #111111; font-size: 28rpx; font-weight: 650; }
+.menu-text { flex: 1; min-width: 0; color: var(--store-text); font-size: 28rpx; font-weight: 650; }
 .menu-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
-.menu-desc { overflow: hidden; color: #999999; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
-.menu-state { flex-shrink: 0; color: #999999; font-size: 21rpx; }
+.menu-desc { overflow: hidden; color: var(--store-muted); font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.menu-state { flex-shrink: 0; color: var(--store-muted); font-size: 21rpx; }
 .menu-arrow { flex-shrink: 0; color: #bbbbbb; font-size: 34rpx; line-height: 1; }
 :deep(.tech-support) { margin-top: 26rpx; }
 </style>

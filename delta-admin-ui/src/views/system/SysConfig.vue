@@ -1,196 +1,411 @@
 <template>
-  <div class="page-container">
-    <el-card>
-      <template #header><div class="card-header"><span>系统配置</span><el-button type="primary" :loading="submitting" @click="handleSave">保存配置</el-button></div></template>
-      <div class="config-layout">
-        <nav v-if="groupNames.length > 1 && !isCompact" class="config-group-nav" aria-label="系统配置分组">
-          <button
-            v-for="g in groupNames"
-            :key="g"
-            type="button"
-            class="config-group-item"
-            :class="{ active: g === activeGroup }"
-            :aria-pressed="g === activeGroup"
-            @click="activeGroup = g"
-          >
-            <span class="config-group-name">{{ g }}</span>
-            <span class="config-group-count">{{ groupCounts.get(g) || 0 }}</span>
-          </button>
-        </nav>
-        <div class="config-main">
-          <div v-if="groupNames.length > 1 && isCompact" class="config-group-select">
-            <span class="config-group-select-label">配置分组</span>
-            <el-select v-model="activeGroup" style="width:100%">
-              <el-option v-for="g in groupNames" :key="g" :label="`${g}（${groupCounts.get(g) || 0}）`" :value="g" />
-            </el-select>
-          </div>
-          <el-alert v-if="activeGroup === '微信支付配置'" title="公众号支付配置提醒" type="info" :closable="false" show-icon
-            description="每个支付开关独立生效，支付页面不再根据浏览器类型自动隐藏已启用方式。微信支付公钥和公钥 ID 必须从当前微信支付商户号的“账户中心 > API安全 > 微信支付公钥”成对下载；两者不匹配会产生“WechatPay signature is incorrect”。公众平台仍需配置网页授权域名，商户平台需配置 JSAPI 支付授权目录。" />
-          <el-alert v-if="activeGroup === '微信支付配置'" title="客户端业务支付与功能购买分开" type="warning" :closable="false" show-icon
-            description="本页只配置客户自己的订单、充值和押金收款。客户端功能商城的购买款由授权中心统一收取，使用授权中心的微信商户和回调，不读取本页配置。" />
-          <el-alert v-if="activeGroup === '公众号通知'" title="四个角色分别使用独立模板" type="info" :closable="false" show-icon
-            description="客户、打手、管理员、客服分别按五个事件直接填写模板 ID 和字段，系统自动生成配置。模板变量、系统数据源和字段长度限制均有提示；旧版通用模板仅作为兼容回退。" />
-          <el-alert v-if="activeGroup === '短信配置'" title="业务短信也按角色独立模板" type="info" :closable="false" show-icon
-            description="客户、打手、管理员、客服分别填写阿里云模板 Code 和参数映射；事件分组与公众号通知一致，页面会自动生成底层配置。"/>
-          <el-form v-loading="loading" :label-position="isCompact ? 'top' : 'right'" :label-width="isCompact ? 'auto' : '200px'" class="config-form">
-            <el-form-item v-for="item in filteredList" :key="item.configKey" :label="item.configName || item.configKey">
-              <NotificationTemplateEditor v-if="isNotificationTemplateKey(item.configKey)" v-model="item.configValue" :config-key="item.configKey" @validity="value => setNotificationValidity(item.configKey, value)" />
-              <el-input v-else-if="item.valueType === 'file'" v-model="item.configValue" readonly>
-                <template #append>
-                  <el-upload
-                    :show-file-list="false"
-                    :auto-upload="true"
-                    accept=".pem,.key,.txt"
-                    :http-request="(options) => handleCertificateUpload(item, options)"
-                  >
-                    <el-button>上传文件</el-button>
-                  </el-upload>
-                </template>
-              </el-input>
-              <el-select v-else-if="item.configKey === 'customer_service.mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'240px'}">
-                <el-option label="系统内置客服" value="internal" />
-                <el-option label="第三方企业微信链接" value="external" />
-              </el-select>
-              <el-select v-else-if="item.configKey === 'player.deposit_mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'280px'}">
-                <el-option label="必须交押金（原配置）" value="REQUIRED" />
-                <el-option label="全部不需要押金" value="NONE" />
-                <el-option label="入驻免押金，提现前补交" value="BEFORE_WITHDRAW" />
-              </el-select>
-              <el-select v-else-if="item.configKey === 'risk.media.review_mode'" v-model="item.configValue" :style="isCompact ? {width:'100%'} : {width:'280px'}">
-                <el-option label="自动检测，失败时转人工" value="AUTO" />
-                <el-option label="直接人工审核" value="MANUAL" />
-              </el-select>
-              <el-input v-else-if="item.valueType === 'text' || !item.valueType" v-model="item.configValue" :type="isSecretKey(item.configKey)?'password':'text'" :show-password="isSecretKey(item.configKey)" autocomplete="new-password" />
-              <el-input-number v-else-if="item.valueType === 'number'" v-model.number="item.configValue" :controls="false" style="width:200px" />
-              <el-switch v-else-if="item.valueType === 'boolean'" v-model="item.configValue" active-value="true" inactive-value="false" />
-              <el-input v-else-if="item.valueType === 'textarea' || item.valueType === 'json'" v-model="item.configValue" type="textarea" :rows="item.valueType==='json'?6:3" />
-              <ImageUpload v-else-if="item.valueType === 'image'" v-model="item.configValue" />
-              <div class="config-desc" v-if="item.remark && !isNotificationTemplateKey(item.configKey)">{{ item.remark }}</div>
-              <NotificationConfigGuide v-if="isNotificationTemplateKey(item.configKey)" :config-key="item.configKey" />
-            </el-form-item>
-            <el-empty v-if="!loading && filteredList.length === 0" description="暂无配置项" />
+  <div class="settings-workspace" :class="{ 'demo-page': readOnly, 'settings-workspace-mobile': mobileShell }">
+    <header v-if="!mobileShell" class="settings-page-head">
+      <Setting aria-hidden="true" />
+      <div><h1>系统配置</h1><p>管理平台基础信息、账户安全、支付交易与消息通知。</p></div>
+    </header>
+    <nav class="settings-categories" aria-label="配置分类">
+      <button v-for="group in navigation" :key="group.id" type="button" class="settings-category"
+        :aria-current="activeGroup.id === group.id ? 'true' : undefined" @click="openGroup(group)">
+        <component :is="categoryIcons[group.id]" aria-hidden="true" />
+        <span><strong>{{ group.title }}</strong><small>{{ group.description }}</small></span>
+        <span v-if="group.tabs.some(tab => unsaved(tab.id))" class="settings-category-dot" aria-label="有未保存更改" />
+        <span v-else-if="group.tabs.some(tab => readiness(tab.id) === 'incomplete')" class="settings-dot" aria-label="有未配置项" />
+      </button>
+    </nav>
+    <div class="settings-body">
+      <nav class="settings-nav" aria-label="系统配置导航">
+        <button v-for="tab in subnav" :key="tab.id" type="button" class="settings-nav-item"
+          :aria-current="subnavId === tab.id ? 'page' : undefined" @click="openSection(tab.id)">
+          <component :is="sectionIcons[tab.id] || Document" aria-hidden="true" />
+          <span>{{ tab.title }}</span>
+          <span v-if="unsaved(tab.id)" class="settings-draft">未保存</span>
+          <span v-else-if="readiness(tab.id) === 'incomplete'" class="settings-dot" aria-label="未配置" />
+        </button>
+      </nav>
+      <div class="settings-content">
+        <header class="settings-header">
+          <div><h2>{{ active.title }}</h2><p v-if="active.id === 'site'">设置平台的基本信息、品牌展示与访问地址。</p></div>
+          <el-tag v-if="readOnly" type="info" effect="plain">演示账号仅可查看</el-tag>
+        </header>
+
+      <template v-if="readOnly">
+        <section v-for="panel in active.panels" :key="panel.id" class="settings-panel" :id="`config-panel-${panel.id}`">
+          <div class="settings-panel-head"><h3><component :is="panelIcons[panel.id] || Document" aria-hidden="true" />{{ panel.title }}</h3></div>
+          <dl class="settings-grid settings-preview">
+            <div v-for="field in panel.fields" :key="field"><dt>{{ field }}</dt><dd aria-label="已脱敏">******</dd></div>
+          </dl>
+        </section>
+      </template>
+
+      <template v-else>
+        <template v-if="!active.editor">
+          <LoadFeedback :loading="loading" :error="loadError" label="系统配置" @retry="fetchData" />
+          <p v-if="active.id === 'payment'" class="settings-note">
+            <InfoFilled aria-hidden="true" />订单、充值和押金使用本站收款配置；功能商城与主题购买由授权中心收款。
+          </p>
+          <el-form v-if="!loading && !loadError" label-position="top" id="settings-form" class="settings-form" @submit.prevent="handleSave">
+            <section v-for="panel in displayedPanels" :key="panel.id" class="settings-panel" :id="`config-panel-${panel.id}`">
+              <div class="settings-panel-head">
+                <h3><component :is="panelIcons[panel.id] || Document" aria-hidden="true" />{{ panel.title }}</h3>
+                <el-button v-if="panel.id === 'deposit'" link type="primary"
+                  @click="router.push(mobileShell ? '/h5/player-level' : '/player-level')">设置各等级提现押金</el-button>
+                <span v-else-if="panel.status" class="settings-tag" :class="{ incomplete:panel.status === 'incomplete' }">
+                  {{ panel.status === 'incomplete' ? '未配置' : '已配置' }}
+                </span>
+              </div>
+              <p v-if="panel.id === 'public-key'" class="settings-note">
+                <InfoFilled aria-hidden="true" />微信支付公钥文件和公钥 ID 必须从同一商户账户成对下载。公众号支付还需配置网页授权域名与 JSAPI 支付授权目录。
+              </p>
+              <div class="settings-grid">
+                <SystemConfigField v-for="item in panel.fields" :key="item.configKey" :item="item" :saved-value="previousValues[item.configKey]"
+                  :busy="submitting || uploading.has(item.configKey)" :upload="options => handleCertificateUpload(item, options)"
+                  @change="item.configValue = $event" @validity="notificationValidity[item.configKey] = $event"
+                  @busy="setUploading(item.configKey, $event)" />
+              </div>
+              <div v-if="panel.templates.length" class="settings-template">
+                <label>
+                  <span>收件角色</span>
+                  <select :value="templateSelected(panel)?.configKey" @change="templateSelection[panel.id] = $event.target.value">
+                    <option v-for="item in panel.templates" :key="item.configKey" :value="item.configKey">{{ item.configName }}</option>
+                  </select>
+                </label>
+                <SystemConfigField v-for="item in panel.templates" v-show="item === templateSelected(panel)" :key="item.configKey"
+                  :item="item" :busy="submitting" :saved-value="previousValues[item.configKey]"
+                  @change="item.configValue = $event" @validity="notificationValidity[item.configKey] = $event" />
+              </div>
+            </section>
+            <el-empty v-if="!displayedPanels.length" description="暂无可配置项" />
           </el-form>
-        </div>
+        </template>
+        <template v-for="tab in visitedEditors" :key="tab.id">
+          <section v-show="active.id === tab.id" class="settings-special" :aria-label="tab.title">
+            <MembershipLevels v-if="tab.editor === 'membership'" :ref="instance => setEditor(tab.id, instance)" embedded
+              @dirty="editorDirty[tab.id] = $event" @busy="editorBusy[tab.id] = $event" @saved="markSaved(tab.id)" />
+            <Governance v-else-if="tab.editor === 'invitation'" fixed-kind="invitations" />
+            <EmailNotifications v-else-if="tab.editor === 'email' && emailAvailable" :ref="instance => setEditor(tab.id, instance)" embedded
+              @dirty="editorDirty[tab.id] = $event" @busy="editorBusy[tab.id] = $event" @saved="markSaved(tab.id)" />
+            <div v-else-if="tab.editor === 'email'" class="settings-panel">
+              <LoadFeedback :loading="enabledPlatformFeatures === null" :error="platformFeatureError" label="邮件通知功能" @retry="loadPlatformFeatureVisibility(true)" />
+              <template v-if="enabledPlatformFeatures !== null && !platformFeatureError">
+                <p>邮件通知尚未开通或启用。</p>
+                <el-button link @click="router.push('/platform/features')">查看功能商城</el-button>
+              </template>
+            </div>
+          </section>
+        </template>
+      </template>
       </div>
-    </el-card>
+    </div>
+    <footer v-if="!readOnly && showSaveBar" class="settings-footer">
+      <span v-if="unsaved(active.id)" class="settings-footer-status" role="status">本页有未保存更改</span>
+      <span v-else-if="lastSaved" class="settings-footer-status" role="status"><InfoFilled aria-hidden="true" />上次保存：{{ lastSaved }}</span>
+      <div class="settings-footer-actions">
+        <el-button :disabled="!unsaved(active.id) || savingCurrent || uploading.size > 0" @click="discardCurrent">取消修改</el-button>
+        <el-button type="primary" :icon="Check" @click="saveCurrent"
+          :disabled="!unsaved(active.id) || uploading.size > 0" :loading="savingCurrent">保存更改</el-button>
+      </div>
+    </footer>
   </div>
 </template>
+
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { getSysConfigList, batchUpdateSysConfig, uploadWxPayCertificate } from '@/api/system'
-import { ElMessage } from 'element-plus'
-import ImageUpload from '@/components/ImageUpload.vue'
-import NotificationConfigGuide from '@/components/NotificationConfigGuide.vue'
-import NotificationTemplateEditor from '@/components/NotificationTemplateEditor.vue'
-import {enabledPlatformFeatures,loadPlatformFeatureVisibility} from '@/utils/platform-feature-visibility'
-import {configGroupCounts,editableSystemConfigs,orderedConfigGroups} from '@/utils/system-config'
-import {useResponsive} from '@/utils/responsive'
-const {isCompact}=useResponsive()
-const loading = ref(false), submitting = ref(false)
-function isSecretKey(key){return ['wx.pay.api-v3-key','wx.pay.official-appsecret','sms.aliyun.access_key_secret','wechat.official.app_secret','risk.media.token','email.notifications.password'].includes(key)}
-const configList = ref([])
-const activeGroup = ref('')
-const notificationValidity = ref({})
-function setNotificationValidity(key, valid) { notificationValidity.value[key] = valid }
-const editableConfigList = computed(() => editableSystemConfigs(configList.value, enabledPlatformFeatures.value))
-const groupNames = computed(() => orderedConfigGroups(editableConfigList.value))
-const groupCounts = computed(() => configGroupCounts(editableConfigList.value))
-const filteredList = computed(() => {
-  // 只显示有 configName 的配置项
-  const named = editableConfigList.value
-  if (groupNames.value.length <= 1) return named
-  const g = groupNames.value.includes(activeGroup.value) ? activeGroup.value : groupNames.value[0]
-  return named.filter(c => (c.configGroup || '默认') === g)
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Bell, Box, Check, Document, Grid, InfoFilled, Link, Lock, Monitor, Setting, Wallet } from '@element-plus/icons-vue'
+import LoadFeedback from '@/components/LoadFeedback.vue'
+import SystemConfigField from '@/components/SystemConfigField.vue'
+import { batchUpdateSysConfig, getSysConfigList, uploadWxPayCertificate } from '@/api/system'
+import { can } from '@/utils/staff-permissions'
+import { enabledPlatformFeatures, loadPlatformFeatureVisibility, platformFeatureAllowed, platformFeatureError } from '@/utils/platform-feature-visibility'
+import { editableSystemConfigs } from '@/utils/system-config'
+import { configGroups, configTabs, configSection, configReadiness, defaultConfigTab, orderConfigFields } from '@/utils/config-sections'
+
+const MembershipLevels = defineAsyncComponent(() => import('@/views/marketing/MembershipLevels.vue'))
+const Governance = defineAsyncComponent(() => import('@/views/player/Governance.vue'))
+const EmailNotifications = defineAsyncComponent(() => import('@/views/system/EmailNotifications.vue'))
+
+const props = defineProps({ readOnly: Boolean })
+const route = useRoute(), router = useRouter()
+const mobileShell = computed(() => route.path.startsWith('/h5/'))
+const configList = ref([]), previousValues = ref({}), snapshotLoaded = ref(false)
+const saveTimes = reactive({}), lastVisited = reactive({})
+const siteAnchor = ref(false)
+const categoryIcons = { basic: Setting, account: Lock, payment: Wallet, message: Bell, business: Box }
+const sectionIcons = { site: Monitor, display: Grid, origin: Link }
+const panelIcons = { brand: InfoFilled, origin: Link }
+const loading = ref(false), submitting = ref(false), loadError = ref('')
+const picked = ref(defaultConfigTab)
+const uploading = reactive(new Set()), visited = reactive(new Set())
+const editorDirty = reactive({}), editorBusy = reactive({}), editorRefs = new Map()
+const notificationValidity = reactive({}), templateSelection = reactive({})
+const canView = tab => props.readOnly || tab.id !== 'invitation' || can('player.manage')
+const navigation = computed(() => configGroups.map(group => ({ ...group, tabs: group.tabs.filter(canView) })))
+const allowedTabs = computed(() => configTabs.filter(canView))
+const active = computed(() => allowedTabs.value.find(tab => tab.id === picked.value) || configTabs.find(tab => tab.id === defaultConfigTab))
+const activeGroup = computed(() => navigation.value.find(group => group.id === active.value.group))
+const subnav = computed(() => activeGroup.value.id === 'basic'
+  ? [...activeGroup.value.tabs, { id:'origin', title:'站点入口' }]
+  : activeGroup.value.tabs)
+const subnavId = computed(() => active.value.id === 'site' && siteAnchor.value ? 'origin' : active.value.id)
+const lastSaved = computed(() => {
+  const dates = fieldsFor(active.value.id).map(item => item.updatedAt || '').sort()
+  const raw = saveTimes[active.value.id] || dates[dates.length - 1]
+  return raw ? String(raw).replace('T',' ').slice(0,16) : ''
 })
-watch(groupNames, names => {
-  if (!names.length) {
-    activeGroup.value = ''
+const visitedEditors = computed(() => allowedTabs.value.filter(tab => tab.editor && visited.has(tab.id)))
+const emailAvailable = computed(() => platformFeatureAllowed('email_notifications'))
+const editable = computed(() => editableSystemConfigs(configList.value, enabledPlatformFeatures.value))
+const fieldsByPanel = computed(() => {
+  const map = new Map()
+  for (const item of editable.value) {
+    const panel = configSection(item.configKey)
+    if (!panel) continue
+    const items = map.get(panel) || []
+    items.push(item)
+    map.set(panel, items)
+  }
+  return map
+})
+const displayValue = value => String(value ?? '')
+function fieldsFor(tab) {
+  const target = configTabs.find(item => item.id === tab)
+  return target?.panels.flatMap(panel => fieldsByPanel.value.get(panel.id) || []) || []
+}
+function dirtyFields(tab) {
+  return fieldsFor(tab).filter(item => displayValue(item.configValue) !== displayValue(previousValues.value[item.configKey]))
+}
+const unsaved = tab => !props.readOnly && (dirtyFields(tab).length > 0 || !!editorDirty[tab])
+const hasDrafts = computed(() => allowedTabs.value.some(tab => unsaved(tab.id)))
+const readiness = tab => props.readOnly ? null : configReadiness(tab, snapshotLoaded.value ? previousValues.value : null)
+const templateField = key => /^(wechat\.official\.templates|sms\.notification\.templates)\.(user|player|admin|cs)$/.test(key)
+const displayedPanels = computed(() => active.value.panels.flatMap(panel => {
+  const all = orderConfigFields(fieldsByPanel.value.get(panel.id) || [])
+  if (!all.length) return []
+  return [{ ...panel, fields: all.filter(item => !templateField(item.configKey)), templates: all.filter(item => templateField(item.configKey)),
+    status: ['wechat','sms'].includes(panel.id) ? readiness(active.value.id) : null }]
+}))
+function templateSelected(panel) {
+  return panel.templates.find(item => item.configKey === templateSelection[panel.id]) || panel.templates[0]
+}
+
+function openGroup(group) {
+  if (group.id === activeGroup.value.id) return
+  openTab(group.tabs.find(tab => tab.id === lastVisited[group.id])?.id || group.tabs[0].id)
+}
+async function openSection(id) {
+  if (uploading.size) { ElMessage.warning('请等待文件上传完成'); return }
+  if (id !== 'origin') {
+    if (siteAnchor.value && id === 'site') scrollWorkArea()
+    siteAnchor.value = false
+    openTab(id)
     return
   }
-  if (!names.includes(activeGroup.value)) activeGroup.value = names[0]
+  openTab('site')
+  siteAnchor.value = true
+  await nextTick()
+  document.getElementById('config-panel-origin')?.scrollIntoView({ block:'end' })
+}
+function scrollWorkArea() {
+  const area = document.querySelector('.layout-main')
+  if (area) area.scrollTop = 0
+}
+function openTab(id) {
+  if (!allowedTabs.value.some(tab => tab.id === id) || id === active.value.id) return
+  if (uploading.size) { ElMessage.warning('请等待文件上传完成'); return }
+  siteAnchor.value = false
+  picked.value = id
+  scrollWorkArea()
+  router.replace({ query: { ...route.query, tab: id } })
+}
+watch(() => route.query.tab, value => {
+  picked.value = typeof value === 'string' && configTabs.some(tab => tab.id === value) ? value : defaultConfigTab
 }, { immediate: true })
+watch(active, tab => {
+  lastVisited[tab.group] = tab.id
+  if (tab.editor) visited.add(tab.id)
+}, { immediate: true })
+
+const savingCurrent = computed(() => submitting.value || !!editorBusy[active.value.id])
+const showSaveBar = computed(() => active.value.editor
+  ? active.value.editor === 'membership' || (active.value.editor === 'email' && emailAvailable.value)
+  : displayedPanels.value.length > 0 && !loading.value && !loadError.value)
+function setEditor(id, instance) {
+  if (instance) editorRefs.set(id, instance)
+  else editorRefs.delete(id)
+}
+function markSaved(id) {
+  saveTimes[id] = new Intl.DateTimeFormat('sv-SE', { dateStyle:'short', timeStyle:'short' }).format(new Date())
+}
+async function saveCurrent() {
+  if (props.readOnly || savingCurrent.value || uploading.size) return
+  if (!active.value.editor) return handleSave()
+  try { await editorRefs.get(active.value.id)?.save() } catch { /* Keep the editor draft after request failure. */ }
+}
+function discardCurrent() {
+  if (props.readOnly || savingCurrent.value || uploading.size) return
+  if (active.value.editor) { editorRefs.get(active.value.id)?.discard(); return }
+  for (const item of dirtyFields(active.value.id)) item.configValue = previousValues.value[item.configKey]
+}
+
 async function fetchData() {
+  if (props.readOnly || loading.value) return
   loading.value = true
+  loadError.value = ''
   try {
-    const res = await getSysConfigList()
-    configList.value = res.data || []
+    const { data } = await getSysConfigList({ silent: true })
+    configList.value = (data || []).map(item => ({ ...item, configValue: item.configValue ?? '' }))
+    previousValues.value = Object.fromEntries(configList.value.map(item => [item.configKey, item.configValue]))
+    snapshotLoaded.value = true
+  } catch {
+    loadError.value = '读取配置失败，请重试。'
   } finally { loading.value = false }
 }
+
+const secretKeys = new Set(['wx.pay.api-v3-key', 'wx.pay.official-appsecret', 'sms.aliyun.access_key_secret', 'wechat.official.app_secret', 'risk.media.token', 'email.notifications.password'])
 async function handleSave() {
-  if (Object.values(notificationValidity.value).some(valid => valid === false)) {
-    ElMessage.warning('请先修正通知模板中的错误')
-    return
-  }
+  const tab = active.value
+  const changes = dirtyFields(tab.id)
+  if (props.readOnly || submitting.value || uploading.size || !changes.length) return
+  if (changes.some(item => notificationValidity[item.configKey] === false)) return ElMessage.warning('请先修正通知模板中的错误')
   submitting.value = true
-  try { await batchUpdateSysConfig(editableConfigList.value); ElMessage.success('保存成功') } finally { submitting.value = false }
+  const items = changes.map(({ id, configKey, configValue }) => ({ id, configKey, configValue: displayValue(configValue) }))
+  try {
+    await batchUpdateSysConfig(items)
+    for (const item of items) {
+      const stored = secretKeys.has(item.configKey) && item.configValue ? '********' : item.configValue
+      previousValues.value[item.configKey] = stored
+      const current = configList.value.find(entry => entry.id === item.id)
+      if (current && displayValue(current.configValue) === item.configValue) current.configValue = stored
+    }
+    markSaved(tab.id)
+    ElMessage.success(tab.title + '已保存')
+  } catch { /* Managed by the request layer; keep the unsaved values. */ }
+  finally { submitting.value = false }
+}
+function setUploading(key, busy) {
+  if (busy) uploading.add(key)
+  else uploading.delete(key)
 }
 async function handleCertificateUpload(item, options) {
+  if (props.readOnly || submitting.value || uploading.has(item.configKey)) return
+  uploading.add(item.configKey)
   try {
     const res = await uploadWxPayCertificate(item.configKey, options.file)
     item.configValue = res.data || ''
     options.onSuccess?.(res)
-    ElMessage.success('证书上传成功，请点击保存配置')
-  } catch (e) {
-    // request 已统一提示错误
-    options.onError?.(e)
-  }
+    ElMessage.success('文件已上传，请保存本页配置')
+  } catch (error) { options.onError?.(error) }
+  finally { uploading.delete(item.configKey) }
 }
-function isNotificationTemplateKey(key) {
-  return /^(wechat\.official\.templates|sms\.notification\.templates)\.(user|player|admin|cs)$/.test(String(key || ''))
+
+function warnUnload(event) {
+  if (!hasDrafts.value && !uploading.size) return
+  event.preventDefault()
+  event.returnValue = ''
 }
-onMounted(()=>{loadPlatformFeatureVisibility();fetchData()})
+onBeforeRouteLeave(async to => {
+  if (props.readOnly || to.path.endsWith('/login')) return true
+  if (uploading.size) { ElMessage.warning('请等待文件上传完成'); return false }
+  if (!hasDrafts.value) return true
+  try { await ElMessageBox.confirm('部分页面有未保存的配置。离开后这些更改会丢失。','离开系统配置',{confirmButtonText:'离开',cancelButtonText:'继续编辑',type:'warning'}); return true }
+  catch { return false }
+})
+onMounted(() => {
+  if (props.readOnly) return
+  loadPlatformFeatureVisibility()
+  fetchData()
+  window.addEventListener('beforeunload', warnUnload)
+})
+onUnmounted(() => window.removeEventListener('beforeunload', warnUnload))
 </script>
+
 <style scoped>
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.config-layout { display: flex; align-items: flex-start; gap: 24px; }
-.config-group-nav {
-  position: sticky;
-  top: 12px;
-  flex: 0 0 176px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: calc(100vh - 180px);
-  overflow: auto;
-  padding: 2px 4px 2px 0;
+.settings-workspace { min-width:0; max-width:1480px; margin-inline:auto; display:flex; flex-direction:column; gap:18px; --settings-bar-offset:0px }
+.settings-workspace-mobile { --settings-bar-offset:calc(62px + var(--app-safe-bottom, 0px)) }
+.settings-page-head { display:flex; align-items:center; gap:14px }
+.settings-page-head > svg { width:32px; height:32px; flex:none; color:var(--el-text-color-regular) }
+.settings-page-head h1 { margin:0; font-size:26px; line-height:1.25 }
+.settings-page-head p,.settings-header p { margin:4px 0 0; color:var(--el-text-color-secondary); font-size:13px }
+.settings-categories { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px }
+.settings-category { position:relative; display:flex; align-items:center; gap:11px; min-width:0; min-height:66px; padding:10px 13px;
+  background:var(--el-bg-color); color:var(--el-text-color-primary); border:1px solid var(--el-border-color-light); border-radius:12px; font:inherit; text-align:left; cursor:pointer }
+.settings-category > svg { width:22px; height:22px; flex:none }
+.settings-category strong,.settings-category small { display:block; line-height:1.4 }
+.settings-category strong { font-size:14px }
+.settings-category small { margin-top:3px; color:var(--el-text-color-secondary); font-size:12px }
+.settings-category:is(:hover,:focus-visible) { border-color:var(--el-text-color-secondary) }
+.settings-category[aria-current] { background:#252526; border-color:#252526; color:#fff }
+.settings-category[aria-current] small { color:#d4d4d5 }
+html[data-theme='dark'] .settings-category[aria-current] { background:#e9e9ed; border-color:#e9e9ed; color:#202023 }
+html[data-theme='dark'] .settings-category[aria-current] small { color:#434348 }
+.settings-body { display:grid; grid-template-columns:minmax(150px,19%) minmax(0,1fr); gap:14px; align-items:stretch }
+.settings-nav { padding:12px 9px; border-radius:12px; background:var(--el-bg-color); border:1px solid var(--el-border-color-lighter) }
+.settings-nav-item { display:flex; width:100%; min-height:42px; align-items:center; gap:9px; padding:7px 9px; margin-bottom:3px; border:1px solid transparent;
+  border-radius:8px; color:var(--el-text-color-primary); background:transparent; text-align:left; font:inherit; cursor:pointer }
+.settings-nav-item > svg { width:18px; height:18px; flex:none }
+.settings-nav-item:is(:hover,[aria-current]) { background:var(--el-fill-color-light) }
+.settings-nav-item[aria-current] { border-color:var(--el-text-color-primary); font-weight:650 }
+.settings-nav-item .settings-dot,.settings-draft { margin-left:auto }
+.settings-dot,.settings-category-dot { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:var(--el-color-danger) }
+.settings-category .settings-dot,.settings-category-dot { position:absolute; top:8px; right:8px }
+.settings-category-dot { background:var(--el-color-warning) }
+.settings-draft { color:var(--el-text-color-secondary); font-size:11px; white-space:nowrap }
+.settings-content { display:grid; align-content:start; gap:12px; min-width:0; padding:15px; background:var(--el-bg-color); border-radius:12px; border:1px solid var(--el-border-color-lighter) }
+.settings-header,.settings-panel-head,.settings-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap }
+.settings-header h2 { margin:0; font-size:21px; line-height:1.3 }
+.settings-panel { border:1px solid var(--el-border-color-light); border-radius:10px; background:var(--el-bg-color); min-width:0; scroll-margin-bottom:85px }
+.settings-panel-head { padding:8px 14px; background:var(--el-fill-color-light); border-radius:9px 9px 0 0 }
+.settings-panel-head h3 { display:flex; align-items:center; gap:8px; margin:0; font-size:15px; line-height:1.4 }
+.settings-panel-head h3 svg { width:17px; height:17px; flex:none }
+.settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; margin:0; padding:12px 15px }
+.settings-grid:empty { display:none }
+.settings-form { display:grid; gap:12px; min-width:0 }
+.settings-workspace .settings-form :deep(.el-form-item) { margin-bottom:0 }
+.settings-tag { padding:2px 7px; border-radius:6px; background:var(--el-bg-color); color:var(--el-text-color-secondary); font-size:12px }
+.settings-tag.incomplete { color:var(--el-color-danger); background:var(--el-color-danger-light-9) }
+.settings-footer { position:sticky; z-index:5; bottom:var(--settings-bar-offset); min-height:52px; padding:9px 12px;
+  margin-top:-6px; background:var(--el-bg-color); border:1px solid var(--el-border-color-light); border-radius:10px; box-shadow:0 -3px 12px rgba(0,0,0,.05) }
+.settings-footer-actions { display:flex; justify-content:flex-end; gap:8px; margin-left:auto }
+.settings-footer-actions .el-button { margin-left:0 }
+.settings-footer-status { display:inline-flex; align-items:center; gap:6px; color:var(--el-text-color-secondary); font-size:12px }
+.settings-note { display:flex; align-items:flex-start; gap:7px; margin:0; color:var(--el-text-color-secondary); font-size:12px; line-height:1.55; overflow-wrap:anywhere }
+.settings-panel .settings-note { margin:9px 15px 0 }
+.settings-note svg,.settings-footer-status svg { flex-shrink:0; width:14px; height:14px; margin-top:2px }
+.settings-preview dt { color:var(--el-text-color-secondary); font-size:12px; margin-bottom:4px }
+.settings-preview dd { margin:0; padding:7px 9px; border-radius:6px; background:var(--el-fill-color-light) }
+.settings-template { display:grid; gap:10px; padding:12px 15px; min-width:0 }
+.settings-template > label { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px }
+.settings-template select { min-height:36px; max-width:100%; padding:6px 9px; border:1px solid var(--el-border-color); border-radius:8px; background:var(--el-fill-color-light); color:var(--el-text-color-primary); font:inherit }
+.settings-special { min-width:0 }
+@media(max-width:1050px) {
+  .settings-category { gap:7px; padding:9px }
+  .settings-category small { display:none }
 }
-.config-group-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
-  color: #374151;
-  font: inherit;
-  line-height: 1.3;
-  text-align: left;
-  cursor: pointer;
+@media(max-width:760px) {
+  .settings-workspace { gap:12px }
+  .settings-body { grid-template-columns:minmax(0,1fr); gap:8px }
+  .settings-nav { display:flex; flex-wrap:wrap; gap:5px; padding:5px }
+  .settings-nav-item { width:auto; flex:none; margin-bottom:0; white-space:nowrap; padding-inline:8px }
+  .settings-content { padding:10px }
+  .settings-categories { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px }
+  .settings-category { min-height:44px; padding:7px 9px; gap:6px }
+  .settings-category > svg { width:17px; height:17px }
+  .settings-category strong { font-size:13px; overflow-wrap:anywhere }
+  .settings-category .settings-dot,.settings-category-dot { top:4px; right:5px }
+  .settings-page-head h1 { font-size:22px }
 }
-.config-group-item:hover { border-color: #c7cbd1; background: #f8fafc; }
-.config-group-item:focus-visible { outline: 2px solid #1f2937; outline-offset: 2px; }
-.config-group-item.active { border-color: #1f2937; background: #1f2937; color: #fff; }
-.config-group-name { min-width: 0; overflow-wrap: anywhere; }
-.config-group-count {
-  min-width: 22px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 12px;
-  text-align: center;
+@media(max-width:360px) {
+  .settings-categories { grid-template-columns:repeat(2,minmax(0,1fr)) }
 }
-.config-group-item.active .config-group-count { background: rgba(255,255,255,.16); color: #fff; }
-.config-main { flex: 1; min-width: 0; }
-.config-group-select { margin-bottom: 16px; }
-.config-group-select-label { display: block; margin-bottom: 6px; color: #6b7280; font-size: 13px; }
-.config-form { max-width: 980px; }
-.config-desc { color: #999; font-size: 12px; line-height: 1.4; margin-top: 4px; }
-@media (max-width: 1024px) {
-  .config-layout { display: block; }
-  .config-group-nav { display: none; }
+@media(max-width:540px) {
+  .settings-header h2 { font-size:18px }
+  .settings-grid { grid-template-columns:minmax(0,1fr); padding:11px; gap:12px }
+  .settings-footer .el-button { min-height:44px }
 }
+@media(max-height:480px) {
+  .settings-workspace-mobile { --settings-bar-offset:calc(52px + var(--app-safe-bottom, 0px)) }
+}
+html[data-keyboard-open] .settings-workspace-mobile { --settings-bar-offset:0px }
 </style>

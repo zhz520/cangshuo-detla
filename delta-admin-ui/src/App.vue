@@ -31,8 +31,8 @@ let progressTimer
 async function applyTheme() {
   try {
     const response = await getPublicTheme()
-    const themeId = response.data?.id === 'neumorphism' ? 'neumorphism' : 'default'
-    if (themeId === 'neumorphism') document.documentElement.setAttribute('data-theme', 'neumorphism')
+    const themeId = response.data?.id
+    if (['neumorphism', 'dark'].includes(themeId)) document.documentElement.setAttribute('data-theme', themeId)
     else document.documentElement.removeAttribute('data-theme')
   } catch (_) {
     document.documentElement.removeAttribute('data-theme')
@@ -48,8 +48,9 @@ watch(() => [route.meta.title, siteStore.adminTitle], ([title, brand]) => {
 }, { immediate: true })
 onUnmounted(() => {
   clearTimeout(progressTimer)
+  window.removeEventListener('delta:theme-changed', applyTheme)
 })
-onMounted(applyTheme)
+onMounted(() => { applyTheme(); window.addEventListener('delta:theme-changed', applyTheme) })
 
 function retryNavigation() {
   const target = loadingFeedback.routeError?.path

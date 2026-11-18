@@ -26,6 +26,19 @@ public class GovernanceSchema implements ApplicationRunner {
     private void initializeCurrentTenant() throws Exception {
         try(var connection=jdbc.getDataSource().getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
+            boolean reviewNote = false;
+            for (String table : java.util.List.of("privacy_request", "PRIVACY_REQUEST")) {
+                try (var columns = connection.getMetaData().getColumns(connection.getCatalog(), null, table, null)) {
+                    while (columns.next()) {
+                        if ("review_note".equalsIgnoreCase(columns.getString("COLUMN_NAME"))) reviewNote = true;
+                    }
+                }
+            }
+            if (!reviewNote) {
+                try (var statement = connection.createStatement()) {
+                    statement.executeUpdate("ALTER TABLE privacy_request ADD COLUMN review_note VARCHAR(500)");
+                }
+            }
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/workbench.sql"));
         }
         // Inserts only. Existing role and customer settings are never overwritten on startup.

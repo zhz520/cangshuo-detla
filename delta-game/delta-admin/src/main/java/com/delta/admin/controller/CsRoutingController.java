@@ -6,6 +6,7 @@ import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.Set;
 
 @RestController
@@ -54,10 +56,48 @@ public class CsRoutingController {
     @PostMapping("/rules")
     @Transactional(rollbackFor = Exception.class)
     public R<Long> saveRule(@RequestBody RuleRequest body) {
-        String matchType = normalizeType(body.matchType(), Set.of("PRODUCT", "CATEGORY", "DEFAULT"), "匹配方式无效");
-        String assigneeType = normalizeType(body.assigneeType(), Set.of("CS", "GROUP"), "分配对象无效");
-        Long targetId = "DEFAULT".equals(matchType) ? 0L : body.targetId();
-        if ("DEFAULT".equals(matchType) && targetId == null) targetId = 0L;
+        if (body == null) throw new BusinessException(400, "请求内容无效");
+        return R.ok(upsertRule(body.matchType(), body.targetId(), body.assigneeType(), body.assigneeId(),
+                body.enabled(), body.remark(), body.id(), false));
+    }
+
+    @OpLog(module = "cs-routing", operation = "批量保存分类分配规则")
+    @PostMapping("/rules/batch")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> saveRules(@RequestBody BatchRuleRequest body) {
+        if (body == null) throw new BusinessException(400, "请求内容无效");
+        String matchType = normalizeType(body.matchType(), Set.of("CATEGORY"), "批量匹配方式无效");
+        if (body.targetIds() == null || body.targetIds().isEmpty())
+            throw new BusinessException(400, "请至少选择一个分类");
+        if (body.targetIds().size() > 200) throw new BusinessException(400, "一次最多选择200个分类");
+        if (body.targetIds().stream().anyMatch(id -> id == null || id <= 0))
+            throw new BusinessException(400, "商品分类无效");
+        List<Long> targetIds = body.targetIds().stream().distinct().sorted().toList();
+        String slots = String.join(",", Collections.nCopies(targetIds.size(), "?"));
+        List<String> conflicts = jdbc.queryForList(
+                "SELECT COALESCE(c.name,CAST(r.target_id AS CHAR)) FROM cs_routing_rule r " +
+                        "LEFT JOIN category c ON c.id=r.target_id WHERE r.match_type='CATEGORY' AND r.target_id IN (" + slots + ")",
+                String.class, targetIds.toArray());
+        if (!conflicts.isEmpty()) {
+            throw new BusinessException(409, "已有分配规则，请单独编辑：" + String.join("、", conflicts.stream().limit(4).toList())
+                    + (conflicts.size() > 4 ? " 等 " + conflicts.size() + " 个分类" : ""));
+        }
+        try {
+            for (Long targetId : targetIds) {
+                upsertRule(matchType, targetId, body.assigneeType(), body.assigneeId(),
+                        body.enabled(), body.remark(), null, true);
+            }
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(409, "部分分类刚被分配，请刷新规则后重试");
+        }
+        return R.ok(targetIds.size());
+    }
+
+    private Long upsertRule(String rawMatchType, Long rawTargetId, String rawAssigneeType, Long assigneeId,
+                            Integer rawEnabled, String rawRemark, Long requestedId, boolean createOnly) {
+        String matchType = normalizeType(rawMatchType, Set.of("PRODUCT", "CATEGORY", "DEFAULT"), "匹配方式无效");
+        String assigneeType = normalizeType(rawAssigneeType, Set.of("CS", "GROUP"), "分配对象无效");
+        Long targetId = "DEFAULT".equals(matchType) ? 0L : rawTargetId;
         if (!"DEFAULT".equals(matchType) && (targetId == null || targetId <= 0)) {
             throw new BusinessException(400, "请选择要匹配的商品或分类");
         }
@@ -66,28 +106,38 @@ public class CsRoutingController {
         } else if ("CATEGORY".equals(matchType)) {
             requireExists("SELECT COUNT(*) FROM category WHERE id=? AND deleted=0", targetId, "分类不存在");
         }
-        if (body.assigneeId() == null) throw new BusinessException(400, "请选择客服或客服组");
+        if (assigneeId == null) throw new BusinessException(400, "请选择客服或客服组");
         if ("CS".equals(assigneeType)) {
-            if (!routing.isActiveCs(body.assigneeId())) throw new BusinessException(400, "请选择启用中的客服账号");
+            if (!routing.isActiveCs(assigneeId)) throw new BusinessException(400, "请选择启用中的客服账号");
         } else {
-            requireExists("SELECT COUNT(*) FROM cs_group WHERE id=? AND enabled=1", body.assigneeId(), "客服组不存在或已停用");
+            requireExists("SELECT COUNT(*) FROM cs_group WHERE id=? AND enabled=1", assigneeId, "客服组不存在或已停用");
         }
-        int enabled = body.enabled() == null ? 1 : (body.enabled() == 0 ? 0 : 1);
-        String remark = body.remark() == null ? "" : body.remark().trim();
+        int enabled = rawEnabled == null ? 1 : (rawEnabled == 0 ? 0 : 1);
+        String remark = rawRemark == null ? "" : rawRemark.trim();
         if (remark.length() > 200) throw new BusinessException(400, "备注不能超过200字");
-        List<Long> existing = jdbc.queryForList(
-                "SELECT id FROM cs_routing_rule WHERE match_type=? AND target_id=?", Long.class, matchType, targetId);
-        Long id = body.id() != null ? body.id() : (existing.isEmpty() ? null : existing.get(0));
+        Long id = requestedId;
+        if (!createOnly) {
+            List<Long> existing = jdbc.queryForList(
+                    "SELECT id FROM cs_routing_rule WHERE match_type=? AND target_id=?", Long.class, matchType, targetId);
+            if (!existing.isEmpty()) {
+                if (id != null && !id.equals(existing.get(0)))
+                    throw new BusinessException(409, "该匹配对象已有分配规则，请单独编辑");
+                id = existing.get(0);
+            }
+            if (requestedId != null) {
+                requireExists("SELECT COUNT(*) FROM cs_routing_rule WHERE id=?", requestedId, "分配规则已不存在");
+            }
+        }
         if (id == null) {
             jdbc.update("INSERT INTO cs_routing_rule(match_type,target_id,assignee_type,assignee_id,enabled,remark,created_by) " +
                             "VALUES (?,?,?,?,?,?,?)",
-                    matchType, targetId, assigneeType, body.assigneeId(), enabled, remark, SecurityUtils.getUserId());
+                    matchType, targetId, assigneeType, assigneeId, enabled, remark, SecurityUtils.getUserId());
             id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         } else {
             jdbc.update("UPDATE cs_routing_rule SET match_type=?,target_id=?,assignee_type=?,assignee_id=?,enabled=?,remark=? WHERE id=?",
-                    matchType, targetId, assigneeType, body.assigneeId(), enabled, remark, id);
+                    matchType, targetId, assigneeType, assigneeId, enabled, remark, id);
         }
-        return R.ok(id);
+        return id;
     }
 
     @OpLog(module = "cs-routing", operation = "删除客服分配规则")
@@ -206,6 +256,9 @@ public class CsRoutingController {
         if (!allowed.contains(normalized)) throw new BusinessException(400, message);
         return normalized;
     }
+
+    public record BatchRuleRequest(String matchType, List<Long> targetIds, String assigneeType,
+                                   Long assigneeId, Integer enabled, String remark) {}
 
     public record RuleRequest(Long id, String matchType, Long targetId, String assigneeType,
                               Long assigneeId, Integer enabled, String remark) {}
