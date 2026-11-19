@@ -46,6 +46,7 @@
         <module>delta-message</module>
         <module>delta-cs</module>
         <module>delta-platform</module>
+        <module>delta-workbench</module>
         <module>delta-admin</module>
     </modules>
 
@@ -199,6 +200,11 @@
             <dependency>
                 <groupId>com.delta</groupId>
                 <artifactId>delta-platform</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.delta</groupId>
+                <artifactId>delta-workbench</artifactId>
                 <version>${delta.version}</version>
             </dependency>
         </dependencies>

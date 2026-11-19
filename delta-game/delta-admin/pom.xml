@@ -22,6 +22,7 @@
         <dependency><groupId>com.delta</groupId><artifactId>delta-cs</artifactId></dependency>
         <dependency><groupId>org.springdoc</groupId><artifactId>springdoc-openapi-starter-webmvc-ui</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-platform</artifactId></dependency>
+        <dependency><groupId>com.delta</groupId><artifactId>delta-workbench</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-devtools</artifactId><optional>true</optional></dependency>
     </dependencies>
     <build>
