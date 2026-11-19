@@ -111,6 +111,7 @@ public class CsPlayerController {
         player.setDepositStatus(summary.status());
         player.setDepositPaymentCount(summary.paymentCount());
         player.setDepositLastPaidAt(summary.lastPaidAt());
+        player.setDepositOverrideAmount(summary.overrideAmount());
     }
 
     @OpLog(module="shift",operation="客服操作打手下班")

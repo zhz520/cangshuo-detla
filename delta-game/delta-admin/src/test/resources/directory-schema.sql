@@ -13,7 +13,7 @@ CREATE TABLE player (
  level INT DEFAULT 1, grab_captcha_override INT DEFAULT -1,price_increase_rate DECIMAL(5,2) DEFAULT -1, introduction VARCHAR(1000) DEFAULT '', proof_images VARCHAR(4096),
  service_types VARCHAR(500), avg_rating DECIMAL(3,2) DEFAULT 0, order_count INT DEFAULT 0,
  complete_rate DECIMAL(5,2) DEFAULT 100, status VARCHAR(20), reject_reason VARCHAR(255) NOT NULL DEFAULT '',
- deposit_payment_no VARCHAR(64), frozen_until TIMESTAMP, last_online_at TIMESTAMP,
+ deposit_payment_no VARCHAR(64), deposit_override_amount DECIMAL(10,2) DEFAULT NULL, frozen_until TIMESTAMP, last_online_at TIMESTAMP,
  is_online INT DEFAULT 1, deleted INT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -146,6 +146,14 @@
             {{ detailData.rejectReason }}
           </el-descriptions-item>
         </el-descriptions>
+        <div v-if="isAdmin" class="deposit-override">
+          <span class="deposit-override-label">单独押金应缴</span>
+          <el-input-number v-model="depositOverrideDraft" :min="0" :max="1000000" :precision="2" :controls="false"
+            placeholder="跟随统一配置" />
+          <el-button type="primary" size="small" :loading="depositOverrideSaving" @click="saveDepositOverride">保存</el-button>
+          <el-button size="small" :disabled="detailData.depositOverrideAmount == null" @click="clearDepositOverride">恢复统一</el-button>
+          <span class="deposit-override-hint">未单独设置时使用全局或等级押金。</span>
+        </div>
         <div class="proof-section">
           <div class="proof-title">证明截图<span v-if="proofImages.length" class="proof-count">（{{ proofImages.length }} 张，点击可放大）</span></div>
           <div v-if="proofImages.length" class="proof-list">
@@ -299,7 +307,7 @@ import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { computed, ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminSetPlayerDepositAmount, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
@@ -474,6 +482,7 @@ async function handleDelete(row) {
 }
 const detailVisible = ref(false), detailData = ref(null), detailLoading = ref(false)
 const playerDeposits = ref([]), depositLoading = ref(false)
+const depositOverrideDraft = ref(null), depositOverrideSaving = ref(false)
 const proofImages = computed(() => {
   const raw = detailData.value?.proofImages
   if (!raw) return []
@@ -542,7 +551,10 @@ async function showDetail(id) {
   try {
     const detailFn = isAdmin ? adminPlayerDetail : csPlayerDetail
     await Promise.all([
-      detailFn(id).then(res => { detailData.value = res.data }),
+      detailFn(id).then(res => {
+        detailData.value = res.data
+        depositOverrideDraft.value = res.data?.depositOverrideAmount ?? null
+      }),
       fetchPlayerTransactions(),
       isAdmin
         ? adminPlayerDeposits(id).then(res => { playerDeposits.value = res.data || [] }).catch(() => { playerDeposits.value = [] })
@@ -552,6 +564,28 @@ async function showDetail(id) {
     detailLoading.value = false
     depositLoading.value = false
   }
+}
+
+async function saveDepositOverride() {
+  if (!detailData.value?.id || depositOverrideSaving.value) return
+  depositOverrideSaving.value = true
+  try {
+    const amount = depositOverrideDraft.value == null ? null : Number(depositOverrideDraft.value)
+    await adminSetPlayerDepositAmount(detailData.value.id, amount)
+    const res = await adminPlayerDetail(detailData.value.id)
+    detailData.value = res.data
+    depositOverrideDraft.value = res.data?.depositOverrideAmount ?? null
+    ElMessage.success(amount == null ? '已恢复统一押金' : '单独押金已保存')
+  } catch (e) {
+    ElMessage.error(e?.msg || e?.message || '保存失败')
+  } finally {
+    depositOverrideSaving.value = false
+  }
+}
+
+function clearDepositOverride() {
+  depositOverrideDraft.value = null
+  return saveDepositOverride()
 }
 
 // 编辑打手
@@ -686,6 +720,9 @@ watch(() => route.query.taskId, id => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
+.deposit-override { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; padding:12px 14px; background:#f7f8fa; border-radius:10px; }
+.deposit-override-label { font-size:13px; color:#606266; }
+.deposit-override-hint { font-size:12px; color:#909399; }
 .deposit-history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .deposit-history-head :deep(.el-divider) { flex: 1; margin-right: 8px; }
 .introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }

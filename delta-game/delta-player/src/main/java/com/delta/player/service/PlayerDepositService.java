@@ -1,6 +1,7 @@
 package com.delta.player.service;
 
 import com.delta.common.mapper.CrossModuleMapper;
+import com.delta.common.exception.BusinessException;
 import com.delta.pay.service.PaymentService;
 import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class PlayerDepositService {
 
     public record Summary(Long playerId, Long userId, String mode, BigDecimal requiredAmount,
                           BigDecimal paidAmount, BigDecimal outstandingAmount, String status,
-                          int paymentCount, String lastPaidAt) {}
+                          int paymentCount, String lastPaidAt, BigDecimal overrideAmount) {}
 
     public record PaymentView(Long id, String paymentNo, BigDecimal amount, String status,
                               String payMethod, String paidAt, String createdAt,
@@ -38,10 +39,11 @@ public class PlayerDepositService {
 
     public Summary summary(Long playerId) {
         String mode = depositMode();
+        BigDecimal override = overrideAmount(playerId);
         Long userId = identities.selectUserIdByPlayerId(playerId);
         if (userId == null) {
             return new Summary(playerId, null, mode, BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, "NO_PLAYER", 0, null);
+                    BigDecimal.ZERO, "NO_PLAYER", 0, null, override);
         }
         BigDecimal required = money(payments.playerDepositRequiredAmount(userId));
         BigDecimal paid = money(payments.playerDepositPaidAmount(userId));
@@ -54,7 +56,19 @@ public class PlayerDepositService {
         String status = required.signum() <= 0 ? "NONE"
                 : paid.compareTo(required) >= 0 ? "PAID"
                 : paid.signum() > 0 ? "PARTIAL" : "UNPAID";
-        return new Summary(playerId, userId, mode, required, paid, outstanding, status, count, lastPaidAt);
+        return new Summary(playerId, userId, mode, required, paid, outstanding, status, count, lastPaidAt, override);
+    }
+
+    /** Set a per-player override. Null clears it and restores the global/level policy. */
+    public Summary setOverrideAmount(Long playerId, BigDecimal amount) {
+        int changed = jdbc.update("UPDATE player SET deposit_override_amount=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted=0", amount, playerId);
+        if (changed == 0) throw new BusinessException(404, "打手不存在");
+        return summary(playerId);
+    }
+
+    private BigDecimal overrideAmount(Long playerId) {
+        return jdbc.query("SELECT deposit_override_amount FROM player WHERE id=? AND deleted=0 LIMIT 1",
+                rs -> rs.next() ? rs.getBigDecimal(1) : null, playerId);
     }
 
     public List<PaymentView> payments(Long playerId) {

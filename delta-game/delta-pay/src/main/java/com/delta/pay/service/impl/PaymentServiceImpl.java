@@ -37,6 +37,7 @@ import com.delta.common.tenant.TenantKeyEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -132,6 +133,11 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     @Override
     public BigDecimal playerDepositRequiredAmount(Long userId) {
+        BigDecimal override = jdbc.query(
+                "SELECT p.deposit_override_amount FROM `user` u JOIN player p ON p.openid=u.openid AND p.deleted=0 " +
+                        "WHERE u.id=? AND u.deleted=0 LIMIT 1",
+                rs -> rs.next() ? rs.getBigDecimal(1) : null, userId);
+        if (override != null) return override.setScale(2, RoundingMode.HALF_UP);
         String mode=sysConfigService.getConfigValue("player.deposit_mode",
                 "true".equalsIgnoreCase(sysConfigService.getConfigValue("player.deposit_required","true"))?"REQUIRED":"NONE").trim().toUpperCase();
         if("NONE".equals(mode))return BigDecimal.ZERO;

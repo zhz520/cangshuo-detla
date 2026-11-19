@@ -29,7 +29,8 @@ CREATE TABLE `player` (`id` bigint NOT NULL AUTO_INCREMENT,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  CONSTRAINT player_uk_openid UNIQUE (`openid`) ,grab_captcha_override INT DEFAULT -1,price_increase_rate DECIMAL(5,2) DEFAULT -1);
+  CONSTRAINT player_uk_openid UNIQUE (`openid`) ,grab_captcha_override INT DEFAULT -1,price_increase_rate DECIMAL(5,2) DEFAULT -1,
+  deposit_override_amount DECIMAL(10,2) DEFAULT NULL);
 CREATE TABLE `player_level` (id int NOT NULL AUTO_INCREMENT,
   name varchar(30) NOT NULL,
   sort_order int NOT NULL DEFAULT 0,

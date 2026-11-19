@@ -30,7 +30,7 @@ class PlayerDepositAdminServiceTest {
         jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("DROP ALL OBJECTS");
         jdbc.execute("CREATE TABLE `user`(id BIGINT PRIMARY KEY,openid VARCHAR(64),deleted INT DEFAULT 0)");
-        jdbc.execute("CREATE TABLE player(id BIGINT PRIMARY KEY,openid VARCHAR(64),nickname VARCHAR(64),level INT,deleted INT DEFAULT 0)");
+        jdbc.execute("CREATE TABLE player(id BIGINT PRIMARY KEY,openid VARCHAR(64),nickname VARCHAR(64),level INT,deleted INT DEFAULT 0,deposit_override_amount DECIMAL(10,2) DEFAULT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE player_level(id INT PRIMARY KEY,name VARCHAR(30),deleted INT DEFAULT 0)");
         jdbc.execute("CREATE TABLE payment(id BIGINT AUTO_INCREMENT PRIMARY KEY,payment_no VARCHAR(32),user_id BIGINT," +
                 "biz_type VARCHAR(20),amount DECIMAL(10,2),status VARCHAR(20),pay_method VARCHAR(20)," +
@@ -66,6 +66,17 @@ class PlayerDepositAdminServiceTest {
         assertThat(summary.status()).isEqualTo("PAID");
         assertThat(summary.paymentCount()).isEqualTo(2);
         assertThat(summary.lastPaidAt()).isEqualTo("2026-11-18 00:33:36");
+        assertThat(summary.overrideAmount()).isNull();
+    }
+
+    @Test
+    void perPlayerOverrideCanBeSetAndCleared() {
+        var updated = service.setOverrideAmount(1L, new BigDecimal("66.50"));
+        assertThat(updated.overrideAmount()).isEqualByComparingTo("66.50");
+        assertThat(jdbc.queryForObject("SELECT deposit_override_amount FROM player WHERE id=1", BigDecimal.class))
+                .isEqualByComparingTo("66.50");
+        var cleared = service.setOverrideAmount(1L, null);
+        assertThat(cleared.overrideAmount()).isNull();
     }
 
     @Test

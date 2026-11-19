@@ -41,6 +41,9 @@ export function adminPlayerTransactions(id, params) {
 export function adminPlayerDeposits(id) {
   return request({ url: `/admin/player/${id}/deposits`, method: 'get' })
 }
+export function adminSetPlayerDepositAmount(id, amount) {
+  return request({ url: `/admin/player/${id}/deposit-amount`, method: 'put', data: { amount } })
+}
 export function adminPlayerDepositList(params) {
   return request({ url: '/admin/player/deposits', method: 'get', params })
 }

@@ -683,6 +683,7 @@ CREATE TABLE `player` (
   `frozen_until` datetime DEFAULT NULL COMMENT '冻结截止时间',
   `reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '驳回原因',
   `deposit_payment_no` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '打手入驻押金支付单号(100元)',
+  `deposit_override_amount` decimal(10,2) DEFAULT NULL COMMENT '单独押金应缴金额；NULL沿用统一/等级配置',
   `last_online_at` datetime DEFAULT NULL COMMENT '最后在线时间',
   `is_online` tinyint NOT NULL DEFAULT '0' COMMENT '是否在线: 0-离线 1-在线',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',

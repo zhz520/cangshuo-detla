@@ -42,6 +42,8 @@ public class Player extends BaseEntity {
     private String rejectReason;
     /** 打手入驻押金支付单号（金额以当时配置为准） */
     private String depositPaymentNo;
+    /** 单独押金应缴金额；NULL 时沿用全局/等级押金配置。 */
+    private BigDecimal depositOverrideAmount;
     private LocalDateTime frozenUntil;
     private LocalDateTime lastOnlineAt;
     private Integer isOnline;

@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +48,7 @@ public class AdminPlayerController {
     public record BatchIdsRequest(List<Long> ids) {}
     public record BatchRejectRequest(List<Long> ids, String reason) {}
     public record BatchLevelRequest(List<Long> ids, Integer levelId) {}
+    public record DepositAmountRequest(BigDecimal amount) {}
 
     @GetMapping("/list")
     public R<Page<Player>> list(PageQuery query, @RequestParam(required = false) Long taskId,
@@ -90,6 +92,21 @@ public class AdminPlayerController {
     @GetMapping("/{id}/deposits")
     public R<List<PlayerDepositService.PaymentView>> deposits(@PathVariable Long id) {
         return R.ok(playerDeposits.payments(id));
+    }
+
+    @OpLog(module = "player", operation = "设置打手单独押金")
+    @PutMapping("/{id}/deposit-amount")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public R<PlayerDepositService.Summary> setDepositAmount(@PathVariable Long id,
+                                                             @RequestBody(required = false) DepositAmountRequest body) {
+        if (playerService.getById(id) == null) return R.fail(404, "打手不存在");
+        BigDecimal amount = body == null ? null : body.amount();
+        if (amount != null) {
+            if (amount.signum() < 0 || amount.compareTo(new BigDecimal("1000000")) > 0)
+                return R.fail(400, "单独押金须在 0 至 1000000 元之间");
+            amount = amount.setScale(2, RoundingMode.HALF_UP);
+        }
+        return R.ok(playerDeposits.setOverrideAmount(id, amount));
     }
 
     @GetMapping("/deposits")
@@ -195,6 +212,7 @@ public class AdminPlayerController {
         player.setDepositStatus(summary.status());
         player.setDepositPaymentCount(summary.paymentCount());
         player.setDepositLastPaidAt(summary.lastPaidAt());
+        player.setDepositOverrideAmount(summary.overrideAmount());
     }
 
     @OpLog(module = "player", operation = "批量通过入驻审核")

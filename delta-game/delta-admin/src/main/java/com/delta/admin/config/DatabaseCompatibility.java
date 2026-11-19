@@ -70,6 +70,8 @@ public class DatabaseCompatibility {
                     "ALTER TABLE player ADD COLUMN grab_captcha_override TINYINT NOT NULL DEFAULT -1"),
             new AdditiveColumn("player", "price_increase_rate",
                     "ALTER TABLE player ADD COLUMN price_increase_rate DECIMAL(5,2) NOT NULL DEFAULT -1"),
+            new AdditiveColumn("player", "deposit_override_amount",
+                    "ALTER TABLE player ADD COLUMN deposit_override_amount DECIMAL(10,2) DEFAULT NULL"),
             new AdditiveColumn("order", "base_amount",
                     "ALTER TABLE `order` ADD COLUMN base_amount DECIMAL(10,2) DEFAULT NULL"),
             new AdditiveColumn("order", "price_increase_rate",

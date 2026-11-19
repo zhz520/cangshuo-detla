@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS withdraw (id BIGINT PRIMARY KEY,status VARCHAR(20),cr
 CREATE TABLE IF NOT EXISTS order_relay_request (id BIGINT PRIMARY KEY,status VARCHAR(20),updated_at DATETIME,reviewed_at DATETIME);
 CREATE TABLE IF NOT EXISTS player_replace_request (id BIGINT PRIMARY KEY,status VARCHAR(20),created_at DATETIME,processed_at DATETIME);
 CREATE TABLE IF NOT EXISTS player_homepage_revision (id VARCHAR(36) PRIMARY KEY,player_id BIGINT,payload TEXT,status VARCHAR(20),created_at DATETIME,reviewed_at DATETIME);
-CREATE TABLE IF NOT EXISTS player (id BIGINT PRIMARY KEY,openid VARCHAR(64),status VARCHAR(20),deleted INT DEFAULT 0,created_at DATETIME);
+CREATE TABLE IF NOT EXISTS player (id BIGINT PRIMARY KEY,openid VARCHAR(64),status VARCHAR(20),deleted INT DEFAULT 0,created_at DATETIME,deposit_override_amount DECIMAL(10,2) DEFAULT NULL);
 CREATE TABLE IF NOT EXISTS identity_verification (user_id BIGINT PRIMARY KEY,status VARCHAR(20),submitted_at DATETIME,reviewed_at DATETIME);
 CREATE TABLE IF NOT EXISTS privacy_request (id VARCHAR(36) PRIMARY KEY,status VARCHAR(20),created_at DATETIME,reviewed_at DATETIME);
 CREATE TABLE IF NOT EXISTS refund_request (id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32),submitted_at DATETIME,completed_at DATETIME,admin_decided_at DATETIME);
