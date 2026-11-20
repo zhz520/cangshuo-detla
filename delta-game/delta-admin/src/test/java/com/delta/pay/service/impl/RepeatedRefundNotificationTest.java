@@ -40,6 +40,31 @@ class RepeatedRefundNotificationTest {
     }
 
     @Test
+    void completedRefundAcceptsNotificationWithMissingCurrency() {
+        Payment payment = completedPayment();
+        payment.setWxTransactionId("wx-transaction-1");
+        Amount amount = amount(100L, 100L);
+        amount.setCurrency(null);
+
+        assertThatCode(() -> service.validateRefundNotification(
+                payment, "refund-1", "wx-transaction-1", amount))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void completedRefundRejectsNonCnyCurrency() {
+        Payment payment = completedPayment();
+        payment.setWxTransactionId("wx-transaction-1");
+        Amount amount = amount(100L, 100L);
+        amount.setCurrency("USD");
+
+        assertThatThrownBy(() -> service.validateRefundNotification(
+                payment, "refund-1", "wx-transaction-1", amount))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不一致");
+    }
+
+    @Test
     void completedRefundStillRejectsConflictingTransactionIdOrAmounts() {
         Payment payment = completedPayment();
         payment.setWxTransactionId("wx-transaction-1");

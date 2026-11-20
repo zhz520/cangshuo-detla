@@ -585,10 +585,12 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
     void validateRefundNotification(Payment payment,String refundNo,String transactionId,
                                     com.wechat.pay.java.service.refund.model.Amount amount) {
+        String notifyCurrency=amount==null?null:amount.getCurrency();
+        boolean currencyMatches=notifyCurrency==null||notifyCurrency.isBlank()||"CNY".equalsIgnoreCase(notifyCurrency);
         boolean detailsMatch=isWechatPayment(payment)
                 && java.util.Objects.equals(refundNo,payment.getRefundNo())
                 && amount!=null && payment.getAmount()!=null && payment.getRefundAmount()!=null
-                && "CNY".equals(amount.getCurrency())
+                && currencyMatches
                 && Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
                 && Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund());
         if(!detailsMatch) rejectRefundNotification(payment,refundNo,transactionId,amount,"field_mismatch");
