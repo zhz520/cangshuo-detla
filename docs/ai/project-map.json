@@ -1,0 +1,221 @@
+{
+  "version": "1.18.0",
+  "tag": "v1.18.0",
+  "commit": "aa3bb3cd5131b20c86dea1b6efa9bab29c1e92a3",
+  "generatedAt": "2026-11-20",
+  "features": [
+    {
+      "id": "auth",
+      "name": "用户登录/注册/微信绑定",
+      "backend": [
+        "delta-game/delta-user/src/main/java/com/delta/user/controller/UserAuthController.java",
+        "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsAuthController.java",
+        "delta-game/delta-common/src/main/java/com/delta/common/security",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/WechatWebLoginController.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/login",
+        "delta-admin-ui/src/api/auth.js",
+        "delta-admin-ui/src/views/user"
+      ],
+      "h5": [
+        "delta-mp/pages/login",
+        "delta-mp/pages/mine/security.vue",
+        "delta-mp/pages/wechat/binding.vue"
+      ],
+      "tables": [
+        "admin",
+        "user",
+        "staff_role_member"
+      ],
+      "tests": [
+        "UserAccountIntegrationTest",
+        "WechatIdentityServiceTest",
+        "login-security.test.mjs",
+        "wechat-binding.test.mjs"
+      ]
+    },
+    {
+      "id": "order",
+      "name": "订单/指派/协同/履约",
+      "backend": [
+        "delta-game/delta-order/src/main/java/com/delta/order/controller/OrderController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminOrderController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/StaffOrderTeamController.java",
+        "delta-game/delta-player/src/main/java/com/delta/player/service/OrderTeamService.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/order"
+      ],
+      "h5": [
+        "delta-mp/pages/order",
+        "delta-mp/pages-player/order"
+      ],
+      "tables": [
+        "order",
+        "order_player",
+        "order_progress"
+      ],
+      "tests": [
+        "OrderPurchaseGateTest",
+        "OrderAssignmentCandidatesTest",
+        "PlayerBusinessRegressionTest"
+      ]
+    },
+    {
+      "id": "payment",
+      "name": "支付/退款",
+      "backend": [
+        "delta-game/delta-pay/src/main/java/com/delta/pay/controller/PayController.java",
+        "delta-game/delta-pay/src/main/java/com/delta/pay/service/impl/PaymentServiceImpl.java",
+        "delta-game/delta-pay/src/main/java/com/delta/pay/service/WechatOfficialPayService.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/refund",
+        "delta-admin-ui/src/api/business.js"
+      ],
+      "h5": [
+        "delta-mp/pages/order/pay.vue",
+        "delta-mp/pages/wallet/recharge.vue",
+        "delta-mp/pages-player/apply/index.vue",
+        "delta-mp/pages-player/withdraw/index.vue"
+      ],
+      "tables": [
+        "payment",
+        "refund_request",
+        "transaction"
+      ],
+      "tests": [
+        "OrderRefundWorkflowTest",
+        "RepeatedRefundNotificationTest",
+        "platform-payment.test.mjs"
+      ]
+    },
+    {
+      "id": "player",
+      "name": "打手/等级/押金/提现",
+      "backend": [
+        "delta-game/delta-player/src/main/java/com/delta/player/controller",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminWithdrawController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerLevelController.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/player",
+        "delta-admin-ui/src/views/withdraw"
+      ],
+      "h5": [
+        "delta-mp/pages/players",
+        "delta-mp/pages-player",
+        "delta-mp/pages/wallet"
+      ],
+      "tables": [
+        "player",
+        "player_level",
+        "player_wallet",
+        "withdraw",
+        "player_deposit_refund",
+        "transaction"
+      ],
+      "tests": [
+        "AdminWithdrawRejectTest",
+        "AdminWithdrawConcurrencyTest",
+        "PlayerDepositAdminServiceTest",
+        "PlayerDirectoryIntegrationTest"
+      ]
+    },
+    {
+      "id": "sms_identity",
+      "name": "短信/实名/套餐",
+      "backend": [
+        "delta-game/delta-common/src/main/java/com/delta/common/sms",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/SmsGatewayAdminController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/IdentityVerificationController.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/service/SmsNoticeService.java",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/service/WechatIdentityService.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/system/SmsAccount.vue",
+        "delta-admin-ui/src/views/user"
+      ],
+      "h5": [
+        "delta-mp/pages/mine/identity.vue"
+      ],
+      "tables": [
+        "sms_*",
+        "identity_*",
+        "transaction"
+      ],
+      "tests": [
+        "SmsNoticeServiceTest",
+        "IdentityVerificationIntegrationTest",
+        "sms-account.test.mjs"
+      ]
+    },
+    {
+      "id": "system_config",
+      "name": "系统配置/公告/内容/主题",
+      "backend": [
+        "delta-game/delta-system/src/main/java/com/delta/system/controller",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/platform/ThemeController.java"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/system",
+        "delta-admin-ui/src/views/platform/ThemeStore.vue"
+      ],
+      "h5": [
+        "delta-mp/pages/agreement",
+        "delta-mp/pages/message"
+      ],
+      "tables": [
+        "sys_config",
+        "notice",
+        "content_config",
+        "banner"
+      ],
+      "tests": [
+        "ContentConfigControllerTest",
+        "system-config.test.mjs",
+        "theme-route-audit.mjs"
+      ]
+    },
+    {
+      "id": "ui",
+      "name": "设计系统/前端边界",
+      "backend": [],
+      "admin": [
+        "delta-admin-ui/src/components",
+        "delta-admin-ui/src/styles",
+        "delta-admin-ui/src/api"
+      ],
+      "h5": [
+        "delta-mp/styles",
+        "delta-mp/api"
+      ],
+      "tables": [],
+      "tests": [
+        "design-system.test.mjs",
+        "feedback.test.mjs",
+        "api-boundary.test.mjs",
+        "soft-theme.test.mjs"
+      ]
+    }
+  ],
+  "documents": [
+    "docs/ai/README.md",
+    "docs/ai/PROJECT_CONTEXT.md",
+    "docs/ai/FEATURE_MAP.md",
+    "docs/ai/PITFALLS.md",
+    "docs/ai/CHANGE_RECIPES.md",
+    "docs/ai/VERIFICATION.md",
+    "docs/ai/CURRENT_RELEASE.md"
+  ],
+  "contracts": {
+    "endpointBaseline": "contracts/endpoint-baseline.json",
+    "openapiBaseline": "contracts/openapi.baseline.json",
+    "types": "contracts/api-types.d.ts",
+    "endpoints": 482,
+    "operations": 482,
+    "schemas": 278
+  }
+}
