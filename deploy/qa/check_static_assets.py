@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 
 TEXT_SUFFIXES = {'.html', '.js', '.css', '.json', '.svg'}
+INJECTED_ARCHIVE_FILES = {'cangshuo-version.json'}
 REFERENCE = re.compile(r'(?:^|["\'(])(/?(?:assets|static)/[^"\'\s<>)]+)')
 
 
@@ -33,7 +34,8 @@ def references(root):
 def archive_check(root, archive):
     with zipfile.ZipFile(archive) as zipped:
         entries = {item.filename for item in zipped.infolist() if not item.is_dir()}
-    missing = sorted(name for name in entries if not (root / name).is_file())
+    missing = sorted(name for name in entries
+                     if name not in INJECTED_ARCHIVE_FILES and not (root / name).is_file())
     extra = sorted(path.relative_to(root).as_posix() for path in root.rglob('*')
                    if path.is_file() and path.relative_to(root).as_posix() not in entries)
     return missing, extra
@@ -69,3 +71,7 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+
+
+
+
