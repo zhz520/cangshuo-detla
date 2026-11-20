@@ -1,17 +1,17 @@
 # AI 项目上下文入口（Delta 1.18.0）
 
-这份目录是给 AI 和新维护者用的“当前事实入口”，不是历史发布记录。开始改代码前先读这里，再读目标功能附近的代码和测试。
+这份目录是给 AI 和新维护者用的“当前事实入口”，不是历史发布记录。开始改代码前先读必读规则，再用本目录定位功能和当前发布，最后读目标代码与测试。
 
 ## 阅读顺序
 
-1. PROJECT_CONTEXT.md：系统组成、仓库、部署和多租户边界
-2. FEATURE_MAP.md：功能对应到后端、管理端、H5、数据库和测试
-3. PITFALLS.md：已经踩过的坑和必须回归的规则
-4. CHANGE_RECIPES.md：不同改动类型的固定动作
-5. inventory.json：从代码生成的 Controller、后台页面/路由、API 模块、H5 页面、数据库表、迁移和测试清单
-6. VERIFICATION.md：实际可执行的验证命令
-7. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
-8. docs/VIBE_CODING.md、docs/development-conventions.md：发布、安全、版本和授权的最高约束
+1. docs/VIBE_CODING.md、docs/development-conventions.md：发布、安全、版本和授权的最高约束
+2. PROJECT_CONTEXT.md：系统组成、仓库、部署和多租户边界
+3. FEATURE_MAP.md：功能对应到后端、管理端、H5、数据库和测试
+4. PITFALLS.md：已经踩过的坑和必须回归的规则
+5. CHANGE_RECIPES.md：不同改动类型的固定动作
+6. inventory.json：从代码生成的 Controller、后台页面/路由、API 模块、H5 页面、数据库表、迁移和测试清单
+7. VERIFICATION.md：实际可执行的验证命令
+8. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
 
 ## 当前事实
 
