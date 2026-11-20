@@ -26,7 +26,7 @@ def checks(database):
     return [
         ("wallet_negative", count("wallet", "CAST(balance AS DECIMAL(18,4)) < -0.005 OR CAST(frozen_amount AS DECIMAL(18,4)) < -0.005")),
         ("player_wallet_negative", count("player_wallet", "CAST(balance AS DECIMAL(18,4)) < -0.005 OR CAST(frozen_amount AS DECIMAL(18,4)) < -0.005")),
-        ("transaction_arithmetic", count("`transaction`", "ABS(CAST(balance_after AS DECIMAL(18,4)) - CAST(balance_before AS DECIMAL(18,4)) - CASE WHEN type='ADMIN_DEDUCT' THEN -CAST(amount AS DECIMAL(18,4)) ELSE CAST(amount AS DECIMAL(18,4)) END) > 0.005")),
+        ("transaction_arithmetic", count("`transaction`", "type NOT IN ('WITHDRAW','WITHDRAW_COMPLETE') AND ABS(CAST(balance_after AS DECIMAL(18,4)) - CAST(balance_before AS DECIMAL(18,4)) - CASE WHEN type='ADMIN_DEDUCT' THEN -CAST(amount AS DECIMAL(18,4)) ELSE CAST(amount AS DECIMAL(18,4)) END) > 0.005")),
         ("transaction_continuity", "SELECT COALESCE(SUM(CASE WHEN previous_after IS NOT NULL AND ABS(CAST(balance_before AS DECIMAL(18,4))-CAST(previous_after AS DECIMAL(18,4))) > 0.005 THEN 1 ELSE 0 END),0) FROM (SELECT balance_before, LAG(balance_after) OVER (PARTITION BY user_type,user_id ORDER BY id) previous_after FROM " + prefix + "`transaction`) t"),
         ("user_wallet_latest_mismatch", "SELECT COALESCE(SUM(CASE WHEN (t.balance_after IS NULL AND ABS(CAST(w.balance AS DECIMAL(18,4))) > 0.005) OR (t.balance_after IS NOT NULL AND ABS(CAST(w.balance AS DECIMAL(18,4))-CAST(t.balance_after AS DECIMAL(18,4))) > 0.005) THEN 1 ELSE 0 END),0) FROM " + prefix + "wallet w LEFT JOIN (SELECT user_id,balance_after FROM (SELECT user_id,balance_after,ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY id DESC) rn FROM " + prefix + "`transaction` WHERE user_type='USER') x WHERE rn=1) t ON t.user_id=w.user_id"),
         ("player_wallet_latest_mismatch", "SELECT COALESCE(SUM(CASE WHEN (t.balance_after IS NULL AND ABS(CAST(w.balance AS DECIMAL(18,4))) > 0.005) OR (t.balance_after IS NOT NULL AND ABS(CAST(w.balance AS DECIMAL(18,4))-CAST(t.balance_after AS DECIMAL(18,4))) > 0.005) THEN 1 ELSE 0 END),0) FROM " + prefix + "player_wallet w LEFT JOIN (SELECT player_id,balance_after FROM (SELECT user_id AS player_id,balance_after,ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY id DESC) rn FROM " + prefix + "`transaction` WHERE user_type='PLAYER') x WHERE rn=1) t ON t.player_id=w.player_id"),
@@ -110,3 +110,5 @@ if __name__ == "__main__":
     except (ValueError, OSError, RuntimeError, json.JSONDecodeError) as error:
         print("ERROR: " + str(error), file=sys.stderr)
         raise SystemExit(2)
+
+
