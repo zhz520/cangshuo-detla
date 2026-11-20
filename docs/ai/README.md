@@ -8,7 +8,7 @@
 2. FEATURE_MAP.md：功能对应到后端、管理端、H5、数据库和测试
 3. PITFALLS.md：已经踩过的坑和必须回归的规则
 4. CHANGE_RECIPES.md：不同改动类型的固定动作
-5. inventory.json：从代码生成的 Controller、后台页面、API 模块和 H5 页面清单
+5. inventory.json：从代码生成的 Controller、后台页面/路由、API 模块、H5 页面、数据库表、迁移和测试清单
 6. VERIFICATION.md：实际可执行的验证命令
 7. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
 8. docs/VIBE_CODING.md、docs/development-conventions.md：发布、安全、版本和授权的最高约束
