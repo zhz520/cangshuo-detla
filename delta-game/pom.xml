@@ -48,6 +48,7 @@
         <module>delta-platform</module>
         <module>delta-workbench</module>
         <module>delta-reporting</module>
+        <module>delta-identity</module>
         <module>delta-admin</module>
     </modules>
 
@@ -211,6 +212,11 @@
             <dependency>
                 <groupId>com.delta</groupId>
                 <artifactId>delta-reporting</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.delta</groupId>
+                <artifactId>delta-identity</artifactId>
                 <version>${delta.version}</version>
             </dependency>
         </dependencies>
