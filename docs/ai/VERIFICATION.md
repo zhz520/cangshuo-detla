@@ -52,6 +52,8 @@ Docker 不可用时可使用独立的本地 MySQL 实例，默认端口 `17427`�
 
 测试包含 API 边界、设计系统、反馈、路由和页面静态检查。
 
+Windows 本机若 esbuild 报“remove ... Access is denied”，把 `TEMP`/`TMP` 指向项目内可写目录后再构建，例如 `delta-admin-ui/.tmp-build`；这属于本机临时目录权限问题，不是前端编译错误。CI 使用 Linux 临时目录，不受影响。
+
 ## H5
 
     cd delta-mp
