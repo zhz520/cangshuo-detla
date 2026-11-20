@@ -1,7 +1,11 @@
 <template>
   <div class="page-container">
     <el-card>
-      <template #header><div class="player-header"><span>打手管理</span><el-button v-if="isAdmin" @click="$router.push('/player-level')">管理等级分类</el-button></div></template>
+      <template #header>
+        <PageHeader title="打手管理" description="审核、分级、冻结和查看打手的押金与接单状态。">
+          <template #actions><el-button v-if="isAdmin" @click="$router.push('/player-level')">管理等级分类</el-button></template>
+        </PageHeader>
+      </template>
       <div v-if="query.taskId" style="margin-bottom:10px">已定位待办 #{{ query.taskId }}
         <el-button link @click="router.replace({ query: {} })">查看全部记录</el-button></div>
       <el-form :inline="true" :model="query" class="search-form">
@@ -22,47 +26,47 @@
       </BatchActionBar>
       <el-table ref="tableRef" row-key="id" :data="list" v-loading="loading" stripe @selection-change="onSelectionChange">
         <el-table-column v-if="isAdmin" type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="头像" width="80">
+        <el-table-column label="头像" width="70">
           <template #default="{ row }">
             <el-avatar :src="thumbnailUrl(row.avatar,160)" :size="32">{{ (row.nickname || '')[0] || '打' }}</el-avatar>
           </template>
         </el-table-column>
-        <el-table-column prop="nickname" label="昵称" width="140" />
-        <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="realName" label="真实姓名" width="100" />
-        <el-table-column prop="level" label="等级" width="90"><template #default="{ row }"><el-tag type="info" size="small">{{ levelLabel(row.level) }}</el-tag></template></el-table-column>
-        <el-table-column prop="completedOrders" label="完成订单" width="100" />
-        <el-table-column prop="balance" label="余额" width="100"><template #default="{ row }">¥{{ row.balance || 0 }}</template></el-table-column>
-        <el-table-column label="押金" width="190">
+        <el-table-column prop="nickname" label="昵称" min-width="120" />
+        <el-table-column prop="phone" label="手机号" width="120" />
+        <el-table-column prop="level" label="等级" width="80"><template #default="{ row }"><el-tag type="info" size="small">{{ levelLabel(row.level) }}</el-tag></template></el-table-column>
+        <el-table-column prop="completedOrders" label="完成订单" width="90" />
+        <el-table-column prop="balance" label="余额" width="90"><template #default="{ row }">¥{{ row.balance || 0 }}</template></el-table-column>
+        <el-table-column label="押金" width="170">
           <template #default="{ row }">
             <el-tag :type="depositTagType(row.depositStatus)" size="small">{{ depositStatusText(row.depositStatus) }}</el-tag>
             <div class="deposit-amount">¥{{ money(row.depositPaidAmount) }} / ¥{{ money(row.depositRequiredAmount) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" min-width="150">
+        <el-table-column prop="status" label="状态" min-width="130">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
-            <div v-if="row.status === 'FROZEN' && row.frozenUntil" style="font-size:12px;color:#999;margin-top:2px">解冻时间：{{ row.frozenUntil }}</div>
+            <div v-if="row.status === 'FROZEN' && row.frozenUntil" class="deposit-time">解冻时间：{{ row.frozenUntil }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="410" :fixed="isCompact ? false : 'right'">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
-            <el-button link type="primary" @click="openEditDialog(row)">{{ isAdmin ? '编辑' : '改名' }}</el-button>
-            <el-button link type="info" @click="showPlayerOrders(row)">订单</el-button>
-            <el-button v-if="isAdmin" link type="primary" @click="showPlayerReviews(row)">评价</el-button>
-            <template v-if="row.status === 'PENDING'">
-              <el-button link type="success" @click="handleApprove(row)">通过</el-button>
-              <el-button link type="danger" @click="openRejectDialog(row)">驳回</el-button>
-            </template>
-            <el-button v-if="row.isOnline===1" link @click="setOffline(row)">下班</el-button>
-            <el-button v-if="row.status === 'ACTIVE'" link type="warning" @click="openFreezeDialog(row)">冻结</el-button>
-            <el-popconfirm v-if="row.status === 'FROZEN'" title="确认解冻？" @confirm="handleUnfreeze(row.id)">
-              <template #reference><el-button link type="success">解冻</el-button></template>
-            </el-popconfirm>
-            <el-button v-if="isAdmin" link type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-dropdown trigger="click" @command="command => handleRowAction(command, row)">
+              <el-button link type="primary">更多<el-icon><ArrowDown /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">{{ isAdmin ? '编辑' : '改名' }}</el-dropdown-item>
+                  <el-dropdown-item command="orders">订单</el-dropdown-item>
+                  <el-dropdown-item v-if="isAdmin" command="reviews">评价</el-dropdown-item>
+                  <el-dropdown-item v-if="row.status === 'PENDING'" command="approve">通过</el-dropdown-item>
+                  <el-dropdown-item v-if="row.status === 'PENDING'" command="reject">驳回</el-dropdown-item>
+                  <el-dropdown-item v-if="row.isOnline === 1" command="offline">下班</el-dropdown-item>
+                  <el-dropdown-item v-if="row.status === 'ACTIVE'" command="freeze">冻结</el-dropdown-item>
+                  <el-dropdown-item v-if="row.status === 'FROZEN'" command="unfreeze">解冻</el-dropdown-item>
+                  <el-dropdown-item v-if="isAdmin" command="delete" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -219,7 +223,7 @@
               <el-option label="跟随等级涨价" value="level"/><el-option label="单独设置涨价" value="custom"/>
             </el-select>
             <div v-if="editForm.priceIncreaseRate >= 0" style="margin-top:8px;width:100%"><el-input-number v-model="editForm.priceIncreaseRate" :min="0" :max="100" :precision="2"/> %</div>
-            <div style="width:100%;color:#858992;font-size:12px">仅指定该打手下单时生效，0% 表示不涨价；已有订单金额不变。</div>
+            <div class="inline-tip">仅指定该打手下单时生效，0% 表示不涨价；已有订单金额不变。</div>
           </el-form-item>
           <el-form-item label="个人简介">
             <el-input v-model="editForm.introduction" type="textarea" :rows="5" maxlength="1000" show-word-limit placeholder="公开展示在打手个人主页" />
@@ -292,6 +296,8 @@ import { watch } from 'vue'
 import request from '@/utils/request'
 import { useResponsive } from '@/utils/responsive'
 import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { computed, ref, reactive, onMounted } from 'vue'
 import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
 import { useUserStore } from '@/stores/user'
@@ -317,6 +323,20 @@ const batchRejectVisible = ref(false), batchRejectReason = ref('')
 const batchLevelVisible = ref(false), batchLevelId = ref(null)
 const selectedIds = computed(() => selectedRows.value.map(row => row.id))
 function onSelectionChange(rows) { selectedRows.value = rows }
+async function handleRowAction(command, row) {
+  if (command === 'edit') return openEditDialog(row)
+  if (command === 'orders') return showPlayerOrders(row)
+  if (command === 'reviews') return showPlayerReviews(row)
+  if (command === 'approve') return handleApprove(row)
+  if (command === 'reject') return openRejectDialog(row)
+  if (command === 'offline') return setOffline(row)
+  if (command === 'freeze') return openFreezeDialog(row)
+  if (command === 'unfreeze') {
+    try { await ElMessageBox.confirm('确认解冻？', '解冻打手', { type: 'warning' }) } catch (_) { return }
+    return handleUnfreeze(row.id)
+  }
+  if (command === 'delete') return handleDelete(row)
+}
 function clearSelection() { tableRef.value?.clearSelection(); selectedRows.value = [] }
 const route = useRoute()
 const router = useRouter()
@@ -651,7 +671,9 @@ watch(() => route.query.taskId, id => {
 </script>
 <style scoped>
 .search-form { margin-bottom: 16px; }
-.dialog-tip { margin: 0 0 12px; color: #73777e; font-size: 13px; line-height: 1.7; }
+.deposit-time { font-size:12px; color:var(--el-text-color-secondary); margin-top:2px; }
+.inline-tip { width:100%; color:var(--el-text-color-secondary); font-size:12px; }
+.dialog-tip { margin: 0 0 12px; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.7; }
 </style>
 
 <style scoped>
@@ -668,24 +690,24 @@ watch(() => route.query.taskId, id => {
 .deposit-history-head :deep(.el-divider) { flex: 1; margin-right: 8px; }
 .introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .proof-section { margin-top: 16px; }
-.proof-title { font-size: 13px; color: #606266; margin-bottom: 10px; }
-.proof-count { color: #909399; font-size: 12px; }
+.proof-title { font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 10px; }
+.proof-count { color: var(--el-text-color-secondary); font-size: 12px; }
 .proof-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .proof-image {
   width: 96px;
   height: 96px;
   border-radius: 8px;
-  border: 1px solid #e6e7e9;
-  background: #f7f8f9;
+  border: 1px solid var(--el-border-color-light);
+  background: var(--el-fill-color-light);
   cursor: zoom-in;
 }
 .proof-empty {
   padding: 14px 16px;
-  border: 1px dashed #dcdfe6;
+  border: 1px dashed var(--el-border-color);
   border-radius: 8px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 13px;
-  background: #fafafa;
+  background: var(--el-fill-color-lighter);
 }
 .player-detail-header {
   display: flex;
@@ -704,15 +726,15 @@ watch(() => route.query.taskId, id => {
 .player-detail-sub {
   margin-top: 4px;
   font-size: 12px;
-  color: #73777e;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
 }
 .player-detail-id {
   font-size: 12px;
 }
-.amount-positive { color: #c94f59; font-weight: 600; }
-.amount-negative { color: #347a5b; font-weight: 600; }
+.amount-positive { color: var(--el-color-danger); font-weight: 600; }
+.amount-negative { color: var(--el-color-success); font-weight: 600; }
 @media (max-width: 768px) {
   .player-detail-header { gap: 10px; }
   .player-detail-main { min-width: 0; }

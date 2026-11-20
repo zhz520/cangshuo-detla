@@ -1,0 +1,2630 @@
+[
+  {
+    "controller": "DashboardAnalyticsController",
+    "handler": "dashboard",
+    "method": "GET",
+    "path": "/admin/analytics/"
+  },
+  {
+    "controller": "DashboardAnalyticsController",
+    "handler": "players",
+    "method": "GET",
+    "path": "/admin/analytics/players"
+  },
+  {
+    "controller": "AdminCategoryFieldController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/admin/category-field/"
+  },
+  {
+    "controller": "AdminCategoryFieldController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/category-field/"
+  },
+  {
+    "controller": "AdminCategoryFieldController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/category-field/list"
+  },
+  {
+    "controller": "AdminCategoryFieldController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/category-field/{id}"
+  },
+  {
+    "controller": "AdminChatController",
+    "handler": "messageList",
+    "method": "GET",
+    "path": "/admin/chat/message/list"
+  },
+  {
+    "controller": "AdminChatController",
+    "handler": "sessionList",
+    "method": "GET",
+    "path": "/admin/chat/session/list"
+  },
+  {
+    "controller": "CouponAdminController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/coupons/"
+  },
+  {
+    "controller": "CouponAdminController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/admin/coupons/"
+  },
+  {
+    "controller": "CouponAdminController",
+    "handler": "records",
+    "method": "GET",
+    "path": "/admin/coupons/records"
+  },
+  {
+    "controller": "CouponAdminController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/coupons/{id}"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "groups",
+    "method": "GET",
+    "path": "/admin/cs-routing/groups"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "saveGroup",
+    "method": "POST",
+    "path": "/admin/cs-routing/groups"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "deleteGroup",
+    "method": "DELETE",
+    "path": "/admin/cs-routing/groups/{id}"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "ratings",
+    "method": "GET",
+    "path": "/admin/cs-routing/ratings"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "rules",
+    "method": "GET",
+    "path": "/admin/cs-routing/rules"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "saveRule",
+    "method": "POST",
+    "path": "/admin/cs-routing/rules"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "deleteRule",
+    "method": "DELETE",
+    "path": "/admin/cs-routing/rules/{id}"
+  },
+  {
+    "controller": "CsRoutingController",
+    "handler": "staff",
+    "method": "GET",
+    "path": "/admin/cs-routing/staff"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "settings",
+    "method": "GET",
+    "path": "/admin/email-notifications/"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "records",
+    "method": "GET",
+    "path": "/admin/email-notifications/records"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "retry",
+    "method": "POST",
+    "path": "/admin/email-notifications/records/{id}/retry"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "settings",
+    "method": "GET",
+    "path": "/admin/email-notifications/settings"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "save",
+    "method": "PUT",
+    "path": "/admin/email-notifications/settings"
+  },
+  {
+    "controller": "EmailNotificationController",
+    "handler": "test",
+    "method": "POST",
+    "path": "/admin/email-notifications/test"
+  },
+  {
+    "controller": "AdminHomeController",
+    "handler": "dashboard",
+    "method": "GET",
+    "path": "/admin/home/dashboard"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/identity/applications"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/admin/identity/applications/{userId}"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "review",
+    "method": "PUT",
+    "path": "/admin/identity/applications/{userId}"
+  },
+  {
+    "controller": "InviteAdminController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/invites/"
+  },
+  {
+    "controller": "InviteAdminController",
+    "handler": "markDebtRecovered",
+    "method": "PUT",
+    "path": "/admin/invites/debts/{id}/recovered"
+  },
+  {
+    "controller": "MembershipAdminController",
+    "handler": "current",
+    "method": "GET",
+    "path": "/admin/membership/"
+  },
+  {
+    "controller": "MembershipAdminController",
+    "handler": "save",
+    "method": "PUT",
+    "path": "/admin/membership/"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/order/list"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/admin/order/{id}"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "assign",
+    "method": "POST",
+    "path": "/admin/order/{id}/assign/{playerId}"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "confirm",
+    "method": "POST",
+    "path": "/admin/order/{id}/confirm"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "assignCs",
+    "method": "PUT",
+    "path": "/admin/order/{id}/cs"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "progress",
+    "method": "GET",
+    "path": "/admin/order/{id}/progress"
+  },
+  {
+    "controller": "AdminOrderController",
+    "handler": "refund",
+    "method": "POST",
+    "path": "/admin/order/{id}/refund"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "checkout",
+    "method": "POST",
+    "path": "/admin/platform/checkout"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "features",
+    "method": "GET",
+    "path": "/admin/platform/features"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "enabled",
+    "method": "PUT",
+    "path": "/admin/platform/features/{id}/enabled"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "importLicense",
+    "method": "POST",
+    "path": "/admin/platform/license/import"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "market",
+    "method": "GET",
+    "path": "/admin/platform/market"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "syncMarket",
+    "method": "POST",
+    "path": "/admin/platform/market/sync"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "overview",
+    "method": "GET",
+    "path": "/admin/platform/overview"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "income",
+    "method": "GET",
+    "path": "/admin/platform/reports/income"
+  },
+  {
+    "controller": "ThemeController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/platform/themes/"
+  },
+  {
+    "controller": "ThemeController",
+    "handler": "activate",
+    "method": "PUT",
+    "path": "/admin/platform/themes/active"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "updates",
+    "method": "GET",
+    "path": "/admin/platform/updates"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "checkUpdates",
+    "method": "POST",
+    "path": "/admin/platform/updates/check"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "install",
+    "method": "POST",
+    "path": "/admin/platform/updates/install"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "remoteStatus",
+    "method": "GET",
+    "path": "/admin/platform/updates/remote"
+  },
+  {
+    "controller": "PlatformController",
+    "handler": "updateSelection",
+    "method": "PUT",
+    "path": "/admin/platform/updates/selection"
+  },
+  {
+    "controller": "PlayerDirectoryLayoutController",
+    "handler": "settings",
+    "method": "GET",
+    "path": "/admin/player-layout"
+  },
+  {
+    "controller": "PlayerDirectoryLayoutController",
+    "handler": "save",
+    "method": "PUT",
+    "path": "/admin/player-layout"
+  },
+  {
+    "controller": "AdminPlayerLevelController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/admin/player-level/"
+  },
+  {
+    "controller": "AdminPlayerLevelController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/player-level/list"
+  },
+  {
+    "controller": "AdminPlayerLevelController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/player-level/{id}"
+  },
+  {
+    "controller": "AdminPlayerLevelController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/player-level/{id}"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "batchApprove",
+    "method": "POST",
+    "path": "/admin/player/batch/approve"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "batchLevel",
+    "method": "POST",
+    "path": "/admin/player/batch/level"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "batchReject",
+    "method": "POST",
+    "path": "/admin/player/batch/reject"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "batchUnfreeze",
+    "method": "POST",
+    "path": "/admin/player/batch/unfreeze"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/player/list"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/player/{id}"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/admin/player/{id}"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "updatePlayer",
+    "method": "PUT",
+    "path": "/admin/player/{id}"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "approve",
+    "method": "PUT",
+    "path": "/admin/player/{id}/approve"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "freeze",
+    "method": "PUT",
+    "path": "/admin/player/{id}/freeze"
+  },
+  {
+    "controller": "GrabMonitorController",
+    "handler": "metrics",
+    "method": "GET",
+    "path": "/admin/player/{id}/grab-metrics"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "reject",
+    "method": "PUT",
+    "path": "/admin/player/{id}/reject"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "updateStatus",
+    "method": "PUT",
+    "path": "/admin/player/{id}/status"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "transactions",
+    "method": "GET",
+    "path": "/admin/player/{id}/transactions"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "unfreeze",
+    "method": "PUT",
+    "path": "/admin/player/{id}/unfreeze"
+  },
+  {
+    "controller": "PrivacyController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/privacy/requests"
+  },
+  {
+    "controller": "PrivacyController",
+    "handler": "review",
+    "method": "PUT",
+    "path": "/admin/privacy/requests/{id}"
+  },
+  {
+    "controller": "AdminRecommendCategoryController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/admin/recommend-category/"
+  },
+  {
+    "controller": "AdminRecommendCategoryController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/recommend-category/"
+  },
+  {
+    "controller": "AdminRecommendCategoryController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/recommend-category/list"
+  },
+  {
+    "controller": "AdminRecommendCategoryController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/recommend-category/{id}"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "adminList",
+    "method": "GET",
+    "path": "/admin/refunds"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "adminDetail",
+    "method": "GET",
+    "path": "/admin/refunds/{id}"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "approve",
+    "method": "POST",
+    "path": "/admin/refunds/{id}/approve"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "reject",
+    "method": "POST",
+    "path": "/admin/refunds/{id}/reject"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "retry",
+    "method": "POST",
+    "path": "/admin/refunds/{id}/retry"
+  },
+  {
+    "controller": "AdminReviewController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/review/list"
+  },
+  {
+    "controller": "AdminReviewController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/review/{id}"
+  },
+  {
+    "controller": "RewardGrabSettingsController",
+    "handler": "get",
+    "method": "GET",
+    "path": "/admin/reward-grab/settings/"
+  },
+  {
+    "controller": "RewardGrabSettingsController",
+    "handler": "save",
+    "method": "PUT",
+    "path": "/admin/reward-grab/settings/"
+  },
+  {
+    "controller": "RewardController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/rewards"
+  },
+  {
+    "controller": "RewardController",
+    "handler": "reverse",
+    "method": "POST",
+    "path": "/admin/rewards/{id}/reverse"
+  },
+  {
+    "controller": "SettlementLedgerController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/settlements/"
+  },
+  {
+    "controller": "SettlementLedgerController",
+    "handler": "export",
+    "method": "GET",
+    "path": "/admin/settlements/export"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "smsNotices",
+    "method": "GET",
+    "path": "/admin/sms/notifications"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "retrySms",
+    "method": "POST",
+    "path": "/admin/sms/notifications/{id}/retry"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "incomeDaily",
+    "method": "GET",
+    "path": "/admin/statistics/income-daily"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "orderStats",
+    "method": "GET",
+    "path": "/admin/statistics/order"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "overview",
+    "method": "GET",
+    "path": "/admin/statistics/overview"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "playerStats",
+    "method": "GET",
+    "path": "/admin/statistics/player"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "userStats",
+    "method": "GET",
+    "path": "/admin/statistics/user"
+  },
+  {
+    "controller": "AdminStatisticsController",
+    "handler": "userSpendingRank",
+    "method": "GET",
+    "path": "/admin/statistics/user-spending-rank"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/admin/user/"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "batchDelete",
+    "method": "POST",
+    "path": "/admin/user/batch/delete"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "batchStatus",
+    "method": "POST",
+    "path": "/admin/user/batch/status"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/user/list"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/user/{id}"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/admin/user/{id}"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/user/{id}"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "adjustBalance",
+    "method": "PUT",
+    "path": "/admin/user/{id}/balance"
+  },
+  {
+    "controller": "AdminUserController",
+    "handler": "updateStatus",
+    "method": "PUT",
+    "path": "/admin/user/{id}/status"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "notices",
+    "method": "GET",
+    "path": "/admin/wechat/notifications"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "retry",
+    "method": "POST",
+    "path": "/admin/wechat/notifications/{id}/retry"
+  },
+  {
+    "controller": "AdminWithdrawController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/withdraw/list"
+  },
+  {
+    "controller": "AdminWithdrawController",
+    "handler": "process",
+    "method": "PUT",
+    "path": "/admin/withdraw/{id}/process"
+  },
+  {
+    "controller": "AdminWithdrawController",
+    "handler": "reject",
+    "method": "PUT",
+    "path": "/admin/withdraw/{id}/reject"
+  },
+  {
+    "controller": "DisplayController",
+    "handler": "feed",
+    "method": "GET",
+    "path": "/app/display/purchase-feed"
+  },
+  {
+    "controller": "DisplayController",
+    "handler": "spending",
+    "method": "GET",
+    "path": "/app/display/spend-ranking"
+  },
+  {
+    "controller": "AppHomeController",
+    "handler": "home",
+    "method": "GET",
+    "path": "/app/home/"
+  },
+  {
+    "controller": "PublicPlayerController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/app/players/"
+  },
+  {
+    "controller": "PublicPlayerController",
+    "handler": "categories",
+    "method": "GET",
+    "path": "/app/players/categories"
+  },
+  {
+    "controller": "PlayerDirectoryLayoutController",
+    "handler": "publicLayout",
+    "method": "GET",
+    "path": "/app/players/layout"
+  },
+  {
+    "controller": "PublicPlayerController",
+    "handler": "levels",
+    "method": "GET",
+    "path": "/app/players/levels"
+  },
+  {
+    "controller": "PublicPlayerController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/app/players/{id}"
+  },
+  {
+    "controller": "PublicPlayerChatController",
+    "handler": "chat",
+    "method": "POST",
+    "path": "/app/players/{id}/chat"
+  },
+  {
+    "controller": "PlayerReviewController",
+    "handler": "reviewableOrders",
+    "method": "GET",
+    "path": "/app/players/{playerId}/reviewable-orders"
+  },
+  {
+    "controller": "PlayerReviewController",
+    "handler": "reviews",
+    "method": "GET",
+    "path": "/app/players/{playerId}/reviews"
+  },
+  {
+    "controller": "AppProductController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/app/product/list"
+  },
+  {
+    "controller": "AppProductController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/app/product/{id}"
+  },
+  {
+    "controller": "LogoutController",
+    "handler": "logout",
+    "method": "POST",
+    "path": "/auth/logout"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "messageList",
+    "method": "GET",
+    "path": "/common/chat/message/list"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "markRead",
+    "method": "POST",
+    "path": "/common/chat/message/read"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "send",
+    "method": "POST",
+    "path": "/common/chat/message/send"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "sessionByOrder",
+    "method": "GET",
+    "path": "/common/chat/session/by-order/{orderId}"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "createSession",
+    "method": "POST",
+    "path": "/common/chat/session/create"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "createCsSession",
+    "method": "POST",
+    "path": "/common/chat/session/cs"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "sessionList",
+    "method": "GET",
+    "path": "/common/chat/session/list"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "sessionDetail",
+    "method": "GET",
+    "path": "/common/chat/session/{id}"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "closeSession",
+    "method": "POST",
+    "path": "/common/chat/session/{id}/close"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "rateSession",
+    "method": "POST",
+    "path": "/common/chat/session/{id}/rate"
+  },
+  {
+    "controller": "ChatController",
+    "handler": "sendSmsReminder",
+    "method": "POST",
+    "path": "/common/chat/sms-reminder"
+  },
+  {
+    "controller": "FileController",
+    "handler": "profileAudio",
+    "method": "POST",
+    "path": "/common/file/profile-audio"
+  },
+  {
+    "controller": "FileController",
+    "handler": "upload",
+    "method": "POST",
+    "path": "/common/file/upload"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "remove",
+    "method": "DELETE",
+    "path": "/common/wechat/binding"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "binding",
+    "method": "GET",
+    "path": "/common/wechat/binding"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "complete",
+    "method": "POST",
+    "path": "/common/wechat/binding/complete"
+  },
+  {
+    "controller": "OfficialWechatController",
+    "handler": "start",
+    "method": "POST",
+    "path": "/common/wechat/binding/start"
+  },
+  {
+    "controller": "DashboardAnalyticsController",
+    "handler": "dashboard",
+    "method": "GET",
+    "path": "/cs/analytics/"
+  },
+  {
+    "controller": "DashboardAnalyticsController",
+    "handler": "players",
+    "method": "GET",
+    "path": "/cs/analytics/players"
+  },
+  {
+    "controller": "CsAuthController",
+    "handler": "captcha",
+    "method": "GET",
+    "path": "/cs/auth/captcha"
+  },
+  {
+    "controller": "CsAuthController",
+    "handler": "login",
+    "method": "POST",
+    "path": "/cs/auth/login"
+  },
+  {
+    "controller": "CsCategoryController",
+    "handler": "save",
+    "method": "POST",
+    "path": "/cs/category/"
+  },
+  {
+    "controller": "CsCategoryController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/category/list"
+  },
+  {
+    "controller": "CsCategoryController",
+    "handler": "updateStatus",
+    "method": "PUT",
+    "path": "/cs/category/status"
+  },
+  {
+    "controller": "CsCategoryController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/cs/category/{id}"
+  },
+  {
+    "controller": "CsChatController",
+    "handler": "messageList",
+    "method": "GET",
+    "path": "/cs/chat/message/list"
+  },
+  {
+    "controller": "CsChatController",
+    "handler": "sessionList",
+    "method": "GET",
+    "path": "/cs/chat/session/list"
+  },
+  {
+    "controller": "CsChatController",
+    "handler": "sessions",
+    "method": "GET",
+    "path": "/cs/chat/sessions"
+  },
+  {
+    "controller": "CsComplaintController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/cs/complaint/create"
+  },
+  {
+    "controller": "CsComplaintController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/complaint/list"
+  },
+  {
+    "controller": "CsComplaintController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/complaint/{id}"
+  },
+  {
+    "controller": "CsComplaintController",
+    "handler": "process",
+    "method": "PUT",
+    "path": "/cs/complaint/{id}/process"
+  },
+  {
+    "controller": "CsComplaintController",
+    "handler": "resolve",
+    "method": "PUT",
+    "path": "/cs/complaint/{id}/resolve"
+  },
+  {
+    "controller": "CsDashboardController",
+    "handler": "dashboard",
+    "method": "GET",
+    "path": "/cs/dashboard/"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "invitations",
+    "method": "GET",
+    "path": "/cs/governance/invitations"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "createInvite",
+    "method": "POST",
+    "path": "/cs/governance/invitations"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "toggle",
+    "method": "PUT",
+    "path": "/cs/governance/invitations/{token}"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "revisions",
+    "method": "GET",
+    "path": "/cs/governance/revisions"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "review",
+    "method": "PUT",
+    "path": "/cs/governance/revisions/{id}"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "recheck",
+    "method": "POST",
+    "path": "/cs/governance/revisions/{id}/recheck"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "shifts",
+    "method": "GET",
+    "path": "/cs/governance/shifts"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "shift",
+    "method": "PUT",
+    "path": "/cs/governance/shifts/{id}"
+  },
+  {
+    "controller": "CsMonitorController",
+    "handler": "overview",
+    "method": "GET",
+    "path": "/cs/monitor/overview"
+  },
+  {
+    "controller": "CsMonitorController",
+    "handler": "realtime",
+    "method": "GET",
+    "path": "/cs/monitor/realtime"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/order/list"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "spendingRank",
+    "method": "GET",
+    "path": "/cs/order/spending-rank"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/order/{id}"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "assign",
+    "method": "POST",
+    "path": "/cs/order/{id}/assign/{playerId}"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "confirm",
+    "method": "POST",
+    "path": "/cs/order/{id}/confirm"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "progress",
+    "method": "GET",
+    "path": "/cs/order/{id}/progress"
+  },
+  {
+    "controller": "CsOrderController",
+    "handler": "refund",
+    "method": "POST",
+    "path": "/cs/order/{id}/refund"
+  },
+  {
+    "controller": "StaffRoleController",
+    "handler": "mine",
+    "method": "GET",
+    "path": "/cs/permissions"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "assignList",
+    "method": "GET",
+    "path": "/cs/player/assign-list"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/player/list"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/player/{id}"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "audit",
+    "method": "PUT",
+    "path": "/cs/player/{id}/audit"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "freeze",
+    "method": "PUT",
+    "path": "/cs/player/{id}/freeze"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "updateNickname",
+    "method": "PUT",
+    "path": "/cs/player/{id}/nickname"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "offline",
+    "method": "PUT",
+    "path": "/cs/player/{id}/online-status"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "transactions",
+    "method": "GET",
+    "path": "/cs/player/{id}/transactions"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "unfreeze",
+    "method": "PUT",
+    "path": "/cs/player/{id}/unfreeze"
+  },
+  {
+    "controller": "CsProductController",
+    "handler": "save",
+    "method": "POST",
+    "path": "/cs/product/"
+  },
+  {
+    "controller": "CsProductController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/product/list"
+  },
+  {
+    "controller": "CsProductController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/product/{id}"
+  },
+  {
+    "controller": "CsProfileController",
+    "handler": "getProfile",
+    "method": "GET",
+    "path": "/cs/profile/"
+  },
+  {
+    "controller": "CsProfileController",
+    "handler": "updateProfile",
+    "method": "PUT",
+    "path": "/cs/profile/"
+  },
+  {
+    "controller": "CsProfileController",
+    "handler": "changePassword",
+    "method": "PUT",
+    "path": "/cs/profile/password"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "csList",
+    "method": "GET",
+    "path": "/cs/refunds"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "csDetail",
+    "method": "GET",
+    "path": "/cs/refunds/{id}"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "audit",
+    "method": "GET",
+    "path": "/cs/refunds/{id}/audit"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "submitReview",
+    "method": "POST",
+    "path": "/cs/refunds/{id}/review"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "startReview",
+    "method": "POST",
+    "path": "/cs/refunds/{id}/review/start"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "createByStaff",
+    "method": "POST",
+    "path": "/cs/refunds/{orderId}"
+  },
+  {
+    "controller": "CsRelayController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/relay/list"
+  },
+  {
+    "controller": "CsRelayController",
+    "handler": "approve",
+    "method": "POST",
+    "path": "/cs/relay/{id}/approve"
+  },
+  {
+    "controller": "CsRelayController",
+    "handler": "reject",
+    "method": "POST",
+    "path": "/cs/relay/{id}/reject"
+  },
+  {
+    "controller": "CsRemindController",
+    "handler": "remind",
+    "method": "GET",
+    "path": "/cs/remind/"
+  },
+  {
+    "controller": "CsReplaceController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/replace/list"
+  },
+  {
+    "controller": "CsReplaceController",
+    "handler": "approve",
+    "method": "PUT",
+    "path": "/cs/replace/{id}/approve"
+  },
+  {
+    "controller": "CsReplaceController",
+    "handler": "reject",
+    "method": "PUT",
+    "path": "/cs/replace/{id}/reject"
+  },
+  {
+    "controller": "StaffShiftController",
+    "handler": "status",
+    "method": "GET",
+    "path": "/cs/shift/status"
+  },
+  {
+    "controller": "StaffShiftController",
+    "handler": "toggle",
+    "method": "POST",
+    "path": "/cs/shift/toggle"
+  },
+  {
+    "controller": "CsUserController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/user/list"
+  },
+  {
+    "controller": "CsUserController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/user/{id}"
+  },
+  {
+    "controller": "CsUserController",
+    "handler": "updateStatus",
+    "method": "PUT",
+    "path": "/cs/user/{id}/status"
+  },
+  {
+    "controller": "CsWithdrawController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/withdraw/list"
+  },
+  {
+    "controller": "CsWithdrawController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/cs/withdraw/{id}"
+  },
+  {
+    "controller": "CsWithdrawController",
+    "handler": "approve",
+    "method": "PUT",
+    "path": "/cs/withdraw/{id}/approve"
+  },
+  {
+    "controller": "CsWithdrawController",
+    "handler": "reject",
+    "method": "PUT",
+    "path": "/cs/withdraw/{id}/reject"
+  },
+  {
+    "controller": "ImageThumbnailController",
+    "handler": "tenantThumbnail",
+    "method": "GET",
+    "path": "/file/thumbnail/{width}/{tenant}/{year}/{month}/{day}/{filename:.+}"
+  },
+  {
+    "controller": "ImageThumbnailController",
+    "handler": "thumbnail",
+    "method": "GET",
+    "path": "/file/thumbnail/{width}/{year}/{month}/{day}/{filename:.+}"
+  },
+  {
+    "controller": "GuestCheckoutController",
+    "handler": "bind",
+    "method": "POST",
+    "path": "/guest/bind"
+  },
+  {
+    "controller": "GuestCheckoutController",
+    "handler": "lookup",
+    "method": "POST",
+    "path": "/guest/lookup"
+  },
+  {
+    "controller": "GuestCheckoutController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/guest/orders"
+  },
+  {
+    "controller": "MaintenanceController",
+    "handler": "maintenancePage",
+    "method": "GET",
+    "path": "/maintenance"
+  },
+  {
+    "controller": "MaintenanceController",
+    "handler": "setMaintenance",
+    "method": "POST",
+    "path": "/maintenance/set"
+  },
+  {
+    "controller": "MaintenanceController",
+    "handler": "state",
+    "method": "GET",
+    "path": "/maintenance/state"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/message/list"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "markAllRead",
+    "method": "POST",
+    "path": "/message/read-all"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "markRead",
+    "method": "POST",
+    "path": "/message/read/{id}"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "remind",
+    "method": "GET",
+    "path": "/message/remind"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "reportSubscribe",
+    "method": "POST",
+    "path": "/message/subscribe/report"
+  },
+  {
+    "controller": "MessageController",
+    "handler": "unreadCount",
+    "method": "GET",
+    "path": "/message/unread-count"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/order/"
+  },
+  {
+    "controller": "UserPlayerController",
+    "handler": "availablePlayers",
+    "method": "GET",
+    "path": "/order/available-players"
+  },
+  {
+    "controller": "ComplaintController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/order/complaint/"
+  },
+  {
+    "controller": "ComplaintController",
+    "handler": "my",
+    "method": "GET",
+    "path": "/order/complaint/my"
+  },
+  {
+    "controller": "ComplaintController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/order/complaint/{id}"
+  },
+  {
+    "controller": "ComplaintController",
+    "handler": "appeal",
+    "method": "POST",
+    "path": "/order/complaint/{id}/appeal"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "myOrders",
+    "method": "GET",
+    "path": "/order/my"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "quote",
+    "method": "GET",
+    "path": "/order/quote"
+  },
+  {
+    "controller": "ReviewController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/order/review/"
+  },
+  {
+    "controller": "ReviewController",
+    "handler": "myReviews",
+    "method": "GET",
+    "path": "/order/review/my"
+  },
+  {
+    "controller": "ReviewController",
+    "handler": "byPlayer",
+    "method": "GET",
+    "path": "/order/review/player/{playerId}"
+  },
+  {
+    "controller": "ReviewController",
+    "handler": "byProduct",
+    "method": "GET",
+    "path": "/order/review/product/{productId}"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/order/{id}"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "cancel",
+    "method": "POST",
+    "path": "/order/{id}/cancel"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "confirm",
+    "method": "POST",
+    "path": "/order/{id}/confirm"
+  },
+  {
+    "controller": "UserPlayerController",
+    "handler": "designatePlayer",
+    "method": "POST",
+    "path": "/order/{id}/designate-player"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "progress",
+    "method": "GET",
+    "path": "/order/{id}/progress"
+  },
+  {
+    "controller": "OrderController",
+    "handler": "requestReplace",
+    "method": "POST",
+    "path": "/order/{id}/replace"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "customerHistory",
+    "method": "GET",
+    "path": "/order/{orderId}/refunds"
+  },
+  {
+    "controller": "RefundController",
+    "handler": "requestByCustomer",
+    "method": "POST",
+    "path": "/order/{orderId}/refunds"
+  },
+  {
+    "controller": "RewardController",
+    "handler": "options",
+    "method": "GET",
+    "path": "/order/{orderId}/reward"
+  },
+  {
+    "controller": "RewardController",
+    "handler": "pay",
+    "method": "POST",
+    "path": "/order/{orderId}/reward"
+  },
+  {
+    "controller": "PayController",
+    "handler": "balancePay",
+    "method": "POST",
+    "path": "/pay/balance/{orderId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "uploadCertificate",
+    "method": "POST",
+    "path": "/pay/config/upload"
+  },
+  {
+    "controller": "PayController",
+    "handler": "h5Pay",
+    "method": "POST",
+    "path": "/pay/h5/{orderId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "playerDeposit",
+    "method": "POST",
+    "path": "/pay/player-deposit"
+  },
+  {
+    "controller": "PayController",
+    "handler": "playerDepositH5",
+    "method": "POST",
+    "path": "/pay/player-deposit/h5"
+  },
+  {
+    "controller": "PayController",
+    "handler": "playerDepositOfficial",
+    "method": "POST",
+    "path": "/pay/player-deposit/official"
+  },
+  {
+    "controller": "PayController",
+    "handler": "rechargeH5Pay",
+    "method": "POST",
+    "path": "/pay/recharge/h5/{packageId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "rechargeOfficialPay",
+    "method": "POST",
+    "path": "/pay/recharge/official/{packageId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "rechargeWxPay",
+    "method": "POST",
+    "path": "/pay/recharge/wx/{packageId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "transactions",
+    "method": "GET",
+    "path": "/pay/transactions"
+  },
+  {
+    "controller": "PayController",
+    "handler": "wxNotify",
+    "method": "POST",
+    "path": "/pay/wx/notify"
+  },
+  {
+    "controller": "PayController",
+    "handler": "officialPayCallback",
+    "method": "GET",
+    "path": "/pay/wx/official/callback"
+  },
+  {
+    "controller": "PayController",
+    "handler": "officialPay",
+    "method": "POST",
+    "path": "/pay/wx/official/{orderId}"
+  },
+  {
+    "controller": "PayController",
+    "handler": "refundNotify",
+    "method": "POST",
+    "path": "/pay/wx/refund-notify"
+  },
+  {
+    "controller": "PayController",
+    "handler": "wxPay",
+    "method": "POST",
+    "path": "/pay/wx/{orderId}"
+  },
+  {
+    "controller": "PlayerAccountController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/player/account/"
+  },
+  {
+    "controller": "PlayerAccountController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/player/account/"
+  },
+  {
+    "controller": "PlayerAccountController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/player/account/"
+  },
+  {
+    "controller": "PlayerAccountController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/player/account/list"
+  },
+  {
+    "controller": "PlayerAccountController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/player/account/{id}"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "apply",
+    "method": "POST",
+    "path": "/player/apply"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "applicationStatus",
+    "method": "GET",
+    "path": "/player/apply/status"
+  },
+  {
+    "controller": "PlayerAuthController",
+    "handler": "wxLogin",
+    "method": "POST",
+    "path": "/player/auth/login"
+  },
+  {
+    "controller": "PlayerAuthController",
+    "handler": "register",
+    "method": "POST",
+    "path": "/player/auth/register"
+  },
+  {
+    "controller": "PlayerEarningsController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/player/earnings/detail"
+  },
+  {
+    "controller": "PlayerEarningsController",
+    "handler": "pending",
+    "method": "GET",
+    "path": "/player/earnings/pending"
+  },
+  {
+    "controller": "PlayerEarningsController",
+    "handler": "summary",
+    "method": "GET",
+    "path": "/player/earnings/summary"
+  },
+  {
+    "controller": "PlayerHomeController",
+    "handler": "home",
+    "method": "GET",
+    "path": "/player/home/"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "updateHomepage",
+    "method": "PUT",
+    "path": "/player/homepage"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "history",
+    "method": "GET",
+    "path": "/player/homepage/revisions"
+  },
+  {
+    "controller": "GovernanceController",
+    "handler": "invite",
+    "method": "GET",
+    "path": "/player/invitations/{token}"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "toggleOnlineStatus",
+    "method": "POST",
+    "path": "/player/online-status"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "hall",
+    "method": "GET",
+    "path": "/player/order/hall"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "inviteList",
+    "method": "GET",
+    "path": "/player/order/invite-list"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "availableTeammates",
+    "method": "GET",
+    "path": "/player/order/teammate/available"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "accept",
+    "method": "POST",
+    "path": "/player/order/{orderId}/accept"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "challenge",
+    "method": "GET",
+    "path": "/player/order/{orderId}/accept-challenge"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "acceptInvite",
+    "method": "POST",
+    "path": "/player/order/{orderId}/accept-invite"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "completeService",
+    "method": "POST",
+    "path": "/player/order/{orderId}/complete"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "inviteTeammate",
+    "method": "POST",
+    "path": "/player/order/{orderId}/invite-teammate"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "viewProgress",
+    "method": "GET",
+    "path": "/player/order/{orderId}/progress"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "updateProgress",
+    "method": "POST",
+    "path": "/player/order/{orderId}/progress"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "rejectAssign",
+    "method": "POST",
+    "path": "/player/order/{orderId}/reject-assign"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "rejectInvite",
+    "method": "POST",
+    "path": "/player/order/{orderId}/reject-invite"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "replaceAll",
+    "method": "POST",
+    "path": "/player/order/{orderId}/replace-all"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "replaceSelf",
+    "method": "POST",
+    "path": "/player/order/{orderId}/replace-self"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "replaceTeammate",
+    "method": "POST",
+    "path": "/player/order/{orderId}/replace-teammate"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "startService",
+    "method": "POST",
+    "path": "/player/order/{orderId}/start"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "profile",
+    "method": "GET",
+    "path": "/player/profile"
+  },
+  {
+    "controller": "PlayerController",
+    "handler": "updateProfile",
+    "method": "PUT",
+    "path": "/player/profile"
+  },
+  {
+    "controller": "PlayerRemindController",
+    "handler": "remind",
+    "method": "GET",
+    "path": "/player/remind/"
+  },
+  {
+    "controller": "WithdrawController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/player/withdraw/"
+  },
+  {
+    "controller": "WithdrawController",
+    "handler": "apply",
+    "method": "POST",
+    "path": "/player/withdraw/"
+  },
+  {
+    "controller": "WithdrawController",
+    "handler": "depositStatus",
+    "method": "GET",
+    "path": "/player/withdraw/deposit-status"
+  },
+  {
+    "controller": "WithdrawController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/player/withdraw/list"
+  },
+  {
+    "controller": "WithdrawController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/player/withdraw/{id}"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "available",
+    "method": "GET",
+    "path": "/player/work/available"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "myOrders",
+    "method": "GET",
+    "path": "/player/work/my"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/player/work/{id}"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "complete",
+    "method": "POST",
+    "path": "/player/work/{id}/complete"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "updateProgress",
+    "method": "POST",
+    "path": "/player/work/{id}/progress"
+  },
+  {
+    "controller": "PlayerWorkController",
+    "handler": "start",
+    "method": "POST",
+    "path": "/player/work/{id}/start"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/product/"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/product/"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "batchCategory",
+    "method": "POST",
+    "path": "/product/batch/category"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "batchCopy",
+    "method": "POST",
+    "path": "/product/batch/copy"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "batchDelete",
+    "method": "POST",
+    "path": "/product/batch/delete"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "batchPrice",
+    "method": "POST",
+    "path": "/product/batch/price"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "batchStatus",
+    "method": "POST",
+    "path": "/product/batch/status"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/product/category/"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/product/category/"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "all",
+    "method": "GET",
+    "path": "/product/category/all"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/product/category/list"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "tree",
+    "method": "GET",
+    "path": "/product/category/tree"
+  },
+  {
+    "controller": "CategoryFormFieldController",
+    "handler": "getFormFields",
+    "method": "GET",
+    "path": "/product/category/{categoryId}/form-fields"
+  },
+  {
+    "controller": "CategoryController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/product/category/{id}"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/product/list"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "recommend",
+    "method": "GET",
+    "path": "/product/recommend"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "recommendCategories",
+    "method": "GET",
+    "path": "/product/recommend/categories"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/product/{id}"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "detail",
+    "method": "GET",
+    "path": "/product/{id}"
+  },
+  {
+    "controller": "ProductController",
+    "handler": "updateStatus",
+    "method": "PUT",
+    "path": "/product/{id}/status"
+  },
+  {
+    "controller": "AdminController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/admin/"
+  },
+  {
+    "controller": "AdminController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/admin/"
+  },
+  {
+    "controller": "AdminController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/admin/list"
+  },
+  {
+    "controller": "AdminController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/admin/{id}"
+  },
+  {
+    "controller": "AdminController",
+    "handler": "getById",
+    "method": "GET",
+    "path": "/system/admin/{id}"
+  },
+  {
+    "controller": "BannerController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/banner/"
+  },
+  {
+    "controller": "BannerController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/banner/"
+  },
+  {
+    "controller": "BannerController",
+    "handler": "active",
+    "method": "GET",
+    "path": "/system/banner/active"
+  },
+  {
+    "controller": "BannerController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/banner/list"
+  },
+  {
+    "controller": "BannerController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/banner/{id}"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/config/"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "batchUpdate",
+    "method": "PUT",
+    "path": "/system/config/batch"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/config/list"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "rechargePackages",
+    "method": "GET",
+    "path": "/system/config/recharge-packages"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "updateRechargePackages",
+    "method": "PUT",
+    "path": "/system/config/recharge-packages"
+  },
+  {
+    "controller": "SysConfigController",
+    "handler": "getSiteConfig",
+    "method": "GET",
+    "path": "/system/config/site"
+  },
+  {
+    "controller": "ThemePublicController",
+    "handler": "theme",
+    "method": "GET",
+    "path": "/system/config/theme"
+  },
+  {
+    "controller": "ContentConfigController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/content/"
+  },
+  {
+    "controller": "ContentConfigController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/content/"
+  },
+  {
+    "controller": "ContentConfigController",
+    "handler": "getByKey",
+    "method": "GET",
+    "path": "/system/content/key/{key}"
+  },
+  {
+    "controller": "ContentConfigController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/content/list"
+  },
+  {
+    "controller": "ContentConfigController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/content/{id}"
+  },
+  {
+    "controller": "ProjectStatusController",
+    "handler": "status",
+    "method": "GET",
+    "path": "/system/maintenance/status"
+  },
+  {
+    "controller": "NoticeController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/notice/"
+  },
+  {
+    "controller": "NoticeController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/notice/"
+  },
+  {
+    "controller": "NoticeController",
+    "handler": "active",
+    "method": "GET",
+    "path": "/system/notice/active"
+  },
+  {
+    "controller": "NoticeController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/notice/list"
+  },
+  {
+    "controller": "NoticeController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/notice/{id}"
+  },
+  {
+    "controller": "AdminNoticePushController",
+    "handler": "push",
+    "method": "POST",
+    "path": "/system/notice/{id}/push"
+  },
+  {
+    "controller": "OperationLogController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/operation-log/list"
+  },
+  {
+    "controller": "QuickReplyController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/quick-reply/"
+  },
+  {
+    "controller": "QuickReplyController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/quick-reply/"
+  },
+  {
+    "controller": "QuickReplyController",
+    "handler": "active",
+    "method": "GET",
+    "path": "/system/quick-reply/active"
+  },
+  {
+    "controller": "QuickReplyController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/quick-reply/list"
+  },
+  {
+    "controller": "QuickReplyController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/quick-reply/{id}"
+  },
+  {
+    "controller": "RechargePackageController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/recharge-packages/"
+  },
+  {
+    "controller": "StaffRoleController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/roles"
+  },
+  {
+    "controller": "StaffRoleController",
+    "handler": "save",
+    "method": "PUT",
+    "path": "/system/roles"
+  },
+  {
+    "controller": "StaffRoleController",
+    "handler": "assign",
+    "method": "PUT",
+    "path": "/system/roles/members/{id}"
+  },
+  {
+    "controller": "StaffRoleController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/roles/{code}"
+  },
+  {
+    "controller": "SensitiveWordController",
+    "handler": "add",
+    "method": "POST",
+    "path": "/system/sensitive-word/"
+  },
+  {
+    "controller": "SensitiveWordController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/system/sensitive-word/"
+  },
+  {
+    "controller": "SensitiveWordController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/system/sensitive-word/list"
+  },
+  {
+    "controller": "SensitiveWordController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/system/sensitive-word/{id}"
+  },
+  {
+    "controller": "StatisticsDailyController",
+    "handler": "daily",
+    "method": "GET",
+    "path": "/system/statistics/daily"
+  },
+  {
+    "controller": "StatisticsDailyController",
+    "handler": "latest",
+    "method": "GET",
+    "path": "/system/statistics/latest"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "captcha",
+    "method": "GET",
+    "path": "/user/auth/captcha"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "h5Login",
+    "method": "POST",
+    "path": "/user/auth/h5-login"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "wxLogin",
+    "method": "POST",
+    "path": "/user/auth/login"
+  },
+  {
+    "controller": "UserLoginPolicyController",
+    "handler": "policy",
+    "method": "GET",
+    "path": "/user/auth/login-policy"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "passwordLogin",
+    "method": "POST",
+    "path": "/user/auth/password-login"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "resetCode",
+    "method": "POST",
+    "path": "/user/auth/reset-code"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "resetPassword",
+    "method": "POST",
+    "path": "/user/auth/reset-password"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "setPassword",
+    "method": "POST",
+    "path": "/user/auth/set-password"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "smsCode",
+    "method": "POST",
+    "path": "/user/auth/sms-code"
+  },
+  {
+    "controller": "UserAuthController",
+    "handler": "switchToPlayer",
+    "method": "POST",
+    "path": "/user/auth/switch-to-player"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "callback",
+    "method": "GET",
+    "path": "/user/auth/wechat/callback"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "exchange",
+    "method": "POST",
+    "path": "/user/auth/wechat/exchange"
+  },
+  {
+    "controller": "WechatAccountLinkController",
+    "handler": "link",
+    "method": "POST",
+    "path": "/user/auth/wechat/link-account"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "start",
+    "method": "GET",
+    "path": "/user/auth/wechat/start"
+  },
+  {
+    "controller": "CouponController",
+    "handler": "available",
+    "method": "GET",
+    "path": "/user/coupons/available"
+  },
+  {
+    "controller": "CouponController",
+    "handler": "mine",
+    "method": "GET",
+    "path": "/user/coupons/mine"
+  },
+  {
+    "controller": "CouponController",
+    "handler": "claim",
+    "method": "POST",
+    "path": "/user/coupons/{templateId}/claim"
+  },
+  {
+    "controller": "DisplayPrivacyController",
+    "handler": "current",
+    "method": "GET",
+    "path": "/user/display/privacy/"
+  },
+  {
+    "controller": "DisplayPrivacyController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/user/display/privacy/"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "favorites",
+    "method": "GET",
+    "path": "/user/favorites"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "unfavorite",
+    "method": "DELETE",
+    "path": "/user/favorites/{productId}"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "favorite",
+    "method": "POST",
+    "path": "/user/favorites/{productId}"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "favoriteStatus",
+    "method": "GET",
+    "path": "/user/favorites/{productId}/status"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "follows",
+    "method": "GET",
+    "path": "/user/follows"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "unfollow",
+    "method": "DELETE",
+    "path": "/user/follows/{playerId}"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "follow",
+    "method": "POST",
+    "path": "/user/follows/{playerId}"
+  },
+  {
+    "controller": "UserEngagementController",
+    "handler": "followStatus",
+    "method": "GET",
+    "path": "/user/follows/{playerId}/status"
+  },
+  {
+    "controller": "UserGameInfoController",
+    "handler": "save",
+    "method": "POST",
+    "path": "/user/game-info/"
+  },
+  {
+    "controller": "UserGameInfoController",
+    "handler": "saveDynamic",
+    "method": "POST",
+    "path": "/user/game-info/dynamic"
+  },
+  {
+    "controller": "UserGameInfoController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/user/game-info/list"
+  },
+  {
+    "controller": "UserGameInfoController",
+    "handler": "listByCategory",
+    "method": "GET",
+    "path": "/user/game-info/list/{categoryId}"
+  },
+  {
+    "controller": "UserGameInfoController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/user/game-info/{id}"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "autoVerify",
+    "method": "POST",
+    "path": "/user/identity/auto-verify"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "upload",
+    "method": "POST",
+    "path": "/user/identity/image"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "status",
+    "method": "GET",
+    "path": "/user/identity/status"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "submit",
+    "method": "POST",
+    "path": "/user/identity/submit"
+  },
+  {
+    "controller": "InviteController",
+    "handler": "info",
+    "method": "GET",
+    "path": "/user/invites/"
+  },
+  {
+    "controller": "InviteController",
+    "handler": "bind",
+    "method": "POST",
+    "path": "/user/invites/bind"
+  },
+  {
+    "controller": "MembershipController",
+    "handler": "current",
+    "method": "GET",
+    "path": "/user/membership/"
+  },
+  {
+    "controller": "UserController",
+    "handler": "bindPhone",
+    "method": "PUT",
+    "path": "/user/phone"
+  },
+  {
+    "controller": "UserController",
+    "handler": "phoneCode",
+    "method": "POST",
+    "path": "/user/phone/code"
+  },
+  {
+    "controller": "PrivacyController",
+    "handler": "mine",
+    "method": "GET",
+    "path": "/user/privacy/requests"
+  },
+  {
+    "controller": "PrivacyController",
+    "handler": "request",
+    "method": "POST",
+    "path": "/user/privacy/requests"
+  },
+  {
+    "controller": "UserController",
+    "handler": "profile",
+    "method": "GET",
+    "path": "/user/profile"
+  },
+  {
+    "controller": "UserController",
+    "handler": "updateProfile",
+    "method": "PUT",
+    "path": "/user/profile"
+  },
+  {
+    "controller": "RewardController",
+    "handler": "eligible",
+    "method": "GET",
+    "path": "/user/rewards/eligible-orders"
+  },
+  {
+    "controller": "WalletController",
+    "handler": "getWallet",
+    "method": "GET",
+    "path": "/user/wallet/"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "acknowledge",
+    "method": "POST",
+    "path": "/workbench/acknowledge"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "summary",
+    "method": "GET",
+    "path": "/workbench/badges"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "read",
+    "method": "POST",
+    "path": "/workbench/read"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "readAll",
+    "method": "POST",
+    "path": "/workbench/read-all"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "summary",
+    "method": "GET",
+    "path": "/workbench/summary"
+  },
+  {
+    "controller": "WorkbenchController",
+    "handler": "tasks",
+    "method": "GET",
+    "path": "/workbench/tasks"
+  }
+]

@@ -113,19 +113,14 @@ logging:
     com.delta: info
     org.springframework.security: info
 
-# Knife4j Swagger
+# OpenAPI / Swagger UI
 springdoc:
   swagger-ui:
     enabled: false
-    path: /swagger-ui.html
+    path: /doc.html
   api-docs:
     enabled: false
     path: /v3/api-docs
   packages-to-scan: com.delta
   paths-to-match: "/**"
 
-knife4j:
-  enable: false
-  setting:
-    language: zh_cn
-    swagger-model-name: 实体类

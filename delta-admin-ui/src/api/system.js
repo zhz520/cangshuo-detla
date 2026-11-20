@@ -152,3 +152,30 @@ export function getOperationLogList(params) {
 export function pushNotice(id) {
   return request({ url: `/system/notice/${id}/push`, method: 'post' })
 }
+
+
+// ==================== 角色与权限 ====================
+export function getStaffRoles() {
+  return request({ url: '/system/roles', method: 'get' })
+}
+export function saveStaffRole(data) {
+  return request({ url: '/system/roles', method: 'put', data })
+}
+export function assignStaffRole(id, roleCode) {
+  return request({ url: '/system/roles/members/' + id, method: 'put', data: { roleCode } })
+}
+export function deleteStaffRole(code) {
+  return request({ url: '/system/roles/' + encodeURIComponent(code), method: 'delete' })
+}
+
+// ==================== 通知发送记录 ====================
+export function getWechatNotifications() {
+  return request({ url: '/admin/wechat/notifications', method: 'get' })
+}
+export function getSmsNotifications() {
+  return request({ url: '/admin/sms/notifications', method: 'get' })
+}
+export function retryNotification(channel, id) {
+  return request({ url: '/admin/' + channel + '/notifications/' + id + '/retry', method: 'post' })
+}
+

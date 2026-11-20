@@ -298,3 +298,10 @@ export function uploadFile(file) {
   formData.append('file', file)
   return request({ url: '/common/file/upload', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data' } })
 }
+
+
+// ==================== 结算台账 ====================
+export function getSettlementLedger(params) {
+  return request({ url: '/admin/settlements', method: 'get', params })
+}
+
