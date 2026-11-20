@@ -18,4 +18,4 @@
 | 系统配置 / 公告 / 内容 | delta-game/delta-system/src/main/java/com/delta/system/controller | delta-admin-ui/src/views/system/config；notice；content；banner | delta-mp/pages/agreement；message | sys_config、notice、content_config | ContentConfigControllerTest、system-config.test.mjs |
 | 主题 / 设计系统 | delta-admin-ui/src/components；src/styles | delta-admin-ui/src/views/platform/ThemeStore.vue；所有页面 | delta-mp/styles；delta-mp/components | theme 配置 | soft-theme.test.mjs、theme-route-audit.mjs |
 
-说明：演示账号完整只读实现主要在 520 演示分支；共享组 1.18.0 不包含完整的 DEMO 后端实现。
+说明：演示账号完整只读实现主要在 520 演示分支；共享组 1.18.1 不包含完整的 DEMO 后端实现。
