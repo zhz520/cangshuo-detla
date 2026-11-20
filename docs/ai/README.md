@@ -8,9 +8,10 @@
 2. FEATURE_MAP.md：功能对应到后端、管理端、H5、数据库和测试
 3. PITFALLS.md：已经踩过的坑和必须回归的规则
 4. CHANGE_RECIPES.md：不同改动类型的固定动作
-5. VERIFICATION.md：实际可执行的验证命令
-6. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
-7. docs/VIBE_CODING.md、docs/development-conventions.md：发布、安全、版本和授权的最高约束
+5. inventory.json：从代码生成的 Controller、后台页面、API 模块和 H5 页面清单
+6. VERIFICATION.md：实际可执行的验证命令
+7. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
+8. docs/VIBE_CODING.md、docs/development-conventions.md：发布、安全、版本和授权的最高约束
 
 ## 当前事实
 
@@ -33,4 +34,4 @@
 
 - 新功能上线时同步更新 FEATURE_MAP.md、project-map.json 和 CURRENT_RELEASE.md。
 - 发布新版本时更新版本、标签、提交和部署事实。
-- scripts/check_ai_context.py 会校验本目录引用的关键路径和版本，避免上下文过期。
+- scripts/generate_ai_inventory.py 生成 inventory.json；scripts/check_ai_context.py 会校验版本、路径、契约和 inventory 是否过期。

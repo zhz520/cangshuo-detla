@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+from generate_ai_inventory import OUT as INVENTORY, build as build_inventory
+
 ROOT = Path(__file__).resolve().parents[1]
 AI = ROOT / 'docs' / 'ai'
 MAP = AI / 'project-map.json'
@@ -35,6 +37,10 @@ def main() -> None:
         for item in missing:
             print('  missing ' + item)
         fail(f'{len(missing)} feature paths are stale')
+    inventory_expected = json.dumps(build_inventory(), ensure_ascii=False, indent=2) + "\n"
+    inventory_actual = INVENTORY.read_text(encoding='utf-8') if INVENTORY.exists() else ''
+    if inventory_actual != inventory_expected:
+        fail('AI inventory is stale; run python scripts/generate_ai_inventory.py')
     contracts = data.get('contracts', {})
     for key in ('endpointBaseline', 'openapiBaseline', 'types'):
         rel = contracts.get(key)
@@ -55,5 +61,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
-

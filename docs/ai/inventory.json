@@ -1,0 +1,1011 @@
+{
+  "version": "1.18.0",
+  "endpointCount": 482,
+  "operationCount": 482,
+  "schemaCount": 278,
+  "controllers": [
+    {
+      "name": "AdminCategoryFieldController",
+      "endpoints": 4
+    },
+    {
+      "name": "AdminChatController",
+      "endpoints": 2
+    },
+    {
+      "name": "AdminController",
+      "endpoints": 5
+    },
+    {
+      "name": "AdminHomeController",
+      "endpoints": 1
+    },
+    {
+      "name": "AdminNoticePushController",
+      "endpoints": 1
+    },
+    {
+      "name": "AdminOrderController",
+      "endpoints": 7
+    },
+    {
+      "name": "AdminPlayerController",
+      "endpoints": 16
+    },
+    {
+      "name": "AdminPlayerLevelController",
+      "endpoints": 4
+    },
+    {
+      "name": "AdminRecommendCategoryController",
+      "endpoints": 4
+    },
+    {
+      "name": "AdminReviewController",
+      "endpoints": 2
+    },
+    {
+      "name": "AdminStatisticsController",
+      "endpoints": 6
+    },
+    {
+      "name": "AdminUserController",
+      "endpoints": 9
+    },
+    {
+      "name": "AdminWithdrawController",
+      "endpoints": 3
+    },
+    {
+      "name": "AppHomeController",
+      "endpoints": 1
+    },
+    {
+      "name": "AppProductController",
+      "endpoints": 2
+    },
+    {
+      "name": "BannerController",
+      "endpoints": 5
+    },
+    {
+      "name": "CategoryController",
+      "endpoints": 6
+    },
+    {
+      "name": "CategoryFormFieldController",
+      "endpoints": 1
+    },
+    {
+      "name": "ChatController",
+      "endpoints": 11
+    },
+    {
+      "name": "ComplaintController",
+      "endpoints": 4
+    },
+    {
+      "name": "ContentConfigController",
+      "endpoints": 5
+    },
+    {
+      "name": "CouponAdminController",
+      "endpoints": 4
+    },
+    {
+      "name": "CouponController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsAuthController",
+      "endpoints": 2
+    },
+    {
+      "name": "CsCategoryController",
+      "endpoints": 4
+    },
+    {
+      "name": "CsChatController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsComplaintController",
+      "endpoints": 5
+    },
+    {
+      "name": "CsDashboardController",
+      "endpoints": 1
+    },
+    {
+      "name": "CsDepositRefundController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsMonitorController",
+      "endpoints": 2
+    },
+    {
+      "name": "CsOrderController",
+      "endpoints": 7
+    },
+    {
+      "name": "CsPlayerController",
+      "endpoints": 10
+    },
+    {
+      "name": "CsProductController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsProfileController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsRelayController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsRemindController",
+      "endpoints": 1
+    },
+    {
+      "name": "CsReplaceController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsRoutingController",
+      "endpoints": 9
+    },
+    {
+      "name": "CsUserController",
+      "endpoints": 3
+    },
+    {
+      "name": "CsWithdrawController",
+      "endpoints": 4
+    },
+    {
+      "name": "DashboardAnalyticsController",
+      "endpoints": 4
+    },
+    {
+      "name": "DisplayController",
+      "endpoints": 2
+    },
+    {
+      "name": "DisplayPrivacyController",
+      "endpoints": 2
+    },
+    {
+      "name": "EmailNotificationController",
+      "endpoints": 6
+    },
+    {
+      "name": "FileController",
+      "endpoints": 2
+    },
+    {
+      "name": "GovernanceController",
+      "endpoints": 10
+    },
+    {
+      "name": "GrabMonitorController",
+      "endpoints": 1
+    },
+    {
+      "name": "GuestCheckoutController",
+      "endpoints": 3
+    },
+    {
+      "name": "IdentityGatewayAdminController",
+      "endpoints": 4
+    },
+    {
+      "name": "IdentityVerificationController",
+      "endpoints": 9
+    },
+    {
+      "name": "ImageThumbnailController",
+      "endpoints": 2
+    },
+    {
+      "name": "InviteAdminController",
+      "endpoints": 2
+    },
+    {
+      "name": "InviteController",
+      "endpoints": 2
+    },
+    {
+      "name": "LogoutController",
+      "endpoints": 1
+    },
+    {
+      "name": "MaintenanceController",
+      "endpoints": 3
+    },
+    {
+      "name": "MembershipAdminController",
+      "endpoints": 2
+    },
+    {
+      "name": "MembershipController",
+      "endpoints": 1
+    },
+    {
+      "name": "MessageController",
+      "endpoints": 6
+    },
+    {
+      "name": "NoticeController",
+      "endpoints": 5
+    },
+    {
+      "name": "OfficialWechatController",
+      "endpoints": 8
+    },
+    {
+      "name": "OperationLogController",
+      "endpoints": 1
+    },
+    {
+      "name": "OrderController",
+      "endpoints": 8
+    },
+    {
+      "name": "PayController",
+      "endpoints": 15
+    },
+    {
+      "name": "PlatformController",
+      "endpoints": 13
+    },
+    {
+      "name": "PlayerAccountController",
+      "endpoints": 5
+    },
+    {
+      "name": "PlayerAuthController",
+      "endpoints": 2
+    },
+    {
+      "name": "PlayerController",
+      "endpoints": 6
+    },
+    {
+      "name": "PlayerDepositRefundController",
+      "endpoints": 4
+    },
+    {
+      "name": "PlayerDirectoryLayoutController",
+      "endpoints": 3
+    },
+    {
+      "name": "PlayerEarningsController",
+      "endpoints": 3
+    },
+    {
+      "name": "PlayerHomeController",
+      "endpoints": 1
+    },
+    {
+      "name": "PlayerOrderController",
+      "endpoints": 18
+    },
+    {
+      "name": "PlayerRemindController",
+      "endpoints": 1
+    },
+    {
+      "name": "PlayerReviewController",
+      "endpoints": 2
+    },
+    {
+      "name": "PlayerWorkController",
+      "endpoints": 6
+    },
+    {
+      "name": "PrivacyController",
+      "endpoints": 4
+    },
+    {
+      "name": "ProductController",
+      "endpoints": 13
+    },
+    {
+      "name": "ProjectStatusController",
+      "endpoints": 1
+    },
+    {
+      "name": "PublicPlayerChatController",
+      "endpoints": 1
+    },
+    {
+      "name": "PublicPlayerController",
+      "endpoints": 4
+    },
+    {
+      "name": "QuickReplyController",
+      "endpoints": 5
+    },
+    {
+      "name": "RechargePackageController",
+      "endpoints": 1
+    },
+    {
+      "name": "RefundController",
+      "endpoints": 13
+    },
+    {
+      "name": "ReviewController",
+      "endpoints": 4
+    },
+    {
+      "name": "RewardController",
+      "endpoints": 5
+    },
+    {
+      "name": "RewardGrabSettingsController",
+      "endpoints": 2
+    },
+    {
+      "name": "SensitiveWordController",
+      "endpoints": 4
+    },
+    {
+      "name": "SettlementLedgerController",
+      "endpoints": 2
+    },
+    {
+      "name": "SmsGatewayAdminController",
+      "endpoints": 4
+    },
+    {
+      "name": "StaffOrderAssignmentController",
+      "endpoints": 2
+    },
+    {
+      "name": "StaffOrderTeamController",
+      "endpoints": 10
+    },
+    {
+      "name": "StaffRoleController",
+      "endpoints": 5
+    },
+    {
+      "name": "StaffShiftController",
+      "endpoints": 2
+    },
+    {
+      "name": "StatisticsDailyController",
+      "endpoints": 2
+    },
+    {
+      "name": "SysConfigController",
+      "endpoints": 6
+    },
+    {
+      "name": "ThemeController",
+      "endpoints": 3
+    },
+    {
+      "name": "ThemePublicController",
+      "endpoints": 1
+    },
+    {
+      "name": "UserAuthController",
+      "endpoints": 10
+    },
+    {
+      "name": "UserController",
+      "endpoints": 4
+    },
+    {
+      "name": "UserEngagementController",
+      "endpoints": 8
+    },
+    {
+      "name": "UserGameInfoController",
+      "endpoints": 5
+    },
+    {
+      "name": "UserLoginPolicyController",
+      "endpoints": 1
+    },
+    {
+      "name": "UserPlayerController",
+      "endpoints": 2
+    },
+    {
+      "name": "WalletController",
+      "endpoints": 1
+    },
+    {
+      "name": "WechatAccountLinkController",
+      "endpoints": 1
+    },
+    {
+      "name": "WechatWebLoginController",
+      "endpoints": 10
+    },
+    {
+      "name": "WithdrawController",
+      "endpoints": 5
+    },
+    {
+      "name": "WorkbenchController",
+      "endpoints": 6
+    }
+  ],
+  "adminViews": [
+    "delta-admin-ui/src/views/chat/ChatRecordDetail.vue",
+    "delta-admin-ui/src/views/chat/ChatRecordList.vue",
+    "delta-admin-ui/src/views/chat/ChatService.vue",
+    "delta-admin-ui/src/views/chat/CsRouting.vue",
+    "delta-admin-ui/src/views/complaint/ComplaintList.vue",
+    "delta-admin-ui/src/views/dashboard/AnalyticsPanel.vue",
+    "delta-admin-ui/src/views/dashboard/MobileDashboard.vue",
+    "delta-admin-ui/src/views/dashboard/index.vue",
+    "delta-admin-ui/src/views/error/403.vue",
+    "delta-admin-ui/src/views/error/404.vue",
+    "delta-admin-ui/src/views/login/index.vue",
+    "delta-admin-ui/src/views/marketing/Coupons.vue",
+    "delta-admin-ui/src/views/marketing/Invites.vue",
+    "delta-admin-ui/src/views/marketing/MembershipLevels.vue",
+    "delta-admin-ui/src/views/order/OrderList.vue",
+    "delta-admin-ui/src/views/order/OrderTeamPanel.vue",
+    "delta-admin-ui/src/views/platform/FeatureMarket.vue",
+    "delta-admin-ui/src/views/platform/IncomeAnalysis.vue",
+    "delta-admin-ui/src/views/platform/SystemUpdates.vue",
+    "delta-admin-ui/src/views/platform/ThemeStore.vue",
+    "delta-admin-ui/src/views/player/DepositRefunds.vue",
+    "delta-admin-ui/src/views/player/Governance.vue",
+    "delta-admin-ui/src/views/player/PlayerDeposits.vue",
+    "delta-admin-ui/src/views/player/PlayerLevels.vue",
+    "delta-admin-ui/src/views/player/PlayerList.vue",
+    "delta-admin-ui/src/views/player/RewardList.vue",
+    "delta-admin-ui/src/views/product/CategoryFieldList.vue",
+    "delta-admin-ui/src/views/product/CategoryList.vue",
+    "delta-admin-ui/src/views/product/ProductForm.vue",
+    "delta-admin-ui/src/views/product/ProductList.vue",
+    "delta-admin-ui/src/views/product/RecommendCategoryList.vue",
+    "delta-admin-ui/src/views/refund/RefundList.vue",
+    "delta-admin-ui/src/views/relay/RelayList.vue",
+    "delta-admin-ui/src/views/replace/ReplaceList.vue",
+    "delta-admin-ui/src/views/review/FulfillmentReview.vue",
+    "delta-admin-ui/src/views/statistics/IncomeDaily.vue",
+    "delta-admin-ui/src/views/statistics/SettlementLedger.vue",
+    "delta-admin-ui/src/views/system/AdminList.vue",
+    "delta-admin-ui/src/views/system/BannerList.vue",
+    "delta-admin-ui/src/views/system/ContentSettings.vue",
+    "delta-admin-ui/src/views/system/EmailNotifications.vue",
+    "delta-admin-ui/src/views/system/NoticeList.vue",
+    "delta-admin-ui/src/views/system/OperationLog.vue",
+    "delta-admin-ui/src/views/system/PlayerLayoutSettings.vue",
+    "delta-admin-ui/src/views/system/QuickReplyList.vue",
+    "delta-admin-ui/src/views/system/RechargePackage.vue",
+    "delta-admin-ui/src/views/system/RewardGrabSettings.vue",
+    "delta-admin-ui/src/views/system/SensitiveWordList.vue",
+    "delta-admin-ui/src/views/system/SmsAccount.vue",
+    "delta-admin-ui/src/views/system/StaffRoles.vue",
+    "delta-admin-ui/src/views/system/SysConfig.vue",
+    "delta-admin-ui/src/views/system/WechatNotices.vue",
+    "delta-admin-ui/src/views/user/IdentityReview.vue",
+    "delta-admin-ui/src/views/user/SpendingRank.vue",
+    "delta-admin-ui/src/views/user/UserList.vue",
+    "delta-admin-ui/src/views/wechat/Binding.vue",
+    "delta-admin-ui/src/views/withdraw/WithdrawList.vue"
+  ],
+  "adminApiModules": [
+    {
+      "module": "auth.js",
+      "exports": [
+        "changeCsPassword",
+        "getCsProfile",
+        "getLoginCaptcha",
+        "login",
+        "logout",
+        "updateCsProfile"
+      ],
+      "urls": [
+        "/auth/logout",
+        "/cs/auth/captcha",
+        "/cs/auth/login",
+        "/cs/profile",
+        "/cs/profile/password"
+      ]
+    },
+    {
+      "module": "business.js",
+      "exports": [
+        "adminChatMessageList",
+        "adminChatSessionList",
+        "adminOrderAssign",
+        "adminOrderConfirm",
+        "adminOrderDetail",
+        "adminOrderList",
+        "adminOrderProgress",
+        "adminOrderReassignCs",
+        "adminOrderRefund",
+        "adminPlayerApprove",
+        "adminPlayerBatchApprove",
+        "adminPlayerBatchLevel",
+        "adminPlayerBatchReject",
+        "adminPlayerBatchUnfreeze",
+        "adminPlayerDelete",
+        "adminPlayerDepositList",
+        "adminPlayerDeposits",
+        "adminPlayerDetail",
+        "adminPlayerFreeze",
+        "adminPlayerList",
+        "adminPlayerReject",
+        "adminPlayerTransactions",
+        "adminPlayerUnfreeze",
+        "adminPlayerUpdate",
+        "adminPlayerUpdateStatus",
+        "adminRefundApprove",
+        "adminRefundDetail",
+        "adminRefundList",
+        "adminRefundReject",
+        "adminRefundRetry",
+        "adminReviewDelete",
+        "adminReviewList",
+        "adminUserAdjustBalance",
+        "adminUserBatchDelete",
+        "adminUserBatchStatus",
+        "adminUserCreate",
+        "adminUserDelete",
+        "adminUserDetail",
+        "adminUserList",
+        "adminUserUpdate",
+        "adminUserUpdateStatus",
+        "adminWithdrawList",
+        "adminWithdrawProcess",
+        "adminWithdrawReject",
+        "chatMarkRead",
+        "chatMessageList",
+        "chatSendMessage",
+        "csChatMessageList",
+        "csChatSessionAllList",
+        "csChatSessionList",
+        "csComplaintCreate",
+        "csComplaintDetail",
+        "csComplaintList",
+        "csComplaintProcess",
+        "csComplaintResolve",
+        "csOrderAssign",
+        "csOrderConfirm",
+        "csOrderDetail",
+        "csOrderList",
+        "csOrderProgress",
+        "csOrderRefund",
+        "csPlayerAudit",
+        "csPlayerDetail",
+        "csPlayerFreeze",
+        "csPlayerList",
+        "csPlayerTransactions",
+        "csPlayerUnfreeze",
+        "csPlayerUpdateNickname",
+        "csRefundAudit",
+        "csRefundCreate",
+        "csRefundDetail",
+        "csRefundList",
+        "csRefundStartReview",
+        "csRefundSubmitReview",
+        "csRelayApprove",
+        "csRelayList",
+        "csRelayReject",
+        "csReplaceApprove",
+        "csReplaceList",
+        "csReplaceReject",
+        "csUserDetail",
+        "csUserList",
+        "csUserUpdateStatus",
+        "csWithdrawApprove",
+        "csWithdrawList",
+        "csWithdrawReject",
+        "customerRefundCreate",
+        "customerRefundHistory",
+        "depositRefundList",
+        "depositRefundRetry",
+        "depositRefundReview",
+        "getActiveQuickReplies",
+        "getPlayerLayoutSettings",
+        "getSettlementLedger",
+        "playerLevelCreate",
+        "playerLevelDelete",
+        "playerLevelList",
+        "playerLevelUpdate",
+        "savePlayerLayoutSettings",
+        "uploadFile",
+        "uploadProfileAudio"
+      ],
+      "urls": [
+        "/admin/chat/message/list",
+        "/admin/chat/session/list",
+        "/admin/order/",
+        "/admin/order/list",
+        "/admin/player-layout",
+        "/admin/player-level",
+        "/admin/player-level/list",
+        "/admin/player/deposits",
+        "/admin/player/list",
+        "/admin/refunds",
+        "/admin/review/list",
+        "/admin/settlements",
+        "/admin/user/list",
+        "/admin/withdraw/list",
+        "/common/chat/message/list",
+        "/common/chat/message/read",
+        "/common/chat/message/send",
+        "/common/file/profile-audio",
+        "/common/file/upload",
+        "/cs/chat/message/list",
+        "/cs/chat/session/list",
+        "/cs/chat/sessions",
+        "/cs/complaint/create",
+        "/cs/complaint/list",
+        "/cs/deposit-refunds/list",
+        "/cs/order/list",
+        "/cs/player/list",
+        "/cs/refunds",
+        "/cs/relay/list",
+        "/cs/replace/list",
+        "/cs/user/list",
+        "/cs/withdraw/list",
+        "/system/quick-reply/active"
+      ]
+    },
+    {
+      "module": "cs-routing.js",
+      "exports": [
+        "csRatingStats",
+        "csRoutingGroups",
+        "csRoutingRules",
+        "csRoutingStaff",
+        "deleteCsRoutingGroup",
+        "deleteCsRoutingRule",
+        "saveCsRoutingGroup",
+        "saveCsRoutingRule",
+        "saveCsRoutingRules"
+      ],
+      "urls": [
+        "/admin/cs-routing/groups",
+        "/admin/cs-routing/groups/",
+        "/admin/cs-routing/ratings",
+        "/admin/cs-routing/rules",
+        "/admin/cs-routing/rules/",
+        "/admin/cs-routing/rules/batch",
+        "/admin/cs-routing/staff"
+      ]
+    },
+    {
+      "module": "dashboard.js",
+      "exports": [
+        "getAdminDashboard",
+        "getCsDashboard",
+        "getDashboardAnalytics",
+        "getDashboardPlayers",
+        "getSpendingRank",
+        "getStatisticsIncomeDaily",
+        "getStatisticsOrder",
+        "getStatisticsOverview",
+        "getStatisticsPlayer",
+        "getStatisticsUser"
+      ],
+      "urls": [
+        "/admin/home/dashboard",
+        "/admin/statistics/income-daily",
+        "/admin/statistics/order",
+        "/admin/statistics/overview",
+        "/admin/statistics/player",
+        "/admin/statistics/user",
+        "/cs/analytics",
+        "/cs/analytics/players",
+        "/cs/dashboard"
+      ]
+    },
+    {
+      "module": "email-notifications.js",
+      "exports": [
+        "getEmailNotificationRecords",
+        "getEmailNotificationSettings",
+        "retryEmailNotification",
+        "saveEmailNotificationSettings",
+        "sendEmailNotificationTest"
+      ],
+      "urls": []
+    },
+    {
+      "module": "governance.js",
+      "exports": [
+        "createGovernanceInvitation",
+        "loadGovernance",
+        "recheckGovernanceRevision",
+        "reviewGovernanceRevision",
+        "reviewPrivacyRequest",
+        "updateGovernanceInvitation",
+        "updateGovernanceShift"
+      ],
+      "urls": [
+        "/cs/governance/invitations"
+      ]
+    },
+    {
+      "module": "identity.js",
+      "exports": [
+        "getIdentityApplication",
+        "getIdentityApplications",
+        "reviewIdentityApplication"
+      ],
+      "urls": []
+    },
+    {
+      "module": "marketing.js",
+      "exports": [
+        "createCouponTemplate",
+        "getCouponRecords",
+        "getCouponTemplates",
+        "getInviteOperations",
+        "getMembershipConfig",
+        "markInviteDebtRecovered",
+        "saveMembershipConfig",
+        "updateCouponTemplate"
+      ],
+      "urls": [
+        "/admin/coupons",
+        "/admin/coupons/records",
+        "/admin/invites",
+        "/admin/membership"
+      ]
+    },
+    {
+      "module": "official-wechat.js",
+      "exports": [
+        "completeOfficialWechatBinding",
+        "getOfficialWechatBinding",
+        "removeOfficialWechatBinding",
+        "startOfficialWechatBinding"
+      ],
+      "urls": [
+        "/common/wechat/binding",
+        "/common/wechat/binding/complete",
+        "/common/wechat/binding/start"
+      ]
+    },
+    {
+      "module": "order-assignment.js",
+      "exports": [
+        "orderAssignmentCandidates"
+      ],
+      "urls": []
+    },
+    {
+      "module": "order-team.js",
+      "exports": [
+        "orderTeamCandidates",
+        "orderTeamInvite",
+        "orderTeamRemove",
+        "orderTeamRevoke",
+        "orderTeamRoster"
+      ],
+      "urls": []
+    },
+    {
+      "module": "platform.js",
+      "exports": [
+        "checkRemoteUpdates",
+        "createPlatformCheckout",
+        "getFeatureMarket",
+        "getIncomeComparison",
+        "getPlatformFeatures",
+        "getPlatformOverview",
+        "getPlatformUpdates",
+        "getPublicTheme",
+        "getRemoteUpdates",
+        "getThemeSettings",
+        "importPlatformLicense",
+        "installRemoteUpdates",
+        "setActiveTheme",
+        "setPlatformFeatureEnabled",
+        "setPlatformUpdateSelection",
+        "setThemePreferences",
+        "syncFeatureMarket"
+      ],
+      "urls": []
+    },
+    {
+      "module": "product.js",
+      "exports": [
+        "addCategory",
+        "addCategoryField",
+        "addProduct",
+        "addRecommendCategory",
+        "batchCopyProducts",
+        "batchDeleteProducts",
+        "batchProductCategory",
+        "batchProductPrice",
+        "batchProductStatus",
+        "csCategoryList",
+        "csCategorySave",
+        "csCategoryUpdateStatus",
+        "deleteCategory",
+        "deleteCategoryField",
+        "deleteProduct",
+        "deleteRecommendCategory",
+        "getAllCategories",
+        "getCategoryFieldList",
+        "getCategoryList",
+        "getCategoryTree",
+        "getProductDetail",
+        "getProductList",
+        "getRecommendCategories",
+        "getRecommendCategoryList",
+        "updateCategory",
+        "updateCategoryField",
+        "updateProduct",
+        "updateProductStatus",
+        "updateRecommendCategory"
+      ],
+      "urls": [
+        "/admin/category-field",
+        "/admin/category-field/list",
+        "/admin/recommend-category",
+        "/admin/recommend-category/list",
+        "/cs/category",
+        "/cs/category/list",
+        "/cs/category/status",
+        "/product",
+        "/product/category",
+        "/product/category/all",
+        "/product/category/list",
+        "/product/category/tree",
+        "/product/list",
+        "/product/recommend/categories"
+      ]
+    },
+    {
+      "module": "reward.js",
+      "exports": [
+        "getGrabMetrics",
+        "getRewardGrabSettings",
+        "getRewards",
+        "reverseReward",
+        "saveRewardGrabSettings"
+      ],
+      "urls": []
+    },
+    {
+      "module": "shift.js",
+      "exports": [
+        "getShiftStatus",
+        "toggleShift"
+      ],
+      "urls": [
+        "/cs/shift/status",
+        "/cs/shift/toggle"
+      ]
+    },
+    {
+      "module": "system.js",
+      "exports": [
+        "addAdmin",
+        "addBanner",
+        "addContentConfig",
+        "addNotice",
+        "addQuickReply",
+        "addSensitiveWord",
+        "assignStaffRole",
+        "batchUpdateSysConfig",
+        "checkoutIdentityPackage",
+        "checkoutSmsPackage",
+        "deleteAdmin",
+        "deleteBanner",
+        "deleteContentConfig",
+        "deleteNotice",
+        "deleteQuickReply",
+        "deleteSensitiveWord",
+        "deleteStaffRole",
+        "getAdminById",
+        "getAdminList",
+        "getAuthoritySettings",
+        "getBannerList",
+        "getContentConfigByKey",
+        "getContentConfigList",
+        "getIdentityGatewayAccount",
+        "getIdentityLimits",
+        "getNoticeList",
+        "getOperationLogList",
+        "getQuickReplyList",
+        "getRechargePackages",
+        "getSensitiveWordList",
+        "getSmsGatewayAccount",
+        "getSmsNotifications",
+        "getStaffRoles",
+        "getSysConfigList",
+        "getWechatNotifications",
+        "pushNotice",
+        "retryNotification",
+        "saveAuthoritySettings",
+        "saveIdentityLimits",
+        "saveStaffRole",
+        "updateAdmin",
+        "updateBanner",
+        "updateContentConfig",
+        "updateNotice",
+        "updateQuickReply",
+        "updateRechargePackages",
+        "updateSensitiveWord",
+        "uploadWxPayCertificate"
+      ],
+      "urls": [
+        "/admin/",
+        "/admin/identity-service/limits",
+        "/admin/sms/account",
+        "/admin/sms/notifications",
+        "/admin/wechat/notifications",
+        "/pay/config/upload",
+        "/system/admin",
+        "/system/admin/list",
+        "/system/banner",
+        "/system/banner/list",
+        "/system/config/batch",
+        "/system/config/list",
+        "/system/config/recharge-packages",
+        "/system/content",
+        "/system/content/list",
+        "/system/notice",
+        "/system/notice/list",
+        "/system/operation-log/list",
+        "/system/quick-reply",
+        "/system/quick-reply/list",
+        "/system/roles",
+        "/system/roles/",
+        "/system/roles/members/",
+        "/system/sensitive-word",
+        "/system/sensitive-word/list"
+      ]
+    }
+  ],
+  "h5Pages": [
+    "pages/agreement/about",
+    "pages/agreement/privacy",
+    "pages/agreement/user",
+    "pages/category/index",
+    "pages/chat/list",
+    "pages/chat/room",
+    "pages/complaint/create",
+    "pages/complaint/detail",
+    "pages/complaint/list",
+    "pages/coupons/index",
+    "pages/display/index",
+    "pages/index/index",
+    "pages/invites/index",
+    "pages/login/bind-phone",
+    "pages/login/index",
+    "pages/maintenance/index",
+    "pages/membership/index",
+    "pages/message/index",
+    "pages/mine/identity",
+    "pages/mine/index",
+    "pages/mine/library",
+    "pages/mine/privacy-center",
+    "pages/mine/profile",
+    "pages/mine/security",
+    "pages/mine/services",
+    "pages/order/create",
+    "pages/order/detail",
+    "pages/order/list",
+    "pages/order/lookup",
+    "pages/order/pay",
+    "pages/players/detail",
+    "pages/players/index",
+    "pages/product/detail",
+    "pages/product/list",
+    "pages/review/create",
+    "pages/wallet/index",
+    "pages/wallet/recharge",
+    "pages/wechat/binding",
+    "pages/workbench/index"
+  ]
+}

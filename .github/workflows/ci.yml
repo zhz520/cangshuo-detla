@@ -25,6 +25,13 @@ jobs:
         run: python deploy/qa/check_ci_storage.py
       - name: Validate collaboration rules
         run: python deploy/qa/check_collaboration_rules.py
+      - name: Validate AI project context
+        run: python scripts/check_ai_context.py
+      - name: Validate API contracts
+        run: |
+          python scripts/check_endpoint_baseline.py
+          python scripts/check_openapi_baseline.py
+          python scripts/check_openapi_types.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '22'
@@ -74,5 +81,3 @@ jobs:
           python deploy/qa/check_static_assets.py delta-admin-ui/dist delta-mp/dist/build/h5
       # Formal release archives are generated and digest-checked separately.
       # Do not upload preview bundles on every push; they exhaust Actions storage.
-
-

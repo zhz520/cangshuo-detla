@@ -208,7 +208,8 @@
     "docs/ai/PITFALLS.md",
     "docs/ai/CHANGE_RECIPES.md",
     "docs/ai/VERIFICATION.md",
-    "docs/ai/CURRENT_RELEASE.md"
+    "docs/ai/CURRENT_RELEASE.md",
+    "docs/ai/inventory.json"
   ],
   "contracts": {
     "endpointBaseline": "contracts/endpoint-baseline.json",
@@ -217,5 +218,6 @@
     "endpoints": 482,
     "operations": 482,
     "schemas": 278
-  }
+  },
+  "inventory": "docs/ai/inventory.json"
 }
