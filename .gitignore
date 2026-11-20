@@ -13,6 +13,7 @@
 **/node_modules/
 **/dist/
 **/target/
+**/.tmp-build/
 /delta-game/delta-admin/logs/
 /delta-game/logs/
 /deploy/security/evidence/
