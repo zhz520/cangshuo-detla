@@ -45,13 +45,13 @@ class AdminWithdrawConcurrencyTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        boolean mysql = "1".equals(System.getenv("WITHDRAW_TEST_MYSQL"));
+        boolean mysql = MySqlTestSupport.enabled("WITHDRAW_TEST_MYSQL");
         registry.add("spring.datasource.url", () -> mysql
-                ? "jdbc:mysql://127.0.0.1:17427/withdraw_qa?allowPublicKeyRetrieval=true&sslMode=DISABLED&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+                ? MySqlTestSupport.jdbcUrl("withdraw_qa")
                 : "jdbc:h2:mem:withdraw-review;MODE=MySQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER,LEVEL,TRANSACTION");
         registry.add("spring.datasource.driver-class-name", () -> mysql ? "com.mysql.cj.jdbc.Driver" : "org.h2.Driver");
-        registry.add("spring.datasource.username", () -> mysql ? "root" : "sa");
-        registry.add("spring.datasource.password", () -> "");
+        registry.add("spring.datasource.username", () -> mysql ? MySqlTestSupport.username() : "sa");
+        registry.add("spring.datasource.password", () -> mysql ? MySqlTestSupport.password() : "");
     }
 
     @Configuration

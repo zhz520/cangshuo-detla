@@ -17,6 +17,19 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.4.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -48,6 +61,27 @@ jobs:
       - name: Test and build backend
         working-directory: delta-game
         run: mvn --batch-mode --settings ../.github/maven-settings.xml -pl delta-admin -am verify
+      - name: Prepare MySQL money-path databases
+        env:
+          MYSQL_CONTAINER_ID: ${{ job.services.mysql.id }}
+        run: |
+          python deploy/qa/workbench-mysql.py > "$RUNNER_TEMP/workbench-qa.sql"
+          docker exec -i "$MYSQL_CONTAINER_ID" mysql -uroot < "$RUNNER_TEMP/workbench-qa.sql"
+          python deploy/qa/withdraw-mysql.py > "$RUNNER_TEMP/withdraw-qa.sql"
+          docker exec -i "$MYSQL_CONTAINER_ID" mysql -uroot < "$RUNNER_TEMP/withdraw-qa.sql"
+          python deploy/qa/refund-workflow-mysql.py > "$RUNNER_TEMP/refund-workflow-qa.sql"
+          docker exec -i "$MYSQL_CONTAINER_ID" mysql -uroot < "$RUNNER_TEMP/refund-workflow-qa.sql"
+      - name: Test money paths on MySQL
+        working-directory: delta-game
+        env:
+          WORKBENCH_TEST_MYSQL: '1'
+          WITHDRAW_TEST_MYSQL: '1'
+          ORDER_REFUND_TEST_MYSQL: '1'
+          TEST_MYSQL_PORT: '3306'
+        run: >-
+          mvn --batch-mode --settings ../.github/maven-settings.xml -pl delta-admin -am
+          -Dtest=WorkbenchIntegrationTest,AdminWithdrawConcurrencyTest,OrderRefundWorkflowTest
+          -Dsurefire.failIfNoSpecifiedTests=false test
       - name: Validate installer, shared release and rollback
         env:
           TEMP: ${{ runner.temp }}

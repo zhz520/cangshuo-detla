@@ -41,11 +41,12 @@ class OrderRefundWorkflowTest {
 
     @BeforeEach
     void setUp() {
-        boolean mysql = "1".equals(System.getenv("ORDER_REFUND_TEST_MYSQL"));
+        boolean mysql = MySqlTestSupport.enabled("ORDER_REFUND_TEST_MYSQL");
         String url = mysql
-                ? "jdbc:mysql://127.0.0.1:17427/refund_workflow_qa?allowPublicKeyRetrieval=true&sslMode=DISABLED&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+                ? MySqlTestSupport.jdbcUrl("refund_workflow_qa")
                 : "jdbc:h2:mem:refund_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE";
-        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, mysql ? "root" : "sa", "");
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                url, mysql ? MySqlTestSupport.username() : "sa", mysql ? MySqlTestSupport.password() : "");
         jdbc = new JdbcTemplate(dataSource);
         if (mysql) {
             jdbc.execute("DROP TABLE IF EXISTS refund_request_audit");

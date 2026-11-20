@@ -2,6 +2,7 @@ package com.delta.admin.workbench;
 
 import com.delta.admin.platform.PlatformRemote;
 import com.delta.admin.platform.PlatformService;
+import com.delta.admin.MySqlTestSupport;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.security.filter.JwtAuthenticationFilter;
 import com.delta.common.security.handler.AccessDeniedHandlerImpl;
@@ -57,11 +58,11 @@ class WorkbenchIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        boolean mysql = "1".equals(System.getenv("WORKBENCH_TEST_MYSQL"));
-        registry.add("spring.datasource.url", () -> mysql ? "jdbc:mysql://127.0.0.1:17427/workbench_qa?allowPublicKeyRetrieval=true&sslMode=DISABLED" : "jdbc:h2:mem:workbench;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        boolean mysql = MySqlTestSupport.enabled("WORKBENCH_TEST_MYSQL");
+        registry.add("spring.datasource.url", () -> mysql ? MySqlTestSupport.jdbcUrl("workbench_qa") : "jdbc:h2:mem:workbench;MODE=MySQL;DB_CLOSE_DELAY=-1");
         registry.add("spring.datasource.driver-class-name", () -> mysql ? "com.mysql.cj.jdbc.Driver" : "org.h2.Driver");
-        registry.add("spring.datasource.username", () -> mysql ? "root" : "sa");
-        registry.add("spring.datasource.password", () -> "");
+        registry.add("spring.datasource.username", () -> mysql ? MySqlTestSupport.username() : "sa");
+        registry.add("spring.datasource.password", () -> mysql ? MySqlTestSupport.password() : "");
     }
 
     @Autowired JdbcTemplate jdbc;
