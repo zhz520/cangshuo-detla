@@ -462,7 +462,7 @@ public class PayController {
         try {
             paymentService.handleWxRefundV3Notify(body,request.getHeader("Wechatpay-Serial"),request.getHeader("Wechatpay-Nonce"),request.getHeader("Wechatpay-Timestamp"),request.getHeader("Wechatpay-Signature"));
             return org.springframework.http.ResponseEntity.ok(Map.of("code","SUCCESS"));
-        } catch(Exception e){log.error("微信退款通知处理失败",e);return org.springframework.http.ResponseEntity.status(500).body(Map.of("code","FAIL","message","处理失败"));}
+        } catch(Exception e){log.error("微信退款通知处理失败: errorType={}, reason={}",e.getClass().getSimpleName(),e.getMessage(),e);return org.springframework.http.ResponseEntity.status(500).body(Map.of("code","FAIL","message","处理失败"));}
     }
 
     @GetMapping("/transactions")

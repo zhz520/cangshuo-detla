@@ -585,18 +585,45 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
                 && "CNY".equals(amount.getCurrency())
                 && Long.valueOf(com.delta.common.utils.Money.cents(payment.getAmount())).equals(amount.getTotal())
                 && Long.valueOf(com.delta.common.utils.Money.cents(payment.getRefundAmount())).equals(amount.getRefund());
-        if(!detailsMatch) throw new BusinessException("退款通知与本地退款单不一致");
+        if(!detailsMatch) rejectRefundNotification(payment,refundNo,transactionId,amount,"field_mismatch");
         // A completed refund can receive delayed duplicate notifications. Some historical rows
         // predate wx_transaction_id persistence, so a missing stored or incoming id is accepted
         // only when the refund number and both amounts already match the completed local record.
         if("REFUNDED".equals(payment.getStatus())) {
             if(transactionId!=null && !transactionId.isBlank() && payment.getWxTransactionId()!=null
                     && !transactionId.equals(payment.getWxTransactionId()))
-                throw new BusinessException("退款通知与本地退款单不一致");
+                rejectRefundNotification(payment,refundNo,transactionId,amount,"completed_transaction_mismatch");
+            log.info("退款重复通知已幂等忽略: paymentId={}, localRefundNo={}",
+                    payment.getId(),maskRefundNo(payment.getRefundNo()));
             return;
         }
         if(transactionId==null || !transactionId.equals(payment.getWxTransactionId()))
-            throw new BusinessException("退款通知与本地退款单不一致");
+            rejectRefundNotification(payment,refundNo,transactionId,amount,"inflight_transaction_mismatch");
+    }
+
+    private void rejectRefundNotification(Payment payment,String notifyRefundNo,String notifyTransactionId,
+                                          com.wechat.pay.java.service.refund.model.Amount notifyAmount,String reason) {
+        log.warn("退款通知校验失败: reason={}, paymentId={}, localStatus={}, localRefundNo={}, notifyRefundNo={}, "
+                        + "localAmountCents={}, localRefundCents={}, notifyTotalCents={}, notifyRefundCents={}, "
+                        + "notifyCurrency={}, notifyTransactionIdPresent={}, storedTransactionIdPresent={}, "
+                        + "transactionIdMatches={}",
+                reason,payment.getId(),payment.getStatus(),maskRefundNo(payment.getRefundNo()),
+                maskRefundNo(notifyRefundNo),centsOrNull(payment.getAmount()),centsOrNull(payment.getRefundAmount()),
+                notifyAmount==null?null:notifyAmount.getTotal(),notifyAmount==null?null:notifyAmount.getRefund(),
+                notifyAmount==null?null:notifyAmount.getCurrency(),
+                notifyTransactionId!=null&&!notifyTransactionId.isBlank(),payment.getWxTransactionId()!=null,
+                java.util.Objects.equals(notifyTransactionId,payment.getWxTransactionId()));
+        throw new BusinessException("退款通知与本地退款单不一致");
+    }
+
+    private static Long centsOrNull(BigDecimal amount) {
+        return amount==null?null:Long.valueOf(com.delta.common.utils.Money.cents(amount));
+    }
+
+    private static String maskRefundNo(String refundNo) {
+        if(refundNo==null||refundNo.isBlank()) return "null";
+        if(refundNo.length()<=8) return refundNo.substring(0,Math.min(2,refundNo.length()))+"***";
+        return refundNo.substring(0,4)+"***"+refundNo.substring(refundNo.length()-4);
     }
 
     @Override

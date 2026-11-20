@@ -66,6 +66,17 @@ class RepeatedRefundNotificationTest {
                 .hasMessageContaining("不一致");
     }
 
+    @Test
+    void pendingRefundAcceptsMatchingNotification() {
+        Payment payment = completedPayment();
+        payment.setStatus("REFUNDING");
+        payment.setWxTransactionId("wx-transaction-1");
+
+        assertThatCode(() -> service.validateRefundNotification(
+                payment, "refund-1", "wx-transaction-1", amount(100L, 100L)))
+                .doesNotThrowAnyException();
+    }
+
     private static Payment completedPayment() {
         Payment payment = new Payment();
         payment.setPayMethod("WECHAT");
