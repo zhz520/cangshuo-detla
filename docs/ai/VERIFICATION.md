@@ -2,6 +2,12 @@
 
 以下命令在项目根目录或对应子目录执行。实际执行时记录 commit、时间、退出码和输出摘要。
 
+## 先看变更影响
+
+    python scripts/ai_impact.py
+
+它会根据 FEATURE_MAP.md 的路径列出受影响功能和测试建议。
+
 ## 后端全量
 
     cd delta-game
