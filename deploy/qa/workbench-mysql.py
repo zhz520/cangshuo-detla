@@ -7,6 +7,7 @@ tables = {
     "order", "order_player", "order_progress", "complaint", "withdraw",
     "order_relay_request", "player_replace_request", "player", "player_wallet",
     "payment", "chat_session", "chat_message", "system_notification", "user",
+    "refund_request", "refund_request_audit",
 }
 dump = (root / "delta_game.sql").read_text(encoding="utf-8")
 ddl = {

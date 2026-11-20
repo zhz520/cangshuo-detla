@@ -41,6 +41,7 @@
 
 ## 契约 / 构建
 
+- H2 的宽松表结构会掩盖真实 MySQL 问题：测试曾漏建 `refund_request`，且 `order_player.role` 未提供值时 H2 未报错；上真实 MySQL 后才暴露。资金、提现、退款和 Workbench 改动必须至少跑一次隔离 MySQL 金路径。
 - Knife4j 4.5.0 与 Spring Framework 6.2 不兼容；保持 springdoc 2.8.x。
 - 端点路径变化必须有意更新 contracts/endpoint-baseline.json、OpenAPI baseline 和 types。
 - 新增页面必须通过 API 边界测试；历史直接请求文件只减不增。

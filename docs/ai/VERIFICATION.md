@@ -15,6 +15,34 @@
 
 包含 ArchUnit、OpenAPI baseline、提现并发和业务回归。需要 JDK 17。
 
+## 真实 MySQL 金路径
+
+Docker 不可用时可使用独立的本地 MySQL 实例，默认端口 `17427`。不要把测试指向生产库，也不要在客户数据库上执行测试 DDL。
+
+先初始化一个专用数据目录并启动 `mysqld`，然后创建隔离测试库：
+
+    mysqld --no-defaults --initialize-insecure --basedir=<mysql-home> --datadir=D:/CodexData/temp/mysql-golden-path/data-qa
+    mysqld --no-defaults --basedir=<mysql-home> --datadir=D:/CodexData/temp/mysql-golden-path/data-qa --port=17427 --bind-address=127.0.0.1 --mysqlx=0 --skip-log-bin
+
+加载 Workbench 与提现并发测试夹具：
+
+    python deploy/qa/workbench-mysql.py > D:/CodexData/temp/workbench-qa.sql
+    mysql --protocol=TCP --host=127.0.0.1 --port=17427 --user=root --default-character-set=utf8mb4 < D:/CodexData/temp/workbench-qa.sql
+    python deploy/qa/withdraw-mysql.py > D:/CodexData/temp/withdraw-qa.sql
+    mysql --protocol=TCP --host=127.0.0.1 --port=17427 --user=root --default-character-set=utf8mb4 < D:/CodexData/temp/withdraw-qa.sql
+    python deploy/qa/refund-workflow-mysql.py > D:/CodexData/temp/refund-workflow-qa.sql
+    mysql --protocol=TCP --host=127.0.0.1 --port=17427 --user=root --default-character-set=utf8mb4 < D:/CodexData/temp/refund-workflow-qa.sql
+
+分别启用真实库开关执行测试：
+
+    $env:WORKBENCH_TEST_MYSQL='1'
+    $env:WITHDRAW_TEST_MYSQL='1'
+    $env:ORDER_REFUND_TEST_MYSQL='1'
+    cd delta-game
+    mvn -pl delta-admin -am -Dtest=WorkbenchIntegrationTest,AdminWithdrawConcurrencyTest,OrderRefundWorkflowTest -Dsurefire.failIfNoSpecifiedTests=false test
+
+真实 MySQL 至少验证 `FOR UPDATE`、提现并发审批/拒绝互斥、退款工作流幂等和真实表结构约束；H2 结果不能替代。
+
 ## 管理端
 
     cd delta-admin-ui

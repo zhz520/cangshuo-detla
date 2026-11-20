@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.math.BigDecimal;
@@ -35,15 +37,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(classes = AdminWithdrawConcurrencyTest.Config.class, properties = {
         "spring.profiles.active=test",
-        "spring.datasource.url=jdbc:h2:mem:withdraw-review;MODE=MySQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER,LEVEL,TRANSACTION",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
         "spring.datasource.type=com.zaxxer.hikari.HikariDataSource",
         "spring.autoconfigure.exclude=com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure"
 })
 @Sql("/withdraw-schema.sql")
 class AdminWithdrawConcurrencyTest {
+
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        boolean mysql = "1".equals(System.getenv("WITHDRAW_TEST_MYSQL"));
+        registry.add("spring.datasource.url", () -> mysql
+                ? "jdbc:mysql://127.0.0.1:17427/withdraw_qa?allowPublicKeyRetrieval=true&sslMode=DISABLED&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+                : "jdbc:h2:mem:withdraw-review;MODE=MySQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER,LEVEL,TRANSACTION");
+        registry.add("spring.datasource.driver-class-name", () -> mysql ? "com.mysql.cj.jdbc.Driver" : "org.h2.Driver");
+        registry.add("spring.datasource.username", () -> mysql ? "root" : "sa");
+        registry.add("spring.datasource.password", () -> "");
+    }
 
     @Configuration
     @EnableAutoConfiguration(excludeName = "com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")

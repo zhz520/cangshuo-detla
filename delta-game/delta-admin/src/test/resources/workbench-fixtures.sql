@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `order` (
  created_at DATETIME, updated_at DATETIME, assign_time DATETIME, accept_time DATETIME, complete_time DATETIME, pay_deadline DATETIME
 );
 CREATE TABLE IF NOT EXISTS order_progress (order_id BIGINT,to_status VARCHAR(20),created_at DATETIME);
-CREATE TABLE IF NOT EXISTS order_player (id BIGINT PRIMARY KEY,order_id BIGINT,player_id BIGINT,status VARCHAR(20),created_at DATETIME,invite_deadline DATETIME);
+CREATE TABLE IF NOT EXISTS order_player (id BIGINT PRIMARY KEY,order_id BIGINT,player_id BIGINT,role VARCHAR(20),status VARCHAR(20),created_at DATETIME,invite_deadline DATETIME);
 CREATE TABLE IF NOT EXISTS complaint (id BIGINT PRIMARY KEY,status VARCHAR(20),updated_at DATETIME);
 CREATE TABLE IF NOT EXISTS withdraw (id BIGINT PRIMARY KEY,status VARCHAR(20),created_at DATETIME,processed_at DATETIME);
 CREATE TABLE IF NOT EXISTS order_relay_request (id BIGINT PRIMARY KEY,status VARCHAR(20),updated_at DATETIME,reviewed_at DATETIME);

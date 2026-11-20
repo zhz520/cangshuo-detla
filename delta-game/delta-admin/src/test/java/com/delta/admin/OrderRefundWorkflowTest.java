@@ -41,10 +41,19 @@ class OrderRefundWorkflowTest {
 
     @BeforeEach
     void setUp() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource(
-                "jdbc:h2:mem:refund_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
-                "sa", "");
+        boolean mysql = "1".equals(System.getenv("ORDER_REFUND_TEST_MYSQL"));
+        String url = mysql
+                ? "jdbc:mysql://127.0.0.1:17427/refund_workflow_qa?allowPublicKeyRetrieval=true&sslMode=DISABLED&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+                : "jdbc:h2:mem:refund_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE";
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, mysql ? "root" : "sa", "");
         jdbc = new JdbcTemplate(dataSource);
+        if (mysql) {
+            jdbc.execute("DROP TABLE IF EXISTS refund_request_audit");
+            jdbc.execute("DROP TABLE IF EXISTS refund_request");
+            jdbc.execute("DROP TABLE IF EXISTS complaint");
+            jdbc.execute("DROP TABLE IF EXISTS payment");
+            jdbc.execute("DROP TABLE IF EXISTS `order`");
+        }
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,order_no VARCHAR(64),user_id BIGINT,amount DECIMAL(12,2),status VARCHAR(32),confirm_time TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)") ;
         jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY,order_id BIGINT,biz_type VARCHAR(20),user_id BIGINT," +
                 "amount DECIMAL(12,2),pay_method VARCHAR(32),status VARCHAR(32),refund_amount DECIMAL(12,2)," +
