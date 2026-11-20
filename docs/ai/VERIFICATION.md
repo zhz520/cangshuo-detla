@@ -43,6 +43,8 @@ Docker 不可用时可使用独立的本地 MySQL 实例，默认端口 `17427`�
 
 真实 MySQL 至少验证 `FOR UPDATE`、提现并发审批/拒绝互斥、退款工作流幂等和真实表结构约束；H2 结果不能替代。
 
+Delta 的 `System validation` CI 已内置 MySQL 8.4.4 服务，并在每次运行中自动准备三个隔离测试库、执行上述 18 项金路径测试。CI 通过仍不等于客户业务或生产支付验收。
+
 ## 管理端
 
     cd delta-admin-ui
