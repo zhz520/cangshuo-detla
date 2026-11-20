@@ -550,6 +550,7 @@
         "adminRefundRetry",
         "adminReviewDelete",
         "adminReviewList",
+        "adminSetPlayerDepositAmount",
         "adminUserAdjustBalance",
         "adminUserBatchDelete",
         "adminUserBatchStatus",
@@ -1145,7 +1146,8 @@
     "V20261114_3__chat_rating.sql",
     "V20261114_4__chat_session_active_unique.sql",
     "V20261114__cs_routing.sql",
-    "V20261116__teammate_management.sql"
+    "V20261116__teammate_management.sql",
+    "V20261119__player_deposit_override.sql"
   ],
   "backendTests": [
     "delta-game/delta-admin/src/test/java/com/delta/admin/AdminAccountConflictTest.java",

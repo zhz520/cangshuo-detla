@@ -720,9 +720,9 @@ watch(() => route.query.taskId, id => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
-.deposit-override { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; padding:12px 14px; background:#f7f8fa; border-radius:10px; }
-.deposit-override-label { font-size:13px; color:#606266; }
-.deposit-override-hint { font-size:12px; color:#909399; }
+.deposit-override { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; padding:12px 14px; background:var(--el-fill-color-light); border-radius:10px; }
+.deposit-override-label { font-size:13px; color:var(--el-text-color-regular); }
+.deposit-override-hint { font-size:12px; color:var(--el-text-color-secondary); }
 .deposit-history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .deposit-history-head :deep(.el-divider) { flex: 1; margin-right: 8px; }
 .introduction-text { white-space: pre-wrap; overflow-wrap: anywhere; }
