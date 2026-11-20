@@ -1,8 +1,8 @@
 {
-  "version": "1.18.0",
-  "endpointCount": 482,
-  "operationCount": 482,
-  "schemaCount": 278,
+  "version": "1.18.1",
+  "endpointCount": 483,
+  "operationCount": 483,
+  "schemaCount": 279,
   "controllers": [
     {
       "name": "AdminCategoryFieldController",
@@ -30,7 +30,7 @@
     },
     {
       "name": "AdminPlayerController",
-      "endpoints": 16
+      "endpoints": 17
     },
     {
       "name": "AdminPlayerLevelController",

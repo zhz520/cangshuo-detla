@@ -329,6 +329,10 @@ export interface Decision {
   note: string
 }
 
+export interface DepositAmountRequest {
+  amount?: number
+}
+
 export interface EnableRequest {
   enabled: boolean
 }
@@ -1107,6 +1111,7 @@ export interface Player {
   status?: string
   rejectReason?: string
   depositPaymentNo?: string
+  depositOverrideAmount?: number
   frozenUntil?: string
   lastOnlineAt?: string
   isOnline?: number
@@ -2302,13 +2307,16 @@ export interface SubmitRequest {
 }
 
 export interface Summary {
-  categories?: Category[]
-  pending?: number
-  urgent?: number
-  unread?: number
-  handledToday?: number
-  systemUnread?: number
-  chatUnread?: number
+  playerId?: number
+  userId?: number
+  mode?: string
+  requiredAmount?: number
+  paidAmount?: number
+  outstandingAmount?: number
+  status?: string
+  paymentCount?: number
+  lastPaidAt?: string
+  overrideAmount?: number
 }
 
 export interface SysConfig {

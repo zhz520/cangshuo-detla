@@ -2310,6 +2310,42 @@
         }
       }
     },
+    "/admin/player/{id}/deposit-amount" : {
+      "put" : {
+        "tags" : [ "admin-player-controller" ],
+        "operationId" : "setDepositAmount",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DepositAmountRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/player/{id}/approve" : {
       "put" : {
         "tags" : [ "admin-player-controller" ],
@@ -14624,6 +14660,9 @@
           "depositPaymentNo" : {
             "type" : "string"
           },
+          "depositOverrideAmount" : {
+            "type" : "number"
+          },
           "frozenUntil" : {
             "type" : "string",
             "format" : "date-time"
@@ -15382,6 +15421,67 @@
             "type" : "string",
             "maxLength" : 32,
             "minLength" : 0
+          }
+        }
+      },
+      "DepositAmountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          }
+        }
+      },
+      "RSummary" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Summary"
+          }
+        }
+      },
+      "Summary" : {
+        "type" : "object",
+        "properties" : {
+          "playerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "userId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "mode" : {
+            "type" : "string"
+          },
+          "requiredAmount" : {
+            "type" : "number"
+          },
+          "paidAmount" : {
+            "type" : "number"
+          },
+          "outstandingAmount" : {
+            "type" : "number"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "paymentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lastPaidAt" : {
+            "type" : "string"
+          },
+          "overrideAmount" : {
+            "type" : "number"
           }
         }
       },
@@ -18089,56 +18189,6 @@
           },
           "hasMore" : {
             "type" : "boolean"
-          }
-        }
-      },
-      "RSummary" : {
-        "type" : "object",
-        "properties" : {
-          "code" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "msg" : {
-            "type" : "string"
-          },
-          "data" : {
-            "$ref" : "#/components/schemas/Summary"
-          }
-        }
-      },
-      "Summary" : {
-        "type" : "object",
-        "properties" : {
-          "categories" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/Category"
-            }
-          },
-          "pending" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "urgent" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "unread" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "handledToday" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "systemUnread" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "chatUnread" : {
-            "type" : "integer",
-            "format" : "int64"
           }
         }
       },

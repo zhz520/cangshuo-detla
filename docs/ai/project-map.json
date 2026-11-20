@@ -1,7 +1,7 @@
 {
-  "version": "1.18.0",
-  "tag": "v1.18.0",
-  "commit": "aa3bb3cd5131b20c86dea1b6efa9bab29c1e92a3",
+  "version": "1.18.1",
+  "tag": "v1.18.1",
+  "commit": "pending-v1.18.1",
   "generatedAt": "2026-11-20",
   "features": [
     {
@@ -215,9 +215,9 @@
     "endpointBaseline": "contracts/endpoint-baseline.json",
     "openapiBaseline": "contracts/openapi.baseline.json",
     "types": "contracts/api-types.d.ts",
-    "endpoints": 482,
-    "operations": 482,
-    "schemas": 278
+    "endpoints": 483,
+    "operations": 483,
+    "schemas": 279
   },
   "inventory": "docs/ai/inventory.json"
 }

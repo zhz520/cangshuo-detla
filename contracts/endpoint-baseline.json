@@ -517,6 +517,12 @@
   },
   {
     "controller": "AdminPlayerController",
+    "handler": "setDepositAmount",
+    "method": "PUT",
+    "path": "/admin/player/{id}/deposit-amount"
+  },
+  {
+    "controller": "AdminPlayerController",
     "handler": "deposits",
     "method": "GET",
     "path": "/admin/player/{id}/deposits"
