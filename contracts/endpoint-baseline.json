@@ -109,6 +109,12 @@
   },
   {
     "controller": "CsRoutingController",
+    "handler": "saveRules",
+    "method": "POST",
+    "path": "/admin/cs-routing/rules/batch"
+  },
+  {
+    "controller": "CsRoutingController",
     "handler": "deleteRule",
     "method": "DELETE",
     "path": "/admin/cs-routing/rules/{id}"
@@ -160,6 +166,42 @@
     "handler": "dashboard",
     "method": "GET",
     "path": "/admin/home/dashboard"
+  },
+  {
+    "controller": "IdentityGatewayAdminController",
+    "handler": "account",
+    "method": "GET",
+    "path": "/admin/identity-service/account"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "limits",
+    "method": "GET",
+    "path": "/admin/identity-service/limits"
+  },
+  {
+    "controller": "IdentityVerificationController",
+    "handler": "saveLimits",
+    "method": "PUT",
+    "path": "/admin/identity-service/limits"
+  },
+  {
+    "controller": "IdentityGatewayAdminController",
+    "handler": "checkout",
+    "method": "POST",
+    "path": "/admin/identity-service/packages/{id}/checkout"
+  },
+  {
+    "controller": "IdentityGatewayAdminController",
+    "handler": "settings",
+    "method": "GET",
+    "path": "/admin/identity-service/settings"
+  },
+  {
+    "controller": "IdentityGatewayAdminController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/identity-service/settings"
   },
   {
     "controller": "IdentityVerificationController",
@@ -216,6 +258,12 @@
     "path": "/admin/order/{id}"
   },
   {
+    "controller": "StaffOrderAssignmentController",
+    "handler": "candidates",
+    "method": "GET",
+    "path": "/admin/order/{id}/assign/candidates"
+  },
+  {
     "controller": "AdminOrderController",
     "handler": "assign",
     "method": "POST",
@@ -244,6 +292,36 @@
     "handler": "refund",
     "method": "POST",
     "path": "/admin/order/{id}/refund"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "roster",
+    "method": "GET",
+    "path": "/admin/order/{id}/teammates/"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "candidates",
+    "method": "GET",
+    "path": "/admin/order/{id}/teammates/candidates"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "invite",
+    "method": "POST",
+    "path": "/admin/order/{id}/teammates/invite"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "remove",
+    "method": "POST",
+    "path": "/admin/order/{id}/teammates/{memberId}/remove"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "revoke",
+    "method": "POST",
+    "path": "/admin/order/{id}/teammates/{memberId}/revoke"
   },
   {
     "controller": "PlatformController",
@@ -304,6 +382,12 @@
     "handler": "activate",
     "method": "PUT",
     "path": "/admin/platform/themes/active"
+  },
+  {
+    "controller": "ThemeController",
+    "handler": "preferences",
+    "method": "PUT",
+    "path": "/admin/platform/themes/preferences"
   },
   {
     "controller": "PlatformController",
@@ -397,6 +481,12 @@
   },
   {
     "controller": "AdminPlayerController",
+    "handler": "depositList",
+    "method": "GET",
+    "path": "/admin/player/deposits"
+  },
+  {
+    "controller": "AdminPlayerController",
     "handler": "list",
     "method": "GET",
     "path": "/admin/player/list"
@@ -424,6 +514,12 @@
     "handler": "approve",
     "method": "PUT",
     "path": "/admin/player/{id}/approve"
+  },
+  {
+    "controller": "AdminPlayerController",
+    "handler": "deposits",
+    "method": "GET",
+    "path": "/admin/player/{id}/deposits"
   },
   {
     "controller": "AdminPlayerController",
@@ -576,6 +672,12 @@
     "path": "/admin/settlements/export"
   },
   {
+    "controller": "SmsGatewayAdminController",
+    "handler": "account",
+    "method": "GET",
+    "path": "/admin/sms/account"
+  },
+  {
     "controller": "OfficialWechatController",
     "handler": "smsNotices",
     "method": "GET",
@@ -586,6 +688,24 @@
     "handler": "retrySms",
     "method": "POST",
     "path": "/admin/sms/notifications/{id}/retry"
+  },
+  {
+    "controller": "SmsGatewayAdminController",
+    "handler": "checkoutPackage",
+    "method": "POST",
+    "path": "/admin/sms/packages/{packageId}/checkout"
+  },
+  {
+    "controller": "SmsGatewayAdminController",
+    "handler": "settings",
+    "method": "GET",
+    "path": "/admin/sms/settings"
+  },
+  {
+    "controller": "SmsGatewayAdminController",
+    "handler": "updateSettings",
+    "method": "PUT",
+    "path": "/admin/sms/settings"
   },
   {
     "controller": "AdminStatisticsController",
@@ -996,6 +1116,24 @@
     "path": "/cs/dashboard/"
   },
   {
+    "controller": "CsDepositRefundController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/cs/deposit-refunds/list"
+  },
+  {
+    "controller": "CsDepositRefundController",
+    "handler": "retry",
+    "method": "POST",
+    "path": "/cs/deposit-refunds/{id}/retry"
+  },
+  {
+    "controller": "CsDepositRefundController",
+    "handler": "review",
+    "method": "PUT",
+    "path": "/cs/deposit-refunds/{id}/review"
+  },
+  {
     "controller": "GovernanceController",
     "handler": "invitations",
     "method": "GET",
@@ -1074,6 +1212,12 @@
     "path": "/cs/order/{id}"
   },
   {
+    "controller": "StaffOrderAssignmentController",
+    "handler": "candidates",
+    "method": "GET",
+    "path": "/cs/order/{id}/assign/candidates"
+  },
+  {
     "controller": "CsOrderController",
     "handler": "assign",
     "method": "POST",
@@ -1096,6 +1240,36 @@
     "handler": "refund",
     "method": "POST",
     "path": "/cs/order/{id}/refund"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "roster",
+    "method": "GET",
+    "path": "/cs/order/{id}/teammates/"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "candidates",
+    "method": "GET",
+    "path": "/cs/order/{id}/teammates/candidates"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "invite",
+    "method": "POST",
+    "path": "/cs/order/{id}/teammates/invite"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "remove",
+    "method": "POST",
+    "path": "/cs/order/{id}/teammates/{memberId}/remove"
+  },
+  {
+    "controller": "StaffOrderTeamController",
+    "handler": "revoke",
+    "method": "POST",
+    "path": "/cs/order/{id}/teammates/{memberId}/revoke"
   },
   {
     "controller": "StaffRoleController",
@@ -1126,6 +1300,12 @@
     "handler": "audit",
     "method": "PUT",
     "path": "/cs/player/{id}/audit"
+  },
+  {
+    "controller": "CsPlayerController",
+    "handler": "deposits",
+    "method": "GET",
+    "path": "/cs/player/{id}/deposits"
   },
   {
     "controller": "CsPlayerController",
@@ -1686,6 +1866,30 @@
     "path": "/player/auth/register"
   },
   {
+    "controller": "PlayerDepositRefundController",
+    "handler": "submit",
+    "method": "POST",
+    "path": "/player/deposit/refund/"
+  },
+  {
+    "controller": "PlayerDepositRefundController",
+    "handler": "context",
+    "method": "GET",
+    "path": "/player/deposit/refund/context"
+  },
+  {
+    "controller": "PlayerDepositRefundController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/player/deposit/refund/list"
+  },
+  {
+    "controller": "PlayerDepositRefundController",
+    "handler": "cancel",
+    "method": "POST",
+    "path": "/player/deposit/refund/{id}/cancel"
+  },
+  {
     "controller": "PlayerEarningsController",
     "handler": "detail",
     "method": "GET",
@@ -1828,6 +2032,18 @@
     "handler": "startService",
     "method": "POST",
     "path": "/player/order/{orderId}/start"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "removeTeammate",
+    "method": "POST",
+    "path": "/player/order/{orderId}/teammates/{memberId}/remove"
+  },
+  {
+    "controller": "PlayerOrderController",
+    "handler": "revokeTeammate",
+    "method": "POST",
+    "path": "/player/order/{orderId}/teammates/{memberId}/revoke"
   },
   {
     "controller": "PlayerController",
@@ -2311,6 +2527,12 @@
   },
   {
     "controller": "UserAuthController",
+    "handler": "accountPassword",
+    "method": "PUT",
+    "path": "/user/auth/account-password"
+  },
+  {
+    "controller": "UserAuthController",
     "handler": "captcha",
     "method": "GET",
     "path": "/user/auth/captcha"
@@ -2329,7 +2551,7 @@
   },
   {
     "controller": "UserLoginPolicyController",
-    "handler": "policy",
+    "handler": "policyResponse",
     "method": "GET",
     "path": "/user/auth/login-policy"
   },
@@ -2371,6 +2593,24 @@
   },
   {
     "controller": "WechatWebLoginController",
+    "handler": "unbind",
+    "method": "DELETE",
+    "path": "/user/auth/wechat/bind"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "bindExisting",
+    "method": "POST",
+    "path": "/user/auth/wechat/bind/complete"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "startBinding",
+    "method": "POST",
+    "path": "/user/auth/wechat/bind/start"
+  },
+  {
+    "controller": "WechatWebLoginController",
     "handler": "callback",
     "method": "GET",
     "path": "/user/auth/wechat/callback"
@@ -2383,9 +2623,33 @@
   },
   {
     "controller": "WechatAccountLinkController",
-    "handler": "link",
+    "handler": "retired",
     "method": "POST",
     "path": "/user/auth/wechat/link-account"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "sendCode",
+    "method": "POST",
+    "path": "/user/auth/wechat/phone/code"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "complete",
+    "method": "POST",
+    "path": "/user/auth/wechat/phone/complete"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "confirm",
+    "method": "POST",
+    "path": "/user/auth/wechat/phone/confirm"
+  },
+  {
+    "controller": "WechatWebLoginController",
+    "handler": "security",
+    "method": "GET",
+    "path": "/user/auth/wechat/security"
   },
   {
     "controller": "WechatWebLoginController",

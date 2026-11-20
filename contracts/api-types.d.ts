@@ -7,6 +7,12 @@ export interface AcceptRequest {
   deviceId?: string
 }
 
+export interface AccountPassword {
+  currentPassword?: string
+  password: string
+  confirmation: string
+}
+
 export interface ActivateRequest {
   themeId: string
 }
@@ -111,9 +117,43 @@ export interface BatchResult {
   messages?: string[]
 }
 
+export interface BatchRuleRequest {
+  matchType?: string
+  targetIds?: number[]
+  assigneeType?: string
+  assigneeId?: number
+  enabled?: number
+  remark?: string
+}
+
 export interface BatchStatusRequest {
   ids?: number[]
   status?: number
+}
+
+export interface BindPhone {
+  ticket: string
+  phone: string
+  requestId: string
+  code: string
+}
+
+export interface Candidate {
+  id?: number
+  nickname?: string
+  avatar?: string
+  avgRating?: number
+  completedOrders?: number
+  activeOrders?: number
+  levelId?: number
+  levelName?: string
+}
+
+export interface Candidates {
+  players?: PageCandidate
+  maxConcurrent?: number
+  requiredLevelId?: number
+  requiredLevelName?: string
 }
 
 export interface Category {
@@ -220,6 +260,16 @@ export interface ComplaintDetailVO {
   progress?: OrderProgress[]
 }
 
+export interface Completion {
+  token?: string
+  userId?: number
+  nickname?: string
+  avatar?: string
+  phoneBound?: boolean
+  bindTicket?: string
+  confirmationTicket?: string
+}
+
 export interface ContentConfig {
   createdAt?: string
   updatedAt?: string
@@ -227,6 +277,15 @@ export interface ContentConfig {
   configKey?: string
   configValue?: string
   remark?: string
+}
+
+export interface Context {
+  playerId?: number
+  requiredAmount?: number
+  paidAmount?: number
+  outstandingAmount?: number
+  payments?: PaymentOption[]
+  history?: RefundView[]
 }
 
 export interface CreateOrderRequest {
@@ -278,12 +337,6 @@ export interface Envelope {
   format: string
   payload: string
   signature: string
-}
-
-export interface EventDescriptor {
-  id?: string
-  name?: string
-  description?: string
 }
 
 export interface FeatureView {
@@ -343,16 +396,26 @@ export interface H5LoginRequest {
   inviteCode?: string
 }
 
+export interface IdentitySettings {
+  provider?: string
+  configured?: boolean
+  enabled?: boolean
+  otpEnabled?: boolean
+  legacyActive?: boolean
+}
+
 export interface InvitationBody {
   name: string
   oneDevice?: boolean
   expiresAt?: string
 }
 
-export interface InviteRequest {
+export interface Invite {
   inviteePlayerId?: number
+  replacedTeammateId?: number
   splitType?: string
   customAmount?: number
+  reason?: string
 }
 
 export interface JsonNode {
@@ -372,10 +435,11 @@ export interface LevelRequest {
   withdrawDepositAmount?: number
 }
 
-export interface LinkRequest {
-  phone: string
-  requestId: string
-  code: string
+export interface LimitRequest {
+  enabled?: boolean
+  maxAttempts?: number
+  windowHours?: number
+  lockHours?: number
 }
 
 export interface LoginResponse {
@@ -488,6 +552,8 @@ export interface OrderPlayer {
   splitRatio?: number
   splitAmount?: number
   invitedBy?: number
+  invitedByType?: string
+  replacesParticipantId?: number
   invitedAt?: string
   inviteDeadline?: string
   acceptedAt?: string
@@ -594,6 +660,20 @@ export interface PageBanner {
   orders?: OrderItem[]
   optimizeCountSql?: PageBanner
   searchCount?: PageBanner
+  optimizeJoinOfCountSql?: boolean
+  maxLimit?: number
+  countId?: string
+  pages?: number
+}
+
+export interface PageCandidate {
+  records?: Candidate[]
+  total?: number
+  size?: number
+  current?: number
+  orders?: OrderItem[]
+  optimizeCountSql?: PageCandidate
+  searchCount?: PageCandidate
   optimizeJoinOfCountSql?: boolean
   maxLimit?: number
   countId?: string
@@ -801,6 +881,13 @@ export interface PageRefundRequest {
   pages?: number
 }
 
+export interface PageResult {
+  records?: Record<string, unknown>[]
+  total?: number
+  pageNum?: number
+  pageSize?: number
+}
+
 export interface PageReview {
   records?: Review[]
   total?: number
@@ -962,6 +1049,29 @@ export interface Payment {
   paidAt?: string
 }
 
+export interface PaymentOption {
+  paymentId?: number
+  paymentNo?: string
+  amount?: number
+  paidAt?: string
+  refundStatus?: string
+  refundId?: number
+  eligible?: boolean
+  blockReason?: string
+}
+
+export interface PaymentView {
+  id?: number
+  paymentNo?: string
+  amount?: number
+  status?: string
+  payMethod?: string
+  paidAt?: string
+  createdAt?: string
+  refundReason?: string
+  refundTime?: string
+}
+
 export interface Period {
   startDate?: string
   endDate?: string
@@ -1007,6 +1117,13 @@ export interface Player {
   balance?: number
   completedOrders?: number
   activeOrders?: number
+  depositMode?: string
+  depositRequiredAmount?: number
+  depositPaidAmount?: number
+  depositOutstandingAmount?: number
+  depositStatus?: string
+  depositPaymentCount?: number
+  depositLastPaidAt?: string
 }
 
 export interface PlayerAccount {
@@ -1114,6 +1231,11 @@ export interface PlayerReplaceRequest {
   playerNickname?: string
 }
 
+export interface PreferenceRequest {
+  enabled: boolean
+  choices?: string[]
+}
+
 export interface Product {
   createdAt?: string
   updatedAt?: string
@@ -1211,6 +1333,12 @@ export interface RBatchResult {
   data?: BatchResult
 }
 
+export interface RCandidates {
+  code?: number
+  msg?: string
+  data?: Candidates
+}
+
 export interface RChatSession {
   code?: number
   msg?: string
@@ -1229,10 +1357,22 @@ export interface RComplaintDetailVO {
   data?: ComplaintDetailVO
 }
 
+export interface RCompletion {
+  code?: number
+  msg?: string
+  data?: Completion
+}
+
 export interface RContentConfig {
   code?: number
   msg?: string
   data?: ContentConfig
+}
+
+export interface RContext {
+  code?: number
+  msg?: string
+  data?: Context
 }
 
 export interface RCustomerRefundView {
@@ -1247,10 +1387,22 @@ export interface RGuestOrderSession {
   data?: GuestOrderSession
 }
 
+export interface RIdentitySettings {
+  code?: number
+  msg?: string
+  data?: IdentitySettings
+}
+
 export interface RInteger {
   code?: number
   msg?: string
   data?: number
+}
+
+export interface RJSONObject {
+  code?: number
+  msg?: string
+  data?: Record<string, unknown>
 }
 
 export interface RJsonNode {
@@ -1325,6 +1477,12 @@ export interface RListOrderProgress {
   data?: OrderProgress[]
 }
 
+export interface RListPaymentView {
+  code?: number
+  msg?: string
+  data?: PaymentView[]
+}
+
 export interface RListPlayerAccount {
   code?: number
   msg?: string
@@ -1359,6 +1517,18 @@ export interface RListRecommendCategory {
   code?: number
   msg?: string
   data?: RecommendCategory[]
+}
+
+export interface RListRefundView {
+  code?: number
+  msg?: string
+  data?: RefundView[]
+}
+
+export interface RListRequestView {
+  code?: number
+  msg?: string
+  data?: RequestView[]
 }
 
 export interface RListReviewableOrder {
@@ -1553,6 +1723,12 @@ export interface RPageRefundRequest {
   data?: PageRefundRequest
 }
 
+export interface RPageResult {
+  code?: number
+  msg?: string
+  data?: PageResult
+}
+
 export interface RPageReview {
   code?: number
   msg?: string
@@ -1649,6 +1825,12 @@ export interface RRefundRequest {
   data?: RefundRequest
 }
 
+export interface RRefundView {
+  code?: number
+  msg?: string
+  data?: RefundView
+}
+
 export interface RReward {
   code?: number
   msg?: string
@@ -1667,10 +1849,28 @@ export interface RRules {
   data?: Rules
 }
 
+export interface RSecurityBinding {
+  code?: number
+  msg?: string
+  data?: SecurityBinding
+}
+
+export interface RSecurityStatus {
+  code?: number
+  msg?: string
+  data?: SecurityStatus
+}
+
 export interface RSettings {
   code?: number
   msg?: string
   data?: Settings
+}
+
+export interface RSmsSettings {
+  code?: number
+  msg?: string
+  data?: SmsSettings
 }
 
 export interface RStatisticsDaily {
@@ -1751,6 +1951,10 @@ export interface RWithdraw {
   data?: Withdraw
 }
 
+export interface Reason {
+  reason?: string
+}
+
 export interface RechargePackage {
   id?: string
   name?: string
@@ -1816,9 +2020,41 @@ export interface RefundReviewRequest {
   note?: string
 }
 
+export interface RefundView {
+  id?: number
+  refundNo?: string
+  playerId?: number
+  userId?: number
+  paymentId?: number
+  amount?: number
+  reason?: string
+  status?: string
+  reviewerId?: number
+  reviewNote?: string
+  reviewedAt?: string
+  channelRefundNo?: string
+  lastError?: string
+  createdAt?: string
+  completedAt?: string
+}
+
+export interface ReplaceTeammateRequest {
+  teammatePlayerId?: number
+}
+
 export interface Request {
   kind: string
   note?: string
+}
+
+export interface RequestView {
+  id?: string
+  kind?: string
+  status?: string
+  note?: string
+  review_note?: string
+  created_at?: string
+  reviewed_at?: string
 }
 
 export interface ReversalRequest {
@@ -1839,7 +2075,7 @@ export interface ReviewCreateRequest {
 }
 
 export interface ReviewRequest {
-  approved?: boolean
+  approve?: boolean
   note?: string
 }
 
@@ -1946,6 +2182,27 @@ export interface SaveGameInfoRequest {
   remark?: string
 }
 
+export interface SecurityBinding {
+  bindTicket?: string
+  maskedPhone?: string
+}
+
+export interface SecurityStatus {
+  phone?: string
+  phoneBound?: boolean
+  wechatBound?: boolean
+  wechatAvailable?: boolean
+  passwordSet?: boolean
+  passwordLoginEnabled?: boolean
+}
+
+export interface SendCode {
+  ticket: string
+  phone: string
+  captchaId: string
+  captchaCode: string
+}
+
 export interface SensitiveWord {
   id?: number
   word?: string
@@ -1956,36 +2213,45 @@ export interface SensitiveWord {
 
 export interface Settings {
   enabled?: boolean
-  host?: string
-  port?: number
-  security?: string
-  username?: string
-  fromAddress?: string
-  senderName?: string
-  recipients?: string[]
-  events?: string[]
-  password?: string
-  passwordConfigured?: boolean
-  licensed?: boolean
-  availableEvents?: EventDescriptor[]
+  maxAttempts?: number
+  windowHours?: number
+  lockHours?: number
 }
 
 export interface SettingsRequest {
+  provider?: string
   enabled?: boolean
-  host?: string
-  port?: number
-  security?: string
-  username?: string
-  fromAddress?: string
-  senderName?: string
-  recipients?: string[]
-  events?: string[]
-  password?: string
+  otpEnabled?: boolean
+  endpoint?: string
+  accessKeyId?: string
+  accessKeySecret?: string
+  signName?: string
+  verificationTemplateCode?: string
+  playerFinishTemplateCode?: string
+  csMessageTemplateCode?: string
+  teammateInvitedTemplateCode?: string
 }
 
 export interface SmsReminderRequest {
   sessionId?: number
   reminderCode?: string
+}
+
+export interface SmsSettings {
+  provider?: string
+  configured?: boolean
+  enabled?: boolean
+  otpEnabled?: boolean
+  legacyActive?: boolean
+  endpoint?: string
+  accessKeyId?: string
+  hasAccessKeySecret?: boolean
+  signName?: string
+  verificationTemplateCode?: string
+  playerFinishTemplateCode?: string
+  csMessageTemplateCode?: string
+  teammateInvitedTemplateCode?: string
+  authorityConfigured?: boolean
 }
 
 export interface StatisticsDaily {
@@ -2111,6 +2377,12 @@ export interface ThemeOption {
 export interface ThemeState {
   activeTheme?: string
   themes?: ThemeOption[]
+  userSwitchEnabled?: boolean
+  userThemeOptions?: string[]
+}
+
+export interface Ticket {
+  ticket: string
 }
 
 export interface Totals {

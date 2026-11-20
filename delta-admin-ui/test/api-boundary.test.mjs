@@ -5,6 +5,7 @@ import { join, relative } from 'node:path'
 
 const root = process.cwd()
 const baseline = new Set([
+  'src/components/DemoReadOnlyPage.vue',
   'src/components/WorkbenchCard.vue',
   'src/components/WorkbenchCenter.vue',
   'src/views/chat/ChatService.vue',

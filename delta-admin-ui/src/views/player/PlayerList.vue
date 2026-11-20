@@ -683,7 +683,7 @@ watch(() => route.query.taskId, id => {
 }
 .deposit-amount {
   margin-top: 4px;
-  color: #667085;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 .deposit-history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

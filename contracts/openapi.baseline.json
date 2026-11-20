@@ -133,6 +133,34 @@
         }
       }
     },
+    "/user/auth/account-password" : {
+      "put" : {
+        "tags" : [ "user-auth-controller" ],
+        "operationId" : "accountPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountPassword"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RLoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/system/sensitive-word" : {
       "put" : {
         "tags" : [ "sensitive-word-controller" ],
@@ -1506,6 +1534,43 @@
         }
       }
     },
+    "/cs/deposit-refunds/{id}/review" : {
+      "put" : {
+        "tags" : [ "cs-deposit-refund-controller" ],
+        "operationId" : "review_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RRefundView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cs/complaint/{id}/resolve" : {
       "put" : {
         "tags" : [ "cs-complaint-controller" ],
@@ -1848,6 +1913,50 @@
         }
       }
     },
+    "/admin/sms/settings" : {
+      "get" : {
+        "tags" : [ "sms-gateway-admin-controller" ],
+        "operationId" : "settings",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSmsSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "sms-gateway-admin-controller" ],
+        "operationId" : "updateSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSmsSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/reward-grab/settings" : {
       "get" : {
         "tags" : [ "reward-grab-settings-controller" ],
@@ -1949,7 +2058,7 @@
     "/admin/privacy/requests/{id}" : {
       "put" : {
         "tags" : [ "privacy-controller" ],
-        "operationId" : "review_1",
+        "operationId" : "review_2",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -2301,7 +2410,7 @@
     "/admin/player-layout" : {
       "get" : {
         "tags" : [ "player-directory-layout-controller" ],
-        "operationId" : "settings",
+        "operationId" : "settings_1",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -2363,6 +2472,34 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RUpdateInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/platform/themes/preferences" : {
+      "put" : {
+        "tags" : [ "theme-controller" ],
+        "operationId" : "preferences",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PreferenceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RThemeState"
                 }
               }
             }
@@ -2575,7 +2712,7 @@
       },
       "put" : {
         "tags" : [ "identity-verification-controller" ],
-        "operationId" : "review_2",
+        "operationId" : "review_3",
         "parameters" : [ {
           "name" : "userId",
           "in" : "path",
@@ -2609,10 +2746,98 @@
         }
       }
     },
+    "/admin/identity-service/settings" : {
+      "get" : {
+        "tags" : [ "identity-gateway-admin-controller" ],
+        "operationId" : "settings_2",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RIdentitySettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "identity-gateway-admin-controller" ],
+        "operationId" : "update_14",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RIdentitySettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/identity-service/limits" : {
+      "get" : {
+        "tags" : [ "identity-verification-controller" ],
+        "operationId" : "limits",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "identity-verification-controller" ],
+        "operationId" : "saveLimits",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LimitRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/email-notifications/settings" : {
       "get" : {
         "tags" : [ "email-notification-controller" ],
-        "operationId" : "settings_1",
+        "operationId" : "settings_3",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -2656,7 +2881,7 @@
     "/admin/coupons/{id}" : {
       "put" : {
         "tags" : [ "coupon-admin-controller" ],
-        "operationId" : "update_14",
+        "operationId" : "update_15",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -2694,7 +2919,7 @@
     "/admin/category-field" : {
       "put" : {
         "tags" : [ "admin-category-field-controller" ],
-        "operationId" : "update_15",
+        "operationId" : "update_16",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2832,7 +3057,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RListMapStringObject"
+                  "$ref" : "#/components/schemas/RListRequestView"
                 }
               }
             }
@@ -3213,15 +3438,15 @@
         }
       }
     },
-    "/user/auth/wechat/link-account" : {
+    "/user/auth/wechat/phone/confirm" : {
       "post" : {
-        "tags" : [ "wechat-account-link-controller" ],
-        "operationId" : "link",
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "confirm",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/LinkRequest"
+                "$ref" : "#/components/schemas/Ticket"
               }
             }
           },
@@ -3233,7 +3458,81 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RLoginResponse"
+                  "$ref" : "#/components/schemas/RCompletion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/phone/complete" : {
+      "post" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "complete",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BindPhone"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RCompletion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/phone/code" : {
+      "post" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "sendCode",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SendCode"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/link-account" : {
+      "post" : {
+        "tags" : [ "wechat-account-link-controller" ],
+        "operationId" : "retired",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
                 }
               }
             }
@@ -3249,10 +3548,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "type" : "object",
-                "additionalProperties" : {
-                  "type" : "string"
-                }
+                "$ref" : "#/components/schemas/Ticket"
               }
             }
           },
@@ -3264,7 +3560,53 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RLoginResponse"
+                  "$ref" : "#/components/schemas/RCompletion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/bind/start" : {
+      "post" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "startBinding",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/bind/complete" : {
+      "post" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "bindExisting",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Ticket"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSecurityBinding"
                 }
               }
             }
@@ -3726,7 +4068,7 @@
     "/player/work/{id}/complete" : {
       "post" : {
         "tags" : [ "player-work-controller" ],
-        "operationId" : "complete",
+        "operationId" : "complete_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3811,6 +4153,86 @@
         }
       }
     },
+    "/player/order/{orderId}/teammates/{memberId}/revoke" : {
+      "post" : {
+        "tags" : [ "player-order-controller" ],
+        "operationId" : "revokeTeammate",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/player/order/{orderId}/teammates/{memberId}/remove" : {
+      "post" : {
+        "tags" : [ "player-order-controller" ],
+        "operationId" : "removeTeammate",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Reason"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/player/order/{orderId}/start" : {
       "post" : {
         "tags" : [ "player-order-controller" ],
@@ -3851,6 +4273,15 @@
             "format" : "int64"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReplaceTeammateRequest"
+              }
+            }
+          }
+        },
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -4071,7 +4502,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/InviteRequest"
+                "$ref" : "#/components/schemas/Invite"
               }
             }
           },
@@ -4200,6 +4631,61 @@
           "required" : true,
           "schema" : {
             "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/player/deposit/refund" : {
+      "post" : {
+        "tags" : [ "player-deposit-refund-controller" ],
+        "operationId" : "submit_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SubmitRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RRefundView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/player/deposit/refund/{id}/cancel" : {
+      "post" : {
+        "tags" : [ "player-deposit-refund-controller" ],
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "responses" : {
@@ -4889,7 +5375,7 @@
     "/order/{id}/confirm" : {
       "post" : {
         "tags" : [ "order-controller" ],
-        "operationId" : "confirm",
+        "operationId" : "confirm_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -4916,7 +5402,7 @@
     "/order/{id}/cancel" : {
       "post" : {
         "tags" : [ "order-controller" ],
-        "operationId" : "cancel",
+        "operationId" : "cancel_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5500,7 +5986,7 @@
     "/cs/order/{id}/confirm" : {
       "post" : {
         "tags" : [ "cs-order-controller" ],
-        "operationId" : "confirm_1",
+        "operationId" : "confirm_2",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5629,6 +6115,33 @@
         }
       }
     },
+    "/cs/deposit-refunds/{id}/retry" : {
+      "post" : {
+        "tags" : [ "cs-deposit-refund-controller" ],
+        "operationId" : "retry",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RRefundView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cs/complaint/create" : {
       "post" : {
         "tags" : [ "cs-complaint-controller" ],
@@ -5734,7 +6247,7 @@
     "/common/wechat/binding/complete" : {
       "post" : {
         "tags" : [ "official-wechat-controller" ],
-        "operationId" : "complete_1",
+        "operationId" : "complete_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -6077,7 +6590,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RVoid"
+                  "$ref" : "#/components/schemas/RInteger"
                 }
               }
             }
@@ -6133,7 +6646,7 @@
     "/admin/wechat/notifications/{id}/retry" : {
       "post" : {
         "tags" : [ "official-wechat-controller" ],
-        "operationId" : "retry",
+        "operationId" : "retry_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6240,6 +6753,32 @@
         }
       }
     },
+    "/admin/sms/packages/{packageId}/checkout" : {
+      "post" : {
+        "tags" : [ "sms-gateway-admin-controller" ],
+        "operationId" : "checkoutPackage",
+        "parameters" : [ {
+          "name" : "packageId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RJSONObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/sms/notifications/{id}/retry" : {
       "post" : {
         "tags" : [ "official-wechat-controller" ],
@@ -6306,7 +6845,7 @@
     "/admin/refunds/{id}/retry" : {
       "post" : {
         "tags" : [ "refund-controller" ],
-        "operationId" : "retry_1",
+        "operationId" : "retry_2",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6663,6 +7202,240 @@
         }
       }
     },
+    "/cs/order/{id}/teammates/{memberId}/revoke" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/order/{id}/teammates/{memberId}/revoke" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "revoke_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/order/{id}/teammates/{memberId}/remove" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "remove",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Reason"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cs/order/{id}/teammates/{memberId}/remove" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "remove_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Reason"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cs/order/{id}/teammates/invite" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "invite",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Invite"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/order/{id}/teammates/invite" : {
+      "post" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "invite_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Invite"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/order/{id}/refund" : {
       "post" : {
         "tags" : [ "admin-order-controller" ],
@@ -6693,7 +7466,7 @@
     "/admin/order/{id}/confirm" : {
       "post" : {
         "tags" : [ "admin-order-controller" ],
-        "operationId" : "confirm_2",
+        "operationId" : "confirm_3",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6752,6 +7525,32 @@
         }
       }
     },
+    "/admin/identity-service/packages/{id}/checkout" : {
+      "post" : {
+        "tags" : [ "identity-gateway-admin-controller" ],
+        "operationId" : "checkout_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RJsonNode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/email-notifications/test" : {
       "post" : {
         "tags" : [ "email-notification-controller" ],
@@ -6782,7 +7581,7 @@
     "/admin/email-notifications/records/{id}/retry" : {
       "post" : {
         "tags" : [ "email-notification-controller" ],
-        "operationId" : "retry_2",
+        "operationId" : "retry_3",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6842,6 +7641,34 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RLong"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/cs-routing/rules/batch" : {
+      "post" : {
+        "tags" : [ "cs-routing-controller" ],
+        "operationId" : "saveRules",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BatchRuleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RInteger"
                 }
               }
             }
@@ -7347,6 +8174,24 @@
         }
       }
     },
+    "/user/auth/wechat/security" : {
+      "get" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "security",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSecurityStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user/auth/wechat/callback" : {
       "get" : {
         "tags" : [ "wechat-web-login-controller" ],
@@ -7354,14 +8199,21 @@
         "parameters" : [ {
           "name" : "code",
           "in" : "query",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
         }, {
           "name" : "state",
           "in" : "query",
-          "required" : true,
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "__Host-delta_wechat_oauth",
+          "in" : "cookie",
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -7376,7 +8228,7 @@
     "/user/auth/login-policy" : {
       "get" : {
         "tags" : [ "user-login-policy-controller" ],
-        "operationId" : "policy",
+        "operationId" : "policyResponse",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -8424,7 +9276,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RMapStringObject"
+                  "$ref" : "#/components/schemas/RCandidates"
                 }
               }
             }
@@ -8495,7 +9347,7 @@
     "/player/invitations/{token}" : {
       "get" : {
         "tags" : [ "governance-controller" ],
-        "operationId" : "invite",
+        "operationId" : "invite_2",
         "parameters" : [ {
           "name" : "token",
           "in" : "path",
@@ -8630,6 +9482,42 @@
         }
       }
     },
+    "/player/deposit/refund/list" : {
+      "get" : {
+        "tags" : [ "player-deposit-refund-controller" ],
+        "operationId" : "list_17",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListRefundView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/player/deposit/refund/context" : {
+      "get" : {
+        "tags" : [ "player-deposit-refund-controller" ],
+        "operationId" : "context",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RContext"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/player/apply/status" : {
       "get" : {
         "tags" : [ "player-controller" ],
@@ -8651,7 +9539,7 @@
     "/player/account/list" : {
       "get" : {
         "tags" : [ "player-account-controller" ],
-        "operationId" : "list_17",
+        "operationId" : "list_18",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -9099,7 +9987,7 @@
     "/message/list" : {
       "get" : {
         "tags" : [ "message-controller" ],
-        "operationId" : "list_18",
+        "operationId" : "list_19",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9322,7 +10210,7 @@
     "/cs/withdraw/list" : {
       "get" : {
         "tags" : [ "cs-withdraw-controller" ],
-        "operationId" : "list_19",
+        "operationId" : "list_20",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9390,7 +10278,7 @@
     "/cs/user/list" : {
       "get" : {
         "tags" : [ "cs-user-controller" ],
-        "operationId" : "list_20",
+        "operationId" : "list_21",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9441,7 +10329,7 @@
     "/cs/replace/list" : {
       "get" : {
         "tags" : [ "cs-replace-controller" ],
-        "operationId" : "list_21",
+        "operationId" : "list_22",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9500,7 +10388,7 @@
     "/cs/relay/list" : {
       "get" : {
         "tags" : [ "cs-relay-controller" ],
-        "operationId" : "list_22",
+        "operationId" : "list_23",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9662,7 +10550,7 @@
     "/cs/product/list" : {
       "get" : {
         "tags" : [ "cs-product-controller" ],
-        "operationId" : "list_23",
+        "operationId" : "list_24",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9761,10 +10649,37 @@
         }
       }
     },
+    "/cs/player/{id}/deposits" : {
+      "get" : {
+        "tags" : [ "cs-player-controller" ],
+        "operationId" : "deposits",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListPaymentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cs/player/list" : {
       "get" : {
         "tags" : [ "cs-player-controller" ],
-        "operationId" : "list_24",
+        "operationId" : "list_25",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9960,7 +10875,7 @@
     "/cs/order/list" : {
       "get" : {
         "tags" : [ "cs-order-controller" ],
-        "operationId" : "list_25",
+        "operationId" : "list_26",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10100,6 +11015,46 @@
         }
       }
     },
+    "/cs/deposit-refunds/list" : {
+      "get" : {
+        "tags" : [ "cs-deposit-refund-controller" ],
+        "operationId" : "list_27",
+        "parameters" : [ {
+          "name" : "query",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/PageQuery"
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RPageResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cs/dashboard" : {
       "get" : {
         "tags" : [ "cs-dashboard-controller" ],
@@ -10148,7 +11103,7 @@
     "/cs/complaint/list" : {
       "get" : {
         "tags" : [ "cs-complaint-controller" ],
-        "operationId" : "list_26",
+        "operationId" : "list_28",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10290,7 +11245,7 @@
     "/cs/category/list" : {
       "get" : {
         "tags" : [ "cs-category-controller" ],
-        "operationId" : "list_27",
+        "operationId" : "list_29",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -10342,7 +11297,7 @@
       },
       "delete" : {
         "tags" : [ "official-wechat-controller" ],
-        "operationId" : "remove",
+        "operationId" : "remove_2",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -10533,7 +11488,7 @@
     "/app/product/list" : {
       "get" : {
         "tags" : [ "app-product-controller" ],
-        "operationId" : "list_28",
+        "operationId" : "list_30",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10583,7 +11538,7 @@
     "/app/players" : {
       "get" : {
         "tags" : [ "public-player-controller" ],
-        "operationId" : "list_29",
+        "operationId" : "list_31",
         "parameters" : [ {
           "name" : "pageNum",
           "in" : "query",
@@ -10868,7 +11823,7 @@
     "/admin/withdraw/list" : {
       "get" : {
         "tags" : [ "admin-withdraw-controller" ],
-        "operationId" : "list_30",
+        "operationId" : "list_32",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10927,7 +11882,7 @@
     "/admin/user/list" : {
       "get" : {
         "tags" : [ "admin-user-controller" ],
-        "operationId" : "list_31",
+        "operationId" : "list_33",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11127,10 +12082,28 @@
         }
       }
     },
+    "/admin/sms/account" : {
+      "get" : {
+        "tags" : [ "sms-gateway-admin-controller" ],
+        "operationId" : "account",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RJSONObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/settlements" : {
       "get" : {
         "tags" : [ "settlement-ledger-controller" ],
-        "operationId" : "list_32",
+        "operationId" : "list_34",
         "parameters" : [ {
           "name" : "from",
           "in" : "query",
@@ -11193,7 +12166,7 @@
     "/admin/rewards" : {
       "get" : {
         "tags" : [ "reward-controller" ],
-        "operationId" : "list_33",
+        "operationId" : "list_35",
         "parameters" : [ {
           "name" : "page",
           "in" : "query",
@@ -11265,7 +12238,7 @@
     "/admin/review/list" : {
       "get" : {
         "tags" : [ "admin-review-controller" ],
-        "operationId" : "list_34",
+        "operationId" : "list_36",
         "parameters" : [ {
           "name" : "pageNum",
           "in" : "query",
@@ -11377,7 +12350,7 @@
     "/admin/recommend-category/list" : {
       "get" : {
         "tags" : [ "admin-recommend-category-controller" ],
-        "operationId" : "list_35",
+        "operationId" : "list_37",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -11395,7 +12368,7 @@
     "/admin/privacy/requests" : {
       "get" : {
         "tags" : [ "privacy-controller" ],
-        "operationId" : "list_36",
+        "operationId" : "list_38",
         "parameters" : [ {
           "name" : "taskId",
           "in" : "query",
@@ -11479,10 +12452,37 @@
         }
       }
     },
+    "/admin/player/{id}/deposits" : {
+      "get" : {
+        "tags" : [ "admin-player-controller" ],
+        "operationId" : "deposits_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListPaymentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/player/list" : {
       "get" : {
         "tags" : [ "admin-player-controller" ],
-        "operationId" : "list_37",
+        "operationId" : "list_39",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11535,10 +12535,61 @@
         }
       }
     },
+    "/admin/player/deposits" : {
+      "get" : {
+        "tags" : [ "admin-player-controller" ],
+        "operationId" : "depositList",
+        "parameters" : [ {
+          "name" : "pageNum",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 1
+          }
+        }, {
+          "name" : "pageSize",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RPageResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/player-level/list" : {
       "get" : {
         "tags" : [ "admin-player-level-controller" ],
-        "operationId" : "list_38",
+        "operationId" : "list_40",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -11592,7 +12643,7 @@
     "/admin/platform/themes" : {
       "get" : {
         "tags" : [ "theme-controller" ],
-        "operationId" : "list_39",
+        "operationId" : "list_41",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -11723,6 +12774,142 @@
         }
       }
     },
+    "/cs/order/{id}/teammates/candidates" : {
+      "get" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "candidates",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/PageQuery"
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/order/{id}/teammates/candidates" : {
+      "get" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "candidates_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/PageQuery"
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/order/{id}/teammates" : {
+      "get" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "roster",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListOrderPlayer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cs/order/{id}/teammates" : {
+      "get" : {
+        "tags" : [ "staff-order-team-controller" ],
+        "operationId" : "roster_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListOrderPlayer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/order/{id}/progress" : {
       "get" : {
         "tags" : [ "admin-order-controller" ],
@@ -11750,10 +12937,92 @@
         }
       }
     },
+    "/admin/order/{id}/assign/candidates" : {
+      "get" : {
+        "tags" : [ "staff-order-assignment-controller" ],
+        "operationId" : "candidates_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/PageQuery"
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cs/order/{id}/assign/candidates" : {
+      "get" : {
+        "tags" : [ "staff-order-assignment-controller" ],
+        "operationId" : "candidates_3",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/PageQuery"
+          }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RCandidates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/order/list" : {
       "get" : {
         "tags" : [ "admin-order-controller" ],
-        "operationId" : "list_40",
+        "operationId" : "list_42",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11817,7 +13086,7 @@
     "/admin/invites" : {
       "get" : {
         "tags" : [ "invite-admin-controller" ],
-        "operationId" : "list_41",
+        "operationId" : "list_43",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -11835,7 +13104,7 @@
     "/admin/identity/applications" : {
       "get" : {
         "tags" : [ "identity-verification-controller" ],
-        "operationId" : "list_42",
+        "operationId" : "list_44",
         "parameters" : [ {
           "name" : "taskId",
           "in" : "query",
@@ -11866,6 +13135,24 @@
         }
       }
     },
+    "/admin/identity-service/account" : {
+      "get" : {
+        "tags" : [ "identity-gateway-admin-controller" ],
+        "operationId" : "account_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RJsonNode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/home/dashboard" : {
       "get" : {
         "tags" : [ "admin-home-controller" ],
@@ -11887,7 +13174,7 @@
     "/admin/email-notifications" : {
       "get" : {
         "tags" : [ "email-notification-controller" ],
-        "operationId" : "settings_2",
+        "operationId" : "settings_4",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -12055,7 +13342,7 @@
     "/admin/category-field/list" : {
       "get" : {
         "tags" : [ "admin-category-field-controller" ],
-        "operationId" : "list_43",
+        "operationId" : "list_45",
         "parameters" : [ {
           "name" : "categoryId",
           "in" : "query",
@@ -12234,6 +13521,24 @@
             "format" : "int64"
           }
         } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/auth/wechat/bind" : {
+      "delete" : {
+        "tags" : [ "wechat-web-login-controller" ],
+        "operationId" : "unbind",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -12701,6 +14006,69 @@
           "data" : {
             "type" : "object",
             "additionalProperties" : { }
+          }
+        }
+      },
+      "AccountPassword" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string",
+            "maxLength" : 72,
+            "minLength" : 0
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 32,
+            "minLength" : 0
+          },
+          "confirmation" : {
+            "type" : "string",
+            "maxLength" : 32,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "confirmation", "password" ]
+      },
+      "LoginResponse" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "avatar" : {
+            "type" : "string"
+          },
+          "passwordSetupRequired" : {
+            "type" : "boolean"
+          },
+          "phoneBound" : {
+            "type" : "boolean"
+          },
+          "setupToken" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RLoginResponse" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/LoginResponse"
           }
         }
       },
@@ -13291,6 +14659,28 @@
           "activeOrders" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "depositMode" : {
+            "type" : "string"
+          },
+          "depositRequiredAmount" : {
+            "type" : "number"
+          },
+          "depositPaidAmount" : {
+            "type" : "number"
+          },
+          "depositOutstandingAmount" : {
+            "type" : "number"
+          },
+          "depositStatus" : {
+            "type" : "string"
+          },
+          "depositPaymentCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "depositLastPaidAt" : {
+            "type" : "string"
           }
         }
       },
@@ -13505,6 +14895,87 @@
           }
         }
       },
+      "ReviewRequest" : {
+        "type" : "object",
+        "properties" : {
+          "approve" : {
+            "type" : "boolean"
+          },
+          "note" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RRefundView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/RefundView"
+          }
+        }
+      },
+      "RefundView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "refundNo" : {
+            "type" : "string"
+          },
+          "playerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "userId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "reviewerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "reviewNote" : {
+            "type" : "string"
+          },
+          "reviewedAt" : {
+            "type" : "string"
+          },
+          "channelRefundNo" : {
+            "type" : "string"
+          },
+          "lastError" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string"
+          },
+          "completedAt" : {
+            "type" : "string"
+          }
+        }
+      },
       "Complaint" : {
         "type" : "object",
         "properties" : {
@@ -13634,6 +15105,108 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/User"
+          }
+        }
+      },
+      "SettingsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "provider" : {
+            "type" : "string"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "otpEnabled" : {
+            "type" : "boolean"
+          },
+          "endpoint" : {
+            "type" : "string"
+          },
+          "accessKeyId" : {
+            "type" : "string"
+          },
+          "accessKeySecret" : {
+            "type" : "string",
+            "format" : "password",
+            "writeOnly" : true
+          },
+          "signName" : {
+            "type" : "string"
+          },
+          "verificationTemplateCode" : {
+            "type" : "string"
+          },
+          "playerFinishTemplateCode" : {
+            "type" : "string"
+          },
+          "csMessageTemplateCode" : {
+            "type" : "string"
+          },
+          "teammateInvitedTemplateCode" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RSmsSettings" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SmsSettings"
+          }
+        }
+      },
+      "SmsSettings" : {
+        "type" : "object",
+        "properties" : {
+          "provider" : {
+            "type" : "string"
+          },
+          "configured" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "otpEnabled" : {
+            "type" : "boolean"
+          },
+          "legacyActive" : {
+            "type" : "boolean"
+          },
+          "endpoint" : {
+            "type" : "string"
+          },
+          "accessKeyId" : {
+            "type" : "string"
+          },
+          "hasAccessKeySecret" : {
+            "type" : "boolean"
+          },
+          "signName" : {
+            "type" : "string"
+          },
+          "verificationTemplateCode" : {
+            "type" : "string"
+          },
+          "playerFinishTemplateCode" : {
+            "type" : "string"
+          },
+          "csMessageTemplateCode" : {
+            "type" : "string"
+          },
+          "teammateInvitedTemplateCode" : {
+            "type" : "string"
+          },
+          "authorityConfigured" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13998,16 +15571,22 @@
           }
         }
       },
-      "ActivateRequest" : {
+      "PreferenceRequest" : {
         "type" : "object",
         "properties" : {
-          "themeId" : {
-            "type" : "string",
-            "maxLength" : 32,
-            "minLength" : 0
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "choices" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "maxItems" : 2,
+            "minItems" : 1
           }
         },
-        "required" : [ "themeId" ]
+        "required" : [ "enabled" ]
       },
       "RThemeState" : {
         "type" : "object",
@@ -14061,8 +15640,28 @@
             "items" : {
               "$ref" : "#/components/schemas/ThemeOption"
             }
+          },
+          "userSwitchEnabled" : {
+            "type" : "boolean"
+          },
+          "userThemeOptions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         }
+      },
+      "ActivateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "themeId" : {
+            "type" : "string",
+            "maxLength" : 32,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "themeId" ]
       },
       "EnableRequest" : {
         "type" : "object",
@@ -14157,72 +15756,58 @@
           }
         }
       },
-      "ReviewRequest" : {
+      "IdentitySettings" : {
         "type" : "object",
         "properties" : {
-          "approved" : {
+          "provider" : {
+            "type" : "string"
+          },
+          "configured" : {
             "type" : "boolean"
           },
-          "note" : {
-            "type" : "string",
-            "maxLength" : 500,
-            "minLength" : 0
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "otpEnabled" : {
+            "type" : "boolean"
+          },
+          "legacyActive" : {
+            "type" : "boolean"
           }
         }
       },
-      "SettingsRequest" : {
+      "RIdentitySettings" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/IdentitySettings"
+          }
+        }
+      },
+      "LimitRequest" : {
         "type" : "object",
         "properties" : {
           "enabled" : {
             "type" : "boolean"
           },
-          "host" : {
-            "type" : "string"
-          },
-          "port" : {
+          "maxAttempts" : {
             "type" : "integer",
             "format" : "int32"
           },
-          "security" : {
-            "type" : "string"
+          "windowHours" : {
+            "type" : "integer",
+            "format" : "int32"
           },
-          "username" : {
-            "type" : "string"
-          },
-          "fromAddress" : {
-            "type" : "string"
-          },
-          "senderName" : {
-            "type" : "string"
-          },
-          "recipients" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "events" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "password" : {
-            "type" : "string"
-          }
-        }
-      },
-      "EventDescriptor" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "description" : {
-            "type" : "string"
+          "lockHours" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -14247,51 +15832,17 @@
           "enabled" : {
             "type" : "boolean"
           },
-          "host" : {
-            "type" : "string"
-          },
-          "port" : {
+          "maxAttempts" : {
             "type" : "integer",
             "format" : "int32"
           },
-          "security" : {
-            "type" : "string"
+          "windowHours" : {
+            "type" : "integer",
+            "format" : "int32"
           },
-          "username" : {
-            "type" : "string"
-          },
-          "fromAddress" : {
-            "type" : "string"
-          },
-          "senderName" : {
-            "type" : "string"
-          },
-          "recipients" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "events" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "password" : {
-            "type" : "string"
-          },
-          "passwordConfigured" : {
-            "type" : "boolean"
-          },
-          "licensed" : {
-            "type" : "boolean"
-          },
-          "availableEvents" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/EventDescriptor"
-            }
+          "lockHours" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -14445,26 +15996,17 @@
           }
         }
       },
-      "LinkRequest" : {
+      "Ticket" : {
         "type" : "object",
         "properties" : {
-          "phone" : {
-            "type" : "string",
-            "minLength" : 1,
-            "pattern" : "^1\\d{10}$"
-          },
-          "requestId" : {
-            "type" : "string",
-            "minLength" : 1
-          },
-          "code" : {
+          "ticket" : {
             "type" : "string",
             "minLength" : 1
           }
         },
-        "required" : [ "code", "phone", "requestId" ]
+        "required" : [ "ticket" ]
       },
-      "LoginResponse" : {
+      "Completion" : {
         "type" : "object",
         "properties" : {
           "token" : {
@@ -14480,18 +16022,18 @@
           "avatar" : {
             "type" : "string"
           },
-          "passwordSetupRequired" : {
-            "type" : "boolean"
-          },
           "phoneBound" : {
             "type" : "boolean"
           },
-          "setupToken" : {
+          "bindTicket" : {
+            "type" : "string"
+          },
+          "confirmationTicket" : {
             "type" : "string"
           }
         }
       },
-      "RLoginResponse" : {
+      "RCompletion" : {
         "type" : "object",
         "properties" : {
           "code" : {
@@ -14502,7 +16044,97 @@
             "type" : "string"
           },
           "data" : {
-            "$ref" : "#/components/schemas/LoginResponse"
+            "$ref" : "#/components/schemas/Completion"
+          }
+        }
+      },
+      "BindPhone" : {
+        "type" : "object",
+        "properties" : {
+          "ticket" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^1\\d{10}$"
+          },
+          "requestId" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "code" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "code", "phone", "requestId", "ticket" ]
+      },
+      "SendCode" : {
+        "type" : "object",
+        "properties" : {
+          "ticket" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "phone" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^1\\d{10}$"
+          },
+          "captchaId" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "captchaCode" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "captchaCode", "captchaId", "phone", "ticket" ]
+      },
+      "RMapStringString" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "RSecurityBinding" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SecurityBinding"
+          }
+        }
+      },
+      "SecurityBinding" : {
+        "type" : "object",
+        "properties" : {
+          "bindTicket" : {
+            "type" : "string"
+          },
+          "maskedPhone" : {
+            "type" : "string"
           }
         }
       },
@@ -14775,10 +16407,31 @@
           }
         }
       },
-      "InviteRequest" : {
+      "Reason" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ReplaceTeammateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "teammatePlayerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "Invite" : {
         "type" : "object",
         "properties" : {
           "inviteePlayerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "replacedTeammateId" : {
             "type" : "integer",
             "format" : "int64"
           },
@@ -14787,6 +16440,9 @@
           },
           "customAmount" : {
             "type" : "number"
+          },
+          "reason" : {
+            "type" : "string"
           }
         }
       },
@@ -14842,24 +16498,6 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/PlayerLoginResponse"
-          }
-        }
-      },
-      "RMapStringString" : {
-        "type" : "object",
-        "properties" : {
-          "code" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "msg" : {
-            "type" : "string"
-          },
-          "data" : {
-            "type" : "object",
-            "additionalProperties" : {
-              "type" : "string"
-            }
           }
         }
       },
@@ -15219,6 +16857,13 @@
             "type" : "number"
           },
           "invitedBy" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "invitedByType" : {
+            "type" : "string"
+          },
+          "replacesParticipantId" : {
             "type" : "integer",
             "format" : "int64"
           },
@@ -15932,6 +17577,43 @@
           "data" : { }
         }
       },
+      "RInteger" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "RJSONObject" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          }
+        }
+      },
       "ReversalRequest" : {
         "type" : "object",
         "properties" : {
@@ -16240,22 +17922,6 @@
           "recipients" : { }
         }
       },
-      "RInteger" : {
-        "type" : "object",
-        "properties" : {
-          "code" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "msg" : {
-            "type" : "string"
-          },
-          "data" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        }
-      },
       "RuleRequest" : {
         "type" : "object",
         "properties" : {
@@ -16299,6 +17965,35 @@
           "data" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "BatchRuleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "matchType" : {
+            "type" : "string"
+          },
+          "targetIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "assigneeType" : {
+            "type" : "string"
+          },
+          "assigneeId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "enabled" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "remark" : {
+            "type" : "string"
           }
         }
       },
@@ -16548,6 +18243,52 @@
           }
         }
       },
+      "RListRequestView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequestView"
+            }
+          }
+        }
+      },
+      "RequestView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "review_note" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "reviewed_at" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "RStatusView" : {
         "type" : "object",
         "properties" : {
@@ -16750,6 +18491,44 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/PageMapStringObject"
+          }
+        }
+      },
+      "RSecurityStatus" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SecurityStatus"
+          }
+        }
+      },
+      "SecurityStatus" : {
+        "type" : "object",
+        "properties" : {
+          "phone" : {
+            "type" : "string"
+          },
+          "phoneBound" : {
+            "type" : "boolean"
+          },
+          "wechatBound" : {
+            "type" : "boolean"
+          },
+          "wechatAvailable" : {
+            "type" : "boolean"
+          },
+          "passwordSet" : {
+            "type" : "boolean"
+          },
+          "passwordLoginEnabled" : {
+            "type" : "boolean"
           }
         }
       },
@@ -17963,6 +19742,128 @@
           }
         }
       },
+      "Candidate" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nickname" : {
+            "type" : "string"
+          },
+          "avatar" : {
+            "type" : "string"
+          },
+          "avgRating" : {
+            "type" : "number"
+          },
+          "completedOrders" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "activeOrders" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "levelId" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "levelName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Candidates" : {
+        "type" : "object",
+        "properties" : {
+          "players" : {
+            "$ref" : "#/components/schemas/PageCandidate"
+          },
+          "maxConcurrent" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "requiredLevelId" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "requiredLevelName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PageCandidate" : {
+        "type" : "object",
+        "properties" : {
+          "records" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Candidate"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "current" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "orders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderItem"
+            },
+            "writeOnly" : true
+          },
+          "optimizeCountSql" : {
+            "$ref" : "#/components/schemas/PageCandidate",
+            "writeOnly" : true
+          },
+          "searchCount" : {
+            "$ref" : "#/components/schemas/PageCandidate",
+            "writeOnly" : true
+          },
+          "optimizeJoinOfCountSql" : {
+            "type" : "boolean",
+            "writeOnly" : true
+          },
+          "maxLimit" : {
+            "type" : "integer",
+            "format" : "int64",
+            "writeOnly" : true
+          },
+          "countId" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "pages" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "RCandidates" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Candidates"
+          }
+        }
+      },
       "RListOrderPlayer" : {
         "type" : "object",
         "properties" : {
@@ -18095,6 +19996,100 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "RListRefundView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RefundView"
+            }
+          }
+        }
+      },
+      "Context" : {
+        "type" : "object",
+        "properties" : {
+          "playerId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "requiredAmount" : {
+            "type" : "number"
+          },
+          "paidAmount" : {
+            "type" : "number"
+          },
+          "outstandingAmount" : {
+            "type" : "number"
+          },
+          "payments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentOption"
+            }
+          },
+          "history" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RefundView"
+            }
+          }
+        }
+      },
+      "PaymentOption" : {
+        "type" : "object",
+        "properties" : {
+          "paymentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentNo" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "paidAt" : {
+            "type" : "string"
+          },
+          "refundStatus" : {
+            "type" : "string"
+          },
+          "refundId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "eligible" : {
+            "type" : "boolean"
+          },
+          "blockReason" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RContext" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Context"
           }
         }
       },
@@ -18859,6 +20854,57 @@
           }
         }
       },
+      "PaymentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentNo" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "payMethod" : {
+            "type" : "string"
+          },
+          "paidAt" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string"
+          },
+          "refundReason" : {
+            "type" : "string"
+          },
+          "refundTime" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RListPaymentView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentView"
+            }
+          }
+        }
+      },
       "PagePlayer" : {
         "type" : "object",
         "properties" : {
@@ -18944,6 +20990,45 @@
             "items" : {
               "type" : "string"
             }
+          }
+        }
+      },
+      "PageResult" : {
+        "type" : "object",
+        "properties" : {
+          "records" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "additionalProperties" : { }
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "pageNum" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "pageSize" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "RPageResult" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/PageResult"
           }
         }
       },
