@@ -3,6 +3,7 @@ package com.delta.identity.controller;
 import com.delta.platform.PlatformService;
 import com.delta.identity.service.IdentityBillingClient;
 import com.delta.identity.service.IdentityAttemptLimitService;
+import com.delta.identity.service.IdentityVerificationStore;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -48,7 +48,7 @@ public class IdentityVerificationController {
     private static final int[] ID_WEIGHTS = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
     private static final char[] ID_CHECK_CODES = {'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'};
 
-    private final JdbcTemplate jdbc;
+    private final IdentityVerificationStore store;
     private final PlatformService platform;
     private final org.springframework.context.ApplicationEventPublisher events;
     private final com.delta.common.security.service.RateLimitService limits;
@@ -79,7 +79,7 @@ public class IdentityVerificationController {
         FeatureAccess access = access(request);
         if (!access.available()) return R.ok(emptyStatus(access.reason()));
         Long userId = SecurityUtils.getUserId();
-        var rows = jdbc.queryForList("SELECT real_name,id_number_masked,status,review_note,submitted_at,reviewed_at,front_image IS NOT NULL AS has_front,back_image IS NOT NULL AS has_back FROM identity_verification WHERE user_id=?", userId);
+        var rows = store.status(userId);
         if (rows.isEmpty()) return R.ok(emptyStatus(""));
         var row = rows.get(0);
         return R.ok(new StatusView(true, "", Objects.toString(value(row, "status"), "NOT_SUBMITTED"),
@@ -115,17 +115,11 @@ public class IdentityVerificationController {
         if (!Set.of("front", "back").contains(side)) throw new BusinessException(400, "证件照片类型不正确");
         Long userId = SecurityUtils.getUserId();
         limits.check("identity-upload:" + userId, 12, 60);
-        var current = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=? FOR UPDATE", userId);
+        var current = store.lockStatus(userId);
         if (!current.isEmpty() && Set.of("PENDING", "APPROVED").contains(value(current.get(0), "status")))
             throw new BusinessException(409, "当前实名资料正在审核或已通过，不能重新上传");
         EncodedImage image = encode(file);
-        if ("front".equals(side)) {
-            jdbc.update("INSERT INTO identity_verification(user_id,status,front_image,front_mime) VALUES (?,'DRAFT',?,?) ON DUPLICATE KEY UPDATE front_image=VALUES(front_image),front_mime=VALUES(front_mime),status=CASE WHEN status='REJECTED' THEN 'DRAFT' ELSE status END,updated_at=CURRENT_TIMESTAMP",
-                    userId, image.base64(), image.mimeType());
-        } else {
-            jdbc.update("INSERT INTO identity_verification(user_id,status,back_image,back_mime) VALUES (?,'DRAFT',?,?) ON DUPLICATE KEY UPDATE back_image=VALUES(back_image),back_mime=VALUES(back_mime),status=CASE WHEN status='REJECTED' THEN 'DRAFT' ELSE status END,updated_at=CURRENT_TIMESTAMP",
-                    userId, image.base64(), image.mimeType());
-        }
+        store.saveImage(userId, side, image.base64(), image.mimeType());
         return R.ok(Map.of("side", side, "uploaded", true));
     }
 
@@ -139,7 +133,7 @@ public class IdentityVerificationController {
         if (!realName.matches("[\\p{IsHan}A-Za-z·. ]{2,32}")) throw new BusinessException(400, "真实姓名格式不正确");
         String idNumber = validateIdNumber(body.idNumber());
         Long userId = SecurityUtils.getUserId();
-        var rows = jdbc.queryForList("SELECT status,front_image,back_image FROM identity_verification WHERE user_id=? FOR UPDATE", userId);
+        var rows = store.lockStatusAndImages(userId);
         if (rows.isEmpty()) throw new BusinessException(409, "请先上传证件照片");
         var row = rows.get(0);
         String currentStatus = Objects.toString(value(row, "status"), "DRAFT");
@@ -147,11 +141,10 @@ public class IdentityVerificationController {
         if ("APPROVED".equals(currentStatus)) throw new BusinessException(409, "实名认证已通过，无需重复提交");
         if (value(row, "front_image") == null || value(row, "back_image") == null) throw new BusinessException(409, "请完整上传身份证人像面和国徽面");
         String idHash = hash(idNumber);
-        var duplicate = jdbc.queryForList("SELECT user_id FROM identity_verification WHERE id_number_hash=? AND user_id<>? LIMIT 1", idHash, userId);
+        var duplicate = store.findByHash(idHash, userId);
         if (!duplicate.isEmpty()) throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
         try {
-            jdbc.update("UPDATE identity_verification SET real_name=?,id_number_hash=?,id_number_masked=?,privacy_version=?,privacy_accepted_at=CURRENT_TIMESTAMP,status='PENDING',review_note='',reviewer_id=NULL,submitted_at=CURRENT_TIMESTAMP,reviewed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
-                    realName, idHash, maskId(idNumber), PRIVACY_VERSION, userId);
+            store.submit(userId, realName, idHash, maskId(idNumber), PRIVACY_VERSION);
         } catch (DuplicateKeyException error) {
             throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
         }
@@ -173,12 +166,12 @@ public class IdentityVerificationController {
         limits.check("identity-auto:" + userId, 10, 3600);
         attemptLimits.ensureAllowed(userId);
         String idHash = hash(idNumber);
-        var duplicate = jdbc.queryForList("SELECT user_id FROM identity_verification WHERE id_number_hash=? AND user_id<>? LIMIT 1", idHash, userId);
+        var duplicate = store.findByHash(idHash, userId);
         if (!duplicate.isEmpty()) throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
         // Do not hold a row lock while the authority call runs: a mismatch is
         // recorded in a separate transaction so the failure counter survives
         // the 422 response.
-        var existing = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=?", userId);
+        var existing = store.statusOnly(userId);
         if (!existing.isEmpty() && Set.of("PENDING", "APPROVED").contains(String.valueOf(value(existing.get(0), "status"))))
             throw new BusinessException(409, "实名资料正在审核或已通过，请勿重复提交");
 
@@ -193,13 +186,8 @@ public class IdentityVerificationController {
         attemptLimits.reset(userId);
 
         try {
-            if (existing.isEmpty()) {
-                jdbc.update("INSERT INTO identity_verification(user_id,real_name,id_number_hash,id_number_masked,status,privacy_version,privacy_accepted_at,review_note,submitted_at,reviewed_at) VALUES(?,?,?,?,'APPROVED',?,CURRENT_TIMESTAMP,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-                        userId, realName, idHash, maskId(idNumber), PRIVACY_VERSION, "授权中心二要素核验通过");
-            } else {
-                jdbc.update("UPDATE identity_verification SET real_name=?,id_number_hash=?,id_number_masked=?,status='APPROVED',privacy_version=?,privacy_accepted_at=CURRENT_TIMESTAMP,review_note=?,reviewer_id=NULL,submitted_at=CURRENT_TIMESTAMP,reviewed_at=CURRENT_TIMESTAMP,front_image=NULL,front_mime=NULL,back_image=NULL,back_mime=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
-                        realName, idHash, maskId(idNumber), PRIVACY_VERSION, "授权中心二要素核验通过", userId);
-            }
+            if (existing.isEmpty()) store.insertApproved(userId, realName, idHash, maskId(idNumber), PRIVACY_VERSION);
+            else store.updateApproved(userId, realName, idHash, maskId(idNumber), PRIVACY_VERSION);
         } catch (DuplicateKeyException error) {
             throw new BusinessException(409, "该证件号码已绑定其他账号，请联系管理员");
         }
@@ -214,7 +202,7 @@ public class IdentityVerificationController {
         requireAccess(request);
         String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         if (!normalized.isEmpty() && !STATUSES.contains(normalized)) throw new BusinessException(400, "审核状态不正确");
-        return R.ok(jdbc.queryForList("SELECT iv.user_id,iv.real_name,iv.id_number_masked,iv.status,iv.review_note,iv.submitted_at,iv.reviewed_at,u.nickname,u.phone FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id WHERE iv.status<>'DRAFT' AND (?='' OR iv.status=?) AND (? IS NULL OR iv.user_id=?) ORDER BY CASE WHEN iv.status='PENDING' THEN 0 ELSE 1 END,iv.submitted_at DESC LIMIT 500", normalized, normalized, taskId, taskId)
+        return R.ok(store.applications(normalized, taskId)
                 .stream().map(this::lowerKeys).toList());
     }
 
@@ -223,7 +211,7 @@ public class IdentityVerificationController {
     @OpLog(module = "identity", operation = "查看实名认证资料")
     public ResponseEntity<R<Map<String, Object>>> detail(@PathVariable Long userId, HttpServletRequest request) {
         requireAccess(request);
-        var rows = jdbc.queryForList("SELECT iv.*,u.nickname,u.phone FROM identity_verification iv JOIN `user` u ON u.id=iv.user_id WHERE iv.user_id=?", userId);
+        var rows = store.detail(userId);
         if (rows.isEmpty()) throw new BusinessException(404, "实名认证记录不存在");
         LinkedHashMap<String, Object> result = new LinkedHashMap<>(lowerKeys(rows.get(0)));
         result.put("frontImage", dataUrl(result.remove("front_image"), result.get("front_mime")));
@@ -240,10 +228,9 @@ public class IdentityVerificationController {
     public R<Void> review(@PathVariable Long userId, @Valid @RequestBody ReviewRequest body, HttpServletRequest request) {
         requireAccess(request);
         if (!body.approved() && (body.note() == null || body.note().isBlank())) throw new BusinessException(400, "驳回时必须填写原因");
-        var rows = jdbc.queryForList("SELECT status FROM identity_verification WHERE user_id=? FOR UPDATE", userId);
+        var rows = store.lockStatus(userId);
         if (rows.isEmpty() || !"PENDING".equals(value(rows.get(0), "status"))) throw new BusinessException(409, "申请不存在或已处理");
-        jdbc.update("UPDATE identity_verification SET status=?,review_note=?,reviewer_id=?,reviewed_at=CURRENT_TIMESTAMP,front_image=NULL,front_mime=NULL,back_image=NULL,back_mime=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
-                body.approved() ? "APPROVED" : "REJECTED", Objects.toString(body.note(), ""), SecurityUtils.getUserId(), userId);
+        store.review(userId, body.approved(), Objects.toString(body.note(), ""), SecurityUtils.getUserId());
         events.publishEvent(new com.delta.common.event.BusinessEvent(this, "IDENTITY_REVIEWED", "USER", userId, null,
                 body.approved() ? "实名认证已通过。" : "实名认证未通过，请在实名认证页面查看原因。"));
         return R.ok();

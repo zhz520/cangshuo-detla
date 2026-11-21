@@ -1,6 +1,7 @@
 package com.delta.admin;
 
 import com.delta.identity.controller.IdentityVerificationController;
+import com.delta.identity.service.IdentityVerificationStore;
 import com.delta.platform.PlatformService;
 import com.delta.identity.service.IdentityVerificationCleanup;
 import com.delta.identity.service.IdentityBillingClient;
@@ -63,7 +64,7 @@ class IdentityVerificationIntegrationTest {
     @EnableAutoConfiguration(excludeName = "com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
     @Import({SecurityConfig.class, JwtAuthenticationFilter.class, AuthenticationEntryPointImpl.class,
             AccessDeniedHandlerImpl.class, GlobalExceptionHandler.class, StaffPermissions.class,
-            IdentityVerificationController.class, IdentityVerificationCleanup.class, IdentityAttemptLimitService.class})
+            IdentityVerificationController.class, IdentityVerificationStore.class, IdentityVerificationCleanup.class, IdentityAttemptLimitService.class})
     static class Config {}
 
     @Autowired MockMvc mvc;

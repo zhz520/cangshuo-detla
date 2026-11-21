@@ -58,7 +58,7 @@
 - 拆出的 `delta-platform`、`delta-workbench`、`delta-reporting`、`delta-identity`、`delta-notification` 不得依赖 `delta-admin`；该规则已由 ArchUnit 强制执行。
 - `platform/catalog.json` 仍保留在 `delta-admin` 资源中，因为发布脚本和更新器按 `BOOT-INF/classes/platform/catalog.json` 校验版本。不要只移动文件而不同步打包链路。
 - 纯结构拆分必须保持 endpoint 数量、OpenAPI operation 和 schema 不变；用 `check_endpoint_baseline.py`、`check_openapi_baseline.py` 和 clean verify 证明，而不是只看编译成功。
-- Controller 不应直接新增 `JdbcTemplate` 查询；ArchUnit 已冻结现有违规，新增违规会失败。查询逻辑优先放模块 Service，并补对应测试。
+- Controller 已不再直接依赖 `JdbcTemplate`；ArchUnit 会拒绝任何新增直连。查询逻辑必须放模块 Service，并补对应测试。
 
 ## 版本 / 发布
 
