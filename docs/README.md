@@ -27,7 +27,7 @@
 - [BUSINESS_RULES.md](BUSINESS_RULES.md)：账号、订单、协同、支付、资金、客服、实名、短信、营销、权限规则。
 - [OPERATIONS.md](OPERATIONS.md)：本地构建、打包、Release、服务组发布、备份、回退和生产验收。
 - [CONFIGURATION.md](CONFIGURATION.md)：系统配置、微信、支付、短信、实名、邮件、主题与功能商城。
-- [CHANGELOG.md](CHANGELOG.md)：1.18.4 证据与历史里程碑摘要。
+- [CHANGELOG.md](CHANGELOG.md)：最近发布证据与历史里程碑摘要。
 - [ai/CONTEXT.md](ai/CONTEXT.md)：AI 唯一常读操作上下文。
 - [ai/routing.json](ai/routing.json)：路径、任务和风险路由。
 - [ai/index.json](ai/index.json)：由 `scripts/ai_context.py build` 生成的代码索引，不要手改。
