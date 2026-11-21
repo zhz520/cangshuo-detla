@@ -11,6 +11,7 @@ import com.delta.pay.controller.PayController;
 import com.delta.pay.config.WxPayConfiguration;
 import com.delta.player.controller.PlayerHomeController;
 import com.delta.player.controller.WithdrawController;
+import com.delta.player.service.PlayerWithdrawService;
 import com.delta.player.service.impl.PlayerAccountServiceImpl;
 import com.delta.player.service.impl.WithdrawServiceImpl;
 import com.delta.product.service.ProductService;
@@ -52,7 +53,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PlayerBusinessRegressionTest {
     @Configuration
     @Import({RewardGrabIntegrationTest.Config.class, PlayerHomeController.class, WithdrawController.class, PayController.class,
-            PlayerAccountServiceImpl.class, WithdrawServiceImpl.class, com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,
+            PlayerWithdrawService.class, PlayerAccountServiceImpl.class, WithdrawServiceImpl.class,
+            com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,
             com.delta.workforce.controller.StaffOrderTeamController.class, com.delta.player.service.PlayerIdentityNameService.class})
     static class Config {}
 

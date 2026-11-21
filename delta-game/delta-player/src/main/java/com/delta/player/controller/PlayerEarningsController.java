@@ -5,10 +5,8 @@ import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.pay.entity.Transaction;
-import com.delta.player.config.PlayerEarningsServiceConfiguration;
 import com.delta.player.service.PlayerEarningsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Import;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +18,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/player/earnings")
 @RequiredArgsConstructor
-@Import(PlayerEarningsServiceConfiguration.class)
 public class PlayerEarningsController {
     private final PlayerEarningsService earningsService;
 

@@ -4,16 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.chat.domain.entity.ChatMessage;
 import com.delta.common.chat.domain.entity.ChatSession;
+import com.delta.common.chat.service.ChatAccessService;
 import com.delta.common.chat.service.ChatSmsReminderService;
 import com.delta.common.chat.service.ChatServiceImpl;
 import com.delta.common.domain.R;
-import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.common.customer.CsRoutingService;
 import com.delta.common.chat.util.ChatParticipantId;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,8 +23,7 @@ import java.util.List;
 public class ChatController {
     private final ChatServiceImpl chatService;
     private final ChatSmsReminderService chatSmsReminderService;
-    private final JdbcTemplate jdbcTemplate;
-    private final CrossModuleMapper crossModuleMapper;
+    private final ChatAccessService chatAccessService;
     private final com.delta.common.security.service.RateLimitService limits;
     private final CsRoutingService csRouting;
 
@@ -42,7 +40,7 @@ public class ChatController {
                 .orderByDesc(ChatSession::getLastMessageAt);
         List<ChatSession> all = chatService.list(qw);
         for (ChatSession s : all) {
-            enrichSession(s, myEncodedId);
+            chatAccessService.enrichSession(s, myEncodedId);
         }
         return R.ok(all);
     }
@@ -60,17 +58,13 @@ public class ChatController {
             long guestUserId=ChatParticipantId.getRawId(myEncodedId);
             if(entity==1) return R.fail(403,"游客不能主动创建会员私聊");
             if(entity==2) {
-                Integer related=jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM `order` WHERE user_id=? AND player_id=? AND status IN ('ASSIGNED','ACCEPTED','WAITING_TEAMMATE','IN_PROGRESS','COMPLETED','CONFIRMED','REVIEWED','DISPUTED','ARBITRATED')",
-                        Integer.class,guestUserId,raw);
-                if(related==null||related==0) return R.fail(403,"只能联系本人订单的接单员");
+                if(!chatAccessService.canGuestContactPlayer(guestUserId,raw)) return R.fail(403,"只能联系本人订单的接单员");
             }
         }
-        String table=switch(entity){case 1 -> "`user`";case 2 -> "player";case 3 -> "admin";default -> null;};
-        if(table==null || raw<=0 || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM "+table+" WHERE id=? AND deleted=0",Long.class,raw)==0)
+        if(!chatAccessService.participantExists(entity,raw))
             return R.fail(404,"对方账号不存在");
         ChatSession s = chatService.findOrCreate(id1, id2);
-        enrichSession(s, myEncodedId);
+        chatAccessService.enrichSession(s, myEncodedId);
         return R.ok(s);
     }
 
@@ -79,22 +73,20 @@ public class ChatController {
     public R<ChatSession> sessionByOrder(@PathVariable Long orderId,
                                          @RequestParam(required = false) String chatRole) {
         long myEncodedId = getMyEncodedId(chatRole);
-        List<java.util.Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT user_id, player_id FROM `order` WHERE id = ?", orderId);
-        if (rows.isEmpty()) return R.fail("订单不存在");
-        java.util.Map<String, Object> row = rows.get(0);
-        Long userId = ((Number) row.get("user_id")).longValue();
-        Number playerIdNum = (Number) row.get("player_id");
+        ChatAccessService.OrderParticipants participants = chatAccessService.findOrderParticipants(orderId);
+        if (participants == null) return R.fail("订单不存在");
+        long userId = participants.userId();
+        Long playerIdNum = participants.playerId();
         long encoded1 = ChatParticipantId.encodeUser(userId);
         if (myEncodedId != encoded1 && (playerIdNum == null
-                || myEncodedId != ChatParticipantId.encodePlayer(playerIdNum.longValue())))
+                || myEncodedId != ChatParticipantId.encodePlayer(playerIdNum)))
             return R.fail(404, "订单不存在");
         if (playerIdNum == null) return R.fail("该订单还未指派打手，暂无法聊天");
-        long playerId = playerIdNum.longValue();
+        long playerId = playerIdNum;
         long encoded2 = ChatParticipantId.encodePlayer(playerId);
         ChatSession s = chatService.findOrCreate(encoded1, encoded2);
         if (!isSessionMember(s, myEncodedId)) return R.fail("无权限查看该会话");
-        enrichSession(s, myEncodedId);
+        chatAccessService.enrichSession(s, myEncodedId);
         return R.ok(s);
     }
 
@@ -105,7 +97,7 @@ public class ChatController {
         if (s == null) return R.fail("会话不存在");
         long myEncodedId = getMyEncodedId(chatRole);
         if (!isSessionMember(s, myEncodedId)) return R.fail("无权限查看该会话");
-        enrichSession(s, myEncodedId);
+        chatAccessService.enrichSession(s, myEncodedId);
         return R.ok(s);
     }
 
@@ -146,14 +138,13 @@ public class ChatController {
         if (resolved != null) {
             csId = resolved;
         } else {
-            List<java.util.Map<String, Object>> csList = jdbcTemplate.queryForList(
-                    "SELECT id FROM admin WHERE role IN ('CS','BOTH','ADMIN') AND status = 1 AND deleted = 0 ORDER BY RAND() LIMIT 1");
-            if (csList.isEmpty()) return R.fail("暂无可用客服，请稍后再试");
-            csId = ((Number) csList.get(0).get("id")).longValue();
+            Long fallback = chatAccessService.findRandomAvailableCsId();
+            if (fallback == null) return R.fail("暂无可用客服，请稍后再试");
+            csId = fallback;
         }
         long encodedCs = ChatParticipantId.encodeCs(csId);
         ChatSession s = chatService.findOrCreate(encodedUser, encodedCs);
-        enrichSession(s, encodedUser);
+        chatAccessService.enrichSession(s, encodedUser);
         return R.ok(s);
     }
 
@@ -244,26 +235,6 @@ public class ChatController {
 
     private boolean isSessionMember(ChatSession s, long myEncodedId) {
         return s != null && (s.getId1() != null && s.getId1().equals(myEncodedId) || s.getId2() != null && s.getId2().equals(myEncodedId));
-    }
-
-    private void enrichSession(ChatSession s, long myEncodedId) {
-        long targetId = (s.getId1() != null && s.getId1().equals(myEncodedId)) ? s.getId2() : s.getId1();
-        s.setTargetId(targetId);
-        s.setTargetName(crossModuleMapper.selectNicknameByEncodedId(targetId));
-        s.setAvatar(crossModuleMapper.selectAvatarByEncodedId(targetId));
-        s.setTargetType(ChatParticipantId.getEntityType(targetId) == 3 ? "CS" : ChatParticipantId.getEntityType(targetId) == 2 ? "PLAYER" : "USER");
-        String lastType = crossModuleMapper.selectLastMessageType(s.getId());
-        if (lastType != null) {
-            switch (lastType) {
-                case "IMAGE" -> s.setLastMessage("[图片]");
-                case "PRODUCT" -> s.setLastMessage("[商品]");
-                case "ORDER" -> s.setLastMessage("[订单]");
-                default -> s.setLastMessage(crossModuleMapper.selectLastMessageContent(s.getId()));
-            }
-        }
-        String excludeType = ChatParticipantId.getEntityType(myEncodedId) == 1 ? "USER" :
-                ChatParticipantId.getEntityType(myEncodedId) == 2 ? "PLAYER" : "CS";
-        s.setUnreadCount(crossModuleMapper.selectUnreadCount(s.getId(), excludeType));
     }
 
     @Data

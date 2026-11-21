@@ -62,7 +62,7 @@ class RewardGrabIntegrationTest {
     @Import({RewardService.class,RewardController.class,RewardGrabRulesService.class,RewardGrabSettingsController.class,FeatureAuditService.class,
             OperationLogServiceImpl.class,SysConfigServiceImpl.class,WalletServiceImpl.class,PlayerWalletServiceImpl.class,UserServiceImpl.class,
             PlayerServiceImpl.class,PlayerLevelService.class,com.delta.order.service.OrderPricingService.class,com.delta.order.service.CouponRedemptionService.class,com.delta.order.controller.OrderController.class,OrderServiceImpl.class,OrderPlayerServiceImpl.class,OrderProgressServiceImpl.class,
-            TransactionServiceImpl.class,PlayerOrderController.class,com.delta.player.service.OrderTeamService.class,com.delta.common.customer.CsRoutingService.class,com.delta.player.controller.PlayerEarningsController.class,com.delta.order.controller.PlayerWorkController.class,SecurityConfig.class,JwtAuthenticationFilter.class,
+            TransactionServiceImpl.class,PlayerOrderController.class,com.delta.player.service.OrderTeamService.class,com.delta.common.customer.CsRoutingService.class,com.delta.player.controller.PlayerEarningsController.class,PlayerEarningsService.class,com.delta.order.controller.PlayerWorkController.class,SecurityConfig.class,JwtAuthenticationFilter.class,
             AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,RateLimitService.class})
     static class Config {
         @Bean MybatisPlusInterceptor pagination(){var p=new MybatisPlusInterceptor();p.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));return p;}

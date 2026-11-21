@@ -4,19 +4,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
-import com.delta.player.config.PlayerWithdrawServiceConfiguration;
 import com.delta.player.dto.WithdrawRequest;
 import com.delta.player.entity.Withdraw;
 import com.delta.player.service.PlayerWithdrawService;
 import com.delta.player.service.WithdrawDepositPolicy;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Import;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/player/withdraw")
 @RequiredArgsConstructor
-@Import(PlayerWithdrawServiceConfiguration.class)
 public class WithdrawController {
     private final PlayerWithdrawService withdraws;
 

@@ -10,6 +10,7 @@ import com.delta.pay.entity.Transaction;
 import com.delta.pay.service.TransactionService;
 import com.delta.player.entity.PlayerWallet;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Player earnings summary, pending settlement and detail queries. */
+@Service
 public class PlayerEarningsService {
     private final TransactionService transactionService;
     private final JdbcTemplate jdbc;

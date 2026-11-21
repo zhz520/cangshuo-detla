@@ -11,8 +11,9 @@
 5. CHANGE_RECIPES.md：不同改动类型的固定动作
 6. inventory.json：从代码生成的 Controller、后台页面/路由、API 模块、H5 页面、数据库表、迁移和测试清单
 7. MODULE_BOUNDARIES.md：19 个后端模块的包根、职责、依赖方向和测试位置
-8. VERIFICATION.md：实际可执行的验证命令
-9. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
+8. OVERSIZED_CLASS_SPLIT_PLAN.md：超大核心类的拆分顺序和风险
+9. VERIFICATION.md：实际可执行的验证命令
+10. CURRENT_RELEASE.md：当前线上版本、标签、计划和已知观察项
 
 ## 当前事实
 

@@ -15,6 +15,7 @@ import com.delta.player.entity.Withdraw;
 import com.delta.system.service.SysConfigService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /** Player withdrawal application, listing and deposit gate. */
+@Service
 public class PlayerWithdrawService {
     private final WithdrawService withdrawService;
     private final JdbcTemplate jdbc;

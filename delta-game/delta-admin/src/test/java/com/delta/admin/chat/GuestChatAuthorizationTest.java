@@ -2,15 +2,14 @@ package com.delta.admin.chat;
 
 import com.delta.common.chat.controller.ChatController;
 import com.delta.common.chat.domain.entity.ChatSession;
+import com.delta.common.chat.service.ChatAccessService;
 import com.delta.common.chat.service.ChatServiceImpl;
 import com.delta.common.chat.service.ChatSmsReminderService;
 import com.delta.common.chat.util.ChatParticipantId;
-import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.customer.CsRoutingService;
 import com.delta.common.security.service.RateLimitService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,22 +25,22 @@ class GuestChatAuthorizationTest {
     @AfterEach void clearSecurityContext() { SecurityContextHolder.clearContext(); }
 
     @Test void guestCannotStartMemberConversation() {
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ChatAccessService access = mock(ChatAccessService.class);
         ChatController controller = new ChatController(mock(ChatServiceImpl.class), mock(ChatSmsReminderService.class),
-                jdbc, mock(CrossModuleMapper.class), mock(RateLimitService.class), mock(CsRoutingService.class));
+                access, mock(RateLimitService.class), mock(CsRoutingService.class));
         loginGuest();
 
         var result = controller.createSession(ChatParticipantId.encodeUser(7), ChatParticipantId.encodeUser(8));
 
         assertThat(result.getCode()).isEqualTo(403);
-        verifyNoInteractions(jdbc);
+        verifyNoInteractions(access);
     }
 
     @Test void guestCannotStartUnrelatedPlayerConversation() {
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(contains("FROM `order` WHERE user_id"), eq(Integer.class), eq(7L), eq(1L))).thenReturn(0);
+        ChatAccessService access = mock(ChatAccessService.class);
+        when(access.canGuestContactPlayer(7L, 1L)).thenReturn(false);
         ChatController controller = new ChatController(mock(ChatServiceImpl.class), mock(ChatSmsReminderService.class),
-                jdbc, mock(CrossModuleMapper.class), mock(RateLimitService.class), mock(CsRoutingService.class));
+                access, mock(RateLimitService.class), mock(CsRoutingService.class));
         loginGuest();
 
         var result = controller.createSession(ChatParticipantId.encodeUser(7), ChatParticipantId.encodePlayer(1));
@@ -58,7 +57,7 @@ class GuestChatAuthorizationTest {
         session.setStatus("CLOSED");
         when(chatService.getById(11L)).thenReturn(session);
         ChatController controller = new ChatController(chatService, mock(ChatSmsReminderService.class),
-                mock(JdbcTemplate.class), mock(CrossModuleMapper.class), mock(RateLimitService.class), mock(CsRoutingService.class));
+                mock(ChatAccessService.class), mock(RateLimitService.class), mock(CsRoutingService.class));
         loginUser();
 
         var result = controller.rateSession(11L, Map.of("rating", 5, "comment", "响应及时"), null);
@@ -77,7 +76,7 @@ class GuestChatAuthorizationTest {
         session.setStatus("ACTIVE");
         when(chatService.getById(12L)).thenReturn(session);
         ChatController controller = new ChatController(chatService, mock(ChatSmsReminderService.class),
-                mock(JdbcTemplate.class), mock(CrossModuleMapper.class), mock(RateLimitService.class), mock(CsRoutingService.class));
+                mock(ChatAccessService.class), mock(RateLimitService.class), mock(CsRoutingService.class));
         loginUser();
 
         assertThat(controller.rateSession(12L, Map.of("rating", 5), null).getCode()).isEqualTo(409);
