@@ -50,6 +50,7 @@
         <module>delta-reporting</module>
         <module>delta-identity</module>
         <module>delta-notification</module>
+        <module>delta-marketing</module>
         <module>delta-admin</module>
     </modules>
 
@@ -223,6 +224,11 @@
             <dependency>
                 <groupId>com.delta</groupId>
                 <artifactId>delta-notification</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.delta</groupId>
+                <artifactId>delta-marketing</artifactId>
                 <version>${delta.version}</version>
             </dependency>
         </dependencies>

@@ -27,7 +27,7 @@ class ArchitectureGuardrailsTest {
                             "com.delta.product..", "com.delta.order..", "com.delta.pay..",
                             "com.delta.message..", "com.delta.cs..", "com.delta.system..",
                             "com.delta.platform..", "com.delta.workbench..", "com.delta.reporting..",
-                            "com.delta.identity..", "com.delta.notification.."));
+                            "com.delta.identity..", "com.delta.notification..", "com.delta.marketing.."));
 
     @ArchTest
     static final ArchRule businessModulesMustNotDependOnAdmin = FreezingArchRule.freeze(
@@ -36,13 +36,13 @@ class ArchitectureGuardrailsTest {
                             "com.delta.order..", "com.delta.pay..", "com.delta.message..",
                             "com.delta.cs..", "com.delta.system..", "com.delta.platform..",
                             "com.delta.workbench..", "com.delta.reporting..", "com.delta.identity..",
-                            "com.delta.notification..")
+                            "com.delta.notification..", "com.delta.marketing..")
                     .should().dependOnClassesThat().resideInAPackage("com.delta.admin.."));
 
     @ArchTest
     static final ArchRule extractedModulesMustNotDependOnAdmin = noClasses()
             .that().resideInAnyPackage(
                     "com.delta.platform..", "com.delta.workbench..", "com.delta.reporting..",
-                    "com.delta.identity..", "com.delta.notification..")
+                    "com.delta.identity..", "com.delta.notification..", "com.delta.marketing..")
             .should().dependOnClassesThat().resideInAPackage("com.delta.admin..");
 }

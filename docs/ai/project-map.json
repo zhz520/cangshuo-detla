@@ -153,6 +153,45 @@
       ]
     },
     {
+      "id": "marketing",
+      "name": "优惠券/会员/邀请/打赏/抢单规则",
+      "backend": [
+        "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller",
+        "delta-game/delta-marketing/src/main/java/com/delta/marketing/reward",
+        "delta-game/delta-marketing/src/main/java/com/delta/marketing/listener",
+        "delta-game/delta-marketing/src/main/java/com/delta/marketing/service"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/marketing",
+        "delta-admin-ui/src/views/player/RewardList.vue",
+        "delta-admin-ui/src/views/system/RewardGrabSettings.vue"
+      ],
+      "h5": [
+        "delta-mp/pages/coupons",
+        "delta-mp/pages/membership",
+        "delta-mp/pages/invites",
+        "delta-mp/pages-player/invite"
+      ],
+      "tables": [
+        "coupon_template",
+        "user_coupon",
+        "player_reward",
+        "invite_code",
+        "invite_relation",
+        "invite_reward",
+        "invite_reward_debt"
+      ],
+      "tests": [
+        "CouponAdminControllerTest",
+        "CouponControllerTest",
+        "MembershipAdminServiceTest",
+        "MembershipControllerTest",
+        "InviteAdminControllerTest",
+        "CouponRefundListenerTest",
+        "RewardGrabIntegrationTest"
+      ]
+    },
+    {
       "id": "system_config",
       "name": "系统配置/公告/内容/主题",
       "backend": [
@@ -207,6 +246,7 @@
     "docs/ai/FEATURE_MAP.md",
     "docs/ai/PITFALLS.md",
     "docs/ai/CHANGE_RECIPES.md",
+    "docs/ai/MODULE_BOUNDARIES.md",
     "docs/ai/VERIFICATION.md",
     "docs/ai/CURRENT_RELEASE.md",
     "docs/ai/inventory.json"

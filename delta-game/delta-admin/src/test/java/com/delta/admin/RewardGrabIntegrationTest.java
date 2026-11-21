@@ -3,8 +3,8 @@ package com.delta.admin;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.delta.admin.controller.*;
-import com.delta.admin.reward.*;
+import com.delta.marketing.controller.RewardGrabSettingsController;
+import com.delta.marketing.reward.*;
 import com.delta.common.chat.domain.entity.ChatSession;
 import com.delta.common.chat.service.ChatSessionService;
 import com.delta.common.config.SecurityConfig;
@@ -58,7 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RewardGrabIntegrationTest {
     @Configuration
     @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
-    @MapperScan({"com.delta.admin.mapper","com.delta.player.mapper","com.delta.order.mapper","com.delta.pay.mapper","com.delta.user.mapper","com.delta.common.mapper","com.delta.system.mapper"})
+    @MapperScan({"com.delta.marketing.mapper","com.delta.player.mapper","com.delta.order.mapper","com.delta.pay.mapper","com.delta.user.mapper","com.delta.common.mapper","com.delta.system.mapper"})
     @Import({RewardService.class,RewardController.class,RewardGrabRulesService.class,RewardGrabSettingsController.class,FeatureAuditService.class,
             OperationLogServiceImpl.class,SysConfigServiceImpl.class,WalletServiceImpl.class,PlayerWalletServiceImpl.class,UserServiceImpl.class,
             PlayerServiceImpl.class,PlayerLevelService.class,com.delta.order.service.OrderPricingService.class,com.delta.order.service.CouponRedemptionService.class,com.delta.order.controller.OrderController.class,OrderServiceImpl.class,OrderPlayerServiceImpl.class,OrderProgressServiceImpl.class,

@@ -12,7 +12,7 @@
 
     python scripts/check_module_boundaries.py
 
-它会检查 15 个 Maven 模块的包根、直接依赖和跨模块 import；新增跨模块引用必须同时声明对应 pom 依赖。
+它会检查 16 个 Maven 模块的包根、直接依赖和跨模块 import；新增跨模块引用必须同时声明对应 pom 依赖。
 
 ## 后端全量
 
