@@ -35,6 +35,7 @@
 ## 前端
 
 - 管理端页面不能直接 request.get/post；请求放 src/api。
+- 商品后台“描述”是富文本，前台详情必须渲染 `description` 的安全 HTML，不能只把标签剥离成纯文本摘要；图片需保留 `/file/` URL 和最大宽度限制。
 - 页面使用 --el-* 主题 token，不写死 #fff/#333 等颜色。
 - 使用 PageHeader/FormSection/AsyncState/DataTable 和统一 toast/confirm，不重复造样式。
 - 表格列多时优先压缩/下拉操作，不要让固定列遮挡关键信息。
