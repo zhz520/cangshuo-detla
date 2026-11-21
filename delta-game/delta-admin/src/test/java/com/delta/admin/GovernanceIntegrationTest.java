@@ -3,6 +3,7 @@ package com.delta.admin;
 import com.delta.admin.controller.*;
 import com.delta.finance.controller.RefundController;
 import com.delta.governance.controller.GovernanceController;
+import com.delta.governance.service.GovernanceAdminService;
 import com.delta.workforce.controller.StaffRoleController;
 import com.delta.workforce.controller.StaffShiftController;
 import com.delta.common.config.SecurityConfig;
@@ -48,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GovernanceIntegrationTest {
  @Configuration @EnableAutoConfiguration(excludeName="com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
  @MapperScan({"com.delta.player.mapper","com.delta.common.mapper"})
- @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,com.delta.player.service.PlayerDepositService.class,StaffRoleController.class,GovernanceController.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,com.delta.common.customer.CsRoutingService.class,RefundController.class,RefundProbe.class})
+ @Import({SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class,com.delta.admin.config.StaffPermissionConfig.class,com.delta.cs.controller.CsPlayerController.class,com.delta.player.service.PlayerDepositService.class,StaffRoleController.class,GovernanceController.class,GovernanceAdminService.class,StaffShiftController.class,PrivacyController.class,PlayerController.class,PlayerServiceImpl.class,PlayerGovernanceService.class,MediaRiskService.class,StaffPermissions.class,com.delta.common.customer.CsRoutingService.class,RefundController.class,RefundProbe.class})
  static class Config{}
  @RestController static class RefundProbe {
   @PostMapping("/cs/order/{id}/refund") @PreAuthorize("@staffPermissions.allowed('order.refund')") public R<Void> refund(@PathVariable Long id){return R.ok();}

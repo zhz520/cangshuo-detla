@@ -1,6 +1,7 @@
 package com.delta.governance.controller;
 
 import com.delta.governance.controller.DisplayPrivacyController;
+import com.delta.governance.service.DisplayPrivacyService;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,7 @@ class DisplayPrivacyControllerTest {
         dataSource.setURL("jdbc:h2:mem:display-privacy-" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
         jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("CREATE TABLE display_privacy(user_id BIGINT PRIMARY KEY,spend_rank_visible INT,purchase_feed_consent INT,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-        controller = new DisplayPrivacyController(jdbc);
+        controller = new DisplayPrivacyController(new DisplayPrivacyService(jdbc));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 Map.of("userId", 7L, "userType", "USER"), null, List.of()));
     }

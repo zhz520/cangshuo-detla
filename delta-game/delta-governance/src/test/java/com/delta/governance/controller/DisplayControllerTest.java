@@ -1,6 +1,7 @@
 package com.delta.governance.controller;
 
 import com.delta.governance.controller.DisplayController;
+import com.delta.governance.service.DisplayService;
 import com.delta.system.service.SysConfigService;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +29,7 @@ class DisplayControllerTest {
         jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(32),amount DECIMAL(12,2),refund_amount DECIMAL(12,2),paid_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE display_privacy(user_id BIGINT PRIMARY KEY,spend_rank_visible INT,purchase_feed_consent INT,updated_at TIMESTAMP)");
         configs = mock(SysConfigService.class);
-        controller = new DisplayController(jdbc, configs);
+        controller = new DisplayController(new DisplayService(jdbc, configs));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.delta.admin.controller.AdminReviewController;
 import com.delta.governance.controller.PlayerDirectoryLayoutController;
+import com.delta.governance.service.PlayerDirectoryLayoutService;
 import com.delta.admin.controller.PlayerReviewController;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;
@@ -70,7 +71,7 @@ class PlayerDirectoryIntegrationTest {
     @EnableAutoConfiguration(excludeName={"com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure"})
     @MapperScan({"com.delta.player.mapper","com.delta.order.mapper","com.delta.common.mapper"})
     @Import({AdminPlayerController.class,AdminPlayerLevelController.class,PlayerController.class,PublicPlayerChatController.class,FileController.class,PlayerLevelService.class,PlayerDirectoryService.class,PublicPlayerController.class,PlayerReviewController.class,AdminReviewController.class,ReviewController.class,
-            PlayerDirectoryLayoutController.class,
+            PlayerDirectoryLayoutController.class,PlayerDirectoryLayoutService.class,
             SecurityConfig.class,JwtAuthenticationFilter.class,AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,
             GlobalExceptionHandler.class,PlayerServiceImpl.class,ReviewServiceImpl.class})
     static class Config {
