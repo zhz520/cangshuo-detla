@@ -12,9 +12,9 @@
 
 ### 验证
 
-- 后端全量 `mvn test`：443 项通过（最近一次 reactor 汇总），包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
-- 管理端与 H5 附件定向测试及完整测试此前已通过；管理端标准生产构建的 esbuild 清理权限问题仍需在 Linux/CI 复核。
-- deploy/qa 25 项、updater 61 项、migration 29 项通过；Endpoint 487、OpenAPI 487 operations、282 schemas。
+- 后端全量 `clean verify`：全部 reactor 成功，`delta-admin` 444 项通过；包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
+- 管理端 108 项、H5 119 项测试通过；管理端在 Linux 容器完成标准生产构建，H5 与微信小程序构建通过。
+- deploy/qa 26 项、updater 61 项、migration 29 项通过；Endpoint 487、OpenAPI 487 operations、282 schemas；候选 ZIP 连续打包两次摘要一致。
 - 未部署、未生成正式三端制品、未做 520/共享组验收。
 
 ## 2026-11-21 · 1.18.4
