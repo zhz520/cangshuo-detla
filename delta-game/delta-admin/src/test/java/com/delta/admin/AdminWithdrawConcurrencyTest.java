@@ -77,7 +77,9 @@ class AdminWithdrawConcurrencyTest {
 
     @BeforeEach
     void seed() {
-        jdbc.update("INSERT INTO withdraw(id,player_id,amount,status,created_at) VALUES(1,1,100.00,'PENDING',CURRENT_TIMESTAMP)");
+        // Keep the application timestamp safely after the request timestamp even
+        // when the test host clock and the database clock tick across a boundary.
+        jdbc.update("INSERT INTO withdraw(id,player_id,amount,status,created_at) VALUES(1,1,100.00,'PENDING',TIMESTAMPADD(MINUTE,-1,CURRENT_TIMESTAMP))");
         jdbc.update("INSERT INTO player_wallet(player_id,balance,frozen_amount,pending_income,total_income) VALUES(1,50.00,100.00,0,0)");
     }
 
