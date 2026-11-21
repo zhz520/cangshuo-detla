@@ -44,6 +44,8 @@ jobs:
         run: python scripts/check_module_boundaries.py
       - name: Validate oversized class baseline
         run: python scripts/check_class_size.py
+      - name: Validate component version alignment
+        run: python scripts/check_version_alignment.py
       - name: Validate API contracts
         run: |
           python scripts/check_endpoint_baseline.py

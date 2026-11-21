@@ -18,6 +18,10 @@
 
 它检查 `src/main/java` 下是否出现新的超过 20KB 的 Java 类；已有超大类记录在 `docs/ai/oversized-class-baseline.json`，调整基线前必须先评审。
 
+    python scripts/check_version_alignment.py
+
+它检查后端 catalog、管理端/H5 package 和 lock、小程序 manifest 的版本是否一致，并确认当前版本的发布说明存在。
+
 ## 后端全量
 
     cd delta-game
