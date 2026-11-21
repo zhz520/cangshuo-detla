@@ -2,6 +2,7 @@ package com.delta.admin;
 
 import com.delta.common.domain.PageQuery;
 import com.delta.user.controller.UserEngagementController;
+import com.delta.user.service.UserEngagementService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class UserEngagementControllerTest {
         jdbc.update("INSERT INTO product VALUES(1,'测试商品','说明','/file/p.jpg',50,1,0,0)");
         jdbc.update("INSERT INTO player VALUES(2,'测试打手','/file/a.jpg',1,'简介','/file/c.jpg',4.8,10,98,1,'ACTIVE',0)");
         jdbc.update("INSERT INTO player_level VALUES(1,'普通',0)");
-        controller = new UserEngagementController(jdbc);
+        controller = new UserEngagementController(new UserEngagementService(jdbc));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 Map.of("userId", 7L, "userType", "USER"), null, List.of()));
     }

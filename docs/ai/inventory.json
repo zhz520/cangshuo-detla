@@ -1259,6 +1259,7 @@
     "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatBindingPersistenceTest.java",
     "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
     "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
+    "delta-game/delta-order/src/test/java/com/delta/order/service/impl/ComplaintServiceImplTest.java",
     "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitInterceptorTest.java",
     "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitRecorderTest.java",
     "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/DashboardAnalyticsServiceTest.java",

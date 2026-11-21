@@ -1,38 +1,25 @@
 package com.delta.order.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
 import com.delta.common.security.utils.SecurityUtils;
-import com.delta.common.utils.ImageListUtils;
 import com.delta.order.entity.Complaint;
-import com.delta.order.entity.Order;
-import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.ComplaintService;
-import com.delta.order.service.OrderService;
-import com.delta.order.service.OrderProgressService;
 import com.delta.order.dto.ComplaintDetailVO;
-import com.delta.common.mapper.CrossModuleMapper;
-import com.delta.common.event.BusinessEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/order/complaint")
 @RequiredArgsConstructor
 public class ComplaintController {
     private final ComplaintService complaintService;
-    private final OrderService orderService;
-    private final ApplicationEventPublisher eventPublisher;
-    private final OrderProgressService orderProgressService;
-    private final CrossModuleMapper crossModuleMapper;
     private final com.delta.common.security.service.RateLimitService limits;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @PostMapping
-    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> create(@RequestBody Complaint complaint) {
         Complaint supplied=complaint;complaint=new Complaint();complaint.setOrderId(supplied.getOrderId());complaint.setType(supplied.getType());
         complaint.setContent(supplied.getContent());complaint.setImages(supplied.getImages());complaint.setExpectedResult(supplied.getExpectedResult());
@@ -42,44 +29,12 @@ public class ComplaintController {
             return R.fail(400,"期望结果不正确");
         if(complaint.getContent()==null || complaint.getContent().isBlank() || complaint.getContent().length()>2000) return R.fail(400,"投诉内容长度不符合要求");
         Long actorId = SecurityUtils.getUserId();
+        String actorType = SecurityUtils.getUserType();
         limits.check("complaint-create:"+actorId,10,3600);
-
-        // 1. 校验订单存在且属于当前用户
-        Order order = orderService.getById(complaint.getOrderId());
-        if (!canAccess(order)) return R.fail(404, "订单不存在");
-
-        // 2. 校验订单状态
-        String status = order.getStatus();
-        boolean afterSaleWindow = false;
-        try {
-            if ("CONFIRMED".equals(status) || "REVIEWED".equals(status)) {
-                Long pending = jdbc.queryForObject("SELECT COUNT(*) FROM player_income_settlement WHERE order_id=? " +
-                        "AND status='PENDING' AND release_at>CURRENT_TIMESTAMP", Long.class, order.getId());
-                afterSaleWindow = pending != null && pending > 0;
-            }
-        } catch (Exception ignored) {}
-        if (!"IN_PROGRESS".equals(status) && !"COMPLETED".equals(status) && !afterSaleWindow) {
-            return R.fail("当前订单状态不允许投诉");
+        if (!complaintService.canAccessOrder(complaint.getOrderId(), actorId, actorType)) {
+            return R.fail(404, "订单不存在");
         }
-
-        // 3. 校验是否已有进行中的投诉
-        long existCount = complaintService.count(new LambdaQueryWrapper<Complaint>()
-                .eq(Complaint::getOrderId, complaint.getOrderId())
-                .in(Complaint::getStatus, "PENDING", "PROCESSING", "APPEALING"));
-        if (existCount > 0) return R.fail("该订单已有进行中的投诉");
-
-        // 4. 从订单获取打手ID
-        complaint.setUserId(order.getUserId());
-        complaint.setPlayerId(order.getPlayerId());
-        complaint.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));
-        complaint.setStatus("PENDING");
-        complaintService.save(complaint);
-
-        // 5. 更新订单状态为DISPUTED
-        orderService.disputeOrder(complaint.getOrderId());
-        // 6. 通知客服新投诉待处理
-        eventPublisher.publishEvent(new BusinessEvent(this, "NEW_COMPLAINT",
-                "CS", null, complaint.getOrderId(), "新投诉待处理，订单ID: " + complaint.getOrderId()));
+        complaintService.createComplaint(complaint, actorId, actorType);
         return R.ok();
     }
 
@@ -87,77 +42,28 @@ public class ComplaintController {
     public R<ComplaintDetailVO> detail(@PathVariable Long id) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
-        if (!canAccess(c.getUserId())) return R.fail("无权查看");
-
-        Order order = orderService.getById(c.getOrderId());
-        ComplaintDetailVO vo = new ComplaintDetailVO();
-        vo.setComplaint(c);
-        vo.setOrder(order);
-
-        if (order != null) {
-            vo.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
-            vo.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
-            if (order.getPlayerId() != null) {
-                vo.setPlayerNickname(crossModuleMapper.selectPlayerNickname(order.getPlayerId()));
-                vo.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(order.getPlayerId()));
-            }
-            java.util.List<OrderProgress> progress = orderProgressService.list(
-                    new LambdaQueryWrapper<OrderProgress>()
-                            .eq(OrderProgress::getOrderId, order.getId())
-                            .orderByAsc(OrderProgress::getCreatedAt)
-            );
-            vo.setProgress(progress);
+        if (!complaintService.canAccessUser(SecurityUtils.getUserId(), SecurityUtils.getUserType(), c.getUserId())) {
+            return R.fail("无权查看");
         }
-
-        return R.ok(vo);
+        return R.ok(complaintService.getDetail(c));
     }
 
     @GetMapping("/my")
     public R<Page<Complaint>> my(PageQuery query) {
-        java.util.ArrayList<Long> owners=new java.util.ArrayList<>();
-        Long actorId=SecurityUtils.getUserId();
-        owners.add(actorId);
-        if("USER".equals(SecurityUtils.getUserType())) owners.addAll(crossModuleMapper.selectLinkedGuestUserIds(actorId));
-        return R.ok(complaintService.page(new Page<>(query.getPageNum(), query.getPageSize()),
-                new LambdaQueryWrapper<Complaint>().in(Complaint::getUserId, owners)
-                        .orderByDesc(Complaint::getCreatedAt)));
+        Long actorId = SecurityUtils.getUserId();
+        List<Long> owners = complaintService.ownerScope(actorId, SecurityUtils.getUserType());
+        return R.ok(complaintService.pageForOwners(query, owners));
     }
 
     @PostMapping("/{id}/appeal")
-    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public R<Void> appeal(@PathVariable Long id, @RequestBody Complaint appeal) {
         Complaint c = complaintService.getById(id);
         if (c == null) return R.fail("投诉不存在");
-        if (!canAccess(c.getUserId())) return R.fail("无权操作");
-        limits.check("complaint-appeal:"+SecurityUtils.getUserId(),10,3600);
-        if (!"RESOLVED".equals(c.getStatus())) return R.fail("当前状态不允许申诉");
-        String reason = appeal.getAppealReason() == null ? "" : appeal.getAppealReason().trim();
-        if (reason.isEmpty() || reason.length() > 2000) return R.fail(400,"申诉原因须为1至2000字");
-        c.setAppealReason(reason);
-        c.setAppealImages(ImageListUtils.normalizeLocal(appeal.getAppealImages(), 9));
-        c.setStatus("APPEALING");
-        complaintService.updateById(c);
-        eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_APPEALED", "USER", c.getUserId(),
-                c.getOrderId(), "投诉申诉已提交，等待客服重新处理"));
-        if (c.getPlayerId() != null) {
-            eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_APPEALED", "PLAYER", c.getPlayerId(),
-                    c.getOrderId(), "客户已提交投诉申诉，等待客服重新处理"));
+        if (!complaintService.canAccessUser(SecurityUtils.getUserId(), SecurityUtils.getUserType(), c.getUserId())) {
+            return R.fail("无权操作");
         }
+        limits.check("complaint-appeal:"+SecurityUtils.getUserId(),10,3600);
+        complaintService.appealComplaint(c, appeal);
         return R.ok();
-    }
-
-    private boolean canAccess(Order order) {
-        if(order==null) return false;
-        Long actorId=SecurityUtils.getUserId();
-        return actorId.equals(order.getUserId())
-                || ("USER".equals(SecurityUtils.getUserType())
-                    && crossModuleMapper.countGuestLink(actorId,order.getUserId())>0);
-    }
-
-    private boolean canAccess(Long ownerUserId) {
-        Long actorId=SecurityUtils.getUserId();
-        return actorId.equals(ownerUserId)
-                || ("USER".equals(SecurityUtils.getUserType())
-                    && crossModuleMapper.countGuestLink(actorId,ownerUserId)>0);
     }
 }
