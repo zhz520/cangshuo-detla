@@ -20,6 +20,11 @@ class ArchitectureGuardrailsTest {
                     .should().dependOnClassesThat().haveSimpleNameEndingWith("Mapper"));
 
     @ArchTest
+    static final ArchRule controllersMustNotDependOnJdbcTemplate = FreezingArchRule.freeze(
+            noClasses().that().haveSimpleNameEndingWith("Controller")
+                    .should().dependOnClassesThat().haveFullyQualifiedName("org.springframework.jdbc.core.JdbcTemplate"));
+
+    @ArchTest
     static final ArchRule commonMustNotDependOnBusinessModules = FreezingArchRule.freeze(
             noClasses().that().resideInAPackage("com.delta.common..")
                     .should().dependOnClassesThat().resideInAnyPackage(
