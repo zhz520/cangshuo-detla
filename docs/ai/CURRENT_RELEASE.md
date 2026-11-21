@@ -4,32 +4,32 @@
 
 - 服务组：delta-shared-prod
 - 租户：742、747、jax
-- 当前版本：1.18.3
-- 标签：v1.18.3
-- 提交：0c0c1cb2fc3d9fd1f944fedd0058df90fe3c9b52
-- GitHub Release：453386331
-- 计划：9c5ba71c-2a1f-472c-b52a-c6a8f514b1bf
+- 当前版本：1.18.4
+- 标签：v1.18.4
+- 提交：d0c03e4e393439df3aa7f7c120a164788dd0d090
+- GitHub Release：453576664
+- 计划：94a97608-ddcc-4ac7-8095-efa78de169a4
 - 计划结果：VALID -> SUCCEEDED
-- 当前发布目录：/www/delta/shared/releases/9c5ba71c-2a1f-472c-b52a-c6a8f514b1bf
-- 三个实例上报：1.18.3
+- 当前发布目录：/www/delta/shared/releases/94a97608-ddcc-4ac7-8095-efa78de169a4
+- 三个实例上报：1.18.4
 - 三库 `player.deposit_override_amount`：均存在
 - 三个数据库表数：76 / 76 / 76
 - 财务 12 项：三库均 0 违规
-- 备份：/var/lib/delta-shared/updater/backups/9c5ba71c-2a1f-472c-b52a-c6a8f514b1bf
+- 备份：/var/lib/delta-shared/updater/backups/94a97608-ddcc-4ac7-8095-efa78de169a4
 
 发布资产：
 
-- backend：100,179,577 bytes，SHA-256 b92ba458cc99e0544b27decefc367ed8d2497ee10250172b73b07a0914783017
-- admin：997,243 bytes，SHA-256 12c1515dd6625df37775c4542729e98152bcf605add8318de6cda7039241f5cc
-- h5：864,046 bytes，SHA-256 dc6d37f7515ee9729307257fef28fd56103621ba7332af0a83328c29d59174b1
+- backend：97,828,447 bytes，SHA-256 990987e55355029c2762b835653f5560f491a7ac7fd72a2ef7a38b3d4e56556f
+- admin：997,243 bytes，SHA-256 3d89834f6235dc3ced83fc6e88c85a47161bd08921951db9fc4b1582b4ca518c
+- h5：864,236 bytes，SHA-256 b18b56798eb0980f984e2b299e32e115654282b876756214fd826dcdc38f751b
 
-## 源码主线（未发布）
+## 1.18.4 内容
 
-- `main` 当前提交以 `git rev-parse HEAD` 为准；本节只记录未发布状态，不复制易过期的提交号。
-- 已完成 9 个后端模块拆分（平台、工作台、统计、短信实名、通知、营销、员工协作、展示治理、财务）、包名迁移、ArchUnit 边界规则和模块依赖检查脚本。
-- 已补充打手列表/详情的“联系客服购买”入口。
-- 当前版本文件已升到 1.18.4，标签 `v1.18.4` 已推送到提交 `d0c03e4e393439df3aa7f7c120a164788dd0d090`；GitHub Release、授权中心版本目录和共享组计划尚未创建，生产仍是 1.18.3。
-- 本次源码验证：后端 clean verify 480 项、管理端 102 项、H5 116 项、静态引用缺失 0；生产验收尚未执行。
+- 后端拆分为 19 个 Maven 模块，`delta-admin` 保留唯一启动入口和核心后台聚合。
+- Controller 不再直接依赖 `JdbcTemplate`；查询和事务下沉到模块 Service，新增 ArchUnit 与 CI 边界检查。
+- 保留打手列表/详情的“联系客服购买”入口和商品富文本图片行为。
+- 源码验证：后端 clean verify 480 项、管理端 102 项、H5 116 项、静态引用缺失 0。
+- 生产验证：计划 `VALID`，审计 `SUCCEEDED`；五容器 healthy、六域名 1.18.4、三库各 76 表、财务 12 项各 0 违规，三实例均上报 1.18.4。
 
 ## 520 演示站
 
