@@ -208,7 +208,9 @@ def digest_inputs(modules: list[dict], admin: dict, h5: dict, database: dict, co
         "h5": h5,
         "database": database,
         "contracts": contracts,
-        "routingSha256": hashlib.sha256(ROUTING.read_bytes()).hexdigest() if ROUTING.exists() else "",
+        "routingSha256": hashlib.sha256(
+            json.dumps(read_json(ROUTING), ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest() if ROUTING.exists() else "",
     }
     return "sha256:" + hashlib.sha256(json.dumps(stable, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 

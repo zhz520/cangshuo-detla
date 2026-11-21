@@ -4,7 +4,7 @@
 
 Delta 是覆盖用户、打手、客服和平台管理员的电竞陪玩/代练/护航业务系统，包含 Spring Boot 后端、Vue 3 管理后台和 UniApp 客户/打手 H5/小程序。
 
-当前共享组正式版本为 **1.18.4**。实时生产状态以 [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) 为准；历史情况见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
+当前版本和生产状态只以 [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) 为准；历史情况见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
 ## 技术栈
 
