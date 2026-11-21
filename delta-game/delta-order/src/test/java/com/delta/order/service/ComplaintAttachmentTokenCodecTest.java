@@ -26,7 +26,9 @@ class ComplaintAttachmentTokenCodecTest {
                 "0123456789abcdef0123456789abcdef.png", 1_700_000_000_000L));
 
         assertThat(codec.decode("/file/2026/11/21/public.png")).isEmpty();
-        assertThat(codec.decode(token.substring(0, token.length() - 1) + "A")).isEmpty();
+        int tamperAt = token.length() - 8;
+        char replacement = token.charAt(tamperAt) == 'A' ? 'B' : 'A';
+        assertThat(codec.decode(token.substring(0, tamperAt) + replacement + token.substring(tamperAt + 1))).isEmpty();
         assertThat(codec.decode(token + "x")).isEmpty();
         assertThat(new ComplaintAttachmentTokenCodec("another-secret-that-is-long-enough-2026")
                 .decode(token)).isEmpty();
