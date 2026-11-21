@@ -20,6 +20,8 @@ import urllib.error
 import urllib.parse
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import stat
@@ -29,6 +31,19 @@ import shared_release
 import shared_registry
 
 MAX_ARTIFACT = shared_release.MAX_ARTIFACT
+
+
+def elapsed_ms(start):
+    return round((time.monotonic() - start) * 1000)
+
+
+@contextmanager
+def measure(timings, phase):
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[phase] = elapsed_ms(start)
 
 
 def inside(path, parent):
@@ -116,7 +131,8 @@ def github_asset_api_url(package, repository, token):
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        # Artifact tasks must not share urllib's implicit global opener.
+        with urllib.request.build_opener().open(request, timeout=30) as response:
             release = json.loads(response.read(2_000_000).decode("utf-8"))
     except Exception as error:
         raise ValueError("GitHub release metadata is unavailable") from error
@@ -143,12 +159,17 @@ def prune_directories(parent, keep, preserve=()):
             shutil.rmtree(path, ignore_errors=True)
 
 
-def start_services(operations, health_host, services, override, expected_versions):
+def start_services(operations, health_host, services, override, expected_versions, timings=None):
+    if timings is None:
+        timings = {}
     for service in ("backend", "admin", "h5"):
         if service not in services:
             continue
-        operations.compose_up([service], override)
-        operations.health(service, expected_versions.get(service), health_host)
+        service_timings = timings[service] = {}
+        with measure(service_timings, "composeUp"):
+            operations.compose_up([service], override)
+        with measure(service_timings, "health"):
+            operations.health(service, expected_versions.get(service), health_host)
 
 
 class DockerOperations:
@@ -202,6 +223,7 @@ class DockerOperations:
             source = redirect.open(request, timeout=self.config.get("download_timeout_seconds", 60))
         except urllib.error.HTTPError as error:
             if error.code not in (301, 302, 303, 307, 308):
+                error.close()
                 raise ValueError("GitHub artifact download failed") from error
             location = error.headers.get("Location", "")
             error.close()
@@ -219,6 +241,8 @@ class DockerOperations:
                 size += len(data)
                 if size > MAX_ARTIFACT:
                     raise ValueError("artifact too large")
+                if size > package["size"]:
+                    raise ValueError("artifact checksum mismatch")
                 digest.update(data)
                 output.write(data)
         if size != package["size"] or digest.hexdigest() != package["sha256"]:
@@ -305,8 +329,10 @@ class SharedExecutor:
     def __init__(self, config, plan, operations=None, now=None):
         self.config = config
         self.plan = plan
-        self.ops = operations or DockerOperations(config)
-        self.now = now or datetime.now(timezone.utc)
+        self.parallel_preparation = operations is None
+        self.ops = DockerOperations(config) if operations is None else operations
+        self.fixed_now = now
+        self.now = self.execution_time()
         self.state = Path(config["state_dir"])
         self.state.mkdir(parents=True, exist_ok=True)
         os.chmod(self.state, 0o700)
@@ -328,6 +354,47 @@ class SharedExecutor:
         if set(self.databases) != set(plan["tenants"]):
             raise ValueError("selected tenant has no database")
         self.platform_tenants_dir = Path(config["platform_tenants_dir"]) if config.get("platform_tenants_dir") else None
+
+    def execution_time(self):
+        return self.fixed_now if self.fixed_now is not None else datetime.now(timezone.utc)
+
+    def require_execution_deadlines(self):
+        now = self.execution_time()
+        if now >= self.checked["expires"]:
+            raise ValueError("release plan is expired")
+        if not self.checked["start"] <= now <= self.checked["end"]:
+            raise ValueError("maintenance window is not open")
+
+    def prepare_artifacts(self, staging, timings):
+        packages = self.plan["packages"]
+        by_component = {package["component"]: {} for package in packages}
+        timings["artifacts"] = by_component
+
+        def prepare(package):
+            component = package["component"]
+            archive = staging / (component + ".zip")
+            # Each task owns its ZIP, extraction directory and timing entries.
+            with measure(by_component[component], "downloadAndVerify"):
+                self.ops.download(package, archive)
+            with measure(by_component[component], "extractAndVerify"):
+                self.ops.extract(archive, staging / component, package)
+
+        if self.parallel_preparation:
+            # Only the built-in adapter is known to be safe here. Exiting the pool
+            # joins all tasks, even if result() raises, before staging can be removed.
+            with ThreadPoolExecutor(max_workers=len(shared_release.COMPONENTS)) as pool:
+                futures = [pool.submit(prepare, package) for package in packages]
+                for future in futures:
+                    future.result()
+        else:
+            for package in packages:
+                prepare(package)
+
+    def audit_execution(self, result, timings, start):
+        record = shared_release.audit_record(self.plan, result, self.now)
+        # Total is wall time to this outcome, not a sum of overlapping stages.
+        record["timingsMs"] = {**timings, "total": elapsed_ms(start)}
+        shared_release.append_audit(self.state / "audit.jsonl", record)
 
     def acquire(self):
         try:
@@ -359,6 +426,8 @@ class SharedExecutor:
         if self.journal.exists():
             raise RuntimeError("previous execution journal exists; run recover")
         self.acquire()
+        started = time.monotonic()
+        timings = {}
         previous_override = None
         previous_current = None
         previous_link = None
@@ -367,9 +436,12 @@ class SharedExecutor:
         staging = self.state / "releases-staging" / self.plan["id"]
         backup_dir = self.state / "backups" / self.plan["id"]
         release_dir = self.root / "releases" / self.plan["id"]
+        staging_created = False
+        release_move_started = False
         changed = False
         rollback_failed = False
         try:
+            self.now = self.execution_time()
             self.checked = shared_release.validate_plan(
                 self.plan, self.config, self.active, shared_release.current_state(self.state),
                 self.now, require_window=True)
@@ -387,18 +459,22 @@ class SharedExecutor:
                 raise ValueError("backup directory already exists")
             if release_dir.exists():
                 raise ValueError("release directory already exists")
-            self.ops.backup(backup_dir, self.plan, self.databases)
-            for package in self.plan["packages"]:
-                component = package["component"]
-                archive = staging / (component + ".zip")
-                archive.parent.mkdir(parents=True, exist_ok=True)
-                self.ops.download(package, archive)
-                self.ops.extract(archive, staging / component, package)
-            release_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(staging), str(release_dir))
-            for path in release_dir.rglob("*"):
-                os.chmod(path, 0o755 if path.is_dir() else 0o644)
-            os.chmod(release_dir, 0o755)
+            with measure(timings, "prepareArtifacts"):
+                staging.mkdir(mode=0o700, parents=True)
+                staging_created = True
+                self.prepare_artifacts(staging, timings)
+            self.require_execution_deadlines()
+            with measure(timings, "backup"):
+                self.ops.backup(backup_dir, self.plan, self.databases)
+            with measure(timings, "stageRelease"):
+                release_dir.parent.mkdir(parents=True, exist_ok=True)
+                release_move_started = True
+                shutil.move(str(staging), str(release_dir))
+                for path in release_dir.rglob("*"):
+                    os.chmod(path, 0o755 if path.is_dir() else 0o644)
+                os.chmod(release_dir, 0o755)
+            # Once live switching starts, finish it or roll back even if a deadline passes.
+            self.require_execution_deadlines()
             write_json(self.journal, {
                 "id": self.plan["id"],
                 "previousOverride": previous_override,
@@ -415,26 +491,28 @@ class SharedExecutor:
                 "tenants": list(self.plan["tenants"]),
             })
             changed = True
-            self.write_override(release_dir)
-            start_services(self.ops, self.health_host, list(shared_release.COMPONENTS), self.override,
-                           {package["component"]: package["version"] for package in self.plan["packages"]})
-            replace_symlink(release_dir, self.root / "current")
-            if self.platform_tenants_dir:
-                for tenant in self.plan["tenants"]:
-                    write_json(self.platform_tenants_dir / tenant / "component-versions.json", {
-                        "backend": self.plan["targetVersion"], "admin": self.plan["targetVersion"],
-                        "h5": self.plan["targetVersion"], "release": self.plan["targetVersion"],
-                    })
-            write_json(self.current, {
-                "release": self.plan["targetVersion"],
-                "releaseId": self.plan["id"],
-                "components": {package["component"]: package["version"] for package in self.plan["packages"]},
-                "updatedAt": self.now.astimezone(timezone.utc).isoformat(),
-            })
-            marker = self.state / "installed-plans" / self.plan["id"]
-            write_json(marker, self.plan)
-            shared_release.append_audit(self.state / "audit.jsonl",
-                                        shared_release.audit_record(self.plan, "SUCCEEDED", self.now))
+            with measure(timings, "switchAndHealth"):
+                self.write_override(release_dir)
+                start_services(self.ops, self.health_host, list(shared_release.COMPONENTS), self.override,
+                               {package["component"]: package["version"] for package in self.plan["packages"]},
+                               timings=timings.setdefault("services", {}))
+            with measure(timings, "finalizeRelease"):
+                replace_symlink(release_dir, self.root / "current")
+                if self.platform_tenants_dir:
+                    for tenant in self.plan["tenants"]:
+                        write_json(self.platform_tenants_dir / tenant / "component-versions.json", {
+                            "backend": self.plan["targetVersion"], "admin": self.plan["targetVersion"],
+                            "h5": self.plan["targetVersion"], "release": self.plan["targetVersion"],
+                        })
+                write_json(self.current, {
+                    "release": self.plan["targetVersion"],
+                    "releaseId": self.plan["id"],
+                    "components": {package["component"]: package["version"] for package in self.plan["packages"]},
+                    "updatedAt": self.now.astimezone(timezone.utc).isoformat(),
+                })
+                marker = self.state / "installed-plans" / self.plan["id"]
+                write_json(marker, self.plan)
+            self.audit_execution("SUCCEEDED", timings, started)
             remove(self.journal)
             remove(self.maintenance)
             try:
@@ -443,6 +521,7 @@ class SharedExecutor:
                 pass
         except Exception as error:
             if changed:
+                rollback_started = time.monotonic()
                 try:
                     if previous_override is None:
                         remove(self.override)
@@ -470,22 +549,23 @@ class SharedExecutor:
                                    self.override if previous_override else None, previous_versions)
                     shutil.rmtree(release_dir, ignore_errors=True)
                     remove(self.journal)
-                    shared_release.append_audit(self.state / "audit.jsonl",
-                                                shared_release.audit_record(self.plan, "ROLLED_BACK", self.now))
+                    timings["rollback"] = elapsed_ms(rollback_started)
+                    self.audit_execution("ROLLED_BACK", timings, started)
                 except Exception:
                     rollback_failed = True
                     self.maintenance.write_text("rollback failed for " + self.plan["id"] + "\n", encoding="utf-8")
-                    shared_release.append_audit(self.state / "audit.jsonl",
-                                                shared_release.audit_record(self.plan, "FAILED", self.now))
+                    timings["rollback"] = elapsed_ms(rollback_started)
+                    self.audit_execution("FAILED", timings, started)
             else:
-                shutil.rmtree(release_dir, ignore_errors=True)
-                shared_release.append_audit(self.state / "audit.jsonl",
-                                            shared_release.audit_record(self.plan, "FAILED", self.now))
+                if release_move_started:
+                    shutil.rmtree(release_dir, ignore_errors=True)
+                self.audit_execution("FAILED", timings, started)
             if rollback_failed:
                 raise RuntimeError("release failed and rollback did not complete") from error
             raise
         finally:
-            shutil.rmtree(self.state / "releases-staging" / self.plan["id"], ignore_errors=True)
+            if staging_created:
+                shutil.rmtree(staging, ignore_errors=True)
             self.release_lock()
 
     def prune(self):
@@ -592,7 +672,6 @@ def process_inbox(config, operations=None, now=None, inbox=None):
         directory.mkdir(parents=True, exist_ok=True)
         os.chmod(directory, 0o700)
     results = []
-    current = now or datetime.now(timezone.utc)
     for path in sorted(source.iterdir(), key=lambda item: item.name):
         if path.suffix.lower() != ".json" or path.is_symlink() or not path.is_file():
             continue
@@ -602,8 +681,8 @@ def process_inbox(config, operations=None, now=None, inbox=None):
             if claimed.stat().st_size > 2_000_000:
                 raise ValueError("release envelope is too large")
             envelope = shared_release.load_json(claimed)
-            plan = shared_release.verify_envelope(envelope, config["public_key_path"], current)
-            SharedExecutor(config, plan, operations=operations, now=current).execute()
+            plan = shared_release.verify_envelope(envelope, config["public_key_path"], now or datetime.now(timezone.utc))
+            SharedExecutor(config, plan, operations=operations, now=now).execute()
             shutil.move(str(claimed), str(processed / claimed.name))
             results.append({"file": path.name, "status": "SUCCEEDED", "releaseId": plan["id"]})
         except Exception as error:
@@ -639,7 +718,7 @@ def main():
     parser.add_argument("--interval", type=float, default=5, help="daemon polling interval in seconds")
     args = parser.parse_args()
     config = shared_release.load_config(args.config)
-    now = shared_release.instant(args.now, "--now") if args.now else datetime.now(timezone.utc)
+    now = shared_release.instant(args.now, "--now") if args.now else None
     if args.command == "daemon":
         run_daemon(config, inbox=args.inbox, interval=args.interval)
         return 0
@@ -648,14 +727,15 @@ def main():
         return 0
     if not args.envelope:
         raise ValueError("envelope is required")
+    current_time = now or datetime.now(timezone.utc)
     envelope = shared_release.load_json(args.envelope)
-    plan = shared_release.verify_envelope(envelope, config["public_key_path"], now)
+    plan = shared_release.verify_envelope(envelope, config["public_key_path"], current_time)
     tenants = shared_release.active_tenants(config)
     current = shared_release.current_state(config["state_dir"])
     if args.command == "validate":
-        result = shared_release.dry_run(plan, config, tenants, current, now)
+        result = shared_release.dry_run(plan, config, tenants, current, current_time)
         if args.audit:
-            shared_release.append_audit(args.audit, shared_release.audit_record(plan, "VALID", now))
+            shared_release.append_audit(args.audit, shared_release.audit_record(plan, "VALID", current_time))
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
     if args.confirm != config["service_group_id"]:

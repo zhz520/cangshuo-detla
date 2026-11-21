@@ -14,18 +14,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class SysConfigPublicSiteTest {
+    private static SysConfigController controller(SysConfigService service) {
+        return new SysConfigController(service);
+    }
+
     @Test
     void h5PaymentStaysDisabledWhenItsDeploymentSettingIsAbsent() {
         SysConfigService service = mock(SysConfigService.class);
         when(service.list(org.mockito.ArgumentMatchers.<com.baomidou.mybatisplus.core.conditions.Wrapper<com.delta.system.entity.SysConfig>>any()))
                 .thenReturn(List.of());
         when(service.getConfigValue(anyString(), anyString())).thenAnswer(call -> call.getArgument(1));
-        Map<String, String> site = new SysConfigController(service).getSiteConfig().getData();
+        Map<String, String> site = controller(service).getSiteConfig().getData();
         assertThat(site).containsEntry("wx_pay_h5_enabled", "false")
                 .containsEntry("order_purchase_enabled", "true")
                 .containsEntry("order_contact_purchase_enabled", "false")
                 .containsEntry("order_guest_checkout_enabled", "false")
                 .containsEntry("player_directory_enabled", "true");
+        assertThat(site).doesNotContainKeys("backend_version", "backend_build_id");
     }
 
     @Test
@@ -45,7 +50,7 @@ class SysConfigPublicSiteTest {
             String key = call.getArgument(0), fallback = call.getArgument(1);
             return values.getOrDefault(key, fallback);
         });
-        Map<String, String> site = new SysConfigController(service).getSiteConfig().getData();
+        Map<String, String> site = controller(service).getSiteConfig().getData();
         assertThat(site).containsEntry("wx_pay_enabled", "true")
                 .containsEntry("wx_pay_miniapp_enabled", "true")
                 .containsEntry("wx_pay_h5_enabled", "false")

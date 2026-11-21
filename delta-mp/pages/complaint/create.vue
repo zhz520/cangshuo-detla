@@ -13,8 +13,8 @@
     <view class="form-item"><text class="label">投诉内容</text>
       <textarea v-model="content" placeholder="请描述您遇到的问题" :maxlength="500" class="content-input" />
     </view>
-    <view class="form-item"><text class="label">证据图片（选填）</text>
-      <ImageUploader v-model="images" :max="6" />
+    <view class="form-item"><text class="label">证据附件（选填）</text>
+      <ComplaintAttachmentUploader v-model="attachmentIds" :order-id="orderId" :max="6" @uploading="attachmentUploading = $event" />
     </view>
     <view class="form-item"><text class="label">期望结果</text>
       <picker :range="expectedOptions" @change="expectedResult=expectedOptions[$event.detail.value]"><view class="picker">{{ expectedResult || '请选择' }}</view></picker>
@@ -25,7 +25,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import ImageUploader from '@/components/ImageUploader.vue'
+import ComplaintAttachmentUploader from '@/components/ComplaintAttachmentUploader.vue'
 import { createComplaint } from '@/api/complaint'
 import { getOrderDetail } from '@/api/order'
 
@@ -35,7 +35,8 @@ const types = ['服务态度', '服务质量', '违规操作', '其他']
 const expectedOptions = ['退款', '重新服务', '赔偿', '道歉']
 const typeIdx = ref(0)
 const content = ref('')
-const images = ref([])
+const attachmentIds = ref([])
+const attachmentUploading = ref(false)
 const expectedResult = ref('')
 const submitting = ref(false)
 
@@ -52,6 +53,7 @@ onLoad(async (opts) => {
 async function submit() {
   if (submitting.value) return
   if (!orderId.value) return uni.showToast({ title: '订单参数异常', icon: 'none' })
+  if (attachmentUploading.value) return uni.showToast({ title: '附件上传中，请稍候', icon: 'none' })
   if (!content.value) return uni.showToast({ title: '请描述投诉内容', icon: 'none' })
   submitting.value = true
   try {
@@ -59,7 +61,7 @@ async function submit() {
       orderId: orderId.value,
       type: types[typeIdx.value],
       content: content.value,
-      images: images.value.length ? images.value.join(',') : null,
+      attachmentIds: [...attachmentIds.value],
       expectedResult: expectedResult.value || null
     })
     uni.showToast({ title: '已提交' })

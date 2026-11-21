@@ -10,6 +10,8 @@ import zipfile
 root=Path(__file__).resolve().parents[2]
 catalog=json.loads((root/'delta-game/delta-admin/src/main/resources/platform/catalog.json').read_text(encoding='utf-8'))
 version=catalog['version']
+sys.path.insert(0,str(root/'deploy/qa'))
+from build_identity import tree_sha256
 if '-' in version:raise SystemExit('Only stable releases can be packaged')
 try:
     commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.DEVNULL).strip()
@@ -38,9 +40,10 @@ for component,source in sources.items():
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as archive:
         if component=='backend':archive.write(source,'delta-admin.jar')
         else:
+            build_id=tree_sha256(source)
             for file in source.rglob('*'):
                 if file.is_file():archive.write(file,file.relative_to(source).as_posix())
-            archive.writestr('cangshuo-version.json',json.dumps({'version':version,'component':component}))
+            archive.writestr('cangshuo-version.json',json.dumps({'version':version,'component':component,'buildId':build_id}))
     print(component,version,target.stat().st_size)
     digest=hashlib.sha256()
     with target.open('rb') as stream:

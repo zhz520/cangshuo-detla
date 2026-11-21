@@ -23,5 +23,11 @@ public class ComplaintDetailVO {
 
     /** 订单进度列表（按时间升序） */
     private List<OrderProgress> progress;
+
+    /** 当前投诉的私有附件 token；旧公开图片只返回不可用标记，不回传 URL。 */
+    private List<ComplaintAttachmentView> attachments;
+
+    /** 申诉阶段的私有附件 token；旧公开图片只返回不可用标记，不回传 URL。 */
+    private List<ComplaintAttachmentView> appealAttachments;
 }
 

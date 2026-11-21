@@ -1098,6 +1098,12 @@
     "path": "/cs/complaint/list"
   },
   {
+    "controller": "CsComplaintAttachmentController",
+    "handler": "download",
+    "method": "GET",
+    "path": "/cs/complaint/{complaintId}/attachment/{token}"
+  },
+  {
     "controller": "CsComplaintController",
     "handler": "detail",
     "method": "GET",
@@ -1612,6 +1618,18 @@
     "handler": "create",
     "method": "POST",
     "path": "/order/complaint/"
+  },
+  {
+    "controller": "ComplaintAttachmentController",
+    "handler": "upload",
+    "method": "POST",
+    "path": "/order/complaint/attachment/"
+  },
+  {
+    "controller": "ComplaintAttachmentController",
+    "handler": "download",
+    "method": "GET",
+    "path": "/order/complaint/attachment/{token}"
   },
   {
     "controller": "ComplaintController",
@@ -2344,6 +2362,12 @@
     "handler": "updateRechargePackages",
     "method": "PUT",
     "path": "/system/config/recharge-packages"
+  },
+  {
+    "controller": "RuntimeIdentityController",
+    "handler": "identity",
+    "method": "GET",
+    "path": "/system/config/runtime-identity"
   },
   {
     "controller": "SysConfigController",

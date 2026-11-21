@@ -231,6 +231,110 @@ export function uploadFile(filePath, endpoint = '/common/file/upload', options =
   })
 }
 
+function unsupportedAttachmentError() {
+  const error = new Error('当前环境无法安全预览附件')
+  error.attachmentUnsupported = true
+  return error
+}
+
+function responseHeader(headers, name) {
+  if (!headers || typeof headers !== 'object') return ''
+  const key = Object.keys(headers).find(item => item.toLowerCase() === name.toLowerCase())
+  return key ? String(headers[key] || '') : ''
+}
+
+/**
+ * 私有附件下载：H5 使用带鉴权请求取得 ArrayBuffer 后生成 blob URL；
+ * 小程序使用带鉴权下载得到的临时文件。任何环境都不把 token 拼成可公开访问的图片地址。
+ */
+export function downloadPrivateFile(endpoint, options = {}) {
+  const role = options.role || getCurrentRole()
+  const token = getTokenByRole(role)
+  if (!token) {
+    const error = new Error('登录已过期，请重新登录')
+    error.code = 401
+    return Promise.reject(error)
+  }
+  if (typeof endpoint !== 'string' || !endpoint.startsWith('/')) {
+    return Promise.reject(new Error('附件地址无效'))
+  }
+
+  const url = `${BASE_URL}${endpoint}`
+  const header = { Authorization: `Bearer ${token}` }
+  const timeout = options.timeout || 30000
+
+  // H5 不能把带鉴权的请求地址直接交给 image 标签，必须缓存为临时 blob URL。
+  if (typeof window !== 'undefined') {
+    if (typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+      return Promise.reject(unsupportedAttachmentError())
+    }
+    return new Promise((resolve, reject) => {
+      uni.request({
+        url,
+        method: 'GET',
+        responseType: 'arraybuffer',
+        header,
+        timeout,
+        success(res) {
+          if (res.statusCode === 200) {
+            const contentType = responseHeader(res.header, 'content-type')
+            if (/json|text\/(?:plain|html)/i.test(contentType)) {
+              reject(new Error('附件不可用'))
+              return
+            }
+            try {
+              const blob = res.data instanceof Blob
+                ? res.data
+                : new Blob([res.data], { type: contentType || 'application/octet-stream' })
+              if (!blob.size) throw new Error('empty attachment')
+              resolve(URL.createObjectURL(blob))
+            } catch (_) {
+              reject(new Error('附件不可用'))
+            }
+          } else if (res.statusCode === 401) {
+            handleUnauthorized(role, token)
+            reject(res)
+          } else {
+            reject(Object.assign(new Error('附件不可用'), { statusCode: res.statusCode }))
+          }
+        },
+        fail(err) {
+          reject(Object.assign(new Error('附件不可用'), { cause: err }))
+        }
+      })
+    })
+  }
+
+  // 小程序仅保存到本地临时文件，不生成或回退任何公开 URL。
+  if (typeof uni.downloadFile !== 'function') return Promise.reject(unsupportedAttachmentError())
+  return new Promise((resolve, reject) => {
+    uni.downloadFile({
+      url,
+      header,
+      timeout,
+      success(res) {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          resolve(res.tempFilePath)
+        } else if (res.statusCode === 401) {
+          handleUnauthorized(role, token)
+          reject(res)
+        } else {
+          reject(Object.assign(new Error('附件不可用'), { statusCode: res.statusCode }))
+        }
+      },
+      fail(err) {
+        reject(Object.assign(new Error('附件不可用'), { cause: err }))
+      }
+    })
+  })
+}
+
+export function releasePrivateFileUrl(source) {
+  if (typeof source !== 'string' || !/^blob:/i.test(source)) return
+  if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+  try { URL.revokeObjectURL(source) } catch (_) {}
+}
+
 // 快捷方法
 export const get = (url, data, options = {}) => request({ url, method: 'GET', data, ...options })
 export const post = (url, data, options = {}) => request({ url, method: 'POST', data, ...options })

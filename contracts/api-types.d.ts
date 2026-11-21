@@ -248,6 +248,12 @@ export interface Complaint {
   appealOperatorId?: number
   appealResolvedAt?: string
   csReadAt?: string
+  attachmentIds?: string[]
+}
+
+export interface ComplaintAttachmentView {
+  token?: string
+  kind?: string
 }
 
 export interface ComplaintDetailVO {
@@ -258,6 +264,8 @@ export interface ComplaintDetailVO {
   playerNickname?: string
   playerAvatar?: string
   progress?: OrderProgress[]
+  attachments?: ComplaintAttachmentView[]
+  appealAttachments?: ComplaintAttachmentView[]
 }
 
 export interface Completion {
@@ -1878,6 +1886,12 @@ export interface RSmsSettings {
   data?: SmsSettings
 }
 
+export interface RSnapshot {
+  code?: number
+  msg?: string
+  data?: Snapshot
+}
+
 export interface RStatisticsDaily {
   code?: number
   msg?: string
@@ -2257,6 +2271,11 @@ export interface SmsSettings {
   csMessageTemplateCode?: string
   teammateInvitedTemplateCode?: string
   authorityConfigured?: boolean
+}
+
+export interface Snapshot {
+  version?: string
+  buildId?: string
 }
 
 export interface StatisticsDaily {

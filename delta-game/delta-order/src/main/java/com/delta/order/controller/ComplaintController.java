@@ -23,6 +23,7 @@ public class ComplaintController {
     public R<Void> create(@RequestBody Complaint complaint) {
         Complaint supplied=complaint;complaint=new Complaint();complaint.setOrderId(supplied.getOrderId());complaint.setType(supplied.getType());
         complaint.setContent(supplied.getContent());complaint.setImages(supplied.getImages());complaint.setExpectedResult(supplied.getExpectedResult());
+        complaint.setAttachmentIds(supplied.getAttachmentIds());
         if(!java.util.Set.of("服务态度","服务质量","代练质量","账号安全","违规操作","其他").contains(complaint.getType()))
             return R.fail(400,"投诉类型不正确");
         if(complaint.getExpectedResult()!=null&&(complaint.getExpectedResult().length()>50||!java.util.Set.of("退款","重新服务","赔偿","道歉").contains(complaint.getExpectedResult())))
@@ -63,7 +64,7 @@ public class ComplaintController {
             return R.fail("无权操作");
         }
         limits.check("complaint-appeal:"+SecurityUtils.getUserId(),10,3600);
-        complaintService.appealComplaint(c, appeal);
+        complaintService.appealComplaint(c, appeal, SecurityUtils.getUserId(), SecurityUtils.getUserType());
         return R.ok();
     }
 }

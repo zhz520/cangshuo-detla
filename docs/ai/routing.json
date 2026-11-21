@@ -14,6 +14,13 @@
         "delta-game/delta-order/*Refund*"
       ],
       "docs": ["BUSINESS_RULES.md", "OPERATIONS.md"],
+      "tests": [
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminWithdrawConcurrencyTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/PlayerDepositPolicyTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OrderRefundWorkflowTest.java",
+        "delta-mp/test/wechat-official-payment.test.mjs",
+        "delta-mp/test/payment-qr-polling.test.mjs"
+      ],
       "checks": ["金额与方向", "支付/退款幂等", "并发与行锁", "租户边界", "真实 MySQL", "财务 12 项"],
       "commands": [
         "cd delta-game && mvn -pl delta-admin -am test",
@@ -44,9 +51,11 @@
         "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java",
         "delta-game/delta-admin/src/main/resources/db/migration/*",
         "delta_game.sql",
+        "delta_game_recharge_migration.sql",
         "deploy/baota/migrations/*"
       ],
       "docs": ["ARCHITECTURE.md", "OPERATIONS.md"],
+      "tests": ["delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantSchedulerTest.java", "deploy/migration/test_schema_inventory.py"],
       "checks": ["启动兼容", "独立迁移可重复执行", "三库表数", "真实 MySQL", "跨租户拒绝"],
       "commands": [
         "cd delta-game && mvn -pl delta-admin -am clean verify",
@@ -65,7 +74,8 @@
         "delta-mp/package.json",
         "delta-mp/package-lock.json",
         "delta-mp/manifest.json",
-        "contracts/*"
+        "contracts/*",
+        "部署文档.md"
       ],
       "docs": ["OPERATIONS.md", "CURRENT_STATE.md", "CHANGELOG.md"],
       "checks": ["三端版本对齐", "干净工作区打包", "SHA-256", "标签不可变", "计划验签", "备份与回退"],
@@ -74,6 +84,46 @@
         "python -m unittest discover -s deploy/updater -p test_*.py",
         "python deploy/qa/check_collaboration_rules.py"
       ]
+    },
+    {
+      "id": "file-access",
+      "risk": "P0",
+      "terms": ["文件安全", "私有附件", "订单附件", "证书目录", "缩略图", "文件归属"],
+      "paths": ["delta-game/delta-common/src/main/java/com/delta/common/file/*", "delta-game/delta-admin/*LegacyFileCompatibilityTest.java", "delta-game/delta-admin/*FileAccessBoundaryTest.java", "delta-game/delta-admin/*SwaggerConfig.java", "delta-admin-ui/nginx.conf", "delta-mp/nginx.conf"],
+      "docs": ["ARCHITECTURE.md", "BUSINESS_RULES.md"],
+      "tests": ["delta-game/delta-admin/src/test/java/com/delta/admin/tenant/FileAccessBoundaryTest.java", "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/LegacyFileCompatibilityTest.java", "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantFileStorageTest.java", "delta-game/delta-admin/src/test/java/com/delta/common/file/service/ThumbnailCacheCleanerTest.java"],
+      "checks": ["公开媒体与私有附件分离", "附件资源归属", "同租户无权和跨租户拒绝", "证书、原图、缩略图与代理缓存"],
+      "commands": ["cd delta-game && mvn -pl delta-admin -am -Dtest=FileAccessBoundaryTest,LegacyFileCompatibilityTest,TenantFileStorageTest,ThumbnailCacheCleanerTest -Dsurefire.failIfNoSpecifiedTests=false test"]
+    },
+    {
+      "id": "authority-services",
+      "risk": "P0",
+      "terms": ["短信", "回执", "实名", "套餐", "功能商城", "授权中心", "权益", "entitlement"],
+      "paths": ["delta-game/delta-common/*/sms/*", "delta-game/delta-identity/*", "delta-game/delta-platform/*", "delta-admin-ui/*sms-account*", "delta-admin-ui/*feature-market*"],
+      "docs": ["CONFIGURATION.md", "BUSINESS_RULES.md", "ARCHITECTURE.md"],
+      "tests": ["delta-game/delta-admin/src/test/java/com/delta/admin/sms/SmsGatewayClientTest.java", "delta-game/delta-admin/src/test/java/com/delta/admin/IdentityVerificationIntegrationTest.java", "delta-admin-ui/test/sms-account.test.mjs", "delta-admin-ui/test/feature-market.test.mjs"],
+      "checks": ["核对授权中心与客户实例两个工作区", "回执与用量幂等", "实名次数/租户", "购买且启用才可用", "套餐支付到账"],
+      "commands": ["cd delta-admin-ui && node --test test/sms-account.test.mjs test/feature-market.test.mjs"]
+    },
+    {
+      "id": "order-team",
+      "risk": "P1",
+      "terms": ["协同", "换人", "再次邀请", "接单大厅", "订单指派", "队友"],
+      "paths": ["delta-game/delta-player/*OrderTeamService.java", "delta-game/delta-workforce/*StaffOrderTeamController.java", "delta-game/delta-order/*InviteTeammate*", "delta-admin-ui/*OrderTeamPanel.vue", "delta-mp/pages-player/invite/*", "delta-mp/pages-player/order/*", "delta-mp/pages-player/hall/*"],
+      "docs": ["BUSINESS_RULES.md", "ARCHITECTURE.md"],
+      "tests": ["delta-mp/test/player-order-actions.test.mjs", "delta-game/delta-admin/src/test/java/com/delta/admin/OrderAssignmentCandidatesTest.java", "delta-game/delta-admin/src/test/java/com/delta/admin/AdminOrderDetailTest.java"],
+      "checks": ["待接单详情与进度权限", "拒绝后重邀", "换人、资格及人数分成", "并发重复操作"],
+      "commands": ["cd delta-mp && node --test test/player-order-actions.test.mjs"]
+    },
+    {
+      "id": "product-media",
+      "risk": "P1",
+      "terms": ["商品详情", "商品描述", "商品图片", "富文本", "购买暂停", "联系客服购买"],
+      "paths": ["delta-game/delta-product/*", "delta-game/delta-user/*AppProductController.java", "delta-admin-ui/*RichTextEditor.vue", "delta-admin-ui/*rich-text.js", "delta-mp/pages/product/*"],
+      "docs": ["BUSINESS_RULES.md", "CONFIGURATION.md"],
+      "tests": ["delta-game/delta-admin/src/test/java/com/delta/admin/PresentationIntegrationTest.java", "delta-game/delta-admin/src/test/java/com/delta/admin/OrderPurchaseGateTest.java", "delta-mp/test/image-url.test.mjs", "delta-mp/test/contact-purchase-entrypoints.test.mjs"],
+      "checks": ["纯图片描述与旧地址", "图片加载失败兜底", "暂停购买的后端门禁"],
+      "commands": ["cd delta-mp && node --test test/image-url.test.mjs test/contact-purchase-entrypoints.test.mjs"]
     },
     {
       "id": "backend-module",
@@ -110,9 +160,10 @@
     {
       "id": "ai-context",
       "risk": "P1",
-      "terms": ["文档", "上下文", "ai", "agents", "routing", "index"],
-      "paths": ["AGENTS.md", "README.md", "docs/*", "scripts/*", ".github/*"],
+      "terms": ["文档", "上下文", "ai", "agents", "routing", "index", "工程治理", "优化方案", "项目问题复核", "契约基线"],
+      "paths": ["AGENTS.md", "README.md", "docs/*", "scripts/*", ".github/*", ".gitattributes", ".gitignore"],
       "docs": ["README.md", "VIBE_CODING.md"],
+      "tests": ["deploy/qa/test_check_collaboration_rules.py", "scripts/ai_context.py"],
       "checks": ["路由覆盖", "索引确定性", "版本一致", "链接有效", "不提升业务版本"],
       "commands": ["python scripts/ai_context.py validate --strict", "python deploy/qa/check_collaboration_rules.py"]
     }

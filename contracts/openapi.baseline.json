@@ -5555,6 +5555,49 @@
         }
       }
     },
+    "/order/complaint/attachment" : {
+      "post" : {
+        "tags" : [ "complaint-attachment-controller" ],
+        "operationId" : "upload_1",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/message/subscribe/report" : {
       "post" : {
         "tags" : [ "message-controller" ],
@@ -6314,7 +6357,7 @@
     "/common/file/upload" : {
       "post" : {
         "tags" : [ "file-controller" ],
-        "operationId" : "upload_1",
+        "operationId" : "upload_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -8656,6 +8699,24 @@
         }
       }
     },
+    "/system/config/runtime-identity" : {
+      "get" : {
+        "tags" : [ "runtime-identity-controller" ],
+        "operationId" : "identity",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/system/config/list" : {
       "get" : {
         "tags" : [ "sys-config-controller" ],
@@ -9934,6 +9995,33 @@
         }
       }
     },
+    "/order/complaint/attachment/{token}" : {
+      "get" : {
+        "tags" : [ "complaint-attachment-controller" ],
+        "operationId" : "download",
+        "parameters" : [ {
+          "name" : "token",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/order/available-players" : {
       "get" : {
         "tags" : [ "user-player-controller" ],
@@ -11129,6 +11217,41 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RComplaintDetailVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cs/complaint/{complaintId}/attachment/{token}" : {
+      "get" : {
+        "tags" : [ "cs-complaint-attachment-controller" ],
+        "operationId" : "download_1",
+        "parameters" : [ {
+          "name" : "complaintId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "token",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
                 }
               }
             }
@@ -15049,7 +15172,8 @@
             "type" : "string"
           },
           "images" : {
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           },
           "expectedResult" : {
             "type" : "string"
@@ -15081,7 +15205,8 @@
             "type" : "string"
           },
           "appealImages" : {
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           },
           "appealResult" : {
             "type" : "string"
@@ -15097,6 +15222,13 @@
           "csReadAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "attachmentIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "writeOnly" : true
           }
         }
       },
@@ -19103,6 +19235,32 @@
           }
         }
       },
+      "RSnapshot" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Snapshot"
+          }
+        }
+      },
+      "Snapshot" : {
+        "type" : "object",
+        "properties" : {
+          "version" : {
+            "type" : "string"
+          },
+          "buildId" : {
+            "type" : "string"
+          }
+        }
+      },
       "RListSysConfig" : {
         "type" : "object",
         "properties" : {
@@ -20318,6 +20476,17 @@
           }
         }
       },
+      "ComplaintAttachmentView" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          }
+        }
+      },
       "ComplaintDetailVO" : {
         "type" : "object",
         "properties" : {
@@ -20343,6 +20512,18 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/OrderProgress"
+            }
+          },
+          "attachments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ComplaintAttachmentView"
+            }
+          },
+          "appealAttachments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ComplaintAttachmentView"
             }
           }
         }

@@ -1,7 +1,10 @@
 package com.delta.admin;
 
 import com.delta.finance.controller.AdminWithdrawController;
+import com.delta.finance.service.WithdrawReviewService;
 import com.delta.common.exception.BusinessException;
+import com.delta.cs.controller.CsWithdrawController;
+import com.delta.pay.service.TransactionService;
 import com.delta.pay.service.impl.TransactionServiceImpl;
 import com.delta.player.entity.Withdraw;
 import com.delta.player.service.PlayerAccountService;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -34,6 +38,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doThrow;
 
 @SpringBootTest(classes = AdminWithdrawConcurrencyTest.Config.class, properties = {
         "spring.profiles.active=test",
@@ -57,12 +64,14 @@ class AdminWithdrawConcurrencyTest {
     @Configuration
     @EnableAutoConfiguration(excludeName = "com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure")
     @MapperScan({"com.delta.player.mapper", "com.delta.pay.mapper"})
-    @Import({AdminWithdrawController.class, WithdrawServiceImpl.class,
+    @Import({AdminWithdrawController.class, CsWithdrawController.class, WithdrawReviewService.class, WithdrawServiceImpl.class,
             PlayerWalletServiceImpl.class, TransactionServiceImpl.class})
     static class Config {}
 
     @Autowired AdminWithdrawController controller;
+    @Autowired CsWithdrawController customerServiceController;
     @Autowired JdbcTemplate jdbc;
+    @SpyBean TransactionService transactions;
     @MockBean PlayerService players;
     @MockBean PlayerAccountService accounts;
 
@@ -106,6 +115,44 @@ class AdminWithdrawConcurrencyTest {
             assertThat(jdbc.queryForObject("SELECT type FROM \u0060transaction\u0060", String.class)).isEqualTo("WITHDRAW_REJECT");
         }
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM \u0060transaction\u0060", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void concurrentAdminApprovalAndCustomerServiceRejectRecordOneDecision() throws Exception {
+        var results = race(
+                () -> controller.process(1L, approval()),
+                () -> customerServiceController.reject(1L, Map.of("reason", "核对未通过")));
+
+        assertThat(results).filteredOn("OK"::equals).hasSize(1);
+        assertThat(results).filteredOn(result -> !"OK".equals(result)).allMatch(result -> result.contains("已处理"));
+        assertThat(wallet("frozen_amount")).isEqualByComparingTo("0.00");
+        var status = jdbc.queryForObject("SELECT status FROM withdraw WHERE id=1", String.class);
+        assertThat(status).isIn("COMPLETED", "REJECTED");
+        boolean completed = "COMPLETED".equals(status);
+        assertThat(wallet("balance")).isEqualByComparingTo(completed ? "50.00" : "150.00");
+        assertThat(jdbc.queryForList("SELECT type FROM \u0060transaction\u0060 WHERE related_withdraw_id=1", String.class))
+                .containsExactly(completed ? "WITHDRAW_COMPLETE" : "WITHDRAW_REJECT");
+    }
+
+    @Test
+    void failedCustomerServiceLedgerWriteRollsBackWalletAndWithdrawal() {
+        doThrow(new IllegalStateException("synthetic ledger failure")).when(transactions)
+                .record(eq("WITHDRAW_COMPLETE"), eq("PLAYER"), eq(1L), any(), any(), any(), isNull(), isNull(), eq(1L), anyString());
+
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(
+                Map.of("userId", 92L, "userType", "CS"), null, List.of()));
+        SecurityContextHolder.setContext(context);
+        try {
+            assertThatThrownBy(() -> customerServiceController.approve(1L, approval()))
+                    .isInstanceOf(IllegalStateException.class).hasMessage("synthetic ledger failure");
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+        assertThat(wallet("frozen_amount")).isEqualByComparingTo("100.00");
+        assertThat(wallet("balance")).isEqualByComparingTo("50.00");
+        assertThat(jdbc.queryForObject("SELECT status FROM withdraw WHERE id=1", String.class)).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM \u0060transaction\u0060", Long.class)).isZero();
     }
 
 
@@ -175,8 +222,3 @@ class AdminWithdrawConcurrencyTest {
         }
     }
 }
-
-
-
-
-

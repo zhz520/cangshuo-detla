@@ -36,7 +36,7 @@
       <Pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="fetchData" />
     </el-card>
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="投诉详情" width="720px">
+    <el-dialog v-model="detailVisible" title="投诉详情" width="720px" @closed="handleDetailClosed">
       <div v-if="detailData">
         <el-descriptions :column="isNarrow ? 1 : 2" border>
           <el-descriptions-item label="投诉ID">{{ detailData.complaint.id }}</el-descriptions-item>
@@ -75,15 +75,36 @@
           <el-descriptions-item label="期望结果" :span="2">
             {{ detailData.complaint.expectedResult || '-' }}
           </el-descriptions-item>
-          <el-descriptions-item label="证据图片" v-if="detailData.complaint.images" :span="2">
-            <el-image lazy
-              v-for="(img, i) in detailData.complaint.images.split(',')"
-              :key="i"
-              :src="img"
-              style="width:80px;height:80px;margin-right:8px"
-              fit="cover"
-              :preview-src-list="detailData.complaint.images.split(',')"
-            />
+          <el-descriptions-item label="证据附件" v-if="showEvidenceAttachments" :span="2">
+            <div v-if="detailAttachments.length" class="attachment-grid">
+              <template v-for="(att, i) in detailAttachments" :key="`evidence-${i}`">
+                <el-image v-if="att.state === 'ready'" lazy
+                  :src="att.src"
+                  class="attachment-image"
+                  fit="cover"
+                  :preview-src-list="detailPreviewSources"
+                  :initial-index="detailPreviewSources.indexOf(att.src)"
+                  @error="markAttachmentUnavailable(att)"
+                />
+                <div v-else class="attachment-unavailable">{{ attachmentStateText(att) }}</div>
+              </template>
+            </div>
+            <div v-if="legacyImageCount" class="attachment-unavailable legacy-attachment">附件不可用（旧版图片不可直接访问）</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="申诉附件" v-if="appealAttachments.length" :span="2">
+            <div class="attachment-grid">
+              <template v-for="(att, i) in appealAttachments" :key="`appeal-${i}`">
+                <el-image v-if="att.state === 'ready'" lazy
+                  :src="att.src"
+                  class="attachment-image"
+                  fit="cover"
+                  :preview-src-list="appealPreviewSources"
+                  :initial-index="appealPreviewSources.indexOf(att.src)"
+                  @error="markAttachmentUnavailable(att)"
+                />
+                <div v-else class="attachment-unavailable">{{ attachmentStateText(att) }}</div>
+              </template>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="仲裁结果">
             {{ RESULT_TEXT[detailData.complaint.result] || detailData.complaint.result || '-' }}
@@ -199,9 +220,10 @@
 import { useRoute, useRouter } from 'vue-router'
 import { watch } from 'vue'
 import { useResponsive } from '@/utils/responsive'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
 import { can } from '@/utils/staff-permissions'
 import { csComplaintList, csComplaintProcess, csComplaintResolve, csComplaintCreate, csUserList, csOrderList, csComplaintDetail } from '@/api/business'
+import { complaintAttachmentGroups, fetchCsComplaintAttachment } from '@/api/complaint-attachment'
 import { ElMessage } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 
@@ -227,10 +249,97 @@ async function fetchData() { loading.value = true; try { const res = await csCom
 async function handleProcess(row) { await csComplaintProcess(row.id, ''); ElMessage.success('已受理'); fetchData() }
 
 const detailVisible = ref(false), detailData = ref(null)
+const detailAttachments = ref([])
+const appealAttachments = ref([])
+const legacyImageCount = ref(0)
+const detailPreviewSources = computed(() => detailAttachments.value.filter(item => item.state === 'ready' && item.src).map(item => item.src))
+const appealPreviewSources = computed(() => appealAttachments.value.filter(item => item.state === 'ready' && item.src).map(item => item.src))
+const showEvidenceAttachments = computed(() => detailAttachments.value.length > 0 || legacyImageCount.value > 0)
+const createdDetailObjectUrls = new Set()
+let detailGeneration = 0
+let detailAbortController = null
+
+function attachmentStateText(item) {
+  return item.state === 'loading' ? '附件加载中' : '附件不可用'
+}
+
+function initialAttachmentState(item) {
+  return {
+    ...item,
+    state: item.kind.toUpperCase() === 'UNAVAILABLE' || !item.token ? 'unavailable' : 'loading',
+    src: ''
+  }
+}
+
+function releaseDetailAttachmentUrls() {
+  detailGeneration++
+  detailAbortController?.abort()
+  detailAbortController = null
+  for (const source of createdDetailObjectUrls) {
+    try { URL.revokeObjectURL(source) } catch (_) {}
+  }
+  createdDetailObjectUrls.clear()
+  for (const item of [...detailAttachments.value, ...appealAttachments.value]) item.src = ''
+}
+
+function resetDetailAttachments() {
+  releaseDetailAttachmentUrls()
+  detailAttachments.value = []
+  appealAttachments.value = []
+  legacyImageCount.value = 0
+}
+
+function handleDetailClosed() {
+  if (detailVisible.value) return
+  resetDetailAttachments()
+  detailData.value = null
+}
+
+async function hydrateDetailAttachments(complaintId, items, generation, signal) {
+  await Promise.all(items.map(async item => {
+    if (!item.token || item.state === 'unavailable') return
+    try {
+      const blob = await fetchCsComplaintAttachment(complaintId, item.token, { signal })
+      if (!detailPageActive || generation !== detailGeneration) return
+      const source = URL.createObjectURL(blob)
+      if (generation !== detailGeneration) {
+        URL.revokeObjectURL(source)
+        return
+      }
+      createdDetailObjectUrls.add(source)
+      item.src = source
+      item.state = 'ready'
+    } catch (_) {
+      if (generation === detailGeneration) item.state = 'unavailable'
+    }
+  }))
+}
+
 async function showDetail(row) {
+  resetDetailAttachments()
   const res = await csComplaintDetail(row.id)
+  if (!detailPageActive) return
   detailData.value = res.data
+  const groups = complaintAttachmentGroups(res.data)
+  detailAttachments.value = groups.attachments.map(item => initialAttachmentState(item))
+  appealAttachments.value = groups.appealAttachments.map(item => initialAttachmentState(item))
+  legacyImageCount.value = groups.legacyImageCount
   detailVisible.value = true
+  const generation = ++detailGeneration
+  detailAbortController = new AbortController()
+  await Promise.all([
+    hydrateDetailAttachments(row.id, detailAttachments.value, generation, detailAbortController.signal),
+    hydrateDetailAttachments(row.id, appealAttachments.value, generation, detailAbortController.signal)
+  ])
+}
+
+function markAttachmentUnavailable(item) {
+  if (item.src) {
+    createdDetailObjectUrls.delete(item.src)
+    try { URL.revokeObjectURL(item.src) } catch (_) {}
+    item.src = ''
+  }
+  item.state = 'unavailable'
 }
 
 // 仲裁
@@ -319,5 +428,28 @@ watch(() => route.query.taskId, id => {
   if (query.taskId) query.status = ''
   fetchData()
 }, { immediate: true })
+
+let detailPageActive = true
+function releaseOnPageExit() {
+  detailPageActive = false
+  releaseDetailAttachmentUrls()
+}
+function releaseWhenPageHidden() {
+  releaseDetailAttachmentUrls()
+}
+
+onMounted(() => window.addEventListener('pagehide', releaseWhenPageHidden))
+onBeforeUnmount(() => {
+  window.removeEventListener('pagehide', releaseWhenPageHidden)
+  releaseOnPageExit()
+  detailData.value = null
+})
 </script>
-<style scoped>.search-form { margin-bottom: 16px; } .card-header { display: flex; justify-content: space-between; align-items: center; }</style>
+<style scoped>
+.search-form { margin-bottom: 16px; }
+.card-header { display: flex; justify-content: space-between; align-items: center; }
+.attachment-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.attachment-image { width: 80px; height: 80px; border-radius: 6px; }
+.attachment-unavailable { min-width: 80px; height: 80px; box-sizing: border-box; padding: 8px; display: inline-flex; align-items: center; justify-content: center; text-align: center; border-radius: 6px; background: #f5f7fa; color: #909399; font-size: 12px; line-height: 1.4; }
+.legacy-attachment { min-width: 180px; height: auto; min-height: 44px; }
+</style>

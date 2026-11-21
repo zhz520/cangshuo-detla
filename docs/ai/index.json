@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.18.4",
-  "inputDigest": "sha256:6259da8e16f6093b758bf31f855dff0dd08c8b2584dfebe32868752cb0994288",
+  "catalogVersion": "1.18.5",
+  "inputDigest": "sha256:2980f23cae8f6692f3fa84d3b48fd4bc8bb3ced45613fc6a5024f72bccf0cac3",
   "counts": {
     "modules": 19,
-    "controllers": 108,
+    "controllers": 111,
     "adminViews": 57,
     "adminRoutes": 68,
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 36,
-    "backendTests": 115,
-    "adminTests": 36,
-    "h5Tests": 23
+    "backendTests": 125,
+    "adminTests": 38,
+    "h5Tests": 24
   },
   "modules": [
     {
@@ -143,10 +143,12 @@
         "delta-game/delta-admin/src/test/java/com/delta/admin/WechatWebLoginServiceTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/ArchitectureGuardrailsTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/OpenApiBaselineTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/OpenApiContractTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/chat/ChatAccessServiceTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/chat/GuestChatAuthorizationTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/config/DatabaseCompatibilityTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/config/ProductionSecurityValidatorTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/controller/RuntimeIdentityControllerTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigControllerRepairTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigPublicSiteTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/pay/DepositH5IntegrationTest.java",
@@ -160,6 +162,7 @@
         "delta-game/delta-admin/src/test/java/com/delta/admin/system/SysConfigMetadataRepairTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/AsyncTenantContextTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/CorsTenantIsolationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/FileAccessBoundaryTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/LegacyFileCompatibilityTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantDataSourceConfigurationTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantFileStorageTest.java",
@@ -239,6 +242,7 @@
       "dependsOn": [
         "delta-common",
         "delta-cs",
+        "delta-finance",
         "delta-message",
         "delta-order",
         "delta-pay",
@@ -247,7 +251,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 23,
+      "mainJavaCount": 24,
       "controllers": [
         {
           "name": "CsAuthController",
@@ -263,6 +267,11 @@
           "name": "CsChatController",
           "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsChatController.java",
           "endpoints": 3
+        },
+        {
+          "name": "CsComplaintAttachmentController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsComplaintAttachmentController.java",
+          "endpoints": 1
         },
         {
           "name": "CsComplaintController",
@@ -330,7 +339,9 @@
           "endpoints": 4
         }
       ],
-      "tests": []
+      "tests": [
+        "delta-game/delta-cs/src/test/java/com/delta/cs/controller/CsComplaintAttachmentControllerTest.java"
+      ]
     },
     {
       "id": "delta-finance",
@@ -342,7 +353,7 @@
         "delta-pay",
         "delta-player"
       ],
-      "mainJavaCount": 5,
+      "mainJavaCount": 6,
       "controllers": [
         {
           "name": "AdminWithdrawController",
@@ -430,7 +441,8 @@
         }
       ],
       "tests": [
-        "delta-game/delta-identity/src/test/java/com/delta/identity/service/AuthorityServiceSettingsTest.java"
+        "delta-game/delta-identity/src/test/java/com/delta/identity/service/AuthorityServiceSettingsTest.java",
+        "delta-game/delta-identity/src/test/java/com/delta/identity/service/IdentityBillingClientTest.java"
       ]
     },
     {
@@ -579,8 +591,13 @@
         "delta-product",
         "delta-system"
       ],
-      "mainJavaCount": 42,
+      "mainJavaCount": 49,
       "controllers": [
+        {
+          "name": "ComplaintAttachmentController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/ComplaintAttachmentController.java",
+          "endpoints": 2
+        },
         {
           "name": "ComplaintController",
           "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/ComplaintController.java",
@@ -603,6 +620,10 @@
         }
       ],
       "tests": [
+        "delta-game/delta-order/src/test/java/com/delta/order/controller/ComplaintAttachmentControllerTest.java",
+        "delta-game/delta-order/src/test/java/com/delta/order/entity/ComplaintSerializationTest.java",
+        "delta-game/delta-order/src/test/java/com/delta/order/service/ComplaintAttachmentTokenCodecTest.java",
+        "delta-game/delta-order/src/test/java/com/delta/order/service/impl/ComplaintAttachmentServiceImplTest.java",
         "delta-game/delta-order/src/test/java/com/delta/order/service/impl/ComplaintServiceImplTest.java"
       ]
     },
@@ -797,7 +818,7 @@
         "delta-common",
         "delta-system"
       ],
-      "mainJavaCount": 53,
+      "mainJavaCount": 55,
       "controllers": [
         {
           "name": "AdminChatController",
@@ -840,6 +861,11 @@
           "endpoints": 1
         },
         {
+          "name": "RuntimeIdentityController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/RuntimeIdentityController.java",
+          "endpoints": 1
+        },
+        {
           "name": "SensitiveWordController",
           "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/SensitiveWordController.java",
           "endpoints": 4
@@ -855,7 +881,9 @@
           "endpoints": 6
         }
       ],
-      "tests": []
+      "tests": [
+        "delta-game/delta-system/src/test/java/com/delta/system/service/RuntimeBuildIdentityTest.java"
+      ]
     },
     {
       "id": "delta-user",
@@ -1240,9 +1268,7 @@
           "playerLevelDelete",
           "playerLevelList",
           "playerLevelUpdate",
-          "savePlayerLayoutSettings",
-          "uploadFile",
-          "uploadProfileAudio"
+          "savePlayerLayoutSettings"
         ],
         "urls": [
           "/admin/chat/message/list",
@@ -1262,8 +1288,6 @@
           "/common/chat/message/list",
           "/common/chat/message/read",
           "/common/chat/message/send",
-          "/common/file/profile-audio",
-          "/common/file/upload",
           "/cs/chat/message/list",
           "/cs/chat/session/list",
           "/cs/chat/sessions",
@@ -1279,6 +1303,16 @@
           "/cs/withdraw/list",
           "/system/quick-reply/active"
         ]
+      },
+      {
+        "module": "complaint-attachment.js",
+        "exports": [
+          "complaintAttachmentGroups",
+          "fetchCsComplaintAttachment",
+          "legacyComplaintImageCount",
+          "normalizeComplaintAttachmentList"
+        ],
+        "urls": []
       },
       {
         "module": "cs-routing.js",
@@ -1339,6 +1373,17 @@
           "sendEmailNotificationTest"
         ],
         "urls": []
+      },
+      {
+        "module": "file-upload.js",
+        "exports": [
+          "uploadFile",
+          "uploadProfileAudio"
+        ],
+        "urls": [
+          "/common/file/profile-audio",
+          "/common/file/upload"
+        ]
       },
       {
         "module": "governance.js",
@@ -1594,6 +1639,7 @@
     "tests": [
       "delta-admin-ui/test/api-boundary.test.mjs",
       "delta-admin-ui/test/batch-actions-browser.mjs",
+      "delta-admin-ui/test/complaint-attachment.test.mjs",
       "delta-admin-ui/test/content-admin.test.mjs",
       "delta-admin-ui/test/cs-routing-admin.test.mjs",
       "delta-admin-ui/test/dashboard-analytics.test.mjs",
@@ -1602,6 +1648,7 @@
       "delta-admin-ui/test/feature-market-browser.mjs",
       "delta-admin-ui/test/feature-market.test.mjs",
       "delta-admin-ui/test/feedback.test.mjs",
+      "delta-admin-ui/test/file-upload-api.test.mjs",
       "delta-admin-ui/test/h5-route.test.mjs",
       "delta-admin-ui/test/h5-shell.test.mjs",
       "delta-admin-ui/test/image-url.test.mjs",
@@ -1707,6 +1754,7 @@
     ],
     "tests": [
       "delta-mp/test/agreement-content.test.mjs",
+      "delta-mp/test/complaint-private-attachment.test.mjs",
       "delta-mp/test/connection-url.test.mjs",
       "delta-mp/test/contact-purchase-entrypoints.test.mjs",
       "delta-mp/test/cs-workbench.test.mjs",
@@ -1936,8 +1984,8 @@
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 483,
-    "operations": 483,
-    "schemas": 279
+    "endpoints": 487,
+    "operations": 487,
+    "schemas": 282
   }
 }

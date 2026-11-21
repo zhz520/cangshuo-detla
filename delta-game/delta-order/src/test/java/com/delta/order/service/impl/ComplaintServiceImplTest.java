@@ -6,6 +6,7 @@ import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.order.entity.Complaint;
 import com.delta.order.entity.Order;
 import com.delta.order.mapper.ComplaintMapper;
+import com.delta.order.service.ComplaintAttachmentService;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,12 +39,14 @@ class ComplaintServiceImplTest {
     @Mock CrossModuleMapper crossModuleMapper;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock ComplaintMapper complaintMapper;
+    @Mock ComplaintAttachmentService attachmentService;
 
     private ComplaintServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new ComplaintServiceImpl(orderService, jdbc, orderProgressService, crossModuleMapper, eventPublisher);
+        service = new ComplaintServiceImpl(orderService, jdbc, orderProgressService, crossModuleMapper,
+                eventPublisher, attachmentService);
         ReflectionTestUtils.setField(service, "baseMapper", complaintMapper);
     }
 
@@ -88,13 +91,14 @@ class ComplaintServiceImplTest {
     void appealComplaintUpdatesTheStatusAndPublishesBothNotifications() {
         Complaint complaint = complaint(10L);
         complaint.setId(5L);
+        complaint.setUserId(7L);
         complaint.setPlayerId(3L);
         complaint.setStatus("RESOLVED");
         Complaint appeal = new Complaint();
         appeal.setAppealReason("  申请重新核对  ");
         when(complaintMapper.updateById(complaint)).thenReturn(1);
 
-        service.appealComplaint(complaint, appeal);
+        service.appealComplaint(complaint, appeal, 7L, "USER");
 
         assertThat(complaint.getStatus()).isEqualTo("APPEALING");
         assertThat(complaint.getAppealReason()).isEqualTo("申请重新核对");

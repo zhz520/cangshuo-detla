@@ -7,12 +7,12 @@ import com.delta.common.domain.PageQuery;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.mapper.CrossModuleMapper;
-import com.delta.common.utils.ImageListUtils;
 import com.delta.order.dto.ComplaintDetailVO;
 import com.delta.order.entity.Complaint;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderProgress;
 import com.delta.order.mapper.ComplaintMapper;
+import com.delta.order.service.ComplaintAttachmentService;
 import com.delta.order.service.ComplaintService;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
@@ -34,6 +34,7 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
     private final OrderProgressService orderProgressService;
     private final CrossModuleMapper crossModuleMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final ComplaintAttachmentService attachmentService;
 
     @Override
     public boolean canAccessOrder(Long orderId, Long actorId, String actorType) {
@@ -74,6 +75,8 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
         ComplaintDetailVO vo = new ComplaintDetailVO();
         vo.setComplaint(complaint);
         vo.setOrder(order);
+        vo.setAttachments(attachmentService.views(complaint.getImages(), complaint.getOrderId()));
+        vo.setAppealAttachments(attachmentService.views(complaint.getAppealImages(), complaint.getOrderId()));
 
         if (order != null) {
             vo.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
@@ -120,7 +123,8 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
 
         complaint.setUserId(order.getUserId());
         complaint.setPlayerId(order.getPlayerId());
-        complaint.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));
+        complaint.setImages(attachmentService.bindToComplaint(order.getId(), actorId, actorType,
+                complaint.getAttachmentIds(), complaint.getImages()));
         complaint.setStatus("PENDING");
         save(complaint);
 
@@ -131,16 +135,20 @@ public class ComplaintServiceImpl extends ServiceImpl<ComplaintMapper, Complaint
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void appealComplaint(Complaint complaint, Complaint appeal) {
+    public void appealComplaint(Complaint complaint, Complaint appeal, Long actorId, String actorType) {
         if (!"RESOLVED".equals(complaint.getStatus())) {
             throw new BusinessException("当前状态不允许申诉");
+        }
+        if (!canAccessUser(actorId, actorType, complaint.getUserId())) {
+            throw new BusinessException(404, "投诉不存在");
         }
         String reason = appeal.getAppealReason() == null ? "" : appeal.getAppealReason().trim();
         if (reason.isEmpty() || reason.length() > 2000) {
             throw new BusinessException(400, "申诉原因须为1至2000字");
         }
         complaint.setAppealReason(reason);
-        complaint.setAppealImages(ImageListUtils.normalizeLocal(appeal.getAppealImages(), 9));
+        complaint.setAppealImages(attachmentService.bindToComplaint(complaint.getOrderId(), actorId, actorType,
+                appeal.getAttachmentIds(), appeal.getAppealImages()));
         complaint.setStatus("APPEALING");
         updateById(complaint);
         eventPublisher.publishEvent(new BusinessEvent(this, "COMPLAINT_APPEALED", "USER",

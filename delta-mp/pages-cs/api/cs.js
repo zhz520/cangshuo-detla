@@ -1,4 +1,4 @@
-import { get, post, put, del } from '@/api/request'
+import { downloadPrivateFile, get, post, put, del, releasePrivateFileUrl } from '@/api/request'
 
 const CS = { role: 'cs' }
 const quiet = { role: 'cs', loading: false, silent: true }
@@ -68,6 +68,14 @@ export const csChatMarkRead = (sessionId) => post(`/common/chat/message/read?ses
 
 // ========== 详情接口 ==========
 export const getCsComplaintDetail = (id) => get(`/cs/complaint/${id}`, {}, CS)
+export const getCsComplaintAttachment = (id, token) => {
+  const attachmentToken = String(token || '').trim()
+  if (!/^\d+$/.test(String(id || '')) || !attachmentToken || attachmentToken === '.' || attachmentToken === '..') {
+    return Promise.reject(new Error('附件不可用'))
+  }
+  return downloadPrivateFile(`/cs/complaint/${encodeURIComponent(id)}/attachment/${encodeURIComponent(attachmentToken)}`, CS)
+}
+export { releasePrivateFileUrl as releaseCsComplaintAttachmentUrl }
 export const getCsPlayerDetail = (id) => get(`/cs/player/${id}`, {}, CS)
 export const getCsWithdrawDetail = (id) => get(`/cs/withdraw/${id}`, {}, CS)
 export const getCsProductDetail = (id) => get(`/cs/product/${id}`, {}, CS)

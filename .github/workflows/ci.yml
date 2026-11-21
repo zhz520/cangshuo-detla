@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Protect Actions storage
         run: python deploy/qa/check_ci_storage.py
       - name: Validate collaboration rules
@@ -42,6 +43,11 @@ jobs:
         run: |
           python scripts/ai_context.py validate --strict
           python scripts/ai_context.py selftest
+      - name: Check change scope has AI routes
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python scripts/ai_context.py brief --strict --base "$PR_BASE_SHA"
       - name: Validate backend module boundaries
         run: python scripts/check_module_boundaries.py
       - name: Validate oversized class baseline
@@ -100,23 +106,25 @@ jobs:
         env:
           TEMP: ${{ runner.temp }}
         run: python -m unittest discover -s deploy/migration -p 'test_*.py'
-      - name: Install admin dependencies
-        working-directory: delta-admin-ui
-        run: npm ci
-      - name: Build admin
-        working-directory: delta-admin-ui
+      - name: Test and build frontends in parallel
+        shell: bash
         run: |
-          npm test
-          npm run build
-      - name: Install H5 dependencies
-        working-directory: delta-mp
-        run: npm ci
-      - name: Build H5
-        working-directory: delta-mp
-        run: |
-          npm test
-          npm run build:h5
-          npm run build:mp-weixin
+          admin_log="$RUNNER_TEMP/delta-admin-ci.log"
+          h5_log="$RUNNER_TEMP/delta-h5-ci.log"
+          (cd delta-admin-ui && npm ci && npm test && npm run build) > "$admin_log" 2>&1 &
+          admin_pid=$!
+          (cd delta-mp && npm ci && npm test && npm run build:h5 && npm run build:mp-weixin) > "$h5_log" 2>&1 &
+          h5_pid=$!
+          admin_status=0; wait "$admin_pid" || admin_status=$?
+          h5_status=0; wait "$h5_pid" || h5_status=$?
+          echo '::group::Admin build and tests'
+          cat "$admin_log"
+          echo '::endgroup::'
+          echo '::group::H5 and WeChat mini program build and tests'
+          cat "$h5_log"
+          echo '::endgroup::'
+          echo "Admin exit: $admin_status; H5/mini program exit: $h5_status"
+          (( admin_status == 0 && h5_status == 0 ))
       - name: Validate static asset references
         run: |
           python -m unittest discover -s deploy/qa -p 'test_*.py'

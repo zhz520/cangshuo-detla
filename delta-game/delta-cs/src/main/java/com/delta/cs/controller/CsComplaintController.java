@@ -9,7 +9,6 @@ import com.delta.common.event.BusinessEvent;
 import com.delta.common.event.OrderConfirmedEvent;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.common.customer.CsRoutingService;
-import com.delta.common.utils.ImageListUtils;
 import com.delta.order.entity.Complaint;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderProgress;
@@ -23,7 +22,6 @@ import com.delta.player.service.PlayerService;
 import com.delta.player.entity.PlayerWallet;
 import com.delta.player.service.PlayerWalletService;
 import com.delta.pay.service.TransactionService;
-import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.order.dto.ComplaintDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,8 +45,8 @@ public class CsComplaintController {
     private final PlayerWalletService playerWalletService;
     private final TransactionService transactionService;
     private final ApplicationEventPublisher eventPublisher;
-    private final CrossModuleMapper crossModuleMapper;
     private final CsRoutingService csRouting;
+    private final com.delta.order.service.ComplaintAttachmentService complaintAttachments;
 
     /**
      * 客服代用户创建投诉工单
@@ -80,7 +78,8 @@ public class CsComplaintController {
         // 4. 创建投诉，只复制允许由客服填写的字段
         Complaint created=new Complaint();created.setOrderId(order.getId());created.setUserId(order.getUserId());
         created.setPlayerId(order.getPlayerId());created.setType(complaint.getType());created.setContent(content);
-        created.setImages(ImageListUtils.normalizeLocal(complaint.getImages(), 9));created.setExpectedResult(complaint.getExpectedResult());
+        created.setImages(complaintAttachments.bindToStaffCreatedComplaint(order.getId(),
+                complaint.getAttachmentIds(), complaint.getImages()));created.setExpectedResult(complaint.getExpectedResult());
         created.setStatus("PENDING");created.setCreatedAt(LocalDateTime.now());
         complaintService.save(created);
         // 5. 更新订单状态为 DISPUTED（如果订单状态允许）
@@ -103,31 +102,7 @@ public class CsComplaintController {
             complaintService.updateById(c);
         }
 
-        Order order = orderService.getById(c.getOrderId());
-
-        ComplaintDetailVO vo = new ComplaintDetailVO();
-        vo.setComplaint(c);
-        vo.setOrder(order);
-
-        if (order != null) {
-            // 用户信息
-            vo.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
-            vo.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
-            // 打手信息
-            if (order.getPlayerId() != null) {
-                vo.setPlayerNickname(crossModuleMapper.selectPlayerNickname(order.getPlayerId()));
-                vo.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(order.getPlayerId()));
-            }
-            // 订单进度
-            java.util.List<OrderProgress> progress = orderProgressService.list(
-                    new LambdaQueryWrapper<OrderProgress>()
-                            .eq(OrderProgress::getOrderId, order.getId())
-                            .orderByAsc(OrderProgress::getCreatedAt)
-            );
-            vo.setProgress(progress);
-        }
-
-        return R.ok(vo);
+        return R.ok(complaintService.getDetail(c));
     }
 
     /**

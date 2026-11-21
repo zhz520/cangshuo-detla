@@ -22,5 +22,5 @@ public interface ComplaintService extends IService<Complaint> {
 
     void createComplaint(Complaint complaint, Long actorId, String actorType);
 
-    void appealComplaint(Complaint complaint, Complaint appeal);
+    void appealComplaint(Complaint complaint, Complaint appeal, Long actorId, String actorType);
 }

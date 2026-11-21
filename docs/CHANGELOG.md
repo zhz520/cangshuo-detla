@@ -2,6 +2,21 @@
 
 本文件只保留对当前决策有用的版本摘要和最近一次发布的完整证据。逐版本原始记录已归档到 D 盘，见 [README.md](README.md) 的归档说明。
 
+## 2026-11-21 · 1.18.5（候选，未发布）
+
+### 变更
+
+- 投诉证据图片改为鉴权私有附件接口，旧公开图片 URL 不再回传给客户端；公开 `/file/**` 明确拒绝 `.private/**`。
+- 新增后端 `GET /api/system/config/runtime-identity` 非秘密构建标识；后台/H5 制品版本文件增加 `buildId`，用于区分客户配置差异与代码差异。
+- 修复系统配置测试构造、附件跨用户/订单/租户读取边界和文件访问回归。
+
+### 验证
+
+- 后端全量 `mvn test`：443 项通过（最近一次 reactor 汇总），包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
+- 管理端与 H5 附件定向测试及完整测试此前已通过；管理端标准生产构建的 esbuild 清理权限问题仍需在 Linux/CI 复核。
+- deploy/qa 25 项、updater 61 项、migration 29 项通过；Endpoint 487、OpenAPI 487 operations、282 schemas。
+- 未部署、未生成正式三端制品、未做 520/共享组验收。
+
 ## 2026-11-21 · 1.18.4
 
 ### 变更

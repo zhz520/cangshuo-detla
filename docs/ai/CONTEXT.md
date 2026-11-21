@@ -131,10 +131,10 @@
 ```powershell
 cd D:\codeStudy\code\cangshuo-detla
 git status --short --branch
-python scripts/ai_context.py brief --task "<当前任务>"
+python scripts/ai_context.py brief --strict --task "<当前任务>"
 ```
 
-然后只读命中的模块、测试和文档。若 `brief` 报未映射路径或未知领域，先补 `routing.json`，不要凭空猜。
+然后只读命中的模块、测试和文档。`--strict` 对未命中或未映射路径返回非零；PR 按实际变更范围检查。路由可显式绑定已有回归测试，不能用推荐列表代替通过证据。若报未映射路径或未知领域，先补 `routing.json`，不要凭空猜。
 
 ## 10. 完成与停止条件
 

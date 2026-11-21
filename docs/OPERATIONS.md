@@ -81,6 +81,25 @@ gh release create vX.Y.Z <assets...> --verify-tag --title "Delta X.Y.Z" --notes-
 
 `gh` 使用本机 Git Credential Manager 中已有凭据或受控 `GH_TOKEN`。禁止把 Token 写入脚本、仓库、日志或对话。
 
+### 520 验证与制品晋级
+
+1. 从同一个干净提交构建一次三端并保留三个 ZIP、manifest。520 使用这批 ZIP，同时记录实际装入的制品清单；禁止拿热修容器或重新构建的 ZIP 代替正式候选。
+2. 用等价的管理员、客服、打手等测试角色在 520 验证受影响的功能，记录该测试对应的提交和三份制品摘要。共享组仍使用签名计划；生成计划前，核对正式资产的可信 digest 与 520 实装清单。
+3. 用 `python deploy/qa/release_parity.py promotion <520实装清单> <正式制品清单>` 检查版本、提交、三组件大小和 SHA-256。清单应来自可信部署记录及经摘要核验的正式资产；输出仅比较清单，不证明清单来源或正在运行的镜像真实。
+4. 上线后每租户逐角色检查授权、开关、界面可见及后端实际权限。`python deploy/qa/release_parity.py features <该租户预期> <同角色实测>` 输入只包含 `role` 和 `features`；每项按 `{"entitled":true,"enabled":true,"visible":true,"allowed":true}` 记录。未测填 `null`，不能按通过；授权差异按该客户套餐判断，不以 520 的套餐覆盖生产客户。禁止传入完整 API 响应、Token 或生产业务数据。
+5. 代码同一性单独核对，不把个性化开关或套餐差异算作代码差异。
+
+```powershell
+python deploy/qa/runtime_identity.py probe `
+  --site '742=https://chuanapi742.idcgov.cn,https://chuan742.idcgov.cn' `
+  --site '747=https://youciapi747.idcgov.cn,https://youci747.idcgov.cn' `
+  --site 'jax=https://jaxapi738.idcgov.cn,https://jax738.idcgov.cn' `
+  --output D:\CodexData\outputs\runtime-identity.json
+python deploy/qa/runtime_identity.py compare D:\CodexData\outputs\runtime-identity\742.json D:\CodexData\outputs\runtime-identity\747.json D:\CodexData\outputs\runtime-identity\jax.json
+```
+
+`backend_build_id` 是新版本后端对自身 JAR 计算的 SHA-256。`cangshuo-admin.zip` / `cangshuo-h5.zip` 内的 `cangshuo-version.json` 还会写入 `buildId`，由打包器对除该文件外的完整前端构建树做稳定 SHA-256；它覆盖入口 JS 之外的异步 chunk 和样式。旧版本没有这些字段时显示未知，不能用“版本号相同”替代。`sameKnownCode=true, complete=false` 表示已知制品一致、仍有构建标识未证实；出现 `differences` 才是已证实代码不一致。对比结果只读取公开版本、入口文件和构建标识，不包含客户配置或业务数据。
+
 ## 4. 授权中心登记
 
 1. 授权中心从 GitHub Release 同步正式版本，忽略草稿和预览版。
@@ -104,6 +123,8 @@ gh release create vX.Y.Z <assets...> --verify-tag --title "Delta X.Y.Z" --notes-
 7. 五个共享容器健康后，检查六个域名、版本文件、API 和静态资源 MIME。
 8. 三库表数、财务 12 项、三实例上报版本和最近错误日志。
 9. 记录计划 ID、发布目录、备份目录、审计结果和未验证项。
+
+发版耗时分开记录构建、上传、下载解包、备份、切换与健康检查，区别总耗时和业务不可用时间。先准备并校验证物，再拍逐租户备份并切换；制品准备失败不得改变运行版本。不要为提速跳过备份、签名、三组件检查或回退。
 
 禁止：
 

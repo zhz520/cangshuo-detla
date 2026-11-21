@@ -11,7 +11,7 @@
 
 ```powershell
 git status --short --branch
-python scripts/ai_context.py brief --task "<当前任务>"
+python scripts/ai_context.py brief --strict --task "<当前任务>"
 ```
 
 3. 按 `brief` 命中的风险、文档、测试和命令读取目标代码；不要从历史发布记录猜当前版本。

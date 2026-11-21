@@ -1,3 +1,5 @@
+import hashlib
+import io
 import json
 import os
 import tempfile
@@ -5,6 +7,8 @@ import unittest
 import uuid
 import zipfile
 import base64
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier, Event
 from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -167,6 +171,33 @@ class SharedWorkerTests(unittest.TestCase):
             "signature": base64.urlsafe_b64encode(signature).decode().rstrip("="),
         }
 
+    def artifact_plan(self):
+        archives = {}
+        plan = self.make_plan()
+        for package in plan["packages"]:
+            component = package["component"]
+            payload = io.BytesIO()
+            with zipfile.ZipFile(payload, "w") as archive:
+                if component == "backend":
+                    jar = io.BytesIO()
+                    with zipfile.ZipFile(jar, "w") as inner:
+                        inner.writestr("BOOT-INF/classes/platform/catalog.json", json.dumps({
+                            "version": package["version"], "schemaVersion": 1,
+                        }))
+                    archive.writestr("delta-admin.jar", jar.getvalue())
+                else:
+                    archive.writestr("index.html", "<html></html>")
+                    archive.writestr("cangshuo-version.json", json.dumps({
+                        "version": package["version"], "component": component,
+                    }))
+            data = payload.getvalue()
+            archives[package["url"]] = data
+            package.update(size=len(data), sha256=hashlib.sha256(data).hexdigest())
+        return plan, archives
+
+    def read_audit(self):
+        return json.loads((self.state / "audit.jsonl").read_text(encoding="utf-8"))
+
     def test_private_inbox_executes_a_signed_plan_and_moves_it_to_processed(self):
         inbox = self.state / "inbox"
         inbox.mkdir()
@@ -201,14 +232,29 @@ class SharedWorkerTests(unittest.TestCase):
 
     def test_successful_execution_updates_each_platform_tenant_component_version(self):
         platform = self.root / "platform" / "tenants"
-        tenant_dir = platform / "tenant-a"
-        tenant_dir.mkdir(parents=True)
-        version_file = tenant_dir / "component-versions.json"
-        version_file.write_text('{"backend":"1.11.2","admin":"1.11.2","h5":"1.11.2","release":"1.11.2"}', encoding="utf-8")
+        tenants = ("tenant-a", "tenant-b", "tenant-c")
+        registry = json.loads(self.registry.read_text(encoding="utf-8"))
+        for tenant in tenants:
+            database = tenant.replace("-", "_")
+            registry["tenants"][tenant] = dict(registry["tenants"]["tenant-a"],
+                hosts=[tenant + ".example.test"], jdbcUrl="jdbc:mysql://mysql:3306/" + database,
+                username=database, platformCustomerId="customer-" + tenant)
+            tenant_dir = platform / tenant
+            tenant_dir.mkdir(parents=True)
+            (tenant_dir / "component-versions.json").write_text('{"release":"1.11.2"}', encoding="utf-8")
+            (tenant_dir / "local-settings.json").write_text(json.dumps({"tenant": tenant}), encoding="utf-8")
+        self.registry.write_text(json.dumps(registry), encoding="utf-8")
         config = dict(self.config, platform_tenants_dir=str(platform))
-        shared_worker.SharedExecutor(config, self.plan, FakeOperations(), self.now).execute()
-        values = json.loads(version_file.read_text(encoding="utf-8"))
-        self.assertEqual(values, {"backend": "1.11.3", "admin": "1.11.3", "h5": "1.11.3", "release": "1.11.3"})
+        plan = self.make_plan(tenants=list(tenants))
+        operations = FakeOperations()
+        shared_worker.SharedExecutor(config, plan, operations, self.now).execute()
+        self.assertIn(("backup", tenants), operations.calls)
+        for tenant in tenants:
+            tenant_dir = platform / tenant
+            values = json.loads((tenant_dir / "component-versions.json").read_text(encoding="utf-8"))
+            self.assertEqual(values, {"backend": "1.11.3", "admin": "1.11.3", "h5": "1.11.3", "release": "1.11.3"})
+            self.assertEqual(json.loads((tenant_dir / "local-settings.json").read_text(encoding="utf-8")),
+                             {"tenant": tenant})
 
     def test_private_github_asset_is_resolved_through_the_release_api(self):
         package = {
@@ -219,7 +265,7 @@ class SharedWorkerTests(unittest.TestCase):
             "url": "https://github.com/owner/cangshuo-detla/releases/download/v1.11.3/cangshuo-backend.zip",
         }
         response = mock_response({"assets": [{"id": 17, "name": "cangshuo-backend.zip", "size": 100}]})
-        with patch("shared_worker.urllib.request.urlopen", return_value=response):
+        with patch("shared_worker.urllib.request.OpenerDirector.open", return_value=response):
             url = shared_worker.github_asset_api_url(package, "owner/cangshuo-detla", "private-token")
         self.assertEqual(url, "https://api.github.com/repos/owner/cangshuo-detla/releases/assets/17")
 
@@ -230,22 +276,23 @@ class SharedWorkerTests(unittest.TestCase):
             "url": "https://github.com/owner/cangshuo-detla/releases/download/v1.11.3/cangshuo-admin.zip",
         }
         response = mock_response({"assets": [{"id": 18, "name": "cangshuo-admin.zip", "size": 99}]})
-        with patch("shared_worker.urllib.request.urlopen", return_value=response):
+        with patch("shared_worker.urllib.request.OpenerDirector.open", return_value=response):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 shared_worker.github_asset_api_url(package, "owner/cangshuo-detla", "private-token")
 
-    def test_successful_execution_backs_up_stages_and_checks_in_order(self):
+    def test_injected_adapter_verifies_every_component_then_backs_up_and_switches_serially(self):
         operations = FakeOperations()
         shared_worker.SharedExecutor(self.config, self.plan, operations, self.now).execute()
 
-        backup = next(call for call in operations.calls if call[0] == "backup")
-        self.assertEqual(backup[1], ("tenant-a",))
-        self.assertIn(("download", "backend"), operations.calls)
-        self.assertIn(("extract", "admin"), operations.calls)
-        compose = [call[1] for call in operations.calls if call[0] == "compose"]
-        self.assertEqual(compose, [("backend",), ("admin",), ("h5",)])
-        health = [call[1] for call in operations.calls if call[0] == "health"]
-        self.assertEqual(health, ["backend", "admin", "h5"])
+        self.assertEqual([call[:2] for call in operations.calls], [
+            ("download", "backend"), ("extract", "backend"),
+            ("download", "admin"), ("extract", "admin"),
+            ("download", "h5"), ("extract", "h5"),
+            ("backup", ("tenant-a",)),
+            ("compose", ("backend",)), ("health", "backend"),
+            ("compose", ("admin",)), ("health", "admin"),
+            ("compose", ("h5",)), ("health", "h5"),
+        ])
         current = json.loads((self.state / "current.json").read_text(encoding="utf-8"))
         self.assertEqual(current["release"], "1.11.3")
         self.assertTrue((self.state / "installed-plans" / self.plan["id"]).exists())
@@ -255,8 +302,256 @@ class SharedWorkerTests(unittest.TestCase):
         override = json.loads((self.root / "compose.shared-release.json").read_text(encoding="utf-8"))
         self.assertEqual(override["services"]["backend"]["volumes"][0].rsplit(":", 2)[0],
                          str(self.root / "releases" / self.plan["id"] / "backend" / "delta-admin.jar"))
-        audit = (self.state / "audit.jsonl").read_text(encoding="utf-8")
-        self.assertIn('"result": "SUCCEEDED"', audit)
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "SUCCEEDED")
+        timings = audit["timingsMs"]
+        for phase in ("prepareArtifacts", "backup", "stageRelease", "switchAndHealth", "finalizeRelease", "total"):
+            self.assertIsInstance(timings[phase], int)
+            self.assertGreaterEqual(timings[phase], 0)
+        self.assertEqual(set(timings["services"]), set(shared_release.COMPONENTS))
+        for service in timings["services"].values():
+            self.assertEqual(set(service), {"composeUp", "health"})
+
+    def test_default_adapter_prepares_all_three_archives_in_parallel(self):
+        plan, archives = self.artifact_plan()
+        executor = shared_worker.SharedExecutor(self.config, plan, now=self.now)
+        staging = self.state / "releases-staging" / plan["id"]
+        operations = FakeOperations()
+        downloading = Barrier(3, timeout=5)
+        extracting = Barrier(3, timeout=5)
+        extract = executor.ops.extract
+
+        def open_artifact(request, **_):
+            response = io.BytesIO(archives[request.full_url])
+            response.url = request.full_url
+            downloading.wait()
+            return response
+
+        def extract_artifact(archive, destination, package):
+            extracting.wait()
+            extract(archive, destination, package)
+
+        def backup(destination, plan, databases):
+            self.assertTrue((staging / "backend" / "delta-admin.jar").is_file())
+            for component in ("admin", "h5"):
+                version = json.loads((staging / component / "cangshuo-version.json").read_text(encoding="utf-8"))
+                self.assertEqual(version, {"component": component, "version": plan["targetVersion"]})
+            operations.backup(destination, plan, databases)
+
+        with (patch("shared_worker.urllib.request.OpenerDirector.open", side_effect=open_artifact),
+              patch.object(executor.ops, "extract", side_effect=extract_artifact),
+              patch.object(executor.ops, "backup", side_effect=backup),
+              patch.object(executor.ops, "compose_up", side_effect=operations.compose_up),
+              patch.object(executor.ops, "health", side_effect=operations.health)):
+            executor.execute()
+
+        self.assertEqual([call[:2] for call in operations.calls], [
+            ("backup", ("tenant-a",)),
+            ("compose", ("backend",)), ("health", "backend"),
+            ("compose", ("admin",)), ("health", "admin"),
+            ("compose", ("h5",)), ("health", "h5"),
+        ])
+        self.assertFalse(staging.exists())
+        timings = self.read_audit()["timingsMs"]
+        self.assertEqual(set(timings["artifacts"]), set(shared_release.COMPONENTS))
+        for component in timings["artifacts"].values():
+            self.assertEqual(set(component), {"downloadAndVerify", "extractAndVerify"})
+            self.assertTrue(all(isinstance(value, int) and value >= 0 for value in component.values()))
+
+    def test_default_adapter_checksum_failure_waits_for_peers_before_cleanup(self):
+        plan, archives = self.artifact_plan()
+        backend, _, h5 = plan["packages"]
+        backend["sha256"] = "0" * 64
+        executor = shared_worker.SharedExecutor(self.config, plan, now=self.now)
+        staging = self.state / "releases-staging" / plan["id"]
+        h5_started, finish_h5, pool_joining = Event(), Event(), Event()
+        cleanup_observations = []
+        remove_tree = shared_worker.shutil.rmtree
+
+        class ObservedPool(ThreadPoolExecutor):
+            def shutdown(self, *args, **kwargs):
+                pool_joining.set()
+                super().shutdown(*args, **kwargs)
+
+        def open_artifact(request, **_):
+            if request.full_url == h5["url"]:
+                h5_started.set()
+                if not finish_h5.wait(10):
+                    raise RuntimeError("test did not release H5 download")
+            response = io.BytesIO(archives[request.full_url])
+            response.url = request.full_url
+            return response
+
+        def observe_cleanup(path, *args, **kwargs):
+            if path == staging:
+                cleanup_observations.append((staging / "h5" / "cangshuo-version.json").is_file())
+            return remove_tree(path, *args, **kwargs)
+
+        with (patch("shared_worker.ThreadPoolExecutor", ObservedPool),
+              patch("shared_worker.urllib.request.OpenerDirector.open", side_effect=open_artifact),
+              patch("shared_worker.shutil.rmtree", side_effect=observe_cleanup),
+              patch.object(executor.ops, "backup") as backup,
+              patch.object(executor.ops, "compose_up") as compose,
+              ThreadPoolExecutor(max_workers=1) as caller):
+            future = caller.submit(executor.execute)
+            try:
+                self.assertTrue(h5_started.wait(5))
+                self.assertTrue(pool_joining.wait(5))
+                self.assertTrue(staging.is_dir())
+                self.assertTrue(executor.lock_path.is_file())
+                self.assertFalse(future.done())
+                backup.assert_not_called()
+                compose.assert_not_called()
+            finally:
+                finish_h5.set()
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                future.result(timeout=5)
+            backup.assert_not_called()
+            compose.assert_not_called()
+
+        self.assertEqual(cleanup_observations, [True])
+        self.assertFalse(staging.exists())
+        self.assertFalse(executor.lock_path.exists())
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse(executor.override.exists())
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "FAILED")
+        timings = audit["timingsMs"]
+        self.assertNotIn("backup", timings)
+        self.assertNotIn("switchAndHealth", timings)
+        self.assertEqual(set(timings["artifacts"]["backend"]), {"downloadAndVerify"})
+        for component in ("admin", "h5"):
+            self.assertIn("extractAndVerify", timings["artifacts"][component])
+        self.assertNotIn("github.com", json.dumps(audit))
+
+    def test_artifact_download_does_not_write_more_than_signed_size(self):
+        plan, archives = self.artifact_plan()
+        package = plan["packages"][0]
+        response = io.BytesIO(archives[package["url"]] + b"extra")
+        response.url = package["url"]
+        target = self.root / "artifact.zip"
+        with patch("shared_worker.urllib.request.OpenerDirector.open", return_value=response):
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                shared_worker.DockerOperations(self.config).download(package, target)
+        self.assertLessEqual(target.stat().st_size, package["size"])
+
+    def test_extraction_failure_never_reaches_backup_or_switch(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.config, self.plan, operations, self.now)
+        extract = operations.extract
+
+        def reject_last_archive(archive, destination, package):
+            extract(archive, destination, package)
+            if package["component"] == "h5":
+                raise ValueError("frontend version does not match release: sensitive-test-value")
+
+        with patch.object(operations, "extract", side_effect=reject_last_archive):
+            with self.assertRaisesRegex(ValueError, "frontend version"):
+                executor.execute()
+
+        self.assertNotIn("backup", [call[0] for call in operations.calls])
+        self.assertNotIn("compose", [call[0] for call in operations.calls])
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse((self.state / "releases-staging" / self.plan["id"]).exists())
+        self.assertNotIn("sensitive-test-value", json.dumps(self.read_audit()))
+
+    def test_backup_failure_never_switches_or_writes_a_journal(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.config, self.plan, operations, self.now)
+        with patch.object(operations, "backup", side_effect=RuntimeError("backup failed")) as backup:
+            with self.assertRaisesRegex(RuntimeError, "backup failed"):
+                executor.execute()
+
+        backup.assert_called_once()
+        self.assertEqual(operations.calls[-1], ("extract", "h5"))
+        self.assertNotIn("compose", [call[0] for call in operations.calls])
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse(executor.override.exists())
+        self.assertFalse((self.state / "releases-staging" / self.plan["id"]).exists())
+        self.assertNotIn("switchAndHealth", self.read_audit()["timingsMs"])
+
+    def test_window_closed_after_preparation_does_not_backup(self):
+        operations = FakeOperations()
+        plan = self.make_plan(expiresAt=(self.now + timedelta(hours=2)).isoformat())
+        executor = shared_worker.SharedExecutor(self.config, plan, operations, self.now)
+        closed = self.now + timedelta(hours=1)
+        with patch.object(executor, "execution_time", side_effect=[self.now, closed]):
+            with self.assertRaisesRegex(ValueError, "maintenance window"):
+                executor.execute()
+        self.assertEqual(operations.calls[-1], ("extract", "h5"))
+        self.assertNotIn("backup", [call[0] for call in operations.calls])
+        self.assertNotIn("compose", [call[0] for call in operations.calls])
+
+    def test_window_closed_after_backup_does_not_switch(self):
+        operations = FakeOperations()
+        plan = self.make_plan(expiresAt=(self.now + timedelta(hours=2)).isoformat())
+        executor = shared_worker.SharedExecutor(self.config, plan, operations, self.now)
+        closed = self.now + timedelta(hours=1)
+        with patch.object(executor, "execution_time", side_effect=[self.now, self.now, closed]):
+            with self.assertRaisesRegex(ValueError, "maintenance window"):
+                executor.execute()
+        self.assertEqual(operations.calls[-1], ("backup", ("tenant-a",)))
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse(executor.override.exists())
+        self.assertFalse((self.root / "releases" / plan["id"]).exists())
+
+    def test_plan_expiring_at_backup_gate_does_not_backup(self):
+        deadline = self.now + timedelta(minutes=1)
+        plan = self.make_plan(expiresAt=deadline.isoformat())
+        operations = FakeOperations()
+        with patch.object(shared_worker, "datetime", wraps=datetime) as clock:
+            clock.now.side_effect = [self.now, self.now, deadline, deadline]
+            executor = shared_worker.SharedExecutor(self.config, plan, operations)
+            with self.assertRaisesRegex(ValueError, "release plan is expired"):
+                executor.execute()
+        self.assertEqual(operations.calls[-1], ("extract", "h5"))
+        self.assertFalse((self.state / "backups" / plan["id"]).exists())
+        self.assertFalse((self.state / "releases-staging" / plan["id"]).exists())
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse(executor.override.exists())
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "FAILED")
+        self.assertNotIn("backup", audit["timingsMs"])
+        self.assertNotIn("detail", audit)
+
+    def test_plan_expiring_at_switch_gate_keeps_backup_without_switching(self):
+        deadline = self.now + timedelta(minutes=1)
+        plan = self.make_plan(expiresAt=deadline.isoformat())
+        operations = FakeOperations()
+        with patch.object(shared_worker, "datetime", wraps=datetime) as clock:
+            clock.now.side_effect = [self.now, self.now, self.now, deadline]
+            executor = shared_worker.SharedExecutor(self.config, plan, operations)
+            with self.assertRaisesRegex(ValueError, "release plan is expired"):
+                executor.execute()
+        self.assertEqual(operations.calls[-1], ("backup", ("tenant-a",)))
+        self.assertTrue((self.state / "backups" / plan["id"] / "customer-files.tar.gz").is_file())
+        self.assertFalse((self.root / "releases" / plan["id"]).exists())
+        self.assertFalse(executor.journal.exists())
+        self.assertFalse(executor.override.exists())
+        self.assertFalse(executor.current.exists())
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "FAILED")
+        self.assertIn("backup", audit["timingsMs"])
+        self.assertNotIn("switchAndHealth", audit["timingsMs"])
+        self.assertNotIn("detail", audit)
+
+    def test_deadlines_passing_after_switch_starts_do_not_interrupt_success(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.config, self.plan, operations, self.now)
+        clock = self.now
+        health = operations.health
+
+        def finish_health(service, expected_version, health_host):
+            nonlocal clock
+            health(service, expected_version, health_host)
+            clock = self.now + timedelta(hours=1)
+
+        with (patch.object(executor, "execution_time", side_effect=lambda: clock),
+              patch.object(operations, "health", side_effect=finish_health)):
+            executor.execute()
+        self.assertEqual([call[1] for call in operations.calls if call[0] == "health"],
+                         ["backend", "admin", "h5"])
+        self.assertEqual(self.read_audit()["result"], "SUCCEEDED")
 
     def test_health_failure_restores_previous_override_and_current(self):
         previous_override = self.root / "compose.shared-release.json"
@@ -266,8 +561,19 @@ class SharedWorkerTests(unittest.TestCase):
         previous_link = str(self.root / "releases" / "previous")
         os.symlink(previous_link, str(self.root / "current"), target_is_directory=True)
         operations = FakeOperations(fail_health_once="admin")
-        with self.assertRaises(RuntimeError):
-            shared_worker.SharedExecutor(self.config, self.plan, operations, self.now).execute()
+        executor = shared_worker.SharedExecutor(self.config, self.plan, operations, self.now)
+        clock = self.now
+        health = operations.health
+
+        def finish_health(service, expected_version, health_host):
+            nonlocal clock
+            clock = self.now + timedelta(hours=1)
+            health(service, expected_version, health_host)
+
+        with (patch.object(executor, "execution_time", side_effect=lambda: clock),
+              patch.object(operations, "health", side_effect=finish_health)):
+            with self.assertRaisesRegex(RuntimeError, "health failed"):
+                executor.execute()
 
         self.assertEqual(previous_override.read_text(encoding="utf-8"),
                          '{"services":{"backend":{"volumes":["/old:/app/app.jar:ro"]}}}')
@@ -277,8 +583,24 @@ class SharedWorkerTests(unittest.TestCase):
         self.assertFalse((self.state / "journal.json").exists())
         self.assertFalse((self.state / "execute.lock").exists())
         self.assertEqual(self.read_link(self.root / "current"), previous_link)
-        audit = (self.state / "audit.jsonl").read_text(encoding="utf-8")
-        self.assertIn('"result": "ROLLED_BACK"', audit)
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "ROLLED_BACK")
+        self.assertGreaterEqual(audit["timingsMs"]["rollback"], 0)
+
+    def test_rollback_health_failure_retains_journal_maintenance_and_backup(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.config, self.plan, operations, self.now)
+        with patch.object(operations, "health", side_effect=RuntimeError("health failed")) as health:
+            with self.assertRaisesRegex(RuntimeError, "rollback did not complete"):
+                executor.execute()
+        self.assertEqual(health.call_count, 2)
+        self.assertTrue(executor.journal.is_file())
+        self.assertTrue(executor.maintenance.is_file())
+        self.assertTrue((self.state / "backups" / self.plan["id"] / "tenant-tenant-a.sql").is_file())
+        self.assertFalse(executor.lock_path.exists())
+        audit = self.read_audit()
+        self.assertEqual(audit["result"], "FAILED")
+        self.assertGreaterEqual(audit["timingsMs"]["rollback"], 0)
 
     def test_execution_refuses_outside_window_and_does_not_backup(self):
         future = self.make_plan(maintenanceWindow={

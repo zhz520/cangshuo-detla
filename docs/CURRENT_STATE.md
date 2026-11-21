@@ -6,10 +6,11 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 源码主线 | `D:\codeStudy\code\cangshuo-detla`，`main` |
-| 客户端正式版本 | `1.18.4` |
-| 标签与提交 | `v1.18.4` → `d0c03e4e393439df3aa7f7c120a164788dd0d090` |
-| GitHub Release | `453576664` |
+| 源码工作区 | `D:\codeStudy\code\cangshuo-detla`，`codex/engineering-hardening`（候选，未发布） |
+| 候选版本 | `1.18.5` |
+| 生产正式版本 | `1.18.4` |
+| 生产标签与提交 | `v1.18.4` → `d0c03e4e393439df3aa7f7c120a164788dd0d090` |
+| 生产 GitHub Release | `453576664` |
 | 授权中心 | `D:\codeStudy\code\cangshuo-detla-authorize`，独立版本线 |
 | 520 演示线 | 后端/后台为 1.16.5 基线加架构与 UI 补丁；H5 为 1.16.5；不是共享组成员 |
 

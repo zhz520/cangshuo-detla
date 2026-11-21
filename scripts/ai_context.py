@@ -75,8 +75,10 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def run(*args: str) -> str:
+def run(*args: str, check: bool = False) -> str:
     result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if check and result.returncode:
+        fail("cannot determine Git scope; check the base ref and fetch sufficient history")
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
@@ -261,6 +263,13 @@ def routing() -> list[dict]:
         if route["id"] in ids:
             fail("duplicate route id: " + route["id"])
         ids.add(route["id"])
+        if "tests" in route and (not isinstance(route["tests"], list) or
+                                 not all(isinstance(path, str) for path in route["tests"])):
+            fail(f"route {route['id']} has invalid tests")
+        for path in route.get("tests", []):
+            target = (ROOT / path).resolve()
+            if not target.is_relative_to(ROOT) or not target.is_file():
+                fail(f"route {route['id']} references missing or external test: {path}")
         for doc in route["docs"]:
             if not (ROOT / "docs" / doc).is_file():
                 fail(f"route {route['id']} references missing docs/{doc}")
@@ -290,16 +299,19 @@ def matching_routes(paths: list[str], task: str = "") -> list[dict]:
 def changed_paths(base: str | None) -> list[str]:
     paths = []
     if base:
-        text = run("git", "-c", "core.quotepath=false", "diff", "--name-only", f"{base}...HEAD")
+        text = run("git", "-c", "core.quotepath=false", "diff", "--name-only", f"{base}...HEAD", "--", check=True)
     else:
-        text = run("git", "-c", "core.quotepath=false", "diff", "--name-only", "HEAD")
-        untracked = run("git", "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+        text = run("git", "-c", "core.quotepath=false", "diff", "--name-only", "HEAD", "--", check=True)
+        untracked = run("git", "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", check=True)
         paths.extend(untracked.splitlines())
     paths.extend(text.splitlines())
     return sorted({line.strip() for line in paths if line.strip()})
 
 
 def relevant_tests(index: dict, routes: list[dict]) -> list[str]:
+    pinned = list(dict.fromkeys(path for item in routes for path in item["route"].get("tests", [])))
+    if pinned:
+        return pinned
     ids = {item["route"]["id"] for item in routes}
     candidates = []
     if "backend-module" in ids or "money" in ids or "security" in ids or "tenant-database" in ids or "release" in ids:
@@ -323,7 +335,7 @@ def relevant_tests(index: dict, routes: list[dict]) -> list[str]:
 
 def command_brief(args) -> None:
     index = read_json(INDEX)
-    paths = args.paths or changed_paths(args.base)
+    paths = [path.replace("\\", "/").removeprefix("./") for path in args.paths] if args.paths is not None else changed_paths(args.base)
     routes = matching_routes(paths, args.task or "")
     head = run("git", "rev-parse", "--short", "HEAD")
     branch = run("git", "branch", "--show-current")
@@ -339,6 +351,8 @@ def command_brief(args) -> None:
     if not routes:
         print("routes=NONE")
         print("STOP: no route matched; extend docs/ai/routing.json before changing code.")
+        if args.strict and (paths or args.task or not args.base):
+            raise SystemExit(1)
         return
     print("routes=" + ",".join(f"{item['route']['id']}({item['route']['risk']})" for item in routes))
     docs = []
@@ -363,6 +377,8 @@ def command_brief(args) -> None:
     unmapped = [path for path in paths if not any(path_matches(path, pattern) for item in routes for pattern in item["route"]["paths"])]
     if unmapped:
         print("unmapped=" + ", ".join(unmapped[:10]))
+        if args.strict:
+            fail(f"{len(unmapped)} path(s) have no route")
 
 
 def command_state(_args) -> None:
@@ -502,6 +518,30 @@ def selftest() -> None:
     unknown = matching_routes(["unmapped/example.bin"])
     if unknown:
         fail("selftest expected unknown path to have no route")
+    tasks = {
+        "项目问题复核与优化方案": "ai-context",
+        "打手提现押金": "money",
+        "协同打单拒绝后再次邀请": "order-team",
+        "商品详情图片不显示": "product-media",
+        "微信电脑浏览器生成支付二维码": "money",
+        "短信已受理但没有回执": "authority-services",
+        "文件安全租户隔离": "file-access",
+    }
+    for task, expected in tasks.items():
+        hits = matching_routes([], task)
+        if not any(hit["route"]["id"] == expected and hit["route"].get("tests") for hit in hits):
+            fail(f"selftest missing route and pinned tests: {expected} for {task}")
+    for expected, args in (
+        (0, ["brief", "--strict", "--paths", "docs/ai/routing.json"]),
+        (0, ["brief", "--strict", "--base", "HEAD"]),
+        (1, ["brief", "--strict", "--paths", "unmapped/example.bin"]),
+        (1, ["brief", "--strict", "--task", "短信回执", "--paths", "unmapped/example.bin"]),
+        (1, ["brief", "--strict", "--base", "missing-ai-context-selftest-ref"]),
+    ):
+        result = subprocess.run([sys.executable, str(Path(__file__).resolve()), *args],
+                                cwd=ROOT, capture_output=True)
+        if result.returncode != expected:
+            fail(f"selftest expected exit {expected}, got {result.returncode}: {args}")
     print("AI context selftest passed")
 
 
@@ -514,8 +554,10 @@ def main() -> None:
     validate_parser.add_argument("--strict", action="store_true")
     brief = sub.add_parser("brief")
     brief.add_argument("--task", default="")
-    brief.add_argument("--paths", nargs="*", default=[])
-    brief.add_argument("--base")
+    scope = brief.add_mutually_exclusive_group()
+    scope.add_argument("--paths", nargs="*")
+    scope.add_argument("--base")
+    brief.add_argument("--strict", action="store_true", help="Fail on unmatched tasks or unmapped paths")
     state = sub.add_parser("state")
     impact = sub.add_parser("impact")
     impact.add_argument("paths", nargs="*")
