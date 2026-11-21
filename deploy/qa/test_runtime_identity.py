@@ -47,3 +47,18 @@ class RuntimeIdentityTest(unittest.TestCase):
         del broken["components"]["h5"]
         with self.assertRaises(ValueError):
             runtime_identity.compare({"742": snapshot(), "747": broken})
+
+    def test_combined_probe_output_is_expanded_for_comparison(self):
+        combined = {"742": snapshot(), "747": snapshot()}
+        loaded = runtime_identity.load_snapshots([self._combined_file(combined)])
+        self.assertEqual(loaded, combined)
+        self.assertTrue(runtime_identity.compare(loaded)["complete"])
+
+    @staticmethod
+    def _combined_file(value):
+        import json, tempfile
+        from pathlib import Path
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8")
+        with handle:
+            json.dump(value, handle)
+        return Path(handle.name)

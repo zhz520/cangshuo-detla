@@ -95,6 +95,25 @@ def load(path):
     return value
 
 
+def load_snapshots(paths):
+    snapshots = {}
+    for path in paths:
+        value = load(path)
+        if "components" in value:
+            candidates = {Path(path).stem: value}
+        else:
+            if not value or not all(isinstance(item, dict) and "components" in item for item in value.values()):
+                fail("snapshot must contain components or tenant snapshots")
+            candidates = value
+        for tenant, snapshot in candidates.items():
+            if not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", str(tenant)):
+                fail("invalid tenant name in snapshot")
+            if tenant in snapshots:
+                fail("duplicate tenant snapshot: " + str(tenant))
+            snapshots[tenant] = snapshot
+    return snapshots
+
+
 def normalize(value, name):
     if not isinstance(value, dict):
         fail(name + " must be an object")
@@ -159,7 +178,7 @@ def main(argv=None):
                 Path(args.output).write_text(text, encoding="utf-8")
             print(text, end="")
             return 0
-        result = compare({Path(path).stem: load(path) for path in args.snapshots})
+        result = compare(load_snapshots(args.snapshots))
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(json.dumps({"sameKnownCode": False, "error": str(error)}, ensure_ascii=False))
         return 2
