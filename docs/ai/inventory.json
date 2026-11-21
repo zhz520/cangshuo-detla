@@ -1194,6 +1194,7 @@
     "delta-game/delta-admin/src/test/java/com/delta/admin/WechatWebLoginServiceTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/ArchitectureGuardrailsTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/OpenApiBaselineTest.java",
+    "delta-game/delta-admin/src/test/java/com/delta/admin/chat/ChatAccessServiceTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/chat/GuestChatAuthorizationTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/config/DatabaseCompatibilityTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/config/ProductionSecurityValidatorTest.java",
