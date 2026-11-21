@@ -1,8 +1,8 @@
 {
-  "version": "1.18.3",
-  "tag": "v1.18.3",
-  "commit": "0c0c1cb2fc3d9fd1f944fedd0058df90fe3c9b52",
-  "generatedAt": "2026-11-20",
+  "version": "1.18.4",
+  "tag": "v1.18.4",
+  "commit": "dea46766b66ba96213b6e59198038e5948a08b51",
+  "generatedAt": "2026-11-21",
   "features": [
     {
       "id": "auth",
