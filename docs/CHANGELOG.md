@@ -12,7 +12,7 @@
 
 ### 验证
 
-- 后端全量 `clean verify`：全部 reactor 成功，`delta-admin` 444 项通过；包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
+- 后端全量 `clean verify`：全部 reactor 成功，537 项通过（125 个测试报告，0 失败/错误/跳过）；包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
 - 管理端 108 项、H5 119 项测试通过；管理端在 Linux 容器完成标准生产构建，H5 与微信小程序构建通过。
 - deploy/qa 26 项、updater 61 项、migration 29 项通过；Endpoint 487、OpenAPI 487 operations、282 schemas；候选 ZIP 连续打包两次摘要一致。
 - 未部署、未生成正式三端制品、未做 520/共享组验收。
