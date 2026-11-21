@@ -10,6 +10,7 @@
         <dependency><groupId>com.delta</groupId><artifactId>delta-system</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-order</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-user</artifactId></dependency>
+        <dependency><groupId>com.delta</groupId><artifactId>delta-product</artifactId></dependency>
         <dependency><groupId>com.github.wechatpay-apiv3</groupId><artifactId>wechatpay-java</artifactId></dependency>
     </dependencies>
 </project>

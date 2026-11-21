@@ -8,6 +8,12 @@
 
 它会根据 FEATURE_MAP.md 的路径列出受影响功能和测试建议。
 
+## 模块边界
+
+    python scripts/check_module_boundaries.py
+
+它会检查 15 个 Maven 模块的包根、直接依赖和跨模块 import；新增跨模块引用必须同时声明对应 pom 依赖。
+
 ## 后端全量
 
     cd delta-game

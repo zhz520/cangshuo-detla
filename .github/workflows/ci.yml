@@ -40,6 +40,8 @@ jobs:
         run: python deploy/qa/check_collaboration_rules.py
       - name: Validate AI project context
         run: python scripts/check_ai_context.py
+      - name: Validate backend module boundaries
+        run: python scripts/check_module_boundaries.py
       - name: Validate API contracts
         run: |
           python scripts/check_endpoint_baseline.py

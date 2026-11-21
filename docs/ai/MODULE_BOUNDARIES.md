@@ -45,6 +45,7 @@ mvn -pl delta-admin -am clean verify
 
 cd D:\codeStudy\code\cangshuo-detla
 python scripts/check_ai_context.py
+python scripts/check_module_boundaries.py
 python scripts/check_endpoint_baseline.py
 python scripts/check_openapi_baseline.py
 python scripts/check_openapi_types.py

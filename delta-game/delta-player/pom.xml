@@ -9,5 +9,7 @@
         <dependency><groupId>com.delta</groupId><artifactId>delta-common</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-order</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-pay</artifactId></dependency>
+        <dependency><groupId>com.delta</groupId><artifactId>delta-system</artifactId></dependency>
+        <dependency><groupId>com.delta</groupId><artifactId>delta-user</artifactId></dependency>
     </dependencies>
 </project>

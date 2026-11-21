@@ -6,6 +6,7 @@
     <artifactId>delta-cs</artifactId>
     <description>客服模块 - 复用其他业务模块Service层</description>
     <dependencies>
+        <dependency><groupId>com.delta</groupId><artifactId>delta-common</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-system</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-user</artifactId></dependency>
         <dependency><groupId>com.delta</groupId><artifactId>delta-player</artifactId></dependency>
