@@ -1,4 +1,4 @@
-package com.delta.admin.service;
+package com.delta.finance.service;
 
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.exception.BusinessException;

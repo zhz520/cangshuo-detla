@@ -1,5 +1,5 @@
 package com.delta.admin;
-import com.delta.admin.service.SettlementRecoveryService;
+import com.delta.finance.service.SettlementRecoveryService;
 import com.delta.common.event.BusinessEvent;
 import com.delta.pay.service.TransactionService;
 import com.delta.player.entity.PlayerWallet;

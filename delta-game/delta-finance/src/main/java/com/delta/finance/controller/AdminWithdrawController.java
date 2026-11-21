@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.finance.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

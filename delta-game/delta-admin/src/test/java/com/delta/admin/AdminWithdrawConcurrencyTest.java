@@ -1,6 +1,6 @@
 package com.delta.admin;
 
-import com.delta.admin.controller.AdminWithdrawController;
+import com.delta.finance.controller.AdminWithdrawController;
 import com.delta.common.exception.BusinessException;
 import com.delta.pay.service.impl.TransactionServiceImpl;
 import com.delta.player.entity.Withdraw;

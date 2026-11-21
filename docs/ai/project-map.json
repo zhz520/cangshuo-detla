@@ -97,7 +97,7 @@
       "backend": [
         "delta-game/delta-player/src/main/java/com/delta/player/controller",
         "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerController.java",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminWithdrawController.java",
+        "delta-game/delta-finance/src/main/java/com/delta/finance/controller/AdminWithdrawController.java",
         "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerLevelController.java"
       ],
       "admin": [
@@ -243,6 +243,35 @@
         "DisplayControllerTest",
         "DisplayPrivacyControllerTest",
         "PlayerDirectoryIntegrationTest"
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "退款/提现审核/结算台账",
+      "backend": [
+        "delta-game/delta-finance/src/main/java/com/delta/finance",
+        "delta-game/delta-pay/src/main/java/com/delta/pay/refund"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/refund/RefundList.vue",
+        "delta-admin-ui/src/views/withdraw/WithdrawList.vue",
+        "delta-admin-ui/src/views/statistics/SettlementLedger.vue"
+      ],
+      "h5": [
+        "delta-mp/pages-player/withdraw",
+        "delta-mp/pages/order"
+      ],
+      "tables": [
+        "refund_request",
+        "withdraw",
+        "player_income_settlement",
+        "transaction"
+      ],
+      "tests": [
+        "AdminWithdrawRejectTest",
+        "AdminWithdrawConcurrencyTest",
+        "SettlementRecoveryTest",
+        "SettlementPendingFlowTest"
       ]
     },
     {

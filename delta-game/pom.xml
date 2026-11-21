@@ -53,6 +53,7 @@
         <module>delta-marketing</module>
         <module>delta-workforce</module>
         <module>delta-governance</module>
+        <module>delta-finance</module>
         <module>delta-admin</module>
     </modules>
 
@@ -241,6 +242,11 @@
             <dependency>
                 <groupId>com.delta</groupId>
                 <artifactId>delta-governance</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.delta</groupId>
+                <artifactId>delta-finance</artifactId>
                 <version>${delta.version}</version>
             </dependency>
         </dependencies>

@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.finance.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.annotation.OpLog;

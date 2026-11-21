@@ -1,6 +1,6 @@
 package com.delta.admin.job;
 
-import com.delta.admin.service.SettlementRecoveryService;
+import com.delta.finance.service.SettlementRecoveryService;
 import com.delta.admin.listener.SettlementEventListener;
 import com.delta.common.event.BusinessEvent;
 import com.delta.common.tenant.TenantRegistry;
