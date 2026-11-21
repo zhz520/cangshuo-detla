@@ -1,6 +1,7 @@
 package com.delta.marketing.controller;
 
 import com.delta.marketing.controller.CouponAdminController;
+import com.delta.marketing.service.CouponAdminService;
 import com.delta.common.exception.BusinessException;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,7 @@ class CouponAdminControllerTest {
                   claimed INT,per_user_limit INT,status TINYINT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
                 """);
         jdbc.update("INSERT INTO coupon_template(name,type,coupon_value,min_spend,valid_days,total,claimed,per_user_limit,status) VALUES('满100减10','AMOUNT',10,100,7,100,1,1,1)");
-        controller = new CouponAdminController(jdbc);
+        controller = new CouponAdminController(new CouponAdminService(jdbc));
     }
 
     @Test

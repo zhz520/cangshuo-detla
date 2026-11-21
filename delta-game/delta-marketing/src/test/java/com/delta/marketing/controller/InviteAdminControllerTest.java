@@ -1,6 +1,7 @@
 package com.delta.marketing.controller;
 
 import com.delta.marketing.controller.InviteAdminController;
+import com.delta.marketing.service.InviteAdminService;
 import com.delta.common.exception.BusinessException;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,7 @@ class InviteAdminControllerTest {
         dataSource.setURL("jdbc:h2:mem:invite-admin-" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
         jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("CREATE TABLE invite_reward_debt(id BIGINT PRIMARY KEY,status VARCHAR(16) NOT NULL,recovered_at TIMESTAMP)");
-        controller = new InviteAdminController(jdbc);
+        controller = new InviteAdminController(new InviteAdminService(jdbc));
     }
 
     @Test

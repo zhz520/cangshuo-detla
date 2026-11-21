@@ -1,6 +1,7 @@
 package com.delta.marketing.controller;
 
 import com.delta.marketing.controller.CouponController;
+import com.delta.marketing.service.CouponService;
 import com.delta.common.exception.BusinessException;
 import com.delta.system.service.SysConfigService;
 import org.h2.jdbcx.JdbcDataSource;
@@ -24,7 +25,7 @@ class CouponControllerTest {
         jdbc=new JdbcTemplate(ds);
         jdbc.execute("CREATE TABLE coupon_template(id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(80),type VARCHAR(16),coupon_value DECIMAL(12,2),min_spend DECIMAL(12,2),valid_days INT,total INT,claimed INT,per_user_limit INT,status TINYINT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE user_coupon(id BIGINT AUTO_INCREMENT PRIMARY KEY,template_id BIGINT,user_id BIGINT,status VARCHAR(16),claimed_at TIMESTAMP,expires_at TIMESTAMP,used_order_id BIGINT,used_at TIMESTAMP)");
-        configs=mock(SysConfigService.class);controller=new CouponController(jdbc,configs);
+        configs=mock(SysConfigService.class);controller=new CouponController(new CouponService(jdbc,configs));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(Map.of("userId",7L,"userType","USER"),null,List.of()));
     }
     @AfterEach void clear(){SecurityContextHolder.clearContext();}

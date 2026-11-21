@@ -1,6 +1,7 @@
 package com.delta.marketing.controller;
 
 import com.delta.marketing.controller.MembershipController;
+import com.delta.marketing.service.MembershipService;
 import com.delta.common.membership.MembershipTierRules;
 import com.delta.system.service.SysConfigService;
 import org.h2.jdbcx.JdbcDataSource;
@@ -30,7 +31,7 @@ class MembershipControllerTest {
         jdbc.execute("CREATE TABLE `order`(id BIGINT PRIMARY KEY,user_id BIGINT)");
         jdbc.execute("CREATE TABLE payment(id BIGINT PRIMARY KEY,order_id BIGINT,status VARCHAR(20),amount DECIMAL(12,2),refund_amount DECIMAL(12,2))");
         configs = mock(SysConfigService.class);
-        controller = new MembershipController(jdbc, configs);
+        controller = new MembershipController(new MembershipService(jdbc, configs));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 Map.of("userId", 7L, "userType", "USER"), null, List.of()));
     }
