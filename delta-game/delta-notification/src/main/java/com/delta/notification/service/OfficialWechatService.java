@@ -116,6 +116,19 @@ public class OfficialWechatService {
   result.put("templateReady",missingTemplates.isEmpty());result.put("missingTemplateGroups",missingTemplates);
   return result;
  }
+ public List<Map<String,Object>> notificationQueue(){
+  return jdbc.queryForList("SELECT id,event_type,user_type,user_id,order_id,status,attempts,last_error,created_at FROM wechat_notice_queue ORDER BY created_at DESC LIMIT 300");
+ }
+ public void retryNotification(String id){
+  jdbc.update("UPDATE wechat_notice_queue SET status='PENDING',attempts=0,next_at=CURRENT_TIMESTAMP,last_error=NULL WHERE id=? AND status IN ('FAILED','RETRY','DELIVERY_UNKNOWN')",id);
+ }
+ public List<Map<String,Object>> smsQueue(){
+  return jdbc.queryForList("SELECT id,event_type,event_group,user_type,user_id,order_id,CONCAT(LEFT(phone,3),'****',RIGHT(phone,4)) AS phone,status,attempts,last_error,created_at,sent_at FROM sms_notice_queue ORDER BY created_at DESC LIMIT 300");
+ }
+ public void retrySms(String id){
+  if(smsGateway==null||!smsGateway.enabled())throw new BusinessException(403,"授权中心短信服务未启用");
+  jdbc.update("UPDATE sms_notice_queue SET status='PENDING',attempts=0,delivery_key=UUID(),next_at=CURRENT_TIMESTAMP,last_error=NULL WHERE id=? AND status IN ('FAILED','RETRY')",id);
+ }
  public String startBinding(String rawType,Long id,String requestDomain){
   String type=canonicalUserType(rawType);
   platform.requireFeature(FEATURE_ID,requestDomain);

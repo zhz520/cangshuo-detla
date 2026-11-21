@@ -58,7 +58,7 @@ class UserAccountIntegrationTest {
     @MapperScan({"com.delta.user.mapper","com.delta.player.mapper","com.delta.common.mapper","com.delta.system.mapper"})
     @Import({UserServiceImpl.class,WalletServiceImpl.class,PlayerServiceImpl.class,PlayerWalletServiceImpl.class,OperationLogServiceImpl.class,
             com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,UserPasswordService.class,WebLoginPolicy.class,UserManagementService.class,UserAuthController.class,AdminUserController.class,
-            com.delta.user.controller.InviteController.class,
+            com.delta.user.controller.InviteController.class,com.delta.user.service.InviteService.class,
             SecurityConfig.class,JwtAuthenticationFilter.class,TokenService.class,com.delta.common.security.controller.LogoutController.class,
             AuthenticationEntryPointImpl.class,AccessDeniedHandlerImpl.class,GlobalExceptionHandler.class})
     static class Config {}

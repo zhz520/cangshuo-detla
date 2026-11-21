@@ -39,15 +39,12 @@ class OfficialWechatAuthorizationTest {
     @Test void everyHttpEntryUsesTheResolvedRequestDomain() throws Exception {
         var service = mock(OfficialWechatService.class);
         var platform = mock(PlatformService.class);
-        var jdbc = mock(JdbcTemplate.class);
-        var controller = new OfficialWechatController(service, jdbc, platform, mock(com.delta.common.sms.service.SmsGatewayClient.class));
+        var controller = new OfficialWechatController(service, platform);
         var request = new MockHttpServletRequest();
         request.setServerName("shop.example.com");
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 Map.of("userType", "USER", "userId", 7L), null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
         when(service.startBinding("USER", 7L, "shop.example.com")).thenReturn("https://open.weixin.qq.com/");
-        when(jdbc.queryForList(anyString())).thenReturn(List.of());
-
         controller.start(request);
         controller.complete(Map.of("code", "code", "state", "state"), request);
         controller.notices(request);
@@ -77,9 +74,8 @@ class OfficialWechatAuthorizationTest {
 
     @Test void adminAndCsBindingEndpointsKeepTheAuthenticatedRole() throws Exception {
         var service = mock(OfficialWechatService.class);
-        var jdbc = mock(JdbcTemplate.class);
         var platform = mock(PlatformService.class);
-        var controller = new OfficialWechatController(service, jdbc, platform, mock(com.delta.common.sms.service.SmsGatewayClient.class));
+        var controller = new OfficialWechatController(service, platform);
         var request = new MockHttpServletRequest();
         request.setServerName("staff.example.com");
 
