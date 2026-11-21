@@ -96,13 +96,10 @@ test('business data catalog exposes order, customer, player and aftersales field
   }
 })
 
-test('the notification documentation includes every role and event content preview', () => {
-  const document = readFileSync(new URL('../../docs/通知模板完整示例.md', import.meta.url), 'utf8')
-  for (const role of NOTIFICATION_ROLES) {
-    for (const event of NOTIFICATION_EVENTS) {
-      assert.ok(document.includes(NOTIFICATION_SAMPLES[role][event]), `missing ${role}/${event} final content preview`)
-    }
-  }
+test('the configuration guide lists every notification role and event family', () => {
+  const document = readFileSync(new URL('../../docs/CONFIGURATION.md', import.meta.url), 'utf8')
+  for (const label of ['客户', '打手', '管理员', '客服']) assert.ok(document.includes(label), `missing role ${label}`)
+  for (const label of ['新订单', '订单状态', '退款状态', '投诉状态', '员工审核']) assert.ok(document.includes(label), `missing event ${label}`)
 })
 
 test('every template-content variable has a matching field mapping', () => {

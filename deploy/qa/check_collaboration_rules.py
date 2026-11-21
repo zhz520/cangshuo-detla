@@ -7,14 +7,18 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 
-CHECKLIST = "docs/AI协作自检与防回归清单.md"
+CHECKLIST = "docs/ai/CONTEXT.md"
 ENTRY_FILES = ("AGENTS.md", "README.md", "docs/README.md", "docs/VIBE_CODING.md")
 REQUIRED_FILES = ENTRY_FILES + (
     CHECKLIST,
-    "docs/development-conventions.md",
-    "docs/客户实例与授权中心关系.md",
-    "docs/项目结构说明.md",
-    "docs/共享服务组更新入口与发布规则.md",
+    "docs/CURRENT_STATE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BUSINESS_RULES.md",
+    "docs/OPERATIONS.md",
+    "docs/CONFIGURATION.md",
+    "docs/CHANGELOG.md",
+    "docs/ai/routing.json",
+    "docs/ai/index.json",
 )
 RECEIPT = re.compile(r"已读取 VIBE_CODING\.md v(\d{4}-\d{2}-\d{2}\.\d+)")
 LINK = re.compile(r"\[[^\]\n]*\]\((<[^>\n]+>|[^\s)]+)(?:\s+\"[^\"]*\")?\)")

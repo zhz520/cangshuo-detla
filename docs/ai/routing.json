@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "routes": [
+    {
+      "id": "money",
+      "risk": "P0",
+      "terms": ["支付", "退款", "提现", "押金", "结算", "钱包", "资金", "payment", "refund", "withdraw", "deposit", "settlement", "wallet"],
+      "paths": [
+        "delta-game/delta-pay/*",
+        "delta-game/delta-finance/*",
+        "delta-game/delta-player/*Wallet*",
+        "delta-game/delta-player/*Withdraw*",
+        "delta-game/delta-player/*Deposit*",
+        "delta-game/delta-order/*Refund*"
+      ],
+      "docs": ["BUSINESS_RULES.md", "OPERATIONS.md"],
+      "checks": ["金额与方向", "支付/退款幂等", "并发与行锁", "租户边界", "真实 MySQL", "财务 12 项"],
+      "commands": [
+        "cd delta-game && mvn -pl delta-admin -am test",
+        "python deploy/migration/financial_reconciliation.py audit --mysql-container <mysql> --database <tenant-db>"
+      ]
+    },
+    {
+      "id": "security",
+      "risk": "P0",
+      "terms": ["登录", "认证", "鉴权", "权限", "越权", "账号", "微信绑定", "token", "auth", "permission", "security"],
+      "paths": [
+        "delta-game/delta-common/src/main/java/com/delta/common/security/*",
+        "delta-game/delta-common/src/main/java/com/delta/common/config/*",
+        "delta-game/delta-user/*",
+        "delta-game/delta-cs/*Auth*",
+        "delta-game/delta-notification/*Wechat*Login*"
+      ],
+      "docs": ["BUSINESS_RULES.md", "CONFIGURATION.md"],
+      "checks": ["正常与拒绝路径", "资源归属", "角色隔离", "Token/Ticket 边界", "敏感日志"],
+      "commands": ["cd delta-game && mvn -pl delta-admin -am test"]
+    },
+    {
+      "id": "tenant-database",
+      "risk": "P0",
+      "terms": ["租户", "多租户", "数据库", "迁移", "索引", "schema", "tenant", "database", "migration"],
+      "paths": [
+        "delta-game/delta-common/src/main/java/com/delta/common/*Tenant*",
+        "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java",
+        "delta-game/delta-admin/src/main/resources/db/migration/*",
+        "delta_game.sql",
+        "deploy/baota/migrations/*"
+      ],
+      "docs": ["ARCHITECTURE.md", "OPERATIONS.md"],
+      "checks": ["启动兼容", "独立迁移可重复执行", "三库表数", "真实 MySQL", "跨租户拒绝"],
+      "commands": [
+        "cd delta-game && mvn -pl delta-admin -am clean verify",
+        "python -m unittest discover -s deploy/migration -p test_*.py"
+      ]
+    },
+    {
+      "id": "release",
+      "risk": "P0",
+      "terms": ["发布", "部署", "版本", "更新", "release", "deploy", "version", "updater"],
+      "paths": [
+        "deploy/*",
+        "delta-game/delta-admin/src/main/resources/platform/catalog.json",
+        "delta-admin-ui/package.json",
+        "delta-admin-ui/package-lock.json",
+        "delta-mp/package.json",
+        "delta-mp/package-lock.json",
+        "delta-mp/manifest.json",
+        "contracts/*"
+      ],
+      "docs": ["OPERATIONS.md", "CURRENT_STATE.md", "CHANGELOG.md"],
+      "checks": ["三端版本对齐", "干净工作区打包", "SHA-256", "标签不可变", "计划验签", "备份与回退"],
+      "commands": [
+        "python scripts/check_version_alignment.py",
+        "python -m unittest discover -s deploy/updater -p test_*.py",
+        "python deploy/qa/check_collaboration_rules.py"
+      ]
+    },
+    {
+      "id": "backend-module",
+      "risk": "P1",
+      "terms": ["后端", "接口", "controller", "service", "mapper", "java"],
+      "paths": ["delta-game/*"],
+      "docs": ["ARCHITECTURE.md", "BUSINESS_RULES.md"],
+      "checks": ["模块边界", "Controller 不直连 JdbcTemplate/Mapper", "endpoint/OpenAPI 不变", "模块测试"],
+      "commands": [
+        "cd delta-game && mvn -pl delta-admin -am test",
+        "python scripts/check_module_boundaries.py",
+        "python scripts/check_endpoint_baseline.py",
+        "python scripts/check_openapi_baseline.py"
+      ]
+    },
+    {
+      "id": "admin-ui",
+      "risk": "P1",
+      "terms": ["后台", "管理端", "菜单", "admin", "vue"],
+      "paths": ["delta-admin-ui/*"],
+      "docs": ["ARCHITECTURE.md", "CONFIGURATION.md", "BUSINESS_RULES.md"],
+      "checks": ["PC / 与 /h5", "权限三层", "保存回读", "主题三套变量", "构建"],
+      "commands": ["cd delta-admin-ui && npm test && npm run build"]
+    },
+    {
+      "id": "h5",
+      "risk": "P1",
+      "terms": ["h5", "小程序", "客户端", "打手端", "uni-app"],
+      "paths": ["delta-mp/*"],
+      "docs": ["ARCHITECTURE.md", "BUSINESS_RULES.md", "CONFIGURATION.md"],
+      "checks": ["pages.json 注册", "客户/打手角色", "H5 构建", "小程序构建", "真机未验证要标注"],
+      "commands": ["cd delta-mp && npm test && npm run build:h5 && npm run build:mp-weixin"]
+    },
+    {
+      "id": "ai-context",
+      "risk": "P1",
+      "terms": ["文档", "上下文", "ai", "agents", "routing", "index"],
+      "paths": ["AGENTS.md", "README.md", "docs/*", "scripts/*", ".github/*"],
+      "docs": ["README.md", "VIBE_CODING.md"],
+      "checks": ["路由覆盖", "索引确定性", "版本一致", "链接有效", "不提升业务版本"],
+      "commands": ["python scripts/ai_context.py validate --strict", "python deploy/qa/check_collaboration_rules.py"]
+    }
+  ]
+}

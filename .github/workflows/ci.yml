@@ -39,7 +39,9 @@ jobs:
       - name: Validate collaboration rules
         run: python deploy/qa/check_collaboration_rules.py
       - name: Validate AI project context
-        run: python scripts/check_ai_context.py
+        run: |
+          python scripts/ai_context.py validate --strict
+          python scripts/ai_context.py selftest
       - name: Validate backend module boundaries
         run: python scripts/check_module_boundaries.py
       - name: Validate oversized class baseline

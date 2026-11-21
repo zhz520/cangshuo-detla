@@ -44,11 +44,11 @@ def main() -> int:
         return 1
 
     version = unique.pop()
-    release_note = ROOT / "docs" / f"{version}-发布说明.md"
-    if not release_note.exists():
-        print(f"release note missing: {release_note.relative_to(ROOT)}")
+    changelog = ROOT / "docs" / "CHANGELOG.md"
+    if not changelog.exists() or version not in changelog.read_text(encoding="utf-8"):
+        print(f"current version missing from docs/CHANGELOG.md: {version}")
         return 1
-    print(f"version alignment OK: {version}; release note present")
+    print(f"version alignment OK: {version}; changelog present")
     return 0
 
 

@@ -4,8 +4,8 @@
 
 ## 功能映射
 
-- [ ] 已在 docs/ai/FEATURE_MAP.md 找到对应功能
-- [ ] 如新增功能，已更新 FEATURE_MAP.md、project-map.json 和 inventory.json
+- [ ] 已运行 `python scripts/ai_context.py brief --task "..."` 并审查命中路由
+- [ ] 如新增目录/入口，已更新 `docs/ai/routing.json` 并重建 `docs/ai/index.json`
 
 ## 风险检查
 

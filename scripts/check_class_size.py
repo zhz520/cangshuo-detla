@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "delta-game"
-BASELINE = ROOT / "docs" / "ai" / "oversized-class-baseline.json"
+BASELINE = ROOT / "scripts" / "baselines" / "oversized-class-baseline.json"
 THRESHOLD = 20 * 1024
 
 

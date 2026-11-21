@@ -1,0 +1,1943 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "1.18.4",
+  "inputDigest": "sha256:93dea9af022438450ad40702497c509bc83a8adaf160aa6f3f0cb5d716faaa6a",
+  "counts": {
+    "modules": 19,
+    "controllers": 108,
+    "adminViews": 57,
+    "adminRoutes": 68,
+    "h5Pages": 60,
+    "baseTables": 53,
+    "migrations": 36,
+    "backendTests": 115,
+    "adminTests": 36,
+    "h5Tests": 23
+  },
+  "modules": [
+    {
+      "id": "delta-admin",
+      "pom": "delta-game/delta-admin/pom.xml",
+      "packageRoot": "com.delta.admin.config",
+      "dependsOn": [
+        "delta-admin",
+        "delta-common",
+        "delta-cs",
+        "delta-finance",
+        "delta-governance",
+        "delta-identity",
+        "delta-marketing",
+        "delta-message",
+        "delta-notification",
+        "delta-order",
+        "delta-pay",
+        "delta-platform",
+        "delta-player",
+        "delta-product",
+        "delta-reporting",
+        "delta-system",
+        "delta-user",
+        "delta-workbench",
+        "delta-workforce"
+      ],
+      "mainJavaCount": 24,
+      "controllers": [
+        {
+          "name": "AdminCategoryFieldController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminCategoryFieldController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "AdminHomeController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminHomeController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "AdminOrderController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminOrderController.java",
+          "endpoints": 7
+        },
+        {
+          "name": "AdminPlayerController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerController.java",
+          "endpoints": 17
+        },
+        {
+          "name": "AdminPlayerLevelController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminPlayerLevelController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "AdminRecommendCategoryController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminRecommendCategoryController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "AdminReviewController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminReviewController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "AdminUserController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminUserController.java",
+          "endpoints": 9
+        },
+        {
+          "name": "PlayerRemindController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/PlayerRemindController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "PlayerReviewController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/PlayerReviewController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "PrivacyController",
+          "file": "delta-game/delta-admin/src/main/java/com/delta/admin/controller/PrivacyController.java",
+          "endpoints": 4
+        }
+      ],
+      "tests": [
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminAccountConflictTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminAuthServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminBatchControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminOrderDetailTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/AdminWithdrawConcurrencyTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/BootstrapAdminRunnerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/ChatSessionManagerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/ContentConfigControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/CouponRedemptionServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/CsProfilePasswordTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/CsRoutingServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/EmailNotificationControllerIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/GlobalExceptionHandlerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/GovernanceIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/GuestCheckoutIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/IdentityVerificationIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/MembershipPricingTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/MembershipTierRulesTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OfficialWechatAuthorizationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OrderAssignmentCandidatesTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OrderPurchaseGateTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OrderRefundWorkflowTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PlayerBusinessRegressionTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PlayerDepositAdminServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PlayerDepositRefundServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PlayerDirectoryIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PlayerIdentityNameServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/PresentationIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/RewardGrabIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/ScheduledTaskStatisticsSqlTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/SensitiveWordControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/SettlementPendingFlowTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/SettlementRecoveryTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/SettlementRelayTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/TokenRoleCaseTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/UserAccountIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/UserAuthPolicyGateTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/UserEngagementControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/UserLoginPolicyControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/WechatAccountLinkControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/WechatIdentityServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/WechatWebLoginServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/ArchitectureGuardrailsTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/OpenApiBaselineTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/chat/ChatAccessServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/chat/GuestChatAuthorizationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/config/DatabaseCompatibilityTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/config/ProductionSecurityValidatorTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigControllerRepairTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigPublicSiteTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/DepositH5IntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/DepositVerificationRegressionTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/PaymentSceneIsolationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/PlayerDepositPolicyTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/pay/WechatOfficialPayServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/service/EmailNotificationServiceContextTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/sms/SmsGatewayClientTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/system/MojibakeTextRepairTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/system/SysConfigMetadataRepairTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/AsyncTenantContextTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/CorsTenantIsolationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/LegacyFileCompatibilityTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantDataSourceConfigurationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantFileStorageTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantMaintenanceStateTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantRedisBoundaryTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantRegistryTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantRequestFilterTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantRoutingDataSourceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantSchedulerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantTaskDecoratorTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantTokenIsolationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/TenantWxMaServiceProviderTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/WebSocketHandshakeIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/tenant/WebSocketTenantIsolationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/common/file/service/ThumbnailCacheCleanerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/common/maintenance/MaintenanceFilterTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/pay/config/WxPayConfigurationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/pay/controller/PaymentKeyStorePathTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/pay/service/WxPaymentRecoveryTaskTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/pay/service/impl/PlayerDepositOverpaymentTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/pay/service/impl/RepeatedRefundNotificationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/AuthorityInteropTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/ComponentUpdateRegressionTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/IncomeAnalysisServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/PlatformAccessIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/PlatformRemoteTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/PlatformServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/ProjectMaintenanceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/RequestDomainRegressionTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/TenantPlatformStateTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/ThemeControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/platform/ThemePublicControllerTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/workbench/WorkbenchIntegrationTest.java"
+      ]
+    },
+    {
+      "id": "delta-common",
+      "pom": "delta-game/delta-common/pom.xml",
+      "packageRoot": "com.delta.common.annotation",
+      "dependsOn": [
+        "delta-common"
+      ],
+      "mainJavaCount": 111,
+      "controllers": [
+        {
+          "name": "ChatController",
+          "file": "delta-game/delta-common/src/main/java/com/delta/common/chat/controller/ChatController.java",
+          "endpoints": 11
+        },
+        {
+          "name": "FileController",
+          "file": "delta-game/delta-common/src/main/java/com/delta/common/file/controller/FileController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "ImageThumbnailController",
+          "file": "delta-game/delta-common/src/main/java/com/delta/common/file/controller/ImageThumbnailController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "LogoutController",
+          "file": "delta-game/delta-common/src/main/java/com/delta/common/security/controller/LogoutController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "MaintenanceController",
+          "file": "delta-game/delta-common/src/main/java/com/delta/common/maintenance/MaintenanceController.java",
+          "endpoints": 3
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-cs",
+      "pom": "delta-game/delta-cs/pom.xml",
+      "packageRoot": "com.delta.cs.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-cs",
+        "delta-message",
+        "delta-order",
+        "delta-pay",
+        "delta-player",
+        "delta-product",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 23,
+      "controllers": [
+        {
+          "name": "CsAuthController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsAuthController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "CsCategoryController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsCategoryController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "CsChatController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsChatController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsComplaintController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsComplaintController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "CsDashboardController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsDashboardController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "CsDepositRefundController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsDepositRefundController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsMonitorController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsMonitorController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "CsOrderController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsOrderController.java",
+          "endpoints": 7
+        },
+        {
+          "name": "CsPlayerController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsPlayerController.java",
+          "endpoints": 10
+        },
+        {
+          "name": "CsProductController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsProductController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsProfileController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsProfileController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsRelayController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsRelayController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsRemindController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsRemindController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "CsReplaceController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsReplaceController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsUserController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsUserController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "CsWithdrawController",
+          "file": "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsWithdrawController.java",
+          "endpoints": 4
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-finance",
+      "pom": "delta-game/delta-finance/pom.xml",
+      "packageRoot": "com.delta.finance.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-finance",
+        "delta-pay",
+        "delta-player"
+      ],
+      "mainJavaCount": 5,
+      "controllers": [
+        {
+          "name": "AdminWithdrawController",
+          "file": "delta-game/delta-finance/src/main/java/com/delta/finance/controller/AdminWithdrawController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "RefundController",
+          "file": "delta-game/delta-finance/src/main/java/com/delta/finance/controller/RefundController.java",
+          "endpoints": 13
+        },
+        {
+          "name": "SettlementLedgerController",
+          "file": "delta-game/delta-finance/src/main/java/com/delta/finance/controller/SettlementLedgerController.java",
+          "endpoints": 2
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-governance",
+      "pom": "delta-game/delta-governance/pom.xml",
+      "packageRoot": "com.delta.governance.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-governance",
+        "delta-platform",
+        "delta-player",
+        "delta-system"
+      ],
+      "mainJavaCount": 8,
+      "controllers": [
+        {
+          "name": "DisplayController",
+          "file": "delta-game/delta-governance/src/main/java/com/delta/governance/controller/DisplayController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "DisplayPrivacyController",
+          "file": "delta-game/delta-governance/src/main/java/com/delta/governance/controller/DisplayPrivacyController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "GovernanceController",
+          "file": "delta-game/delta-governance/src/main/java/com/delta/governance/controller/GovernanceController.java",
+          "endpoints": 10
+        },
+        {
+          "name": "PlayerDirectoryLayoutController",
+          "file": "delta-game/delta-governance/src/main/java/com/delta/governance/controller/PlayerDirectoryLayoutController.java",
+          "endpoints": 3
+        }
+      ],
+      "tests": [
+        "delta-game/delta-governance/src/test/java/com/delta/governance/controller/DisplayControllerTest.java",
+        "delta-game/delta-governance/src/test/java/com/delta/governance/controller/DisplayPrivacyControllerTest.java"
+      ]
+    },
+    {
+      "id": "delta-identity",
+      "pom": "delta-game/delta-identity/pom.xml",
+      "packageRoot": "com.delta.identity.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-identity",
+        "delta-platform",
+        "delta-system"
+      ],
+      "mainJavaCount": 8,
+      "controllers": [
+        {
+          "name": "IdentityGatewayAdminController",
+          "file": "delta-game/delta-identity/src/main/java/com/delta/identity/controller/IdentityGatewayAdminController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "IdentityVerificationController",
+          "file": "delta-game/delta-identity/src/main/java/com/delta/identity/controller/IdentityVerificationController.java",
+          "endpoints": 9
+        },
+        {
+          "name": "SmsGatewayAdminController",
+          "file": "delta-game/delta-identity/src/main/java/com/delta/identity/controller/SmsGatewayAdminController.java",
+          "endpoints": 4
+        }
+      ],
+      "tests": [
+        "delta-game/delta-identity/src/test/java/com/delta/identity/service/AuthorityServiceSettingsTest.java"
+      ]
+    },
+    {
+      "id": "delta-marketing",
+      "pom": "delta-game/delta-marketing/pom.xml",
+      "packageRoot": "com.delta.marketing.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-marketing",
+        "delta-order",
+        "delta-pay",
+        "delta-player",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 21,
+      "controllers": [
+        {
+          "name": "CouponAdminController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/CouponAdminController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "CouponController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/CouponController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "GrabMonitorController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/GrabMonitorController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "InviteAdminController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/InviteAdminController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "MembershipAdminController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/MembershipAdminController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "MembershipController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/MembershipController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "RewardController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/reward/RewardController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "RewardGrabSettingsController",
+          "file": "delta-game/delta-marketing/src/main/java/com/delta/marketing/controller/RewardGrabSettingsController.java",
+          "endpoints": 2
+        }
+      ],
+      "tests": [
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/controller/CouponAdminControllerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/controller/CouponControllerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/controller/InviteAdminControllerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/controller/MembershipControllerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/listener/CouponRefundListenerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/listener/InviteRewardListenerTest.java",
+        "delta-game/delta-marketing/src/test/java/com/delta/marketing/service/MembershipAdminServiceTest.java"
+      ]
+    },
+    {
+      "id": "delta-message",
+      "pom": "delta-game/delta-message/pom.xml",
+      "packageRoot": "com.delta.message.config",
+      "dependsOn": [
+        "delta-common",
+        "delta-message",
+        "delta-player",
+        "delta-user"
+      ],
+      "mainJavaCount": 12,
+      "controllers": [
+        {
+          "name": "MessageController",
+          "file": "delta-game/delta-message/src/main/java/com/delta/message/controller/MessageController.java",
+          "endpoints": 6
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-notification",
+      "pom": "delta-game/delta-notification/pom.xml",
+      "packageRoot": "com.delta.notification.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-message",
+        "delta-notification",
+        "delta-order",
+        "delta-platform",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 16,
+      "controllers": [
+        {
+          "name": "AdminNoticePushController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/AdminNoticePushController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "EmailNotificationController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/EmailNotificationController.java",
+          "endpoints": 6
+        },
+        {
+          "name": "OfficialWechatController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/OfficialWechatController.java",
+          "endpoints": 8
+        },
+        {
+          "name": "WechatAccountLinkController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatAccountLinkController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "WechatWebLoginController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatWebLoginController.java",
+          "endpoints": 10
+        }
+      ],
+      "tests": [
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/EmailNotificationServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/NotificationCenterServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/NotificationTemplateDataServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatBindingPersistenceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java"
+      ]
+    },
+    {
+      "id": "delta-order",
+      "pom": "delta-game/delta-order/pom.xml",
+      "packageRoot": "com.delta.order.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-order",
+        "delta-product",
+        "delta-system"
+      ],
+      "mainJavaCount": 42,
+      "controllers": [
+        {
+          "name": "ComplaintController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/ComplaintController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "OrderController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/OrderController.java",
+          "endpoints": 8
+        },
+        {
+          "name": "PlayerWorkController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/PlayerWorkController.java",
+          "endpoints": 6
+        },
+        {
+          "name": "ReviewController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/ReviewController.java",
+          "endpoints": 4
+        }
+      ],
+      "tests": [
+        "delta-game/delta-order/src/test/java/com/delta/order/service/impl/ComplaintServiceImplTest.java"
+      ]
+    },
+    {
+      "id": "delta-pay",
+      "pom": "delta-game/delta-pay/pom.xml",
+      "packageRoot": "com.delta.pay.config",
+      "dependsOn": [
+        "delta-common",
+        "delta-order",
+        "delta-pay",
+        "delta-product",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 22,
+      "controllers": [
+        {
+          "name": "PayController",
+          "file": "delta-game/delta-pay/src/main/java/com/delta/pay/controller/PayController.java",
+          "endpoints": 15
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-platform",
+      "pom": "delta-game/delta-platform/pom.xml",
+      "packageRoot": "com.delta.platform",
+      "dependsOn": [
+        "delta-common",
+        "delta-platform",
+        "delta-system"
+      ],
+      "mainJavaCount": 14,
+      "controllers": [
+        {
+          "name": "PlatformController",
+          "file": "delta-game/delta-platform/src/main/java/com/delta/platform/PlatformController.java",
+          "endpoints": 13
+        },
+        {
+          "name": "ProjectStatusController",
+          "file": "delta-game/delta-platform/src/main/java/com/delta/platform/ProjectStatusController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "ThemeController",
+          "file": "delta-game/delta-platform/src/main/java/com/delta/platform/ThemeController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "ThemePublicController",
+          "file": "delta-game/delta-platform/src/main/java/com/delta/platform/ThemePublicController.java",
+          "endpoints": 1
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-player",
+      "pom": "delta-game/delta-player/pom.xml",
+      "packageRoot": "com.delta.player.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-order",
+        "delta-pay",
+        "delta-player",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 49,
+      "controllers": [
+        {
+          "name": "PlayerAccountController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerAccountController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "PlayerAuthController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerAuthController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "PlayerController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerController.java",
+          "endpoints": 6
+        },
+        {
+          "name": "PlayerDepositRefundController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerDepositRefundController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "PlayerEarningsController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerEarningsController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "PlayerHomeController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerHomeController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "PlayerOrderController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PlayerOrderController.java",
+          "endpoints": 18
+        },
+        {
+          "name": "PublicPlayerChatController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PublicPlayerChatController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "PublicPlayerController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/PublicPlayerController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "UserPlayerController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/UserPlayerController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "WithdrawController",
+          "file": "delta-game/delta-player/src/main/java/com/delta/player/controller/WithdrawController.java",
+          "endpoints": 5
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-product",
+      "pom": "delta-game/delta-product/pom.xml",
+      "packageRoot": "com.delta.product.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-product"
+      ],
+      "mainJavaCount": 30,
+      "controllers": [
+        {
+          "name": "CategoryController",
+          "file": "delta-game/delta-product/src/main/java/com/delta/product/controller/CategoryController.java",
+          "endpoints": 6
+        },
+        {
+          "name": "CategoryFormFieldController",
+          "file": "delta-game/delta-product/src/main/java/com/delta/product/controller/CategoryFormFieldController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "ProductController",
+          "file": "delta-game/delta-product/src/main/java/com/delta/product/controller/ProductController.java",
+          "endpoints": 13
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-reporting",
+      "pom": "delta-game/delta-reporting/pom.xml",
+      "packageRoot": "com.delta.reporting.analytics",
+      "dependsOn": [
+        "delta-common",
+        "delta-reporting"
+      ],
+      "mainJavaCount": 8,
+      "controllers": [
+        {
+          "name": "AdminStatisticsController",
+          "file": "delta-game/delta-reporting/src/main/java/com/delta/reporting/controller/AdminStatisticsController.java",
+          "endpoints": 6
+        },
+        {
+          "name": "DashboardAnalyticsController",
+          "file": "delta-game/delta-reporting/src/main/java/com/delta/reporting/analytics/DashboardAnalyticsController.java",
+          "endpoints": 4
+        }
+      ],
+      "tests": [
+        "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitInterceptorTest.java",
+        "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitRecorderTest.java",
+        "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/DashboardAnalyticsServiceTest.java"
+      ]
+    },
+    {
+      "id": "delta-system",
+      "pom": "delta-game/delta-system/pom.xml",
+      "packageRoot": "com.delta.system.aspect",
+      "dependsOn": [
+        "delta-common",
+        "delta-system"
+      ],
+      "mainJavaCount": 53,
+      "controllers": [
+        {
+          "name": "AdminChatController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/AdminChatController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "AdminController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/AdminController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "BannerController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/BannerController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "ContentConfigController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/ContentConfigController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "NoticeController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/NoticeController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "OperationLogController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/OperationLogController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "QuickReplyController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/QuickReplyController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "RechargePackageController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/RechargePackageController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "SensitiveWordController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/SensitiveWordController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "StatisticsDailyController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/StatisticsDailyController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "SysConfigController",
+          "file": "delta-game/delta-system/src/main/java/com/delta/system/controller/SysConfigController.java",
+          "endpoints": 6
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-user",
+      "pom": "delta-game/delta-user/pom.xml",
+      "packageRoot": "com.delta.user.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-order",
+        "delta-product",
+        "delta-system",
+        "delta-user"
+      ],
+      "mainJavaCount": 41,
+      "controllers": [
+        {
+          "name": "AppHomeController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/AppHomeController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "AppProductController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/AppProductController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "GuestCheckoutController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/GuestCheckoutController.java",
+          "endpoints": 3
+        },
+        {
+          "name": "InviteController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/InviteController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "UserAuthController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/UserAuthController.java",
+          "endpoints": 10
+        },
+        {
+          "name": "UserController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/UserController.java",
+          "endpoints": 4
+        },
+        {
+          "name": "UserEngagementController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/UserEngagementController.java",
+          "endpoints": 8
+        },
+        {
+          "name": "UserGameInfoController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/UserGameInfoController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "UserLoginPolicyController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/UserLoginPolicyController.java",
+          "endpoints": 1
+        },
+        {
+          "name": "WalletController",
+          "file": "delta-game/delta-user/src/main/java/com/delta/user/controller/WalletController.java",
+          "endpoints": 1
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-workbench",
+      "pom": "delta-game/delta-workbench/pom.xml",
+      "packageRoot": "com.delta.workbench",
+      "dependsOn": [
+        "delta-common",
+        "delta-message",
+        "delta-pay",
+        "delta-platform",
+        "delta-player",
+        "delta-system",
+        "delta-workbench"
+      ],
+      "mainJavaCount": 2,
+      "controllers": [
+        {
+          "name": "WorkbenchController",
+          "file": "delta-game/delta-workbench/src/main/java/com/delta/workbench/WorkbenchController.java",
+          "endpoints": 6
+        }
+      ],
+      "tests": []
+    },
+    {
+      "id": "delta-workforce",
+      "pom": "delta-game/delta-workforce/pom.xml",
+      "packageRoot": "com.delta.workforce.controller",
+      "dependsOn": [
+        "delta-common",
+        "delta-order",
+        "delta-player",
+        "delta-workforce"
+      ],
+      "mainJavaCount": 8,
+      "controllers": [
+        {
+          "name": "CsRoutingController",
+          "file": "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/CsRoutingController.java",
+          "endpoints": 9
+        },
+        {
+          "name": "StaffOrderAssignmentController",
+          "file": "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/StaffOrderAssignmentController.java",
+          "endpoints": 2
+        },
+        {
+          "name": "StaffOrderTeamController",
+          "file": "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/StaffOrderTeamController.java",
+          "endpoints": 10
+        },
+        {
+          "name": "StaffRoleController",
+          "file": "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/StaffRoleController.java",
+          "endpoints": 5
+        },
+        {
+          "name": "StaffShiftController",
+          "file": "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/StaffShiftController.java",
+          "endpoints": 2
+        }
+      ],
+      "tests": [
+        "delta-game/delta-workforce/src/test/java/com/delta/workforce/controller/CsRoutingBatchRuleTest.java"
+      ]
+    }
+  ],
+  "admin": {
+    "views": [
+      "delta-admin-ui/src/views/chat/ChatRecordDetail.vue",
+      "delta-admin-ui/src/views/chat/ChatRecordList.vue",
+      "delta-admin-ui/src/views/chat/ChatService.vue",
+      "delta-admin-ui/src/views/chat/CsRouting.vue",
+      "delta-admin-ui/src/views/complaint/ComplaintList.vue",
+      "delta-admin-ui/src/views/dashboard/AnalyticsPanel.vue",
+      "delta-admin-ui/src/views/dashboard/MobileDashboard.vue",
+      "delta-admin-ui/src/views/dashboard/index.vue",
+      "delta-admin-ui/src/views/error/403.vue",
+      "delta-admin-ui/src/views/error/404.vue",
+      "delta-admin-ui/src/views/login/index.vue",
+      "delta-admin-ui/src/views/marketing/Coupons.vue",
+      "delta-admin-ui/src/views/marketing/Invites.vue",
+      "delta-admin-ui/src/views/marketing/MembershipLevels.vue",
+      "delta-admin-ui/src/views/order/OrderList.vue",
+      "delta-admin-ui/src/views/order/OrderTeamPanel.vue",
+      "delta-admin-ui/src/views/platform/FeatureMarket.vue",
+      "delta-admin-ui/src/views/platform/IncomeAnalysis.vue",
+      "delta-admin-ui/src/views/platform/SystemUpdates.vue",
+      "delta-admin-ui/src/views/platform/ThemeStore.vue",
+      "delta-admin-ui/src/views/player/DepositRefunds.vue",
+      "delta-admin-ui/src/views/player/Governance.vue",
+      "delta-admin-ui/src/views/player/PlayerDeposits.vue",
+      "delta-admin-ui/src/views/player/PlayerLevels.vue",
+      "delta-admin-ui/src/views/player/PlayerList.vue",
+      "delta-admin-ui/src/views/player/RewardList.vue",
+      "delta-admin-ui/src/views/product/CategoryFieldList.vue",
+      "delta-admin-ui/src/views/product/CategoryList.vue",
+      "delta-admin-ui/src/views/product/ProductForm.vue",
+      "delta-admin-ui/src/views/product/ProductList.vue",
+      "delta-admin-ui/src/views/product/RecommendCategoryList.vue",
+      "delta-admin-ui/src/views/refund/RefundList.vue",
+      "delta-admin-ui/src/views/relay/RelayList.vue",
+      "delta-admin-ui/src/views/replace/ReplaceList.vue",
+      "delta-admin-ui/src/views/review/FulfillmentReview.vue",
+      "delta-admin-ui/src/views/statistics/IncomeDaily.vue",
+      "delta-admin-ui/src/views/statistics/SettlementLedger.vue",
+      "delta-admin-ui/src/views/system/AdminList.vue",
+      "delta-admin-ui/src/views/system/BannerList.vue",
+      "delta-admin-ui/src/views/system/ContentSettings.vue",
+      "delta-admin-ui/src/views/system/EmailNotifications.vue",
+      "delta-admin-ui/src/views/system/NoticeList.vue",
+      "delta-admin-ui/src/views/system/OperationLog.vue",
+      "delta-admin-ui/src/views/system/PlayerLayoutSettings.vue",
+      "delta-admin-ui/src/views/system/QuickReplyList.vue",
+      "delta-admin-ui/src/views/system/RechargePackage.vue",
+      "delta-admin-ui/src/views/system/RewardGrabSettings.vue",
+      "delta-admin-ui/src/views/system/SensitiveWordList.vue",
+      "delta-admin-ui/src/views/system/SmsAccount.vue",
+      "delta-admin-ui/src/views/system/StaffRoles.vue",
+      "delta-admin-ui/src/views/system/SysConfig.vue",
+      "delta-admin-ui/src/views/system/WechatNotices.vue",
+      "delta-admin-ui/src/views/user/IdentityReview.vue",
+      "delta-admin-ui/src/views/user/SpendingRank.vue",
+      "delta-admin-ui/src/views/user/UserList.vue",
+      "delta-admin-ui/src/views/wechat/Binding.vue",
+      "delta-admin-ui/src/views/withdraw/WithdrawList.vue"
+    ],
+    "routes": [
+      "/",
+      "/chat",
+      "/complaint",
+      "/deposit-refunds",
+      "/fulfillment-review",
+      "/h5/login",
+      "/invitations",
+      "/login",
+      "/marketing",
+      "/material-review",
+      "/order",
+      "/platform",
+      "/player",
+      "/player-level",
+      "/player/deposits",
+      "/privacy-requests",
+      "/product",
+      "/refund",
+      "/relay",
+      "/replace",
+      "/rewards",
+      "/settlements",
+      "/staff-shifts",
+      "/statistics",
+      "/system",
+      "/user",
+      "/user/identity-review",
+      "/user/list",
+      "/withdraw",
+      "403",
+      ":pathMatch(.*)*",
+      "admin",
+      "banner",
+      "category",
+      "config",
+      "content",
+      "coupons",
+      "create",
+      "dashboard",
+      "edit/:id",
+      "email-notifications",
+      "features",
+      "form-fields",
+      "identity-account",
+      "income-analysis",
+      "income-daily",
+      "invites",
+      "list",
+      "membership",
+      "notice",
+      "operation-log",
+      "player-layout",
+      "quick-reply",
+      "recharge-packages",
+      "recommend-category",
+      "record",
+      "record/:id",
+      "reward-grab",
+      "roles",
+      "routing",
+      "sensitive-words",
+      "service",
+      "sms-account",
+      "spending-rank",
+      "themes",
+      "updates",
+      "wechat-binding",
+      "wechat-notices"
+    ],
+    "apiModules": [
+      {
+        "module": "auth.js",
+        "exports": [
+          "changeCsPassword",
+          "getCsProfile",
+          "getLoginCaptcha",
+          "login",
+          "logout",
+          "updateCsProfile"
+        ],
+        "urls": [
+          "/auth/logout",
+          "/cs/auth/captcha",
+          "/cs/auth/login",
+          "/cs/profile",
+          "/cs/profile/password"
+        ]
+      },
+      {
+        "module": "business.js",
+        "exports": [
+          "adminChatMessageList",
+          "adminChatSessionList",
+          "adminOrderAssign",
+          "adminOrderConfirm",
+          "adminOrderDetail",
+          "adminOrderList",
+          "adminOrderProgress",
+          "adminOrderReassignCs",
+          "adminOrderRefund",
+          "adminPlayerApprove",
+          "adminPlayerBatchApprove",
+          "adminPlayerBatchLevel",
+          "adminPlayerBatchReject",
+          "adminPlayerBatchUnfreeze",
+          "adminPlayerDelete",
+          "adminPlayerDepositList",
+          "adminPlayerDeposits",
+          "adminPlayerDetail",
+          "adminPlayerFreeze",
+          "adminPlayerList",
+          "adminPlayerReject",
+          "adminPlayerTransactions",
+          "adminPlayerUnfreeze",
+          "adminPlayerUpdate",
+          "adminPlayerUpdateStatus",
+          "adminRefundApprove",
+          "adminRefundDetail",
+          "adminRefundList",
+          "adminRefundReject",
+          "adminRefundRetry",
+          "adminReviewDelete",
+          "adminReviewList",
+          "adminSetPlayerDepositAmount",
+          "adminUserAdjustBalance",
+          "adminUserBatchDelete",
+          "adminUserBatchStatus",
+          "adminUserCreate",
+          "adminUserDelete",
+          "adminUserDetail",
+          "adminUserList",
+          "adminUserUpdate",
+          "adminUserUpdateStatus",
+          "adminWithdrawList",
+          "adminWithdrawProcess",
+          "adminWithdrawReject",
+          "chatMarkRead",
+          "chatMessageList",
+          "chatSendMessage",
+          "csChatMessageList",
+          "csChatSessionAllList",
+          "csChatSessionList",
+          "csComplaintCreate",
+          "csComplaintDetail",
+          "csComplaintList",
+          "csComplaintProcess",
+          "csComplaintResolve",
+          "csOrderAssign",
+          "csOrderConfirm",
+          "csOrderDetail",
+          "csOrderList",
+          "csOrderProgress",
+          "csOrderRefund",
+          "csPlayerAudit",
+          "csPlayerDetail",
+          "csPlayerFreeze",
+          "csPlayerList",
+          "csPlayerTransactions",
+          "csPlayerUnfreeze",
+          "csPlayerUpdateNickname",
+          "csRefundAudit",
+          "csRefundCreate",
+          "csRefundDetail",
+          "csRefundList",
+          "csRefundStartReview",
+          "csRefundSubmitReview",
+          "csRelayApprove",
+          "csRelayList",
+          "csRelayReject",
+          "csReplaceApprove",
+          "csReplaceList",
+          "csReplaceReject",
+          "csUserDetail",
+          "csUserList",
+          "csUserUpdateStatus",
+          "csWithdrawApprove",
+          "csWithdrawList",
+          "csWithdrawReject",
+          "customerRefundCreate",
+          "customerRefundHistory",
+          "depositRefundList",
+          "depositRefundRetry",
+          "depositRefundReview",
+          "getActiveQuickReplies",
+          "getPlayerLayoutSettings",
+          "getSettlementLedger",
+          "playerLevelCreate",
+          "playerLevelDelete",
+          "playerLevelList",
+          "playerLevelUpdate",
+          "savePlayerLayoutSettings",
+          "uploadFile",
+          "uploadProfileAudio"
+        ],
+        "urls": [
+          "/admin/chat/message/list",
+          "/admin/chat/session/list",
+          "/admin/order/",
+          "/admin/order/list",
+          "/admin/player-layout",
+          "/admin/player-level",
+          "/admin/player-level/list",
+          "/admin/player/deposits",
+          "/admin/player/list",
+          "/admin/refunds",
+          "/admin/review/list",
+          "/admin/settlements",
+          "/admin/user/list",
+          "/admin/withdraw/list",
+          "/common/chat/message/list",
+          "/common/chat/message/read",
+          "/common/chat/message/send",
+          "/common/file/profile-audio",
+          "/common/file/upload",
+          "/cs/chat/message/list",
+          "/cs/chat/session/list",
+          "/cs/chat/sessions",
+          "/cs/complaint/create",
+          "/cs/complaint/list",
+          "/cs/deposit-refunds/list",
+          "/cs/order/list",
+          "/cs/player/list",
+          "/cs/refunds",
+          "/cs/relay/list",
+          "/cs/replace/list",
+          "/cs/user/list",
+          "/cs/withdraw/list",
+          "/system/quick-reply/active"
+        ]
+      },
+      {
+        "module": "cs-routing.js",
+        "exports": [
+          "csRatingStats",
+          "csRoutingGroups",
+          "csRoutingRules",
+          "csRoutingStaff",
+          "deleteCsRoutingGroup",
+          "deleteCsRoutingRule",
+          "saveCsRoutingGroup",
+          "saveCsRoutingRule",
+          "saveCsRoutingRules"
+        ],
+        "urls": [
+          "/admin/cs-routing/groups",
+          "/admin/cs-routing/groups/",
+          "/admin/cs-routing/ratings",
+          "/admin/cs-routing/rules",
+          "/admin/cs-routing/rules/",
+          "/admin/cs-routing/rules/batch",
+          "/admin/cs-routing/staff"
+        ]
+      },
+      {
+        "module": "dashboard.js",
+        "exports": [
+          "getAdminDashboard",
+          "getCsDashboard",
+          "getDashboardAnalytics",
+          "getDashboardPlayers",
+          "getSpendingRank",
+          "getStatisticsIncomeDaily",
+          "getStatisticsOrder",
+          "getStatisticsOverview",
+          "getStatisticsPlayer",
+          "getStatisticsUser"
+        ],
+        "urls": [
+          "/admin/home/dashboard",
+          "/admin/statistics/income-daily",
+          "/admin/statistics/order",
+          "/admin/statistics/overview",
+          "/admin/statistics/player",
+          "/admin/statistics/user",
+          "/cs/analytics",
+          "/cs/analytics/players",
+          "/cs/dashboard"
+        ]
+      },
+      {
+        "module": "email-notifications.js",
+        "exports": [
+          "getEmailNotificationRecords",
+          "getEmailNotificationSettings",
+          "retryEmailNotification",
+          "saveEmailNotificationSettings",
+          "sendEmailNotificationTest"
+        ],
+        "urls": []
+      },
+      {
+        "module": "governance.js",
+        "exports": [
+          "createGovernanceInvitation",
+          "loadGovernance",
+          "recheckGovernanceRevision",
+          "reviewGovernanceRevision",
+          "reviewPrivacyRequest",
+          "updateGovernanceInvitation",
+          "updateGovernanceShift"
+        ],
+        "urls": [
+          "/cs/governance/invitations"
+        ]
+      },
+      {
+        "module": "identity.js",
+        "exports": [
+          "getIdentityApplication",
+          "getIdentityApplications",
+          "reviewIdentityApplication"
+        ],
+        "urls": []
+      },
+      {
+        "module": "marketing.js",
+        "exports": [
+          "createCouponTemplate",
+          "getCouponRecords",
+          "getCouponTemplates",
+          "getInviteOperations",
+          "getMembershipConfig",
+          "markInviteDebtRecovered",
+          "saveMembershipConfig",
+          "updateCouponTemplate"
+        ],
+        "urls": [
+          "/admin/coupons",
+          "/admin/coupons/records",
+          "/admin/invites",
+          "/admin/membership"
+        ]
+      },
+      {
+        "module": "official-wechat.js",
+        "exports": [
+          "completeOfficialWechatBinding",
+          "getOfficialWechatBinding",
+          "removeOfficialWechatBinding",
+          "startOfficialWechatBinding"
+        ],
+        "urls": [
+          "/common/wechat/binding",
+          "/common/wechat/binding/complete",
+          "/common/wechat/binding/start"
+        ]
+      },
+      {
+        "module": "order-assignment.js",
+        "exports": [
+          "orderAssignmentCandidates"
+        ],
+        "urls": []
+      },
+      {
+        "module": "order-team.js",
+        "exports": [
+          "orderTeamCandidates",
+          "orderTeamInvite",
+          "orderTeamRemove",
+          "orderTeamRevoke",
+          "orderTeamRoster"
+        ],
+        "urls": []
+      },
+      {
+        "module": "platform.js",
+        "exports": [
+          "checkRemoteUpdates",
+          "createPlatformCheckout",
+          "getFeatureMarket",
+          "getIncomeComparison",
+          "getPlatformFeatures",
+          "getPlatformOverview",
+          "getPlatformUpdates",
+          "getPublicTheme",
+          "getRemoteUpdates",
+          "getThemeSettings",
+          "importPlatformLicense",
+          "installRemoteUpdates",
+          "setActiveTheme",
+          "setPlatformFeatureEnabled",
+          "setPlatformUpdateSelection",
+          "setThemePreferences",
+          "syncFeatureMarket"
+        ],
+        "urls": []
+      },
+      {
+        "module": "product.js",
+        "exports": [
+          "addCategory",
+          "addCategoryField",
+          "addProduct",
+          "addRecommendCategory",
+          "batchCopyProducts",
+          "batchDeleteProducts",
+          "batchProductCategory",
+          "batchProductPrice",
+          "batchProductStatus",
+          "csCategoryList",
+          "csCategorySave",
+          "csCategoryUpdateStatus",
+          "deleteCategory",
+          "deleteCategoryField",
+          "deleteProduct",
+          "deleteRecommendCategory",
+          "getAllCategories",
+          "getCategoryFieldList",
+          "getCategoryList",
+          "getCategoryTree",
+          "getProductDetail",
+          "getProductList",
+          "getRecommendCategories",
+          "getRecommendCategoryList",
+          "updateCategory",
+          "updateCategoryField",
+          "updateProduct",
+          "updateProductStatus",
+          "updateRecommendCategory"
+        ],
+        "urls": [
+          "/admin/category-field",
+          "/admin/category-field/list",
+          "/admin/recommend-category",
+          "/admin/recommend-category/list",
+          "/cs/category",
+          "/cs/category/list",
+          "/cs/category/status",
+          "/product",
+          "/product/category",
+          "/product/category/all",
+          "/product/category/list",
+          "/product/category/tree",
+          "/product/list",
+          "/product/recommend/categories"
+        ]
+      },
+      {
+        "module": "reward.js",
+        "exports": [
+          "getGrabMetrics",
+          "getRewardGrabSettings",
+          "getRewards",
+          "reverseReward",
+          "saveRewardGrabSettings"
+        ],
+        "urls": []
+      },
+      {
+        "module": "shift.js",
+        "exports": [
+          "getShiftStatus",
+          "toggleShift"
+        ],
+        "urls": [
+          "/cs/shift/status",
+          "/cs/shift/toggle"
+        ]
+      },
+      {
+        "module": "system.js",
+        "exports": [
+          "addAdmin",
+          "addBanner",
+          "addContentConfig",
+          "addNotice",
+          "addQuickReply",
+          "addSensitiveWord",
+          "assignStaffRole",
+          "batchUpdateSysConfig",
+          "checkoutIdentityPackage",
+          "checkoutSmsPackage",
+          "deleteAdmin",
+          "deleteBanner",
+          "deleteContentConfig",
+          "deleteNotice",
+          "deleteQuickReply",
+          "deleteSensitiveWord",
+          "deleteStaffRole",
+          "getAdminById",
+          "getAdminList",
+          "getAuthoritySettings",
+          "getBannerList",
+          "getContentConfigByKey",
+          "getContentConfigList",
+          "getIdentityGatewayAccount",
+          "getIdentityLimits",
+          "getNoticeList",
+          "getOperationLogList",
+          "getQuickReplyList",
+          "getRechargePackages",
+          "getSensitiveWordList",
+          "getSmsGatewayAccount",
+          "getSmsNotifications",
+          "getStaffRoles",
+          "getSysConfigList",
+          "getWechatNotifications",
+          "pushNotice",
+          "retryNotification",
+          "saveAuthoritySettings",
+          "saveIdentityLimits",
+          "saveStaffRole",
+          "updateAdmin",
+          "updateBanner",
+          "updateContentConfig",
+          "updateNotice",
+          "updateQuickReply",
+          "updateRechargePackages",
+          "updateSensitiveWord",
+          "uploadWxPayCertificate"
+        ],
+        "urls": [
+          "/admin/",
+          "/admin/identity-service/limits",
+          "/admin/sms/account",
+          "/admin/sms/notifications",
+          "/admin/wechat/notifications",
+          "/pay/config/upload",
+          "/system/admin",
+          "/system/admin/list",
+          "/system/banner",
+          "/system/banner/list",
+          "/system/config/batch",
+          "/system/config/list",
+          "/system/config/recharge-packages",
+          "/system/content",
+          "/system/content/list",
+          "/system/notice",
+          "/system/notice/list",
+          "/system/operation-log/list",
+          "/system/quick-reply",
+          "/system/quick-reply/list",
+          "/system/roles",
+          "/system/roles/",
+          "/system/roles/members/",
+          "/system/sensitive-word",
+          "/system/sensitive-word/list"
+        ]
+      }
+    ],
+    "tests": [
+      "delta-admin-ui/test/api-boundary.test.mjs",
+      "delta-admin-ui/test/batch-actions-browser.mjs",
+      "delta-admin-ui/test/content-admin.test.mjs",
+      "delta-admin-ui/test/cs-routing-admin.test.mjs",
+      "delta-admin-ui/test/dashboard-analytics.test.mjs",
+      "delta-admin-ui/test/design-system.test.mjs",
+      "delta-admin-ui/test/email-notifications-browser.mjs",
+      "delta-admin-ui/test/feature-market-browser.mjs",
+      "delta-admin-ui/test/feature-market.test.mjs",
+      "delta-admin-ui/test/feedback.test.mjs",
+      "delta-admin-ui/test/h5-route.test.mjs",
+      "delta-admin-ui/test/h5-shell.test.mjs",
+      "delta-admin-ui/test/image-url.test.mjs",
+      "delta-admin-ui/test/latest-task.test.mjs",
+      "delta-admin-ui/test/login-security.test.mjs",
+      "delta-admin-ui/test/marketing-admin.test.mjs",
+      "delta-admin-ui/test/mobile-dashboard.test.mjs",
+      "delta-admin-ui/test/mobile-layout-normalization.test.mjs",
+      "delta-admin-ui/test/mobile-navigation.test.mjs",
+      "delta-admin-ui/test/mobile-redirect.test.mjs",
+      "delta-admin-ui/test/navigation.test.mjs",
+      "delta-admin-ui/test/nginx-static.test.mjs",
+      "delta-admin-ui/test/notification-examples.test.mjs",
+      "delta-admin-ui/test/order-assignment-candidates.test.mjs",
+      "delta-admin-ui/test/platform-shell.test.mjs",
+      "delta-admin-ui/test/player-admin-delete.test.mjs",
+      "delta-admin-ui/test/player-application-review.test.mjs",
+      "delta-admin-ui/test/player-image-guidance.test.mjs",
+      "delta-admin-ui/test/request-client.test.mjs",
+      "delta-admin-ui/test/sensitive-word-admin.test.mjs",
+      "delta-admin-ui/test/sms-account.test.mjs",
+      "delta-admin-ui/test/soft-theme.test.mjs",
+      "delta-admin-ui/test/system-config.test.mjs",
+      "delta-admin-ui/test/update-selection.test.mjs",
+      "delta-admin-ui/test/wechat-binding.test.mjs",
+      "delta-admin-ui/test/workbench-links.test.mjs"
+    ]
+  },
+  "h5": {
+    "pages": [
+      "pages/agreement/about",
+      "pages/agreement/privacy",
+      "pages/agreement/user",
+      "pages/category/index",
+      "pages/chat/list",
+      "pages/chat/room",
+      "pages/complaint/create",
+      "pages/complaint/detail",
+      "pages/complaint/list",
+      "pages/coupons/index",
+      "pages/display/index",
+      "pages/index/index",
+      "pages/invites/index",
+      "pages/login/bind-phone",
+      "pages/login/index",
+      "pages/maintenance/index",
+      "pages/membership/index",
+      "pages/message/index",
+      "pages/mine/identity",
+      "pages/mine/index",
+      "pages/mine/library",
+      "pages/mine/privacy-center",
+      "pages/mine/profile",
+      "pages/mine/security",
+      "pages/mine/services",
+      "pages/order/create",
+      "pages/order/detail",
+      "pages/order/list",
+      "pages/order/lookup",
+      "pages/order/pay",
+      "pages/players/detail",
+      "pages/players/index",
+      "pages/product/detail",
+      "pages/product/list",
+      "pages/review/create",
+      "pages/wallet/index",
+      "pages/wallet/recharge",
+      "pages/wechat/binding",
+      "pages/workbench/index"
+    ],
+    "subPackages": [
+      {
+        "root": "pages-player",
+        "pages": [
+          "account/edit",
+          "account/list",
+          "apply/index",
+          "chat/list",
+          "chat/room",
+          "deposit/refund",
+          "earnings/detail",
+          "earnings/index",
+          "hall/index",
+          "invite/list",
+          "invite/teammate",
+          "mine/index",
+          "order/detail",
+          "order/list",
+          "order/progress",
+          "profile/introduction",
+          "review/list",
+          "withdraw/detail",
+          "withdraw/index",
+          "withdraw/list"
+        ]
+      },
+      {
+        "root": "pages-cs",
+        "pages": [
+          "login/index"
+        ]
+      }
+    ],
+    "tests": [
+      "delta-mp/test/agreement-content.test.mjs",
+      "delta-mp/test/connection-url.test.mjs",
+      "delta-mp/test/contact-purchase-entrypoints.test.mjs",
+      "delta-mp/test/cs-workbench.test.mjs",
+      "delta-mp/test/guest-checkout-ui.test.mjs",
+      "delta-mp/test/image-url.test.mjs",
+      "delta-mp/test/nginx-static.test.mjs",
+      "delta-mp/test/notice-layout.test.mjs",
+      "delta-mp/test/operations-features.test.mjs",
+      "delta-mp/test/payment-qr-polling.test.mjs",
+      "delta-mp/test/platform-payment.test.mjs",
+      "delta-mp/test/player-image-display.test.mjs",
+      "delta-mp/test/player-layout.test.mjs",
+      "delta-mp/test/player-lists.test.mjs",
+      "delta-mp/test/player-order-actions.test.mjs",
+      "delta-mp/test/request.test.mjs",
+      "delta-mp/test/soft-theme.test.mjs",
+      "delta-mp/test/staff-binding-entry.test.mjs",
+      "delta-mp/test/staff-entry.test.mjs",
+      "delta-mp/test/ui-remediation.test.mjs",
+      "delta-mp/test/usePagedList.test.mjs",
+      "delta-mp/test/websocket.test.mjs",
+      "delta-mp/test/wechat-official-payment.test.mjs"
+    ]
+  },
+  "database": {
+    "baseTables": [
+      "admin",
+      "banner",
+      "category",
+      "category_form_field",
+      "chat_message",
+      "chat_session",
+      "complaint",
+      "content_config",
+      "coupon_template",
+      "display_privacy",
+      "email_notice_queue",
+      "guest_checkout_profile",
+      "guest_user_link",
+      "invite_code",
+      "invite_relation",
+      "invite_reward",
+      "invite_reward_debt",
+      "notice",
+      "operation_log",
+      "order",
+      "order_player",
+      "order_progress",
+      "order_relay_request",
+      "payment",
+      "player",
+      "player_account",
+      "player_follow",
+      "player_income_settlement",
+      "player_level",
+      "player_replace_request",
+      "player_reward",
+      "player_wallet",
+      "price_rule",
+      "product",
+      "product_spec",
+      "quick_reply",
+      "recommend_category",
+      "refund_request",
+      "refund_request_audit",
+      "review",
+      "sensitive_word",
+      "statistics_daily",
+      "subscribe_message_log",
+      "sys_config",
+      "system_notification",
+      "transaction",
+      "user",
+      "user_coupon",
+      "user_favorite",
+      "user_game_info",
+      "user_subscribe",
+      "wallet",
+      "withdraw"
+    ],
+    "migrations": [
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20260318__player_deposit_amount_config.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20260323__image_columns_use_varchar_csv.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20260407_1__admin_login_lock_state_cleanup.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20260407__product_limit_type.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261112__coupon_multi_claim.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261112__marketing_display.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261114_1__category_icon_size.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261114_2__banner_text.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261114_3__chat_rating.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261114_4__chat_session_active_unique.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261114__cs_routing.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261116__teammate_management.sql"
+      },
+      {
+        "kind": "admin",
+        "path": "delta-game/delta-admin/src/main/resources/db/migration/V20261119__player_deposit_override.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261023-player-directory.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261023-player-homepage.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261024-reward-grab.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261024-user-password-management.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261025-player-pricing.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261101-client-phone-unique.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261102-identity-verification.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261102-player-deposit-modes.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261106-guest-checkout.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261106-workbench.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261107-settlement-hold.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261107-user-favorites-follows.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261108-dashboard-analytics.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261108-notification-center.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261108-two-stage-refunds.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261109-official-wechat-one-wechat.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261112-coupon-multi-claim.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261112-marketing-display.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261116-privacy-request-review-note.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261117-identity-attempt-limit.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261117-sms-authority-delivery-key.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261118-player-deposit-refund.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261119-player-deposit-override.sql"
+      }
+    ],
+    "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
+  },
+  "contracts": {
+    "endpoints": 483,
+    "operations": 483,
+    "schemas": 279
+  }
+}

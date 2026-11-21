@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 export const repoRoot = path.resolve(fileURLToPath(new URL('../../', import.meta.url)))
-export const inventoryRelativePath = 'docs/theme-route-inventory-2026-11-13.json'
+export const inventoryRelativePath = 'D:/CodexData/outputs/theme-route-audit/theme-route-inventory.json'
 export const profiles = [
   { id: 'customer-mobile', app: 'customer', viewport: { width: 390, height: 844 }, mobile: true },
   { id: 'customer-small', app: 'customer', viewport: { width: 320, height: 568 }, mobile: true },
@@ -35,7 +35,8 @@ export function gitSnapshot() {
 }
 export async function hashSources() {
   const files = ['delta-mp/pages.json', 'delta-admin-ui/src/router/index.js', 'delta-admin-ui/src/utils/h5-route.js',
-    'docs/VIBE_CODING.md', 'docs/development-conventions.md', 'docs/客户实例与授权中心关系.md', 'docs/项目结构说明.md', 'docs/AI协作自检与防回归清单.md']
+    'docs/VIBE_CODING.md', 'docs/CURRENT_STATE.md', 'docs/ARCHITECTURE.md', 'docs/BUSINESS_RULES.md',
+    'docs/CONFIGURATION.md', 'docs/ai/CONTEXT.md']
   return Object.fromEntries(await Promise.all(files.map(async file => [file, createHash('sha256').update(await readFile(path.join(repoRoot, file))).digest('hex')])))
 }
 
@@ -51,6 +52,7 @@ function literal(node) {
   }))
   if (node.type === 'Identifier' && ['Layout', 'H5Layout'].includes(node.name)) return `@/layout/${node.name === 'Layout' ? 'index' : 'H5Layout'}.vue`
   if (node.type === 'ArrowFunctionExpression' && node.body.type === 'CallExpression' && node.body.callee.type === 'Import') return literal(node.body.arguments[0])
+  if (node.type === 'ArrowFunctionExpression') return '[dynamic-function]'
   throw new Error(`Unsupported route expression: ${node.type}; update inventory parser explicitly`)
 }
 function walk(node, visit) {
@@ -68,7 +70,8 @@ function flatten(routes, variant, parent = '', inherited = {}, ancestors = []) {
     const meta = { ...inherited, ...route.meta }
     const roleRequirements = [...ancestors, ...(route.meta?.roles ? [route.meta.roles] : [])]
     if (route.children?.length) return flatten(route.children, variant, routePath, meta, roleRequirements)
-    if (!route.component || route.redirect) throw new Error(`Unrenderable leaf requires explicit treatment: ${routePath}`)
+    if (route.redirect) return []
+    if (!route.component) throw new Error(`Unrenderable leaf requires explicit treatment: ${routePath}`)
     const catchAll = routePath.includes(':pathMatch')
     return [{ id: `${variant}:${routePath}`, app: 'admin', variant, path: routePath,
       samplePath: catchAll ? routePath.replace(':pathMatch(.*)*', '__qa_missing_route__') : routePath.replace(/:id\b/g, '900001'),
@@ -141,12 +144,12 @@ export async function buildInventory() {
 }
 export async function writeInventory() {
   const inventory = await buildInventory()
-  const output = dDrivePath(path.join(repoRoot, inventoryRelativePath))
+  const output = dDrivePath(inventoryRelativePath)
   await mkdir(path.dirname(output), { recursive: true })
   await writeFile(output, JSON.stringify(inventory, null, 2) + '\n')
   return inventory
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const inventory = await writeInventory()
-  console.log(JSON.stringify({ output: path.join(repoRoot, inventoryRelativePath), counts: inventory.counts }, null, 2))
+  console.log(JSON.stringify({ output: inventoryRelativePath, counts: inventory.counts }, null, 2))
 }
