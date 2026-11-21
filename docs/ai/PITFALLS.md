@@ -51,6 +51,14 @@
 - 发布 ZIP 会自动注入 cangshuo-version.json；归档检查要允许这个注入文件。
 - 发布前必须从干净工作区构建，不能拿旧 dist/target 冒充新版本。
 
+## 模块拆分
+
+- 抽 Maven 模块时，源码包名必须和目录一致；不要把新模块继续放在 `com.delta.admin.*` 下，否则 ArchUnit 和检索都无法区分边界。
+- 包级私有方法和内部类只能在同包测试中访问。移动模块时要同步移动这类单元测试，或把它们放到新模块的匹配包；否则会出现“主代码能编译、测试找不到符号”的错误。
+- 拆出的 `delta-platform`、`delta-workbench`、`delta-reporting`、`delta-identity`、`delta-notification` 不得依赖 `delta-admin`；该规则已由 ArchUnit 强制执行。
+- `platform/catalog.json` 仍保留在 `delta-admin` 资源中，因为发布脚本和更新器按 `BOOT-INF/classes/platform/catalog.json` 校验版本。不要只移动文件而不同步打包链路。
+- 纯结构拆分必须保持 endpoint 数量、OpenAPI operation 和 schema 不变；用 `check_endpoint_baseline.py`、`check_openapi_baseline.py` 和 clean verify 证明，而不是只看编译成功。
+
 ## 版本 / 发布
 
 - 版本号更高不代表功能集合自动包含旧分支：1.18.0 从 1.16.6 架构线构建，曾遗漏 520 已有的单独押金功能。合并前要按功能提交和迁移比对分支，不只看版本号。

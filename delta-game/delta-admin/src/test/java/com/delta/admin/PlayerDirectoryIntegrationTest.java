@@ -34,7 +34,7 @@ import com.delta.pay.service.PaymentService;
 import com.delta.pay.service.TransactionService;
 import com.delta.user.service.UserService;
 import com.delta.system.service.SysConfigService;
-import com.delta.admin.platform.PlatformService;
+import com.delta.platform.PlatformService;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;

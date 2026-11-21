@@ -1,8 +1,8 @@
 package com.delta.admin;
 
-import com.delta.admin.service.OfficialWechatService;
-import com.delta.admin.service.WechatIdentityService;
-import com.delta.admin.service.WechatWebLoginService;
+import com.delta.notification.service.OfficialWechatService;
+import com.delta.notification.service.WechatIdentityService;
+import com.delta.notification.service.WechatWebLoginService;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.redis.service.RedisService;
 import com.delta.common.security.service.VerificationService;

@@ -1,10 +1,10 @@
 package com.delta.admin;
 
-import com.delta.admin.controller.IdentityVerificationController;
-import com.delta.admin.platform.PlatformService;
-import com.delta.admin.service.IdentityVerificationCleanup;
-import com.delta.admin.service.IdentityBillingClient;
-import com.delta.admin.service.IdentityAttemptLimitService;
+import com.delta.identity.controller.IdentityVerificationController;
+import com.delta.platform.PlatformService;
+import com.delta.identity.service.IdentityVerificationCleanup;
+import com.delta.identity.service.IdentityBillingClient;
+import com.delta.identity.service.IdentityAttemptLimitService;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;
 import com.delta.common.security.filter.JwtAuthenticationFilter;

@@ -1,8 +1,8 @@
 package com.delta.admin;
 
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.delta.admin.service.OfficialWechatService;
-import com.delta.admin.service.WechatIdentityService;
+import com.delta.notification.service.OfficialWechatService;
+import com.delta.notification.service.WechatIdentityService;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.mapper.CrossModuleMapper;
 import com.delta.common.security.service.TokenService;

@@ -1,9 +1,9 @@
 package com.delta.admin;
 
-import com.delta.admin.controller.EmailNotificationController;
-import com.delta.admin.platform.PlatformService;
-import com.delta.admin.service.EmailNotificationService;
-import com.delta.admin.service.EmailNotificationTemplate;
+import com.delta.notification.controller.EmailNotificationController;
+import com.delta.platform.PlatformService;
+import com.delta.notification.service.EmailNotificationService;
+import com.delta.notification.service.EmailNotificationTemplate;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.exception.GlobalExceptionHandler;

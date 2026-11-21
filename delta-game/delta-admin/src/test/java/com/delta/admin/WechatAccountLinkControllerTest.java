@@ -1,6 +1,6 @@
 package com.delta.admin;
 
-import com.delta.admin.controller.WechatAccountLinkController;
+import com.delta.notification.controller.WechatAccountLinkController;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

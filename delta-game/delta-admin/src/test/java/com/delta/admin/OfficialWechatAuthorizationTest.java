@@ -1,8 +1,8 @@
 package com.delta.admin;
 
-import com.delta.admin.controller.OfficialWechatController;
-import com.delta.admin.platform.PlatformService;
-import com.delta.admin.service.OfficialWechatService;
+import com.delta.notification.controller.OfficialWechatController;
+import com.delta.platform.PlatformService;
+import com.delta.notification.service.OfficialWechatService;
 import com.delta.common.exception.BusinessException;
 import com.delta.common.security.service.StaffPermissions;
 import com.delta.system.service.SysConfigService;
@@ -64,7 +64,7 @@ class OfficialWechatAuthorizationTest {
         var permissions = mock(StaffPermissions.class);
         var platform = mock(PlatformService.class);
         var redis = mock(StringRedisTemplate.class);
-        var service = new OfficialWechatService(jdbc, configs, new com.delta.admin.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
+        var service = new OfficialWechatService(jdbc, configs, new com.delta.notification.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
         doThrow(new BusinessException(403, "domain denied"))
                 .when(platform).requireFeature(OfficialWechatService.FEATURE_ID, "denied.example");
 
@@ -110,7 +110,7 @@ class OfficialWechatAuthorizationTest {
         when(configs.getConfigValue("wechat.official.redirect_url", "")).thenReturn("https://shop.example.com/");
         when(configs.getConfigValue("wechat.official.staff_redirect_url", ""))
                 .thenReturn("https://staff.example.com/mobile/wechat-binding");
-        var service = new OfficialWechatService(jdbc, configs, new com.delta.admin.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
+        var service = new OfficialWechatService(jdbc, configs, new com.delta.notification.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
 
         assertThat(service.startBinding("USER", 7L, "shop.example.com"))
                 .contains("redirect_uri=" + URLEncoder.encode("https://shop.example.com/", StandardCharsets.UTF_8));

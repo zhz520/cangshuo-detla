@@ -1,7 +1,9 @@
 package com.delta.admin.service;
 
-import com.delta.admin.platform.PlatformService;
+import com.delta.platform.PlatformService;
 import com.delta.system.service.SysConfigService;
+import com.delta.notification.service.EmailNotificationService;
+import com.delta.notification.service.EmailNotificationTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;

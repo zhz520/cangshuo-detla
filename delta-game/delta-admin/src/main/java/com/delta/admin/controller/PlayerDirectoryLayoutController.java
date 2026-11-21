@@ -1,6 +1,6 @@
 package com.delta.admin.controller;
 
-import com.delta.admin.platform.PlatformService;
+import com.delta.platform.PlatformService;
 import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;
