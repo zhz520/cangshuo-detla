@@ -20,6 +20,7 @@ EXTRACTED_MODULES = {
     "delta-notification",
     "delta-marketing",
     "delta-workforce",
+    "delta-governance",
 }
 PACKAGE_PATTERN = re.compile(r"^package\s+com\.delta\.([A-Za-z0-9_.]+);", re.MULTILINE)
 IMPORT_PATTERN = re.compile(r"^\s*import\s+(?:static\s+)?com\.delta\.([A-Za-z0-9_]+)\.", re.MULTILINE)

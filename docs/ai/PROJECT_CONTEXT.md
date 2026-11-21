@@ -30,6 +30,7 @@ Delta 是电竞代练/陪玩业务系统，主要组件：
 - delta-game/delta-notification：站内通知、公众号、邮件、短信通知和通知队列
 - delta-game/delta-marketing：优惠券、会员、邀请、打赏和抢单规则
 - delta-game/delta-workforce：员工角色、排班、客服分配和订单协同指派
+- delta-game/delta-governance：公开展示、隐私设置、打手主页审核和布局
 - delta-admin-ui/src/views：管理端页面
 - delta-admin-ui/src/api：管理端 API 封装；新页面不得绕过
 - delta-admin-ui/src/components：设计系统组件

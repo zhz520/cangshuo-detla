@@ -1,6 +1,6 @@
 # 后端模块边界（2026-11-21）
 
-这份文件说明 17 个 Maven 模块的职责、包根和依赖方向。改后端代码前先按这里定位模块；不要把新代码继续堆进 `delta-admin`。
+这份文件说明 18 个 Maven 模块的职责、包根和依赖方向。改后端代码前先按这里定位模块；不要把新代码继续堆进 `delta-admin`。
 
 ## 模块与包根
 
@@ -22,6 +22,7 @@
 | `delta-notification` | `com.delta.notification` | 站内通知、公众号、邮件、短信通知和队列 |
 | `delta-marketing` | `com.delta.marketing` | 优惠券、会员、邀请、打赏和抢单规则 |
 | `delta-workforce` | `com.delta.workforce` | 员工角色、排班、客服分配和订单协同指派 |
+| `delta-governance` | `com.delta.governance` | 公开展示、隐私设置、打手主页审核和布局 |
 | `delta-admin` | `com.delta.admin` | 唯一启动模块、后台订单/用户/打手聚合、待办 |
 
 ## 依赖规则

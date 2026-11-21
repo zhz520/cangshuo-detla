@@ -1,6 +1,6 @@
-package com.delta.admin;
+package com.delta.governance.controller;
 
-import com.delta.admin.controller.DisplayPrivacyController;
+import com.delta.governance.controller.DisplayPrivacyController;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

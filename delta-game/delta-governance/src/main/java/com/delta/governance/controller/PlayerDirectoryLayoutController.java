@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.governance.controller;
 
 import com.delta.platform.PlatformService;
 import com.delta.common.annotation.OpLog;

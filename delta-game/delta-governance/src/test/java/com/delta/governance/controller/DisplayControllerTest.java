@@ -1,6 +1,6 @@
-package com.delta.admin;
+package com.delta.governance.controller;
 
-import com.delta.admin.controller.DisplayController;
+import com.delta.governance.controller.DisplayController;
 import com.delta.system.service.SysConfigService;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;

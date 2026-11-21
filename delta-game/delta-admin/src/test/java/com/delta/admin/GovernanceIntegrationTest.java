@@ -1,6 +1,7 @@
 package com.delta.admin;
 
 import com.delta.admin.controller.*;
+import com.delta.governance.controller.GovernanceController;
 import com.delta.workforce.controller.StaffRoleController;
 import com.delta.workforce.controller.StaffShiftController;
 import com.delta.common.config.SecurityConfig;

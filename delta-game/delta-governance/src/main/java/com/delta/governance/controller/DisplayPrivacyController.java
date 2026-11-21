@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.governance.controller;
 
 import com.delta.common.domain.R;
 import com.delta.common.exception.BusinessException;

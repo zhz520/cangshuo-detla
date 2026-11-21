@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.delta.admin.controller.AdminReviewController;
-import com.delta.admin.controller.PlayerDirectoryLayoutController;
+import com.delta.governance.controller.PlayerDirectoryLayoutController;
 import com.delta.admin.controller.PlayerReviewController;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.exception.GlobalExceptionHandler;

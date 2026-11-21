@@ -219,6 +219,33 @@
       ]
     },
     {
+      "id": "governance",
+      "name": "展示/隐私/打手主页审核/布局",
+      "backend": [
+        "delta-game/delta-governance/src/main/java/com/delta/governance/controller"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/player/Governance.vue",
+        "delta-admin-ui/src/views/user/SpendingRank.vue",
+        "delta-admin-ui/src/views/system/PlayerLayoutSettings.vue"
+      ],
+      "h5": [
+        "delta-mp/pages/mine/privacy-center.vue",
+        "delta-mp/pages/players"
+      ],
+      "tables": [
+        "player_homepage_revision",
+        "display_privacy",
+        "sys_config"
+      ],
+      "tests": [
+        "GovernanceIntegrationTest",
+        "DisplayControllerTest",
+        "DisplayPrivacyControllerTest",
+        "PlayerDirectoryIntegrationTest"
+      ]
+    },
+    {
       "id": "system_config",
       "name": "系统配置/公告/内容/主题",
       "backend": [
