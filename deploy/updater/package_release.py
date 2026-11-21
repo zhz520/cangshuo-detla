@@ -12,6 +12,14 @@ catalog=json.loads((root/'delta-game/delta-admin/src/main/resources/platform/cat
 version=catalog['version']
 sys.path.insert(0,str(root/'deploy/qa'))
 from build_identity import tree_sha256
+
+def write_version_entry(archive, component, build_id):
+    # Keep the generated metadata stable so packaging the same build twice
+    # produces the same release asset digest.
+    info=zipfile.ZipInfo('cangshuo-version.json',date_time=(1980,1,1,0,0,0))
+    info.compress_type=zipfile.ZIP_DEFLATED
+    archive.writestr(info,json.dumps({'version':version,'component':component,'buildId':build_id}))
+
 if '-' in version:raise SystemExit('Only stable releases can be packaged')
 try:
     commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.DEVNULL).strip()
@@ -43,7 +51,7 @@ for component,source in sources.items():
             build_id=tree_sha256(source)
             for file in source.rglob('*'):
                 if file.is_file():archive.write(file,file.relative_to(source).as_posix())
-            archive.writestr('cangshuo-version.json',json.dumps({'version':version,'component':component,'buildId':build_id}))
+            write_version_entry(archive,component,build_id)
     print(component,version,target.stat().st_size)
     digest=hashlib.sha256()
     with target.open('rb') as stream:
