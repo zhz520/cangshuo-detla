@@ -1305,6 +1305,7 @@
   "h5Tests": [
     "agreement-content.test.mjs",
     "connection-url.test.mjs",
+    "contact-purchase-entrypoints.test.mjs",
     "cs-workbench.test.mjs",
     "guest-checkout-ui.test.mjs",
     "image-url.test.mjs",

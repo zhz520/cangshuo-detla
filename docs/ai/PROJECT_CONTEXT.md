@@ -13,7 +13,7 @@ Delta 是电竞代练/陪玩业务系统，主要组件：
 
 ## 2. 代码目录
 
-- delta-game/delta-admin：启动模块、后台聚合、平台/工作台/统计、部分治理
+- delta-game/delta-admin：唯一启动模块、后台订单/用户/打手聚合和待办；平台、工作台、统计、短信实名、通知已拆出
 - delta-game/delta-common：安全、租户、文件、公共能力和基础设施
 - delta-game/delta-user：用户、登录、邀请
 - delta-game/delta-player：打手、钱包、提现、押金
@@ -23,6 +23,11 @@ Delta 是电竞代练/陪玩业务系统，主要组件：
 - delta-game/delta-message：站内消息
 - delta-game/delta-cs：客服、客服分配、客服提现审核
 - delta-game/delta-system：管理员、角色、配置、内容、公告
+- delta-game/delta-platform：平台授权、版本目录、主题、维护过滤、收益分析
+- delta-game/delta-workbench：后台和客服移动工作台聚合
+- delta-game/delta-reporting：访问分析和仪表盘统计
+- delta-game/delta-identity：短信网关、实名认证和实名计费客户端
+- delta-game/delta-notification：站内通知、公众号、邮件、短信通知和通知队列
 - delta-admin-ui/src/views：管理端页面
 - delta-admin-ui/src/api：管理端 API 封装；新页面不得绕过
 - delta-admin-ui/src/components：设计系统组件

@@ -11,7 +11,7 @@
         "delta-game/delta-user/src/main/java/com/delta/user/controller/UserAuthController.java",
         "delta-game/delta-cs/src/main/java/com/delta/cs/controller/CsAuthController.java",
         "delta-game/delta-common/src/main/java/com/delta/common/security",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/WechatWebLoginController.java"
+        "delta-game/delta-notification/src/main/java/com/delta/admin/controller/WechatWebLoginController.java"
       ],
       "admin": [
         "delta-admin-ui/src/views/login",
@@ -129,10 +129,10 @@
       "name": "短信/实名/套餐",
       "backend": [
         "delta-game/delta-common/src/main/java/com/delta/common/sms",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/SmsGatewayAdminController.java",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/IdentityVerificationController.java",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/service/SmsNoticeService.java",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/service/WechatIdentityService.java"
+        "delta-game/delta-identity/src/main/java/com/delta/admin/controller/SmsGatewayAdminController.java",
+        "delta-game/delta-identity/src/main/java/com/delta/admin/controller/IdentityVerificationController.java",
+        "delta-game/delta-notification/src/main/java/com/delta/admin/service/SmsNoticeService.java",
+        "delta-game/delta-notification/src/main/java/com/delta/admin/service/WechatIdentityService.java"
       ],
       "admin": [
         "delta-admin-ui/src/views/system/SmsAccount.vue",
@@ -157,7 +157,7 @@
       "name": "系统配置/公告/内容/主题",
       "backend": [
         "delta-game/delta-system/src/main/java/com/delta/system/controller",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/platform/ThemeController.java"
+        "delta-game/delta-platform/src/main/java/com/delta/admin/platform/ThemeController.java"
       ],
       "admin": [
         "delta-admin-ui/src/views/system",
