@@ -263,6 +263,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void assignCs(Long orderId, Long csId, Long operatorId) {
+        Order order = getById(orderId);
+        if (order == null) throw new BusinessException(404, "订单不存在");
+        Long normalized = csId == null || csId <= 0 ? null : csId;
+        if (normalized != null && (csRouting == null || !csRouting.isActiveCs(normalized))) {
+            throw new BusinessException(400, "请选择启用中的客服账号");
+        }
+        jdbc.update("UPDATE `order` SET cs_id=?,updated_at=? WHERE id=?", normalized, LocalDateTime.now(), orderId);
+        jdbc.update("UPDATE order_finance_snapshot SET cs_id=? WHERE order_id=? " +
+                "AND NOT EXISTS(SELECT 1 FROM order_settlement_ledger WHERE order_id=?)", normalized, orderId, orderId);
+        OrderProgress progress = new OrderProgress();
+        progress.setOrderId(orderId);
+        progress.setType("CS_ASSIGN");
+        progress.setOperatorType("ADMIN");
+        progress.setOperatorId(operatorId);
+        String name = normalized == null ? "公共池" : crossModuleMapper.selectAdminNickname(normalized);
+        progress.setContent("管理员将归属客服调整为：" + (name == null || name.isBlank() ? "公共池" : name));
+        progress.setCreatedAt(LocalDateTime.now());
+        orderProgressService.save(progress);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void acceptOrder(Long orderId, Long playerId) {
         acceptOrder(orderId,playerId,null,null,null,null,"");
     }

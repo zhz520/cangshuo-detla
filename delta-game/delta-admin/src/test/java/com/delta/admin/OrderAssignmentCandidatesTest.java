@@ -7,6 +7,7 @@ import com.delta.workforce.controller.StaffOrderTeamController;
 import com.delta.common.security.service.StaffPermissions;
 import com.delta.cs.controller.CsOrderController;
 import com.delta.pay.refund.OrderRefundWorkflowService;
+import com.delta.order.service.OrderViewService;
 import com.delta.player.service.OrderAssignmentCandidateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class OrderAssignmentCandidatesTest {
     @Configuration
     @Import({RewardGrabIntegrationTest.Config.class, StaffPermissionConfig.class, StaffOrderAssignmentController.class,
             StaffOrderTeamController.class, OrderAssignmentCandidateService.class,
-            AdminOrderController.class, CsOrderController.class})
+            AdminOrderController.class, CsOrderController.class, OrderViewService.class})
     static class Config {}
 
     @Autowired MockMvc mvc;

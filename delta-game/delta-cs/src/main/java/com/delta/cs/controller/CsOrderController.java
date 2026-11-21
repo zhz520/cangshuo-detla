@@ -4,12 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.delta.common.domain.PageQuery;
 import com.delta.common.domain.R;
-import com.delta.common.mapper.CrossModuleMapper;
-import com.delta.common.mapper.StatsMapper;
 import com.delta.order.entity.Order;
 import com.delta.order.entity.OrderProgress;
 import com.delta.order.service.OrderProgressService;
 import com.delta.order.service.OrderService;
+import com.delta.order.service.OrderViewService;
 import com.delta.common.security.utils.SecurityUtils;
 import com.delta.common.customer.CsRoutingService;
 import com.delta.pay.refund.OrderRefundWorkflowService;
@@ -25,11 +24,9 @@ import java.util.List;
 public class CsOrderController {
     private final OrderService orderService;
     private final OrderProgressService orderProgressService;
-    private final CrossModuleMapper crossModuleMapper;
-    private final StatsMapper statsMapper;
+    private final OrderViewService orderView;
     private final OrderRefundWorkflowService refunds;
     private final CsRoutingService csRouting;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @GetMapping("/list")
     public R<Page<Order>> list(PageQuery query, @RequestParam(value = "status", required = false) String status,
@@ -49,18 +46,7 @@ public class CsOrderController {
                 .orderByDesc(Order::getCreatedAt);
         Page<Order> page = orderService.page(new Page<>(query.getPageNum(), query.getPageSize()), w);
         for (Order o : page.getRecords()) {
-            if (o.getUserId() != null) {
-                String nick = crossModuleMapper.selectUserNickname(o.getUserId());
-                o.setUserNickname((nick != null && !nick.isEmpty()) ? nick : "用户" + o.getUserId());
-                o.setUserAvatar(crossModuleMapper.selectUserAvatar(o.getUserId()));
-                o.setUserPhone(crossModuleMapper.selectUserPhone(o.getUserId()));
-            }
-            if (o.getPlayerId() != null) {
-                String pNick = crossModuleMapper.selectPlayerNickname(o.getPlayerId());
-                o.setPlayerName((pNick != null && !pNick.isEmpty()) ? pNick : "接单员" + o.getPlayerId());
-                o.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(o.getPlayerId()));
-            }
-            fillCs(o);
+            orderView.enrichOrder(o, true);
         }
         return R.ok(page);
     }
@@ -70,29 +56,9 @@ public class CsOrderController {
         csRouting.assertCsCanHandleOrder(id, SecurityUtils.getUserId());
         Order order = orderService.getById(id);
         if (order != null) {
-            fillCs(order);
-            if (order.getPlayerId() != null) {
-                order.setPlayerName(crossModuleMapper.selectPlayerNickname(order.getPlayerId()));
-                order.setPlayerAvatar(crossModuleMapper.selectPlayerAvatar(order.getPlayerId()));
-            }
-            if (order.getUserId() != null) {
-                order.setUserNickname(crossModuleMapper.selectUserNickname(order.getUserId()));
-                order.setUserAvatar(crossModuleMapper.selectUserAvatar(order.getUserId()));
-                order.setUserPhone(crossModuleMapper.selectUserPhone(order.getUserId()));
-            }
+            orderView.enrichOrder(order, false);
         }
         return R.ok(order);
-    }
-
-    private void fillCs(Order order) {
-        try {
-            java.util.List<Long> rows = jdbc.queryForList("SELECT cs_id FROM `order` WHERE id=?", Long.class, order.getId());
-            if (rows != null && !rows.isEmpty()) {
-                order.setCsId(rows.get(0));
-                if (rows.get(0) != null) order.setCsName(crossModuleMapper.selectAdminNickname(rows.get(0)));
-            }
-        } catch (org.springframework.dao.DataAccessException ignored) {
-        }
     }
 
     @GetMapping("/{id}/progress")
@@ -130,6 +96,6 @@ public class CsOrderController {
     @GetMapping("/spending-rank")
     public R<java.util.List<java.util.Map<String, Object>>> spendingRank(
             @RequestParam(value = "limit", defaultValue = "50") int limit) {
-        return R.ok(statsMapper.userSpendingRank(Math.min(limit, 200)));
+        return R.ok(orderView.spendingRank(limit));
     }
 }
