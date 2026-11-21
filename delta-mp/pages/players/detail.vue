@@ -39,7 +39,7 @@
         <view class="page-bottom"/>
       </template>
     </scroll-view>
-    <view v-if="player" class="profile-actions"><view v-if="rewardOrders.length" class="action-button secondary" @click="rewardPlayer">打赏</view><view class="action-button secondary" @click="privateChat">{{ chatting?'连接中...':'私聊' }}</view><view v-if="siteStore.orderPurchaseEnabled" class="action-button primary" :class="{unavailable:!player.canOrder}" @click="placeOrder">点单<text> {{ player.canOrder?'指定TA服务':'暂不可接单' }}</text></view></view>
+    <view v-if="player" class="profile-actions"><view v-if="rewardOrders.length" class="action-button secondary" @click="rewardPlayer">打赏</view><view class="action-button secondary" @click="privateChat">{{ chatting?'连接中...':'私聊' }}</view><view v-if="siteStore.orderPurchaseEnabled" class="action-button primary" :class="{unavailable:!player.canOrder}" @click="placeOrder">点单<text> {{ player.canOrder?'指定TA服务':'暂不可接单' }}</text></view><view v-else-if="siteStore.orderContactPurchaseEnabled" class="action-button primary" @click="contactForPurchase">联系客服购买</view></view>
   </view>
 </template>
 <script setup>
@@ -53,6 +53,7 @@ import { followPlayer, unfollowPlayer } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { getRewardableOrders } from '@/api/reward'
 import { useSiteStore } from '@/store/site'
+import { openCustomerService } from '@/utils/customer-service'
 const siteStore = useSiteStore()
 const rewardOrders=ref([])
 async function loadRewardOrders(){rewardOrders.value=[];if(!useUserStore().isLoggedIn)return;try{rewardOrders.value=(await getRewardableOrders(playerId.value)).data||[]}catch(_){}}
@@ -140,6 +141,10 @@ function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({title:'购买功能已暂停',icon:'none'})
   if (!player.value.canOrder) return uni.showToast({title:player.value.orderUnavailableReason || '暂不可接单',icon:'none'})
   uni.navigateTo({url:`/pages/product/list?playerId=${playerId.value}`})
+}
+async function contactForPurchase() {
+  try { await openCustomerService() }
+  catch (e) { uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' }) }
 }
 function previewAlbum(index) { uni.previewImage({urls:album.value,current:index}) }
 function formatTime(time) { return String(time || '').replace('T',' ').slice(0,16) }

@@ -29,6 +29,19 @@ test('all frontend immediate purchase entry points obey the purchase switch', as
   }
 })
 
+test('contact-only purchase mode replaces hidden entries on player list and detail', async () => {
+  const card = await read('components/PlayerListCard.vue')
+  const detail = await read('pages/players/detail.vue')
+  for (const source of [card, detail]) {
+    assert.match(source, /siteStore\.orderContactPurchaseEnabled/)
+    assert.match(source, /contactForPurchase/)
+  }
+  assert.match(card, /aria-label="联系客服购买"/)
+  assert.match(detail, />联系客服购买</)
+  assert.match(detail, /v-else-if="siteStore\.orderContactPurchaseEnabled"/)
+  assert.match(card, /v-else-if="siteStore\.orderContactPurchaseEnabled"/)
+})
+
 test('product detail renders rich description images and contact-only purchase state', async () => {
   const source = await read('pages/product/detail.vue')
   assert.match(source, /productDescriptionHtml\(product\.value\?\.detail \|\| product\.value\?\.description\)/)

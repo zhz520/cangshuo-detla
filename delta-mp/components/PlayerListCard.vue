@@ -24,6 +24,7 @@
       <view v-if="siteStore.orderPurchaseEnabled" class="book-btn" :class="{ disabled: !online }" :aria-label="online ? '立即点单' : '暂时离线'" @click.stop="placeOrder">
         {{ online ? '预约' : '离线' }}
       </view>
+      <view v-else-if="siteStore.orderContactPurchaseEnabled" class="book-btn contact" aria-label="联系客服购买" @click.stop="contactForPurchase">咨询</view>
     </view>
   </view>
 </template>
@@ -32,6 +33,7 @@
 import { computed } from 'vue'
 import AppImage from '@/components/AppImage.vue'
 import { useSiteStore } from '@/store/site'
+import { openCustomerService } from '@/utils/customer-service'
 const siteStore = useSiteStore()
 
 const props = defineProps({
@@ -55,6 +57,10 @@ function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
   if (!online.value) return uni.showToast({ title: '该打手当前离线', icon: 'none' })
   uni.navigateTo({ url: '/pages/product/list?playerId=' + props.player.id })
+}
+async function contactForPurchase() {
+  try { await openCustomerService() }
+  catch (e) { uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' }) }
 }
 </script>
 
@@ -174,6 +180,7 @@ function placeOrder() {
   font-size: 19rpx;
   font-weight: 750;
   &.disabled { background: #d7dade; color: #ffffff; }
+  &.contact { background: var(--store-surface); color: var(--store-primary); box-shadow: inset 0 0 0 1rpx var(--store-primary); }
 }
 .compact {
   gap: 14rpx;
