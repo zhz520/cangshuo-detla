@@ -484,6 +484,8 @@ public class DatabaseCompatibility {
         }
         insertBooleanConfigIfMissing("order.purchase_enabled", "启用前台购买", "true",
                 "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
+        insertBooleanConfigIfMissing("order.contact_purchase_enabled", "暂停购买时仅联系客服", "false",
+                "关闭前台购买后，商品详情显示“联系客服购买”并直达客服；关闭此开关时显示“购买已暂停”。前端购买开关开启时此配置不生效");
         insertBooleanConfigIfMissing("order.guest_checkout_enabled", "允许游客下单", "false",
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         insertBooleanConfigIfMissing("order.cooperation.enabled", "启用协同打单", "true",

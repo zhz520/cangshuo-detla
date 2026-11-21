@@ -15,7 +15,7 @@ export const configGroups = [
   { id: 'payment', title: '支付与交易', description: '支付通道与订单', tabs: [
     page('payment', '支付方式', [panel('payment', '渠道开关', ['微信支付', '公众号支付', 'H5 支付', '小程序支付'])]),
     page('certificate', '微信商户证书', [panel('merchant', '商户与应用', ['商户号', 'AppID']), panel('certificate', '证书与密钥', ['API v3 密钥', '商户私钥文件', '商户证书序列号']), panel('public-key', '微信支付公钥', ['公钥 ID', '公钥文件'])]),
-    page('order', '下单与协作', [panel('order', '下单策略', ['启用商品购买', '启用游客下单', '打手协同接单'])]),
+    page('order', '下单与协作', [panel('order', '下单策略', ['启用商品购买', '暂停购买时仅联系客服', '启用游客下单', '打手协同接单'])]),
   ] },
   { id: 'message', title: '消息与通知', description: '站内外消息管理', tabs: [
     page('sms', '短信提醒', [panel('sms-send', '客服提醒', ['客服短信提醒冷却秒数']), panel('sms-templates', '聊天提醒规则', ['用户与打手短信冷却秒数', '打手短信提醒扣费金额'])]),
@@ -76,6 +76,7 @@ const fieldOrder = [
   'auth.primary_method', 'auth.phone.enabled', 'auth.password.enabled',
   'player.deposit_mode', 'player.deposit_amount',
   'wx.pay.enabled', 'wx.pay.official-enabled', 'wx.pay.h5-enabled', 'wx.pay.miniapp-enabled',
+  'order.purchase_enabled', 'order.contact_purchase_enabled', 'order.guest_checkout_enabled',
 ]
 const rank = new Map(fieldOrder.map((key, index) => [key, index]))
 

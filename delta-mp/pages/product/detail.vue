@@ -112,6 +112,7 @@
         <text>{{ favorite ? '已收藏' : '收藏' }}</text>
       </view>
       <view v-if="siteStore.orderPurchaseEnabled" class="buy-btn" role="button" @click="goBuy">立即购买</view>
+      <view v-else-if="siteStore.orderContactPurchaseEnabled" class="buy-btn contact" role="button" @click="goChat">联系客服购买</view>
       <view v-else class="buy-btn disabled" role="button">购买已暂停</view>
     </view>
 
@@ -189,7 +190,7 @@ const limitLabel = computed(() => {
   return product.value?.perUserLimitEnabled === 1 && product.value?.perUserLimitCount ? '限购 ' + product.value.perUserLimitCount + ' 次' : ''
 })
 const descriptionText = computed(() => String(product.value?.description || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim())
-const detailHtml = computed(() => productDescriptionHtml(product.value?.detail))
+const detailHtml = computed(() => productDescriptionHtml(product.value?.detail || product.value?.description))
 const images = computed(() => {
   if (!product.value) return []
   const raw = product.value.images
@@ -381,6 +382,8 @@ function goBuy() {
 .info-line { width: 1rpx; height: 28rpx; flex-shrink: 0; margin-top: 5rpx; background: var(--store-soft); }
 .info-value { flex: 1; min-width: 0; color: var(--store-regular); font-size: 23rpx; line-height: 1.65; overflow-wrap: anywhere; }
 .rich-body { margin-top: 18rpx; color: #555555; font-size: 24rpx; line-height: 1.75; overflow-wrap: anywhere; }
+.rich-body :deep(img) { display: block; max-width: 100%; height: auto; margin: 12rpx auto; border-radius: 12rpx; }
+.rich-body :deep(iframe), .rich-body :deep(script) { display: none; }
 .review-head { display: flex; align-items: center; justify-content: space-between; gap: 14rpx; }
 .review-count { color: var(--store-muted); font-size: 24rpx; font-weight: 500; }
 .review-more { color: var(--store-regular); font-size: 22rpx; }
@@ -434,6 +437,7 @@ function goBuy() {
   letter-spacing: 1rpx;
   &.disabled { background: var(--store-line); color: var(--store-muted); }
 }
+.buy-btn.contact { background: var(--store-surface); color: var(--store-primary); border: 1px solid var(--store-primary); }
 .review-sheet-mask { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; background: rgba(12, 14, 17, .5); }
 .review-sheet { width: 100%; max-height: 76vh; display: flex; flex-direction: column; border-radius: 28rpx 28rpx 0 0; background: var(--store-surface); overflow: hidden; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 26rpx 30rpx 18rpx; }

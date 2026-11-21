@@ -133,6 +133,7 @@ public class SysConfigController {
         // 打手押金金额（元）
         map.put("player_deposit_amount", sysConfigService.getConfigValue("player.deposit_amount", "100"));
         map.put("order_purchase_enabled", sysConfigService.getConfigValue("order.purchase_enabled", "true"));
+        map.put("order_contact_purchase_enabled", sysConfigService.getConfigValue("order.contact_purchase_enabled", "false"));
         map.put("order_guest_checkout_enabled", sysConfigService.getConfigValue("order.guest_checkout_enabled", "false"));
         map.put("player_directory_enabled", sysConfigService.getConfigValue("player.directory.enabled", "true"));
         // 微信支付总开关（支付模块运行时动态读取）
@@ -206,6 +207,8 @@ public class SysConfigController {
                 "开启后浏览器刷新会展示已发布的首页公告，切换页面不会重复弹出；关闭后仅在新版本公告首次出现时提醒");
         ensureConfig("order.purchase_enabled", "启用前台购买", "true", "boolean", "订单配置",
                 "关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理");
+        ensureConfig("order.contact_purchase_enabled", "暂停购买时仅联系客服", "false", "boolean", "订单配置",
+                "关闭前台购买后，商品详情显示“联系客服购买”并直达客服；关闭此开关时显示“购买已暂停”。前端购买开关开启时此配置不生效");
         ensureConfig("order.guest_checkout_enabled", "允许游客下单", "false", "boolean", "订单配置",
                 "开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计");
         ensureConfig("order.cooperation.enabled", "启用协同打单", "true", "boolean", "订单配置",
@@ -417,7 +420,7 @@ public class SysConfigController {
         if("customer_service.home_icon_visible".equals(key)) {
             if(!java.util.Set.of("true","false").contains(value)) throw new com.delta.common.exception.BusinessException(400,"首页客服图标显示设置不正确");
         }
-        if(java.util.Set.of("order.purchase_enabled","order.guest_checkout_enabled","player.directory.enabled",
+        if(java.util.Set.of("order.purchase_enabled","order.contact_purchase_enabled","order.guest_checkout_enabled","player.directory.enabled",
                 "order.cooperation.enabled","auth.phone.enabled","auth.password.enabled","auth.wechat.enabled",
                 "identity.auto.enabled","membership.enabled","marketing.coupon.issue_enabled",
                 "marketing.coupon.redeem_enabled","marketing.invite.enabled","display.spend_rank.enabled",

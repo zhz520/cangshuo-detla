@@ -23,6 +23,7 @@ class SysConfigPublicSiteTest {
         Map<String, String> site = new SysConfigController(service).getSiteConfig().getData();
         assertThat(site).containsEntry("wx_pay_h5_enabled", "false")
                 .containsEntry("order_purchase_enabled", "true")
+                .containsEntry("order_contact_purchase_enabled", "false")
                 .containsEntry("order_guest_checkout_enabled", "false")
                 .containsEntry("player_directory_enabled", "true");
     }

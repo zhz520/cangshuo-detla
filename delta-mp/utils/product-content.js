@@ -69,6 +69,7 @@ export function productDescriptionHtml(value) {
       }
     }
     if (element.tagName === 'IMG') {
+      element.setAttribute('style', [style, 'max-width: 100%', 'height: auto'].filter(Boolean).join('; '))
       const src = safeUrl(srcValue, true)
       if (src) {
         element.setAttribute('src', src)

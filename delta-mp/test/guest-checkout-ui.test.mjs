@@ -7,8 +7,11 @@ const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 test('site configuration exposes independent purchase and guest-checkout switches', async () => {
   const source = await read('store/site.js')
   assert.match(source, /orderPurchaseEnabled = ref\(false\)/)
+  assert.match(source, /orderContactPurchaseEnabled = ref\(false\)/)
+  assert.match(source, /purchaseContactOnly/)
   assert.match(source, /guestCheckoutEnabled = ref\(false\)/)
   assert.match(source, /data\.order_purchase_enabled/)
+  assert.match(source, /data\.order_contact_purchase_enabled/)
   assert.match(source, /data\.order_guest_checkout_enabled/)
   assert.match(source, /playerDirectoryEnabled/)
   assert.match(source, /data\.player_directory_enabled/)
@@ -24,6 +27,16 @@ test('all frontend immediate purchase entry points obey the purchase switch', as
     const source = await read(file)
     assert.match(source, /siteStore\.orderPurchaseEnabled/)
   }
+})
+
+test('product detail renders rich description images and contact-only purchase state', async () => {
+  const source = await read('pages/product/detail.vue')
+  assert.match(source, /productDescriptionHtml\(product\.value\?\.detail \|\| product\.value\?\.description\)/)
+  assert.match(source, /siteStore\.orderContactPurchaseEnabled/)
+  assert.match(source, />联系客服购买</)
+  assert.match(source, /rich-body :deep\(img\)/)
+  const content = await read('utils/product-content.js')
+  assert.match(content, /max-width: 100%', 'height: auto'/)
 })
 
 test('guest order form requires phone, lookup code and privacy consent', async () => {

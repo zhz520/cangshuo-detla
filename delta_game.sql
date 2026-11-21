@@ -1587,6 +1587,9 @@ INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_gro
 SELECT 'order.purchase_enabled','启用前台购买','true','boolean','订单配置','关闭后前台隐藏全部立即购买和立即点单按钮，并禁止创建新订单；已有订单仍可支付和处理'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.purchase_enabled');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
+SELECT 'order.contact_purchase_enabled','暂停购买时仅联系客服','false','boolean','订单配置','关闭前台购买后，商品详情显示“联系客服购买”并直达客服；关闭此开关时显示“购买已暂停”。前端购买开关开启时此配置不生效'
+WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.contact_purchase_enabled');
+INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)
 SELECT 'order.guest_checkout_enabled','允许游客下单','false','boolean','订单配置','开启后未登录用户可用手机号和查单码创建游客订单；游客订单使用独立影子账户，不写入正式会员统计'
 WHERE NOT EXISTS(SELECT 1 FROM sys_config WHERE config_key='order.guest_checkout_enabled');
 INSERT INTO sys_config(config_key,config_name,config_value,value_type,config_group,remark)

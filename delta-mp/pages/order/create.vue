@@ -96,7 +96,7 @@
     </view>
     <view class="bottom-bar">
       <view class="total">合计：<PriceText v-if="quoteReady" :value="amount" :size="36" /><text v-else>待确认</text></view>
-      <view class="btn-submit" :class="{disabled:!canSubmit || submitting}" @click="submitOrder">{{ submitting?'提交中…':(siteStore.orderPurchaseEnabled?'提交订单':'购买已暂停') }}</view>
+      <view class="btn-submit" :class="{disabled:(!canSubmit && !siteStore.purchaseContactOnly) || submitting}" @click="siteStore.purchaseContactOnly ? contactForPurchase() : submitOrder()">{{ submitting?'提交中…':(siteStore.orderPurchaseEnabled?'提交订单':(siteStore.purchaseContactOnly?'联系客服购买':'购买已暂停')) }}</view>
     </view>
     <!-- 接单员选择弹窗（底部滑出） -->
     <view v-if="showPlayerPicker" class="modal-mask" @click="showPlayerPicker = false">
@@ -162,6 +162,7 @@ import { useSiteStore } from '@/store/site'
 import { createGuestOrder } from '@/api/guest'
 import { getPublicPlayer, getPlayerCategories } from '@/api/player'
 import { getMyCoupons } from '@/api/coupon'
+import { openCustomerService } from '@/utils/customer-service'
 
 const userStore = useUserStore()
 const siteStore = useSiteStore()
@@ -450,6 +451,11 @@ async function submitOrder() {
     uni.showToast({ title: msg, icon: 'none' })
     await refreshQuote()
   } finally { submitting.value = false }
+}
+
+async function contactForPurchase() {
+  try { await openCustomerService({ id: Number(productId.value) || undefined, name: productName.value, price: amount.value }) }
+  catch (e) { uni.showToast({ title: e?.msg || '连接客服失败', icon: 'none' }) }
 }
 
 function goLogin() { uni.navigateTo({ url: '/pages/login/index' }) }

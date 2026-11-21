@@ -21,6 +21,8 @@ export const useSiteStore = defineStore('site', () => {
   const wxPayOfficialEnabled = ref(false)
   /** 前台立即购买/立即点单总开关。 */
   const orderPurchaseEnabled = ref(false)
+  /** 关闭前台购买后，是否改为联系客服购买。 */
+  const orderContactPurchaseEnabled = ref(false)
   /** 未登录游客下单开关。 */
   const guestCheckoutEnabled = ref(false)
   /** 用户端打手页面展示开关。 */
@@ -44,6 +46,7 @@ export const useSiteStore = defineStore('site', () => {
   const externalCustomerServiceEnabled = computed(() =>
     customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
   )
+  const purchaseContactOnly = computed(() => !orderPurchaseEnabled.value && orderContactPurchaseEnabled.value)
   let pendingConfigRequest = null
   let noticePopupShownThisSession = false
 
@@ -83,6 +86,9 @@ export const useSiteStore = defineStore('site', () => {
         }
         if (data.order_purchase_enabled !== undefined) {
           orderPurchaseEnabled.value = data.order_purchase_enabled === 'true'
+        }
+        if (data.order_contact_purchase_enabled !== undefined) {
+          orderContactPurchaseEnabled.value = data.order_contact_purchase_enabled === 'true'
         }
         if (data.order_guest_checkout_enabled !== undefined) {
           guestCheckoutEnabled.value = data.order_guest_checkout_enabled === 'true'
@@ -155,5 +161,5 @@ export const useSiteStore = defineStore('site', () => {
     noticePopupShownThisSession = true
   }
 
-  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, customerWebUrl, themeId, userTheme, userThemeAllowed, userThemeOptions, setUserTheme, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
+  return { siteName, subtitle, logo, adminTitle, playerCommissionRate, depositRequired, depositMode, wxPayEnabled, wxPayMiniappEnabled, wxPayH5Enabled, wxPayOfficialEnabled, orderPurchaseEnabled, orderContactPurchaseEnabled, purchaseContactOnly, guestCheckoutEnabled, playerDirectoryEnabled, noticePopupEveryVisit, techSupportText, techSupportUrl, customerServiceMode, customerServiceUrl, customerServiceHomeIconVisible, staffWebUrl, customerWebUrl, themeId, userTheme, userThemeAllowed, userThemeOptions, setUserTheme, externalCustomerServiceEnabled, fullName, fetchSiteConfig, fetchThemeConfig, hasShownNoticePopupThisSession, markNoticePopupShownThisSession }
 })
