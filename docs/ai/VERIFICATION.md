@@ -14,6 +14,10 @@
 
 它会检查 19 个 Maven 模块的包根、直接依赖和跨模块 import；新增跨模块引用必须同时声明对应 pom 依赖。
 
+    python scripts/check_class_size.py
+
+它检查 `src/main/java` 下是否出现新的超过 20KB 的 Java 类；已有超大类记录在 `docs/ai/oversized-class-baseline.json`，调整基线前必须先评审。
+
 ## 后端全量
 
     cd delta-game

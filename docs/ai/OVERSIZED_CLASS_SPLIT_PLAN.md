@@ -1,6 +1,8 @@
 # 超大类拆分计划
 
-本文件只记录拆分方案，不代表已经完成。当前优先级低于剩余 3 个 Controller 和 1.18.4 发布门禁。
+本文件只记录拆分方案，不代表已经完成。当前 Controller 的 `JdbcTemplate` 直连已清零，下一优先级是 1.18.4 发布门禁，然后按本文件拆分超大类。
+
+`scripts/check_class_size.py` 已把现有超大类冻结为基线，新增超过 20KB 的类会让 CI 失败。
 
 ## 1. PaymentServiceImpl（约 49KB）
 

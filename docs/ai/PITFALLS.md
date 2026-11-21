@@ -59,6 +59,7 @@
 - `platform/catalog.json` 仍保留在 `delta-admin` 资源中，因为发布脚本和更新器按 `BOOT-INF/classes/platform/catalog.json` 校验版本。不要只移动文件而不同步打包链路。
 - 纯结构拆分必须保持 endpoint 数量、OpenAPI operation 和 schema 不变；用 `check_endpoint_baseline.py`、`check_openapi_baseline.py` 和 clean verify 证明，而不是只看编译成功。
 - Controller 已不再直接依赖 `JdbcTemplate`；ArchUnit 会拒绝任何新增直连。查询逻辑必须放模块 Service，并补对应测试。
+- 新增 Java 类不要超过 20KB；超过时必须按业务场景拆分，确需保留则评审后更新 `docs/ai/oversized-class-baseline.json`。
 
 ## 版本 / 发布
 
