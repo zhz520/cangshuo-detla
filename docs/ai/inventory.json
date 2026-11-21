@@ -1160,7 +1160,6 @@
     "delta-game/delta-admin/src/test/java/com/delta/admin/ContentConfigControllerTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/CouponRedemptionServiceTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/CsProfilePasswordTest.java",
-    "delta-game/delta-admin/src/test/java/com/delta/admin/CsRoutingBatchRuleTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/CsRoutingServiceTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/DisplayControllerTest.java",
     "delta-game/delta-admin/src/test/java/com/delta/admin/DisplayPrivacyControllerTest.java",
@@ -1262,7 +1261,8 @@
     "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
     "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitInterceptorTest.java",
     "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/AnalyticsVisitRecorderTest.java",
-    "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/DashboardAnalyticsServiceTest.java"
+    "delta-game/delta-reporting/src/test/java/com/delta/reporting/analytics/DashboardAnalyticsServiceTest.java",
+    "delta-game/delta-workforce/src/test/java/com/delta/workforce/controller/CsRoutingBatchRuleTest.java"
   ],
   "adminTests": [
     "api-boundary.test.mjs",

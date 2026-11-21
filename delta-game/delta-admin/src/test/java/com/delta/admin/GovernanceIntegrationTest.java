@@ -1,6 +1,8 @@
 package com.delta.admin;
 
 import com.delta.admin.controller.*;
+import com.delta.workforce.controller.StaffRoleController;
+import com.delta.workforce.controller.StaffShiftController;
 import com.delta.common.config.SecurityConfig;
 import com.delta.common.domain.R;
 import com.delta.common.exception.*;

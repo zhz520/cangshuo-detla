@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.workforce.controller;
 
 import com.alibaba.fastjson2.JSON;
 import com.delta.common.annotation.OpLog;

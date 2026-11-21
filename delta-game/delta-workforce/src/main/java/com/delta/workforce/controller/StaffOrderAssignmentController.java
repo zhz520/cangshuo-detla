@@ -1,4 +1,4 @@
-package com.delta.admin.controller;
+package com.delta.workforce.controller;
 
 import com.delta.common.customer.CsRoutingService;
 import com.delta.common.domain.PageQuery;

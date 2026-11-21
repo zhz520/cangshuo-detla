@@ -53,7 +53,7 @@ class PlayerBusinessRegressionTest {
     @Configuration
     @Import({RewardGrabIntegrationTest.Config.class, PlayerHomeController.class, WithdrawController.class, PayController.class,
             PlayerAccountServiceImpl.class, WithdrawServiceImpl.class, com.delta.common.mybatis.handler.MetaObjectHandlerImpl.class,
-            com.delta.admin.controller.StaffOrderTeamController.class, com.delta.player.service.PlayerIdentityNameService.class})
+            com.delta.workforce.controller.StaffOrderTeamController.class, com.delta.player.service.PlayerIdentityNameService.class})
     static class Config {}
 
     @Autowired MockMvc mvc;

@@ -51,6 +51,7 @@
         <module>delta-identity</module>
         <module>delta-notification</module>
         <module>delta-marketing</module>
+        <module>delta-workforce</module>
         <module>delta-admin</module>
     </modules>
 
@@ -229,6 +230,11 @@
             <dependency>
                 <groupId>com.delta</groupId>
                 <artifactId>delta-marketing</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.delta</groupId>
+                <artifactId>delta-workforce</artifactId>
                 <version>${delta.version}</version>
             </dependency>
         </dependencies>

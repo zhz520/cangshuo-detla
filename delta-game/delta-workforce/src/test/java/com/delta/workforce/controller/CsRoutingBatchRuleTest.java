@@ -1,6 +1,6 @@
-package com.delta.admin;
+package com.delta.workforce.controller;
 
-import com.delta.admin.controller.CsRoutingController;
+import com.delta.workforce.controller.CsRoutingController;
 import com.delta.common.customer.CsRoutingService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

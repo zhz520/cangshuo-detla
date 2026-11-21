@@ -2,8 +2,8 @@ package com.delta.admin;
 
 import com.delta.admin.config.StaffPermissionConfig;
 import com.delta.admin.controller.AdminOrderController;
-import com.delta.admin.controller.StaffOrderAssignmentController;
-import com.delta.admin.controller.StaffOrderTeamController;
+import com.delta.workforce.controller.StaffOrderAssignmentController;
+import com.delta.workforce.controller.StaffOrderTeamController;
 import com.delta.common.security.service.StaffPermissions;
 import com.delta.cs.controller.CsOrderController;
 import com.delta.pay.refund.OrderRefundWorkflowService;

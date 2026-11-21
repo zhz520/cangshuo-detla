@@ -41,7 +41,7 @@
       "backend": [
         "delta-game/delta-order/src/main/java/com/delta/order/controller/OrderController.java",
         "delta-game/delta-admin/src/main/java/com/delta/admin/controller/AdminOrderController.java",
-        "delta-game/delta-admin/src/main/java/com/delta/admin/controller/StaffOrderTeamController.java",
+        "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller/StaffOrderTeamController.java",
         "delta-game/delta-player/src/main/java/com/delta/player/service/OrderTeamService.java"
       ],
       "admin": [
@@ -189,6 +189,33 @@
         "InviteAdminControllerTest",
         "CouponRefundListenerTest",
         "RewardGrabIntegrationTest"
+      ]
+    },
+    {
+      "id": "workforce",
+      "name": "员工角色/排班/客服分配/协同指派",
+      "backend": [
+        "delta-game/delta-workforce/src/main/java/com/delta/workforce/controller"
+      ],
+      "admin": [
+        "delta-admin-ui/src/views/system/StaffRoles.vue",
+        "delta-admin-ui/src/views/chat/CsRouting.vue",
+        "delta-admin-ui/src/views/dashboard/MobileDashboard.vue"
+      ],
+      "h5": [],
+      "tables": [
+        "staff_role",
+        "staff_role_member",
+        "staff_shift",
+        "cs_group",
+        "cs_group_member",
+        "cs_routing_rule",
+        "order_player"
+      ],
+      "tests": [
+        "CsRoutingBatchRuleTest",
+        "OrderAssignmentCandidatesTest",
+        "PlayerBusinessRegressionTest"
       ]
     },
     {
