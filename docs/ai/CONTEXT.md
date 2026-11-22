@@ -112,6 +112,7 @@
 | P1-admin-permission | 只隐藏按钮没做后端权限 | 管理员/客服/越权负向测试 |
 | P1-static-mime | JS/图片 200 但返回 HTML | 公网状态码、Content-Type、实际内容 |
 | P1-doc-drift | 当前版本/计划写入多份文档后冲突 | `ai_context.py validate --strict` |
+| P1-ci-index | Windows/Linux 文件排序或大小写差异导致 `index.json` 过期 | `ai_context.py build --check`，POSIX 路径排序、最短包名 |
 | P2-old-worktree | 在落后副本修改 | `git worktree list`、HEAD、分支、dirty |
 
 ## 8. 任务路由

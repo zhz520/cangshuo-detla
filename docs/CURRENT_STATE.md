@@ -64,7 +64,7 @@
 - 三租户后台 PC/H5、客户 H5、打手 H5 的完整逐页业务回归尚未重新执行；已完成关键入口、版本、构建标识、API 和财务对账检查。
 - iOS/Android 微信内置浏览器和真机支付仍需验证。
 - 发布后 24–48 小时观察仍在持续；不能把容器 healthy 当作业务验收。
-- GitHub Actions `System validation` 在 `v1.18.5` 提交上未启动成功；GitHub 返回的注解是账户付款/消费额度限制，不是工作流代码或测试失败。当前发布证据来自本地全量验证、520 验收和共享 worker 审计，不能宣称 CI 已通过。
+- GitHub Actions `System validation` 已在公开仓库启用并通过：`main` 提交 `39455b9` 的工作流运行 `45004138265` 全流程成功。`docs/ai/index.json` 现按 POSIX 路径稳定排序，并从模块最短包名生成 `packageRoot`，Windows 与 Linux 生成结果一致。
 
 ### 磁盘清理（2026-11-22）
 

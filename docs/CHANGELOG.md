@@ -25,6 +25,12 @@
 - 后台/H5 静态 buildId 三租户一致；后端 buildId 三租户一致；520 与共享组前端代码同源。
 - 未验证真实微信支付、退款回调重放、真实短信/实名供应商和真机微信支付；不能把构建、健康检查或容器状态当成这些业务验收。
 
+### CI 修复
+
+- `scripts/ai_context.py` 统一使用仓库 POSIX 相对路径排序；`packageRoot` 改为取模块最短包名，消除 Windows 大小写不敏感排序与 Linux 排序差异。
+- `docs/ai/index.json` 重新生成后，Windows 与 WSL Linux 的 `build --check` 均通过。
+- 公开仓库 `main` 提交 `39455b9` 的 `System validation` 运行 `45004138265` 全流程成功；该结论只代表 CI 构建与测试通过，不代表生产业务重新验收。
+
 ## 2026-11-21 · 1.18.4
 
 ### 变更
