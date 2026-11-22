@@ -179,6 +179,7 @@ python deploy/qa/runtime_identity.py compare D:\CodexData\outputs\runtime-identi
 - Docker 只清理超过 7 天且未被容器使用的镜像、停止容器和旧构建缓存；保留当前镜像、最近回滚镜像和最近构建缓存，清理后必须重新验证当前 5 个共享容器和 520 三容器 healthy。
 - `/tmp` 只清理可重建的构建包、临时 JAR 和旧 staging；不删除当前 Compose 引用的文件或正在被进程打开的文件。
 - 每次清理记录删除清单、释放字节数、清理前后 `df -h /` 和健康检查结果；不删除数据库、当前 release、worker journal、审计或授权私钥。
+- 服务器已启用 `cangshuo-disk-guard.timer`：每天 04:20 检查根分区，只有使用率达到 85% 才清理超过 7 天且未被容器使用的容器、镜像和构建缓存；85% 以下正常运行时不删除任何当前 release 或备份。
 
 ## 8. 生产验收
 
