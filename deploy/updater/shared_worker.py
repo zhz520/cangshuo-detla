@@ -159,7 +159,21 @@ def prune_directories(parent, keep, preserve=()):
             shutil.rmtree(path, ignore_errors=True)
 
 
-def start_services(operations, health_host, services, override, expected_versions, timings=None):
+def release_health_hosts(rows, tenants, preferred=None):
+    hosts = list(dict.fromkeys(host for tenant in tenants for host in rows[tenant]["hosts"]))
+    if preferred:
+        preferred = shared_registry.normalize_host(preferred)
+        if preferred not in hosts:
+            raise ValueError("health_host must belong to a selected tenant")
+        hosts.remove(preferred)
+        hosts.insert(0, preferred)
+    if not hosts:
+        raise ValueError("no tenant hosts available for health checks")
+    return hosts
+
+
+def start_services(operations, health_hosts, services, override, expected_versions, timings=None,
+                   gateway_keys=None):
     if timings is None:
         timings = {}
     for service in ("backend", "admin", "h5"):
@@ -169,7 +183,10 @@ def start_services(operations, health_host, services, override, expected_version
         with measure(service_timings, "composeUp"):
             operations.compose_up([service], override)
         with measure(service_timings, "health"):
-            operations.health(service, expected_versions.get(service), health_host)
+            for host in health_hosts if service == "backend" else health_hosts[:1]:
+                operations.health(service, expected_versions.get(service), host)
+            if service == "backend" and gateway_keys:
+                operations.verify_running_gateway_keys(gateway_keys)
 
 
 class DockerOperations:
@@ -274,7 +291,7 @@ class DockerOperations:
             if not (destination / "index.html").is_file() or version.get("version") != package["version"] or version.get("component") != package["component"]:
                 raise ValueError("frontend version does not match release")
 
-    def compose_up(self, services, override):
+    def compose_command(self, override):
         command = ["docker", "compose", "--project-directory", self.config["compose_directory"]]
         if self.config.get("env_file"):
             command += ["--env-file", self.config["env_file"]]
@@ -285,8 +302,37 @@ class DockerOperations:
             command += ["-f", str(compose_file)]
         if override:
             command += ["-f", str(override)]
-        command += ["up", "-d", "--no-deps"] + list(services)
+        return command
+
+    def compose_up(self, services, override):
+        command = self.compose_command(override) + ["up", "-d", "--no-deps"] + list(services)
         self.run(command, timeout=self.config.get("compose_timeout_seconds", 300))
+
+    @staticmethod
+    def require_gateway_keys(keys, environment, source):
+        missing = [tenant for tenant, key in keys.items()
+                   if not str(environment.get(key) or "").strip()]
+        if missing:
+            raise ValueError(source + " lacks authority gateway credentials for: " + ", ".join(missing))
+
+    def verify_compose_gateway_keys(self, keys, override):
+        try:
+            output = self.run(self.compose_command(override) + ["config", "--format", "json"]).stdout
+            environment = json.loads(output)["services"]["backend"].get("environment") or {}
+        except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError):
+            # Never emit Compose output: the effective environment includes credentials.
+            raise ValueError("cannot read effective backend Compose configuration") from None
+        if not isinstance(environment, dict):
+            raise ValueError("invalid backend Compose environment")
+        self.require_gateway_keys(keys, environment, "Compose")
+
+    def verify_running_gateway_keys(self, keys):
+        try:
+            inspected, _ = self.container_ip("backend")
+            environment = dict(entry.split("=", 1) for entry in inspected["Config"]["Env"] if "=" in entry)
+        except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError):
+            raise ValueError("cannot read running backend configuration") from None
+        self.require_gateway_keys(keys, environment, "running backend")
 
     def container_ip(self, service):
         inspected = json.loads(self.run(["docker", "inspect", self.config["containers"][service]]).stdout)[0]
@@ -318,10 +364,14 @@ class DockerOperations:
                     version = json.loads(body)
                     if version.get("component") != service or version.get("version") != expected_version:
                         raise RuntimeError("frontend version mismatch")
+                if service == "backend":
+                    payload = json.loads(body)
+                    if payload.get("code") != 200 or not isinstance(payload.get("data"), dict):
+                        raise RuntimeError("tenant site config response invalid")
                 return
             except Exception:
                 if _ + 1 >= max(1, attempts):
-                    raise
+                    raise RuntimeError("health check failed for " + service + " at " + health_host) from None
                 time.sleep(max(0, interval))
 
 
@@ -345,11 +395,7 @@ class SharedExecutor:
         self.rows = {row["id"]: row for row in shared_release.tenant_rows(config)}
         self.active = [row_id for row_id, row in self.rows.items() if row["active"]]
         self.checked = shared_release.validate_plan(plan, config, self.active, shared_release.current_state(self.state), self.now)
-        hosts = [host for row in self.rows.values() if row["id"] in plan["tenants"] for host in row["hosts"]]
-        selected_host = config.get("health_host") or (hosts[0] if hosts else "")
-        self.health_host = shared_registry.normalize_host(selected_host) if selected_host else ""
-        if self.health_host not in hosts:
-            raise ValueError("health_host must belong to a selected tenant")
+        self.health_hosts = release_health_hosts(self.rows, plan["tenants"], config.get("health_host"))
         self.databases = {row_id: self.rows[row_id]["database"] for row_id in plan["tenants"] if row_id in self.rows}
         if set(self.databases) != set(plan["tenants"]):
             raise ValueError("selected tenant has no database")
@@ -357,6 +403,33 @@ class SharedExecutor:
 
     def execution_time(self):
         return self.fixed_now if self.fixed_now is not None else datetime.now(timezone.utc)
+
+    def gateway_keys(self):
+        required = sorted(self.config.get("required_authority_gateway_tenants", []))
+        if not set(required).issubset(self.databases):
+            raise ValueError("gateway readiness policy references tenants outside this release")
+        keys = {}
+        for tenant in required:
+            try:
+                state = shared_release.load_json(self.platform_tenants_dir / tenant / "state.json")
+                instance = state["instanceId"]
+                if str(uuid.UUID(instance)) != instance or instance != self.rows[tenant]["platformInstanceId"]:
+                    raise ValueError("platform instance does not match registry")
+            except (ValueError, OSError, KeyError, TypeError, AttributeError):
+                raise ValueError("invalid platform instance for gateway check: " + tenant) from None
+            key = "AUTHORITY_GATEWAY_SECRET_" + instance.replace("-", "_").upper()
+            if key in keys.values():
+                raise ValueError("duplicate platform instance in gateway readiness policy")
+            keys[tenant] = key
+        return keys
+
+    def check_gateway_compose(self):
+        keys = self.gateway_keys()
+        if keys:
+            # The release override is replaced on every deployment. Credentials must
+            # come from persistent Compose inputs, never from the current override.
+            self.ops.verify_compose_gateway_keys(keys, None)
+        return keys
 
     def require_execution_deadlines(self):
         now = self.execution_time()
@@ -445,6 +518,8 @@ class SharedExecutor:
             self.checked = shared_release.validate_plan(
                 self.plan, self.config, self.active, shared_release.current_state(self.state),
                 self.now, require_window=True)
+            with measure(timings, "gatewayPreflight"):
+                gateway_keys = self.check_gateway_compose()
             previous_override = read_optional(self.override)
             previous_current = read_optional(self.current)
             previous_link = read_symlink(self.root / "current")
@@ -486,16 +561,16 @@ class SharedExecutor:
                 "releaseDir": str(release_dir),
                 "serviceGroupId": self.plan["serviceGroupId"],
                 "targetVersion": self.plan["targetVersion"],
-                "healthHost": self.health_host,
+                "healthHost": self.health_hosts[0],
                 "schemaVersion": self.plan["schemaVersion"],
                 "tenants": list(self.plan["tenants"]),
             })
             changed = True
             with measure(timings, "switchAndHealth"):
                 self.write_override(release_dir)
-                start_services(self.ops, self.health_host, list(shared_release.COMPONENTS), self.override,
+                start_services(self.ops, self.health_hosts, list(shared_release.COMPONENTS), self.override,
                                {package["component"]: package["version"] for package in self.plan["packages"]},
-                               timings=timings.setdefault("services", {}))
+                               timings=timings.setdefault("services", {}), gateway_keys=gateway_keys)
             with measure(timings, "finalizeRelease"):
                 replace_symlink(release_dir, self.root / "current")
                 if self.platform_tenants_dir:
@@ -545,7 +620,7 @@ class SharedExecutor:
                             target.write_text(content, encoding="utf-8")
                             os.chmod(target, 0o600)
                     remove(self.state / "installed-plans" / self.plan["id"])
-                    start_services(self.ops, self.health_host, list(shared_release.COMPONENTS),
+                    start_services(self.ops, self.health_hosts, list(shared_release.COMPONENTS),
                                    self.override if previous_override else None, previous_versions)
                     shutil.rmtree(release_dir, ignore_errors=True)
                     remove(self.journal)
@@ -628,11 +703,10 @@ def recover(config, operations=None, now=None):
                 target.write_text(content, encoding="utf-8")
                 os.chmod(target, 0o600)
         remove(state / "installed-plans" / release_id)
-        health_host = journal.get("healthHost") or config.get("health_host")
-        if not health_host:
-            rows = shared_release.tenant_rows(config)
-            health_host = next((host for row in rows if row["active"] for host in row["hosts"]), "")
-        start_services(ops, health_host, ["backend", "admin", "h5"],
+        rows = {row["id"]: row for row in shared_release.tenant_rows(config)}
+        tenants = journal.get("tenants") or [row["id"] for row in rows.values() if row["active"]]
+        health_hosts = release_health_hosts(rows, tenants, journal.get("healthHost") or config.get("health_host"))
+        start_services(ops, health_hosts, ["backend", "admin", "h5"],
                        override if previous_override else None, journal.get("versionsBefore", {}))
         release_text = journal.get("releaseDir")
         if release_text:
@@ -734,6 +808,9 @@ def main():
     current = shared_release.current_state(config["state_dir"])
     if args.command == "validate":
         result = shared_release.dry_run(plan, config, tenants, current, current_time)
+        if config.get("required_authority_gateway_tenants"):
+            checks = SharedExecutor(config, plan, now=current_time).check_gateway_compose()
+            result["gatewayComposeCheckedTenants"] = sorted(checks)
         if args.audit:
             shared_release.append_audit(args.audit, shared_release.audit_record(plan, "VALID", current_time))
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

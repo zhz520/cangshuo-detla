@@ -1,15 +1,11 @@
 <template>
   <div class="sms-account-page">
     <div class="page-head">
-      <div>
-        <h2>{{ label }}服务</h2>
-        <p>{{ identity ? '自动核验姓名与身份证号；未启用时按原有人工审核流程处理。' : '可选择授权中心统一服务，或在本实例直接配置阿里云短信。' }}</p>
-      </div>
-      <el-button :loading="loading" @click="load">刷新</el-button>
+      <h2>{{ label }}服务</h2>
+      <el-button v-if="!readOnly" :loading="loading || limitsLoading" :disabled="saving || limitSaving" @click="refresh">刷新</el-button>
     </div>
     <el-card v-if="settings" shadow="never" class="account-card">
-      <el-alert v-if="settings.legacyActive" title="当前使用阿里云短信，由本实例直接发送并按阿里云账单计费。" type="info" :closable="false" show-icon />
-      <el-form label-position="top">
+      <el-form label-position="top" :disabled="readOnly || loading || saving">
         <div class="settings-grid">
           <el-form-item label="服务提供方">
             <el-select v-model="settings.provider" :disabled="readOnly || saving">
@@ -18,7 +14,7 @@
             </el-select>
           </el-form-item>
           <el-form-item :label="identity ? '自动二要素核验' : '启用短信服务'">
-            <el-switch v-model="settings.enabled" :disabled="readOnly || saving || (settings.provider === 'AUTHORITY' && !settings.configured && !settings.enabled)" @change="settleToggles" />
+            <el-switch v-model="settings.enabled" :disabled="readOnly || saving || (settings.provider === 'AUTHORITY' && !authorityConfigured && !settings.enabled)" @change="settleToggles" />
           </el-form-item>
           <el-form-item v-if="!identity" label="启用短信验证码">
             <el-switch v-model="settings.otpEnabled" :disabled="readOnly || saving || !settings.enabled" />
@@ -37,27 +33,31 @@
           <el-form-item label="消息提醒模板 Code"><el-input v-model="settings.csMessageTemplateCode" placeholder="可选" /></el-form-item>
           <el-form-item label="邀请协同模板 Code"><el-input v-model="settings.teammateInvitedTemplateCode" placeholder="可选" /></el-form-item>
         </div>
-        <el-alert v-if="!identity && settings.provider === 'ALIYUN'" type="info" :closable="false" show-icon
-          title="阿里云短信由本实例直接发送，费用从阿里云账户扣取，不使用授权中心短信套餐。" />
-        <el-tag v-if="!settings.configured" type="warning">尚未配置</el-tag>
-        <el-button v-if="!readOnly" type="primary" :disabled="!dirty" :loading="saving" @click="save">保存设置</el-button>
+        <el-button v-if="!readOnly" type="primary" :disabled="!dirty || loading" :loading="saving" @click="save">保存设置</el-button>
       </el-form>
     </el-card>
-    <el-card v-if="identity" shadow="never" class="account-card">
-      <template #header><div class="card-head"><strong>同一账号失败次数限制</strong><span>防止连续输入错误实名信息</span></div></template>
-      <el-form label-position="top">
+    <el-card v-if="identity && !readOnly" shadow="never" class="account-card">
+      <template #header><strong>同一账号失败次数限制</strong></template>
+      <LoadFeedback :loading="limitsLoading" :error="limitsError" label="失败次数限制" @retry="loadLimits" />
+      <el-form v-if="limitSettings" label-position="top" :disabled="limitsLoading || limitSaving || !!limitsError">
         <div class="settings-grid">
           <el-form-item label="启用限制"><el-switch v-model="limitSettings.enabled" :disabled="readOnly || limitSaving" /></el-form-item>
           <el-form-item label="最大失败次数"><el-input-number v-model="limitSettings.maxAttempts" :min="1" :max="20" :disabled="readOnly || limitSaving" /></el-form-item>
           <el-form-item label="统计窗口（小时）"><el-input-number v-model="limitSettings.windowHours" :min="1" :max="720" :disabled="readOnly || limitSaving" /></el-form-item>
           <el-form-item label="锁定时长（小时）"><el-input-number v-model="limitSettings.lockHours" :min="1" :max="720" :disabled="readOnly || limitSaving" /></el-form-item>
         </div>
-        <el-button v-if="!readOnly" type="primary" :loading="limitSaving" @click="saveLimits">保存限制</el-button>
+        <el-button type="primary" :loading="limitSaving" @click="saveLimits">保存限制</el-button>
       </el-form>
     </el-card>
-    <LoadFeedback :loading="loading" :error="loadError" :label="label + '服务账户'" @retry="load" />
-    <template v-if="account && (identity || settings.provider === 'AUTHORITY')">
+    <el-empty v-if="readOnly" description="演示账号不读取真实服务账户" />
+    <LoadFeedback :loading="loading" :error="loadError" :label="label + '服务账户'" @retry="refresh" />
+    <el-card v-if="accountUnavailable" shadow="never" class="account-card">
+      <template #header><strong>可购买套餐</strong></template>
+      <el-empty :description="accountUnavailable" />
+    </el-card>
+    <template v-if="account && accountEligible">
       <el-card shadow="never" class="account-card">
+        <el-alert v-if="account.ready === false" :title="label + '服务尚未就绪，请联系平台运营检查授权中心配置'" type="warning" :closable="false" show-icon />
         <div class="account-grid">
           <div><span>计费模式</span><strong>{{ modeLabel(account.billingMode) }}</strong></div>
           <div><span>单{{ unit }}价格</span><strong>{{ money(account.unitPriceCents) }}</strong></div>
@@ -75,7 +75,7 @@
       <el-card shadow="never" class="account-card">
         <template #header><div class="card-head"><strong>余额充值</strong><span>支付成功后自动入账，可继续按量使用</span></div></template>
         <div v-if="rechargePackages.length" class="recharge-grid">
-          <button v-for="item in rechargePackages" :key="item.id" class="recharge-item" :disabled="!!buying" @click="buy(item)">
+          <button v-for="item in rechargePackages" :key="item.id" class="recharge-item" :disabled="readOnly || loading || saving || !!buying" @click="buy(item)">
             <strong>{{ money(item.credit_cents) }}</strong>
             <span>售价 {{ money(item.price_cents) }}</span>
             <small v-if="Number(item.credit_cents) > Number(item.price_cents)">赠 {{ money(Number(item.credit_cents) - Number(item.price_cents)) }}</small>
@@ -109,7 +109,7 @@
           <el-table-column :prop="identity ? 'verification_count' : 'message_count'" :label="'额度（' + unit + '）'" width="110" />
           <el-table-column label="价格" width="120"><template #default="{row}">{{ money(row.price_cents) }}</template></el-table-column>
           <el-table-column prop="validity_days" label="有效天数" width="110" />
-          <el-table-column v-if="!readOnly" label="操作" width="120"><template #default="{row}"><el-button type="primary" plain :loading="buying === row.id" :disabled="!!buying" @click="buy(row)">购买</el-button></template></el-table-column>
+          <el-table-column v-if="!readOnly" label="操作" width="120"><template #default="{row}"><el-button type="primary" plain :loading="buying === row.id" :disabled="loading || saving || !!buying" @click="buy(row)">购买</el-button></template></el-table-column>
         </el-table>
         <el-empty v-if="!servicePackages.length" description="暂无上架套餐，请联系平台运营" />
       </el-card>
@@ -118,12 +118,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { isDemoSession } from '@/utils/staff-permissions'
 import { ElMessage } from 'element-plus'
 import { checkoutIdentityPackage, checkoutSmsPackage, getAuthoritySettings, getIdentityGatewayAccount, getIdentityLimits, getSmsGatewayAccount, saveAuthoritySettings, saveIdentityLimits } from '@/api/system'
 import LoadFeedback from '@/components/LoadFeedback.vue'
+import { serviceAccountState } from '@/utils/service-account-state.mjs'
 
 const route = useRoute()
 const identity = computed(() => route.meta.feature === 'identity_verification')
@@ -132,17 +133,28 @@ const label = computed(() => identity.value ? '实名' : '短信')
 const unit = computed(() => identity.value ? '次' : '条')
 const account = ref(null), loading = ref(false), loadError = ref(''), settings = ref(null)
 const saved = ref(null), saving = ref(false), buying = ref('')
-const limitSettings = reactive({ enabled: true, maxAttempts: 5, windowHours: 24, lockHours: 24 })
-const limitSaving = ref(false)
+const limitSettings = ref(null)
+const limitSaving = ref(false), limitsLoading = ref(false), limitsError = ref('')
 const editableFields = ['provider', 'enabled', 'otpEnabled', 'endpoint', 'accessKeyId', 'signName',
   'verificationTemplateCode', 'playerFinishTemplateCode', 'csMessageTemplateCode', 'teammateInvitedTemplateCode']
-const dirty = computed(() => !!saved.value && editableFields.some(key => settings.value[key] !== saved.value[key])
+const dirty = computed(() => !!saved.value && !!settings.value && editableFields.some(key => settings.value[key] !== saved.value[key])
   || !!settings.value?.accessKeySecret)
+const authorityConfigured = computed(() => identity.value ? settings.value?.configured : settings.value?.authorityConfigured)
+const accountState = computed(() => serviceAccountState(kind.value, saved.value, settings.value?.provider))
+const accountEligible = computed(() => accountState.value === 'CONNECTED')
+const accountUnavailable = computed(() => {
+  if (loading.value || loadError.value || !settings.value) return ''
+  return ({
+    DIRECT: '当前使用本实例阿里云短信，不使用授权中心套餐。',
+    UNCONNECTED: '当前实例未接入授权中心，请联系平台运营配置本实例的接入凭据。',
+    UNSAVED: '保存服务提供方后查看套餐。'
+  })[accountState.value] || ''
+})
 const availableBalance = computed(() => Math.max(0, Number(account.value?.balanceCents || 0) - Number(account.value?.reservedCents || 0)))
 const rechargePackages = computed(() => (account.value?.availablePackages || []).filter(item => Number(item.credit_cents) > 0))
 const servicePackages = computed(() => (account.value?.availablePackages || []).filter(item => !(Number(item.credit_cents) > 0)))
 const readOnly = computed(() => isDemoSession())
-let sequence = 0
+let sequence = 0, limitsSequence = 0
 const money = cents => '¥' + (Number(cents || 0) / 100).toFixed(2)
 const time = value => value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—'
 const modeLabel = mode => ({ METERED: '按量计费', PACKAGE: '只套餐', HYBRID: '套餐 + 按量' }[mode] || mode || '未配置')
@@ -150,21 +162,34 @@ const modeLabel = mode => ({ METERED: '按量计费', PACKAGE: '只套餐', HYBR
 async function load() {
   if (readOnly.value) return
   const run = ++sequence
+  const service = kind.value
   loading.value = true; loadError.value = ''
+  account.value = null
   try {
-    const limitsPromise = identity.value ? getIdentityLimits().catch(() => null) : Promise.resolve(null)
-    const current = await getAuthoritySettings(kind.value)
-    const limits = await limitsPromise
+    const current = await getAuthoritySettings(service)
     if (run !== sequence) return
-    if (identity.value && limits?.data) Object.assign(limitSettings, limits.data)
     resetSettings(current.data)
-    if (!identity.value && current.data.provider === 'ALIYUN') { account.value = null; return }
-    if (!current.data.configured) { account.value = null; return }
-    const { data } = await (identity.value ? getIdentityGatewayAccount() : getSmsGatewayAccount())
-    if (run === sequence) account.value = normalize(data)
+    if (serviceAccountState(service, saved.value, settings.value.provider) === 'CONNECTED') {
+      const { data } = await (service === 'identity' ? getIdentityGatewayAccount() : getSmsGatewayAccount())
+      if (run === sequence) account.value = normalize(data)
+    }
   } catch (error) {
-    if (run === sequence) { loadError.value = error?.message || '加载服务账户失败'; account.value = null }
+    if (run === sequence) { loadError.value = error?.response?.data?.msg || error?.message || '加载服务账户失败'; account.value = null }
   } finally { if (run === sequence) loading.value = false }
+}
+async function loadLimits() {
+  if (!identity.value || readOnly.value) return
+  const run = ++limitsSequence
+  limitsLoading.value = true; limitsError.value = ''
+  try {
+    const { data } = await getIdentityLimits()
+    if (run === limitsSequence) limitSettings.value = { ...data }
+  } catch (error) {
+    if (run === limitsSequence) limitsError.value = error?.response?.data?.msg || error?.message || '请重试'
+  } finally { if (run === limitsSequence) limitsLoading.value = false }
+}
+function refresh() {
+  return Promise.all([load(), loadLimits()])
 }
 function resetSettings(data) {
   const normalized = { endpoint: 'dysmsapi.aliyuncs.com', accessKeyId: '', accessKeySecret: '', signName: '',
@@ -179,8 +204,9 @@ function normalize(data) {
     balanceCents: data.balanceCents ?? data.balance_cents, reservedCents: data.reservedCents ?? data.reserved_cents }
 }
 async function save() {
-  if (saving.value || readOnly.value) return
+  if (saving.value || loading.value || readOnly.value || !settings.value || !dirty.value) return
   const service = kind.value
+  const run = sequence
   saving.value = true
   try {
     const s = settings.value
@@ -191,23 +217,30 @@ async function save() {
       csMessageTemplateCode: s.csMessageTemplateCode, teammateInvitedTemplateCode: s.teammateInvitedTemplateCode
     } : { provider: s.provider, enabled: s.enabled }
     const { data } = await saveAuthoritySettings(service, payload)
-    if (service === kind.value) resetSettings(data)
+    if (run === sequence) {
+      resetSettings(data)
+      await load()
+    }
     ElMessage.success('服务设置已保存')
   } catch (error) { ElMessage.error(error?.message || '保存服务设置失败') }
   finally { saving.value = false }
 }
 async function saveLimits() {
-  if (limitSaving.value || readOnly.value) return
+  if (!identity.value || limitSaving.value || limitsLoading.value || limitsError.value || readOnly.value || !limitSettings.value) return
+  const run = limitsSequence
   limitSaving.value = true
   try {
-    const { data } = await saveIdentityLimits({ ...limitSettings })
-    Object.assign(limitSettings, data)
+    const { data } = await saveIdentityLimits({ ...limitSettings.value })
+    if (run === limitsSequence) limitSettings.value = { ...data }
     ElMessage.success('实名失败次数限制已保存')
   } catch (error) { ElMessage.error(error?.message || '保存实名失败次数限制失败') }
-  finally { limitSaving.value = false }
+  finally {
+    limitSaving.value = false
+    if (run !== limitsSequence && identity.value) await loadLimits()
+  }
 }
 async function buy(item) {
-  if (buying.value || readOnly.value) return
+  if (buying.value || readOnly.value || saving.value || loading.value || !accountEligible.value || !account.value) return
   const ua = navigator.userAgent
   const mobileWechat = /MicroMessenger/i.test(ua) && !/WindowsWechat|MacWechat|WeChatWin|WeChatMac|Windows NT|X11/i.test(ua) && /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|OpenHarmony/i.test(ua)
   const popup = mobileWechat ? null : window.open('about:blank', '_blank')
@@ -224,14 +257,18 @@ async function buy(item) {
     ElMessage.error(error?.message || '套餐购买暂不可用')
   } finally { buying.value = '' }
 }
-watch(kind, () => { settings.value = null; account.value = null; load() }, { immediate: true })
+watch(kind, () => {
+  ++limitsSequence
+  settings.value = null; saved.value = null; account.value = null
+  limitSettings.value = null; limitsError.value = ''; limitsLoading.value = false
+  refresh()
+}, { immediate: true })
 </script>
 
 <style scoped>
 .sms-account-page { display: grid; gap: 16px; }
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .page-head h2 { margin: 0 0 6px; font-size: 22px; }
-.page-head p { margin: 0; color: #7b8798; font-size: 13px; }
 .account-card { border-radius: 14px; }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px 18px; }
 .aliyun-grid { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--el-border-color-lighter); }

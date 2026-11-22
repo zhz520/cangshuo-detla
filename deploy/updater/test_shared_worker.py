@@ -23,6 +23,8 @@ import shared_worker
 
 
 class FakeResponse:
+    status = 200
+
     def __init__(self, value):
         self.value = value
 
@@ -76,6 +78,12 @@ class FakeOperations:
         if (not self.failed and self.fail_health_once and service == self.fail_health_once):
             self.failed = True
             raise RuntimeError("health failed")
+
+    def verify_compose_gateway_keys(self, keys, override):
+        self.calls.append(("gateway-compose", tuple(sorted(keys)), override))
+
+    def verify_running_gateway_keys(self, keys):
+        self.calls.append(("gateway-running", tuple(sorted(keys))))
 
 
 class SharedWorkerTests(unittest.TestCase):
@@ -249,12 +257,93 @@ class SharedWorkerTests(unittest.TestCase):
         operations = FakeOperations()
         shared_worker.SharedExecutor(config, plan, operations, self.now).execute()
         self.assertIn(("backup", tenants), operations.calls)
+        self.assertEqual(
+            [host for phase, *args in operations.calls if phase == "health"
+             for service, _, host in [args] if service == "backend"],
+            [tenant + ".example.test" for tenant in tenants])
         for tenant in tenants:
             tenant_dir = platform / tenant
             values = json.loads((tenant_dir / "component-versions.json").read_text(encoding="utf-8"))
             self.assertEqual(values, {"backend": "1.11.3", "admin": "1.11.3", "h5": "1.11.3", "release": "1.11.3"})
             self.assertEqual(json.loads((tenant_dir / "local-settings.json").read_text(encoding="utf-8")),
                              {"tenant": tenant})
+
+    def gateway_fixture(self, *, state_id=None):
+        instance = "3e1e660b-0393-4682-9e02-f5a8407f326e"
+        registry = json.loads(self.registry.read_text(encoding="utf-8"))
+        registry["tenants"]["tenant-a"]["platformInstanceId"] = instance
+        self.registry.write_text(json.dumps(registry), encoding="utf-8")
+        platform = self.root / "platform" / "tenants"
+        tenant = platform / "tenant-a"
+        tenant.mkdir(parents=True)
+        (tenant / "state.json").write_text(json.dumps({"instanceId": state_id or instance}), encoding="utf-8")
+        return dict(self.config, platform_tenants_dir=str(platform),
+                    required_authority_gateway_tenants=["tenant-a"])
+
+    def test_gateway_checks_use_persistent_compose_and_recheck_runtime(self):
+        config = self.gateway_fixture()
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(config, self.plan, operations, self.now)
+        executor.override.write_text('{"services":{}}', encoding="utf-8")
+        executor.execute()
+        self.assertEqual(operations.calls[0], ("gateway-compose", ("tenant-a",), None))
+        runtime = operations.calls.index(("gateway-running", ("tenant-a",)))
+        self.assertEqual(operations.calls[runtime - 1], ("health", "backend", "1.11.3", "tenant-a.example.test"))
+        self.assertNotIn("AUTHORITY_GATEWAY_SECRET_", json.dumps(self.read_audit()))
+
+    def test_missing_required_gateway_stops_before_download_and_backup(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.gateway_fixture(), self.plan, operations, self.now)
+        with patch.object(operations, "verify_compose_gateway_keys",
+                          side_effect=ValueError("Compose lacks authority gateway credentials for: tenant-a")):
+            with self.assertRaisesRegex(ValueError, "credentials for: tenant-a"):
+                executor.execute()
+        self.assertEqual(operations.calls, [])
+        self.assertEqual(self.read_audit()["result"], "FAILED")
+
+    def test_missing_runtime_gateway_after_switch_rolls_back(self):
+        operations = FakeOperations()
+        executor = shared_worker.SharedExecutor(self.gateway_fixture(), self.plan, operations, self.now)
+        with patch.object(operations, "verify_running_gateway_keys",
+                          side_effect=ValueError("running backend lacks authority gateway credentials for: tenant-a")):
+            with self.assertRaisesRegex(ValueError, "credentials for: tenant-a"):
+                executor.execute()
+        self.assertFalse(executor.current.exists())
+        self.assertFalse(executor.journal.exists())
+        self.assertEqual(self.read_audit()["result"], "ROLLED_BACK")
+
+    def test_gateway_check_rejects_a_state_for_the_wrong_instance(self):
+        config = self.gateway_fixture(state_id="af1a4665-71b0-46f3-8dba-bb151a39f97a")
+        executor = shared_worker.SharedExecutor(config, self.plan, FakeOperations(), self.now)
+        with self.assertRaisesRegex(ValueError, "invalid platform instance for gateway check: tenant-a"):
+            executor.check_gateway_compose()
+
+    def test_gateway_preflight_and_runtime_do_not_disclose_other_values(self):
+        config = self.gateway_fixture()
+        adapter = shared_worker.DockerOperations(config)
+        keys = shared_worker.SharedExecutor(config, self.plan, adapter, self.now).gateway_keys()
+        wanted = keys["tenant-a"]
+        other = "AUTHORITY_GATEWAY_SECRET_OTHER"
+        good = {"services": {"backend": {"environment": {wanted: "fixture-valid", other: "fixture-other"}}}}
+        bad = {"services": {"backend": {"environment": {other: "fixture-other"}}}}
+        with patch.object(adapter, "run") as run:
+            run.return_value.stdout = json.dumps(good).encode()
+            adapter.verify_compose_gateway_keys(keys, None)
+            run.return_value.stdout = json.dumps(bad).encode()
+            with self.assertRaisesRegex(ValueError, "^Compose lacks authority gateway credentials for: tenant-a$"):
+                adapter.verify_compose_gateway_keys(keys, None)
+        with patch.object(adapter, "container_ip", return_value=({"Config": {"Env": [other + "=fixture-other"]}}, None)):
+            with self.assertRaisesRegex(ValueError, "^running backend lacks authority gateway credentials for: tenant-a$"):
+                adapter.verify_running_gateway_keys(keys)
+
+    def test_backend_health_rejects_http_200_with_business_failure(self):
+        adapter = shared_worker.DockerOperations(self.config)
+        with patch.object(adapter, "container_ip", return_value=({"State": {"Running": True}}, "127.0.0.1")):
+            with patch.object(shared_worker.urllib.request, "urlopen", return_value=mock_response({"code": 503})):
+                with self.assertRaisesRegex(RuntimeError, "backend at tenant-a.example.test"):
+                    adapter.health("backend", "1.11.3", "tenant-a.example.test")
+            with patch.object(shared_worker.urllib.request, "urlopen", return_value=mock_response({"code": 200, "data": {}})):
+                adapter.health("backend", "1.11.3", "tenant-a.example.test")
 
     def test_private_github_asset_is_resolved_through_the_release_api(self):
         package = {

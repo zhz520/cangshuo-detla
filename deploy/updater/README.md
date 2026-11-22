@@ -75,9 +75,9 @@
 
 ## 共享服务组执行器
 
-`python deploy/updater/shared_worker.py execute <envelope.json> --config <config.json> --confirm <service-group-id>` 只接受已验签、处于维护窗口内、租户集合与注册文件一致的计划。执行顺序固定为：获取独占锁、逐租户 `mysqldump` 和文件归档、下载并校验三个制品、按组件解包和版本核对、写入 Compose 覆盖文件、后端健康检查、后台健康检查、H5 健康检查、写入当前版本和审计记录。
+`python deploy/updater/shared_worker.py execute <envelope.json> --config <config.json> --confirm <service-group-id>` 只接受已验签、处于维护窗口内、租户集合与注册文件一致的计划。顺序为：获取独占锁、检查预期网关接入、下载校验并解包三个制品、逐租户 `mysqldump` 和文件归档、写入 Compose 覆盖文件、逐租户后端健康检查、后台健康检查、H5 健康检查、写入当前版本和审计记录。
 
-`health_host` 必须是该服务组启用租户的登记域名，用于共享后端带 Host 的站点健康检查。`compose_override` 默认是 `<root>/compose.shared-release.json`；`release_retention` 至少为 2，确保回退目标不会被清理。`allow_execute` 为 false 时只允许 `validate`。Compose 文件、容器名、MySQL 容器、备份路径和公钥都来自运维配置，不接受签名计划提供的命令或路径。
+`health_host` 可指定优先检查的已登记域名；共享后端仍逐一检查本计划租户登记的 Host。运维把预期接入授权中心短信或实名的租户列入私有配置 `required_authority_gateway_tenants`，为这些租户检查实例标识与持久 Compose / 新容器的对应凭据。维护步骤和业务验收见 [运营手册](../../docs/OPERATIONS.md#5-共享服务组发布)。`compose_override` 默认是 `<root>/compose.shared-release.json`；`release_retention` 至少为 2，确保回退目标不会被清理。`allow_execute` 为 false 时只允许 `validate`。Compose 文件、容器名、MySQL 容器、备份路径和公钥都来自运维配置，不接受签名计划提供的命令或路径。
 
 失败时恢复原 Compose 覆盖文件、原 `current.json` 和上一个版本，删除本次已安装标记和发布目录；回退健康检查失败会保留 `journal.json` 和 `maintenance` 门禁，禁止继续执行。`python deploy/updater/shared_worker.py recover --config <config.json>` 按宿主私有日志恢复。审计记录只包含服务组、发布 ID、版本、租户和结果，不含签名、凭据或业务数据。
 

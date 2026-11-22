@@ -20,6 +20,7 @@
   "public_key_path": "/www/delta/shared/public.pem",
   "github_token_path": "/www/delta/shared/github-token",
   "platform_tenants_dir": "/www/delta/data/platform/tenants",
+  "required_authority_gateway_tenants": [],
   "health_host": "jaxapi738.idcgov.cn",
   "inbox_dir": "/var/lib/delta-shared/updater/inbox",
   "allow_execute": false,

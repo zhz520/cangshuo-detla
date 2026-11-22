@@ -110,6 +110,14 @@ def validate_config(raw):
         raise ValueError("github_token_path must be an absolute path")
     if raw.get("platform_tenants_dir") and not Path(str(raw["platform_tenants_dir"])).is_absolute():
         raise ValueError("platform_tenants_dir must be an absolute path")
+    gateway_tenants = raw.get("required_authority_gateway_tenants", [])
+    if (not isinstance(gateway_tenants, list)
+            or any(not isinstance(item, str) or not shared_registry.TENANT_ID.fullmatch(item)
+                   for item in gateway_tenants)
+            or len(set(gateway_tenants)) != len(gateway_tenants)):
+        raise ValueError("required_authority_gateway_tenants must list unique tenant IDs")
+    if gateway_tenants and not raw.get("platform_tenants_dir"):
+        raise ValueError("platform_tenants_dir is required for gateway checks")
     maximum = raw.get("maintenance_max_minutes", 240)
     if not isinstance(maximum, int) or not 1 <= maximum <= 1440:
         raise ValueError("maintenance_max_minutes must be 1..1440")
@@ -333,6 +341,7 @@ def config_example():
         "public_key_path": "/www/delta/shared/public.pem",
         "github_token_path": "/www/delta/shared/github-token",
         "platform_tenants_dir": "/www/delta/data/platform/tenants",
+        "required_authority_gateway_tenants": [],
         "health_host": "jaxapi738.idcgov.cn",
         "inbox_dir": "/var/lib/delta-shared/updater/inbox",
         "allow_execute": False,
