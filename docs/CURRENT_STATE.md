@@ -1,4 +1,4 @@
-# 当前状态（2026-11-21）
+# 当前状态（2026-11-22）
 
 本文件只记录“现在是什么”，不承载历史过程。当前版本、生产状态和最近发布证据以本文件为准；历史变化见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -10,7 +10,7 @@
 | 当前正式版本 | `1.18.5` |
 | 正式标签与提交 | `v1.18.5` → `47a874f7abcd044514effb9af7088685f0171e96` |
 | GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.18.5` |
-| 授权中心 | `D:\codeStudy\code\cangshuo-detla-authorize`，独立版本线 |
+| 授权中心 | `0.7.9`，生产容器 `cangshuo-detla-authority:0.7.9-20261122`；独立版本线 |
 | 520 演示线 | 后端/后台/H5 均为 `1.18.5`；不是共享组成员 |
 
 `main` 上发布标签之后的文档提交不表示生产被重新部署。不要从 `742`、`747`、`detla738` 等客户副本反向推断最新源码。
@@ -45,6 +45,7 @@
 - 520 独立演示线已更新到 `1.18.5`，后台/H5/后端 buildId 分别为 `8e11d16a...`、`bbdf9de3...`、`b7c26a2a...`；520 与共享组前端代码同源。
 - 三库各 76 张表；财务对账 12 项在三库和 520 均为 0 违规。
 - `cangshuo-shared-worker.service` active，`allow_execute=true`，无 journal、维护门禁和待处理计划。
+- 授权中心已运行 `0.7.9`，`/health` 返回 200；从 GitHub 同步到 `96` 个正式版本（最新 `1.18.5`），并生成上述共享计划。
 
 正式资产：
 
