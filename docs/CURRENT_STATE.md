@@ -6,13 +6,12 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 源码工作区 | `D:\codeStudy\code\cangshuo-detla`，`codex/engineering-hardening`（候选，未发布） |
-| 候选版本 | `1.18.5` |
-| 生产正式版本 | `1.18.4` |
-| 生产标签与提交 | `v1.18.4` → `d0c03e4e393439df3aa7f7c120a164788dd0d090` |
-| 生产 GitHub Release | `453576664` |
+| 源码工作区 | `D:\codeStudy\code\cangshuo-detla`，`codex/engineering-hardening`（已发布到共享组） |
+| 当前正式版本 | `1.18.5` |
+| 正式标签与提交 | `v1.18.5` → `47a874f7abcd044514effb9af7088685f0171e96` |
+| GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.18.5` |
 | 授权中心 | `D:\codeStudy\code\cangshuo-detla-authorize`，独立版本线 |
-| 520 演示线 | 后端/后台为 1.16.5 基线加架构与 UI 补丁；H5 为 1.16.5；不是共享组成员 |
+| 520 演示线 | 后端/后台/H5 均为 `1.18.5`；不是共享组成员 |
 
 `main` 上发布标签之后的文档提交不表示生产被重新部署。不要从 `742`、`747`、`detla738` 等客户副本反向推断最新源码。
 
@@ -22,11 +21,11 @@
 | --- | --- |
 | 服务组 | `delta-shared-prod` |
 | 租户 | `742`、`747`、`jax` |
-| 生产版本 | `1.18.4` |
-| 最近计划 | `94a97608-ddcc-4ac7-8095-efa78de169a4` |
+| 生产版本 | `1.18.5` |
+| 最近计划 | `edad2f69-2bde-43dd-950b-a9cfc2b16f1b` |
 | 预检与审计 | `VALID` → `SUCCEEDED` |
-| 发布目录 | `/www/delta/shared/releases/94a97608-ddcc-4ac7-8095-efa78de169a4` |
-| 备份目录 | `/var/lib/delta-shared/updater/backups/94a97608-ddcc-4ac7-8095-efa78de169a4` |
+| 发布目录 | `/www/delta/shared/releases/edad2f69-2bde-43dd-950b-a9cfc2b16f1b` |
+| 备份目录 | `/var/lib/delta-shared/updater/backups/edad2f69-2bde-43dd-950b-a9cfc2b16f1b` |
 
 ### 租户与数据库
 
@@ -38,27 +37,28 @@
 
 三套业务数据、上传文件、Redis 命名空间、管理员账号和授权实例相互隔离。共享的是 Java、MySQL、Redis 和静态制品运行时，不是业务数据。
 
-### 1.18.4 生产验收
+### 1.18.5 生产验收
 
-- 三组件均为 `1.18.4`；三个实例在 2026-11-21 17:49（Asia/Shanghai）完成新版上报。
+- 三组件均为 `1.18.5`；共享计划 `edad2f69-2bde-43dd-950b-a9cfc2b16f1b` 审计为 `SUCCEEDED`，三个实例均在 2026-11-22 12:51（Asia/Shanghai）上报 `1.18.5`。
 - 五个共享容器 `delta-shared-backend`、`delta-shared-mysql`、`delta-shared-redis`、`delta-admin-ui`、`delta-h5` 均 running / healthy。
-- 六个生产域名返回 `200`；后台和 H5 版本文件均为 `1.18.4`；入口 JS 返回 `application/javascript`。
-- 三库各 76 张表；财务对账 12 项在三库均为 0 违规。
+- 742、747、JAX 的六个公众号/后台/H5 入口均已验证：后台 buildId `8e11d16a...`，H5 buildId `bbdf9de3...`，后端 buildId `b7c26a2a...` 三租户一致；六个域名返回 `200`。
+- 520 独立演示线已更新到 `1.18.5`，后台/H5/后端 buildId 分别为 `8e11d16a...`、`bbdf9de3...`、`b7c26a2a...`；520 与共享组前端代码同源。
+- 三库各 76 张表；财务对账 12 项在三库和 520 均为 0 违规。
 - `cangshuo-shared-worker.service` active，`allow_execute=true`，无 journal、维护门禁和待处理计划。
 
 正式资产：
 
 | 文件 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| `cangshuo-backend.zip` | 97,828,447 | `990987e55355029c2762b835653f5560f491a7ac7fd72a2ef7a38b3d4e56556f` |
-| `cangshuo-admin.zip` | 997,243 | `3d89834f6235dc3ced83fc6e88c85a47161bd08921951db9fc4b1582b4ca518c` |
-| `cangshuo-h5.zip` | 864,236 | `b18b56798eb0980f984e2b299e32e115654282b876756214fd826dcdc38f751b` |
-| `release-manifest.json` | 762 | `83b7e40aa28ec48524d51d35f122b262de1cc64ef0cadc9fe3f4fd3a4c3dd163` |
+| `cangshuo-backend.zip` | 97,857,264 | `055f71525601af9d47a1ec1621a25abe2b7239c9cef9f9c8c39a7deb463b4b5f` |
+| `cangshuo-admin.zip` | 999,395 | `72b8ad89d905b3519aa4f42916d6745e8280b39ef020753f3b43f75d42b93955` |
+| `cangshuo-h5.zip` | 869,615 | `726641bbf75261dda63902dc94d3f45ef91c21d68f4bb8ff168fe5bf764b8365` |
+| `release-manifest.json` | 762 | `09c6fcaf0f32c1ef5edc3ef67601f417493d2f4b35efddae4f2fefb8fbcddec3` |
 
 ## 3. 尚未完成的生产验证
 
 - 真实微信支付、退款回调和重放未做；需要真实商户环境和付款人。
-- 三租户后台 PC/H5、客户 H5、打手 H5 的完整逐页业务回归尚未重新执行。
+- 三租户后台 PC/H5、客户 H5、打手 H5 的完整逐页业务回归尚未重新执行；已完成关键入口、版本、构建标识、API 和财务对账检查。
 - iOS/Android 微信内置浏览器和真机支付仍需验证。
 - 发布后 24–48 小时观察仍在持续；不能把容器 healthy 当作业务验收。
 

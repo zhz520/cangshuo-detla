@@ -2,7 +2,7 @@
 
 本文件只保留对当前决策有用的版本摘要和最近一次发布的完整证据。逐版本原始记录已归档到 D 盘，见 [README.md](README.md) 的归档说明。
 
-## 2026-11-21 · 1.18.5（候选，未发布）
+## 2026-11-22 · 1.18.5
 
 ### 变更
 
@@ -15,7 +15,15 @@
 - 后端全量 `clean verify`：全部 reactor 成功，537 项通过（125 个测试报告，0 失败/错误/跳过）；包含 `RuntimeBuildIdentityTest`、`FileAccessBoundaryTest`。
 - 管理端 108 项、H5 119 项测试通过；管理端在 Linux 容器完成标准生产构建，H5 与微信小程序构建通过。
 - deploy/qa 26 项、updater 61 项、migration 29 项通过；Endpoint 487、OpenAPI 487 operations、282 schemas；候选 ZIP 连续打包两次摘要一致。
-- 未部署、未生成正式三端制品、未做 520/共享组验收。
+- 520 独立演示线先完成验收；后端 537 项、后台 108 项、H5 119 项通过，静态引用 0，520 财务 12 项 0 违规。
+- 共享计划 `edad2f69-2bde-43dd-950b-a9cfc2b16f1b`：预检 `VALID`、审计 `SUCCEEDED`，742/747/JAX 均上报 `1.18.5`；三库各 76 表、财务 12 项各 0 违规。
+
+### 发布与生产
+
+- 标签：`v1.18.5` → `47a874f7abcd044514effb9af7088685f0171e96`；GitHub Release：`https://github.com/zhz520/cangshuo-detla/releases/tag/v1.18.5`。
+- 共享发布目录：`/www/delta/shared/releases/edad2f69-2bde-43dd-950b-a9cfc2b16f1b`；备份目录：`/var/lib/delta-shared/updater/backups/edad2f69-2bde-43dd-950b-a9cfc2b16f1b`。
+- 后台/H5 静态 buildId 三租户一致；后端 buildId 三租户一致；520 与共享组前端代码同源。
+- 未验证真实微信支付、退款回调重放、真实短信/实名供应商和真机微信支付；不能把构建、健康检查或容器状态当成这些业务验收。
 
 ## 2026-11-21 · 1.18.4
 

@@ -126,6 +126,23 @@ python deploy/qa/runtime_identity.py compare D:\CodexData\outputs\runtime-identi
 
 发版耗时分开记录构建、上传、下载解包、备份、切换与健康检查，区别总耗时和业务不可用时间。先准备并校验证物，再拍逐租户备份并切换；制品准备失败不得改变运行版本。不要为提速跳过备份、签名、三组件检查或回退。
 
+### 1.18.5 实测流程基线（2026-11-22）
+
+本次从已验证的 `1.18.5` 候选到生产验收的实际参考：
+
+- 520 独立演示线：上传三件 ZIP 约 70 秒，复用服务器已有基础镜像后重建 backend/admin/h5 镜像约 10 秒；后端健康约 15 秒；三端切换和版本/buildId 检查约 2 分钟。
+- 共享组：授权中心创建计划后，`shared_worker.py validate` 约 8 秒；从提交 inbox 到 `current.json` 写入 `1.18.5` 约 2 分 26 秒，其中包含逐租户 MySQL 备份、约 600MB 客户文件归档、三件资产下载解包、按 backend → admin → h5 切换和健康检查。审计结果 `SUCCEEDED`。
+- 后续发版应优先复用已缓存的 Docker 基础镜像、一次构建一套三端制品、一次上传 Release，避免重复 `npm ci`、重复全量测试和逐组件手工重启。
+
+稳态流程：
+
+1. 先从干净提交构建一次，锁定 manifest、三件摘要和 buildId；不要在 520 或共享组重新构建源码。
+2. 先验证 GitHub Release 的 digest，再让授权中心同步；共享计划必须显式通过 `shared_worker.py validate`，维护窗口至少留 30 分钟。
+3. 上线前确认磁盘可用空间大于客户文件备份大小的 2 倍；执行器保留最近 3 个备份，不能等到磁盘满才清理。
+4. 520 只切换候选的三端镜像，验证版本、buildId、登录页、站点配置、短信服务页、H5 首页和财务对账；通过后再提交共享组计划。
+5. 共享组的 `docker ps` 会继续显示基础镜像名，因为发布通过只读 volume 挂载 release 资产；不能据此判断旧版本。必须检查 `current.json`、`cangshuo-version.json` 和 `/api/system/config/runtime-identity` 的 buildId。
+6. 三个租户上报目标版本后，再打开故障处理；任何一步失败都保留计划、备份和审计证据，不用手工覆盖单个容器。
+
 禁止：
 
 - 使用 `/api/client/update-plan` 或旧 `worker.py` 处理共享组。
