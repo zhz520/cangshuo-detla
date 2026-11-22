@@ -54,6 +54,10 @@ class RuntimeIdentityTest(unittest.TestCase):
         self.assertEqual(loaded, combined)
         self.assertTrue(runtime_identity.compare(loaded)["complete"])
 
+    def test_backend_identity_accepts_the_dedicated_endpoint_shape(self):
+        value = runtime_identity.backend_identity({"data": {"version": "1.18.5", "buildId": "a" * 64}})
+        self.assertEqual(value, {"version": "1.18.5", "buildId": "a" * 64})
+
     @staticmethod
     def _combined_file(value):
         import json, tempfile

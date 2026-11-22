@@ -67,14 +67,19 @@ def backend(base, stamp):
     try:
         status, kind, body = fetch(base.rstrip("/") + "/api/system/config/runtime-identity?probe=" + stamp)
         if status == 200 and kind == "application/json":
-            value = json.loads(body.decode("utf-8")).get("data") or {}
-            version = value.get("backend_version")
-            build = value.get("backend_build_id")
-            return {"version": version if isinstance(version, str) and VERSION.fullmatch(version) else None,
-                    "buildId": build if isinstance(build, str) and (HEX64.fullmatch(build) or build == "development") else None}
+            return backend_identity(json.loads(body.decode("utf-8")))
     except Exception:
         pass
     return {"version": None, "buildId": None}
+
+
+def backend_identity(payload):
+    value = payload.get("data") if isinstance(payload, dict) else None
+    value = value if isinstance(value, dict) else {}
+    version = value.get("version") or value.get("backend_version")
+    build = value.get("buildId") or value.get("backend_build_id")
+    return {"version": version if isinstance(version, str) and VERSION.fullmatch(version) else None,
+            "buildId": build if isinstance(build, str) and (HEX64.fullmatch(build) or build == "development") else None}
 
 
 def probe(spec):

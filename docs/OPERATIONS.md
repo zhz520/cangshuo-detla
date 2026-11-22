@@ -98,7 +98,7 @@ python deploy/qa/runtime_identity.py probe `
 python deploy/qa/runtime_identity.py compare D:\CodexData\outputs\runtime-identity.json
 ```
 
-`backend_build_id` 是新版本后端对自身 JAR 计算的 SHA-256。`cangshuo-admin.zip` / `cangshuo-h5.zip` 内的 `cangshuo-version.json` 还会写入 `buildId`，由打包器对除该文件外的完整前端构建树做稳定 SHA-256；它覆盖入口 JS 之外的异步 chunk 和样式。旧版本没有这些字段时显示未知，不能用“版本号相同”替代。`sameKnownCode=true, complete=false` 表示已知制品一致、仍有构建标识未证实；出现 `differences` 才是已证实代码不一致。对比结果只读取公开版本、入口文件和构建标识，不包含客户配置或业务数据。
+后端 `/api/system/config/runtime-identity` 返回 `version` 和对自身 JAR 计算的 `buildId`（SHA-256）；工具兼容旧接口字段名。`cangshuo-admin.zip` / `cangshuo-h5.zip` 内的 `cangshuo-version.json` 还会写入 `buildId`，由打包器对除该文件外的完整前端构建树做稳定 SHA-256；它覆盖入口 JS 之外的异步 chunk 和样式。旧版本没有这些字段时显示未知，不能用“版本号相同”替代。`sameKnownCode=true, complete=false` 表示已知制品一致、仍有构建标识未证实；出现 `differences` 才是已证实代码不一致。对比结果只读取公开版本、入口文件和构建标识，不包含客户配置或业务数据。
 
 ## 4. 授权中心登记
 
