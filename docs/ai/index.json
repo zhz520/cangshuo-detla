@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:2980f23cae8f6692f3fa84d3b48fd4bc8bb3ced45613fc6a5024f72bccf0cac3",
+  "inputDigest": "sha256:39bf65b3344a4239d2ab6c50e47c1692eddf0a0b13b9eaec6624911bc85a204a",
   "counts": {
     "modules": 19,
     "controllers": 111,
@@ -18,7 +18,7 @@
     {
       "id": "delta-admin",
       "pom": "delta-game/delta-admin/pom.xml",
-      "packageRoot": "com.delta.admin.config",
+      "packageRoot": "com.delta.admin",
       "dependsOn": [
         "delta-admin",
         "delta-common",

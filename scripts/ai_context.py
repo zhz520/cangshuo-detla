@@ -86,6 +86,11 @@ def rel(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
+def path_sort_key(path: Path) -> str:
+    """Sort repository paths the same way on Windows and POSIX hosts."""
+    return rel(path)
+
+
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -109,7 +114,7 @@ def module_rows() -> list[dict]:
     endpoint_counts: dict[str, int] = {}
     for row in endpoint_rows:
         endpoint_counts[row["controller"]] = endpoint_counts.get(row["controller"], 0) + 1
-    for pom in sorted((ROOT / "delta-game").glob("*/pom.xml")):
+    for pom in sorted((ROOT / "delta-game").glob("*/pom.xml"), key=path_sort_key):
         module_dir = pom.parent
         module = module_dir.name
         pom_text = pom.read_text(encoding="utf-8", errors="ignore")
@@ -118,10 +123,14 @@ def module_rows() -> list[dict]:
         if own_artifact:
             deps = [dep for dep in deps if dep != own_artifact.group(1)]
         java_root = module_dir / "src/main/java"
-        java_files = sorted(java_root.rglob("*.java")) if java_root.exists() else []
+        java_files = sorted(java_root.rglob("*.java"), key=path_sort_key) if java_root.exists() else []
         if java_files:
-            package = re.search(r"^package\s+([\w.]+)", java_files[0].read_text(encoding="utf-8", errors="ignore"), re.M)
-            package_root = package.group(1) if package else ""
+            packages = []
+            for java_file in java_files:
+                package = re.search(r"^package\s+([\w.]+)", java_file.read_text(encoding="utf-8", errors="ignore"), re.M)
+                if package:
+                    packages.append(package.group(1))
+            package_root = min(packages, key=lambda item: (item.count("."), item)) if packages else ""
         else:
             package_root = ""
         module_controllers = []
@@ -147,7 +156,7 @@ def admin_rows() -> dict:
     router_text = (base / "src/router/index.js").read_text(encoding="utf-8", errors="ignore")
     routes = sorted(set(re.findall(r"path\s*:\s*['\"]([^'\"]+)['\"]", router_text)))
     api_modules = []
-    for path in sorted((base / "src/api").glob("*.js")):
+    for path in sorted((base / "src/api").glob("*.js"), key=path_sort_key):
         text = path.read_text(encoding="utf-8", errors="ignore")
         api_modules.append({
             "module": path.name,
@@ -182,7 +191,7 @@ def database_rows() -> dict:
     migrations = []
     for kind, base in migration_roots:
         if base.exists():
-            migrations.extend({"kind": kind, "path": rel(path)} for path in sorted(base.glob("*.sql")))
+            migrations.extend({"kind": kind, "path": rel(path)} for path in sorted(base.glob("*.sql"), key=path_sort_key))
     compatibility = ROOT / "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
     return {
         "baseTables": tables,
