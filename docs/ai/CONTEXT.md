@@ -56,6 +56,8 @@
 - 共享组只接受 `cangshuo-shared-release-v1` + `cangshuo-shared-worker.service`；不得使用实例更新页、`/api/client/update-plan` 或旧 `worker.py`。
 - 共享计划必须有维护窗口、租户集合、三制品摘要、逐租户备份、健康检查和回退。
 - 执行器不接受任意命令、路径、容器名或数据库迁移。
+- 发版前必须检查磁盘：可用空间低于 15% 先清理，低于 10% 禁止发布。共享计划备份保留最近 3 份；520 保留当前/上一版、最近押金审计和被 Compose 引用的凭据文件。
+- 清理 Docker 只删除超过 7 天且未被容器使用的镜像/旧缓存；不得删除当前 release、当前镜像、worker journal、数据库备份或审计。清理后必须重新检查所有生产容器、版本和 buildId。
 
 ### 数据库
 

@@ -168,6 +168,18 @@ python deploy/qa/runtime_identity.py compare D:\CodexData\outputs\runtime-identi
 
 服务端备份位于 `/var/lib/delta-shared/updater/backups/<plan-id>`。需要下载时保存到 `D:\CodexData\backups\`，并记录文件大小和 SHA-256；本地备份不能替代服务端原备份。
 
+### 磁盘与备份保留规则
+
+每次发版前和清理后都要用 `df -h /`、`docker system df`、`du -sh` 核对。低于 15% 可用空间先清理再发版，低于 10% 禁止继续执行生产发布。
+
+- 共享组发布备份保留最近 3 个计划（由 `shared-worker.json` 的 `backup_retention=3` 控制）；当前保留 `edad2f69`、`94a97608`、`9c5ba71c`。
+- 520 保留当前 1.18.5 备份、上一版 `arch-20261120`、最近两次押金备份，以及被当前 Compose `env_file` 引用的 `pre-usage-afe8aa9`。引用中的配置文件不得作为旧备份删除。
+- 授权中心保留最近成功版本备份和上一版本备份；只保留最近 3 份，不保留同版本的多个半成品目录。
+- `/www/delta/shared/backups` 和 `/www/delta/backups` 是历史备份根，各保留最近 3 个目录；新发布只写 `/var/lib/delta-shared/updater/backups`。
+- Docker 只清理超过 7 天且未被容器使用的镜像、停止容器和旧构建缓存；保留当前镜像、最近回滚镜像和最近构建缓存，清理后必须重新验证当前 5 个共享容器和 520 三容器 healthy。
+- `/tmp` 只清理可重建的构建包、临时 JAR 和旧 staging；不删除当前 Compose 引用的文件或正在被进程打开的文件。
+- 每次清理记录删除清单、释放字节数、清理前后 `df -h /` 和健康检查结果；不删除数据库、当前 release、worker journal、审计或授权私钥。
+
 ## 8. 生产验收
 
 至少检查：
