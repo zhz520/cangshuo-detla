@@ -53,10 +53,9 @@ public class RuntimeBuildIdentity {
     }
 
     static Path executableJar(URL location) {
-        Path located = jarFromLocation(location);
-        if (located != null) return located;
-        // Spring Boot's executable launcher normally exposes only the application
-        // JAR on java.class.path. Accept it only when the choice is unambiguous.
+        // In a Spring Boot fat JAR a class may be loaded from a nested dependency;
+        // that class source is not the deployed application artifact. Prefer the
+        // unambiguous launcher classpath, which is the outer executable JAR.
         List<Path> jars = new ArrayList<>();
         String classpath = System.getProperty("java.class.path", "");
         for (String entry : classpath.split(Pattern.quote(java.io.File.pathSeparator))) {
@@ -66,7 +65,8 @@ public class RuntimeBuildIdentity {
                 jars.add(candidate);
             }
         }
-        return jars.size() == 1 ? jars.get(0) : null;
+        if (jars.size() == 1) return jars.get(0);
+        return jarFromLocation(location);
     }
 
     static Path jarFromLocation(URL location) {

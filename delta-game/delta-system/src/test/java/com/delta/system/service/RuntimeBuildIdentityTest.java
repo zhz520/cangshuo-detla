@@ -32,4 +32,20 @@ class RuntimeBuildIdentityTest {
         Files.write(jar, new byte[]{7, 8, 9});
         assertThat(RuntimeBuildIdentity.sha256(jar)).isNotEqualTo(first);
     }
+
+    @Test
+    void prefersTheSingleLauncherJarOverNestedDependencySource() throws Exception {
+        Path launcher = directory.resolve("app.jar");
+        Path nested = directory.resolve("delta-system.jar");
+        Files.write(launcher, new byte[]{1});
+        Files.write(nested, new byte[]{2});
+        String original = System.getProperty("java.class.path", "");
+        try {
+            System.setProperty("java.class.path", launcher.toString());
+            assertThat(RuntimeBuildIdentity.executableJar(nested.toUri().toURL()))
+                    .isEqualTo(launcher.toAbsolutePath());
+        } finally {
+            System.setProperty("java.class.path", original);
+        }
+    }
 }
