@@ -45,6 +45,7 @@
 - 520 独立演示线已更新到 `1.18.5`，后台/H5/后端 buildId 分别为 `8e11d16a...`、`bbdf9de3...`、`b7c26a2a...`；520 与共享组前端代码同源。
 - `runtime_identity.py compare` 对 520/742/747/jax 的最终公开快照返回 `sameKnownCode=true`、`complete=true`、`differences=[]`、`unknown=[]`；客户配置差异未参与比较。
 - 三库各 76 张表；财务对账 12 项在三库和 520 均为 0 违规。
+- 520 和共享三库的 `complaint` 表当前均为 0 条带图片/申诉图片记录；没有待迁移的历史投诉附件引用，旧公开文件不做自动删除。
 - `cangshuo-shared-worker.service` active，`allow_execute=true`，无 journal、维护门禁和待处理计划。
 - 授权中心已运行 `0.7.9`，`/health` 返回 200；从 GitHub 同步到 `96` 个正式版本（最新 `1.18.5`），并生成上述共享计划。
 
