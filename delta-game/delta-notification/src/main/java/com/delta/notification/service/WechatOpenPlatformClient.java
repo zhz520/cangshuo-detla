@@ -7,13 +7,16 @@ import com.delta.common.sms.service.SmsGatewayClient;
 import com.delta.platform.PlatformService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +36,7 @@ public class WechatOpenPlatformClient {
     public record Availability(boolean ready, String reason) {}
     public record Authorization(String state, String authorizationUrl, String expiresAt) {}
     public record Progress(String status, Map<String, Object> account, boolean opened) {}
+    public record ReplyRules(long revision, List<Map<String, Object>> rules) {}
 
     public Availability status() {
         if (!gateway.configured()) return new Availability(false, "当前实例尚未配置授权中心接入凭据");
@@ -72,17 +76,37 @@ public class WechatOpenPlatformClient {
         return token;
     }
 
+    public ReplyRules replyRules(String appId) {
+        return readReplyRules(request("reply-rules", Map.of("appId", appId)));
+    }
+
+    public ReplyRules replaceReplyRules(String appId, long revision, List<Map<String, Object>> rules) {
+        return readReplyRules(request("reply-rules", Map.of("appId", appId, "revision", revision, "rules", rules)));
+    }
+
+    private ReplyRules readReplyRules(JsonNode data) {
+        var revision = data.path("revision");
+        var rules = data.path("rules");
+        if (!revision.isIntegralNumber() || !revision.canConvertToLong() || revision.asLong() < 0 ||
+                !rules.isArray() || rules.size() > 100)
+            throw new BusinessException(502, "授权中心自动回复结果无效");
+        return new ReplyRules(revision.asLong(), json.convertValue(rules, new TypeReference<>() {}));
+    }
+
     private static boolean validState(String state) { return state != null && state.matches("[A-Za-z0-9_-]{43}"); }
     private String origin() { return platform.authorityOrigin().replaceAll("/+$", ""); }
-    private JsonNode request(String action, Map<String, String> values) {
+    private JsonNode request(String action, Map<String, ?> values) {
         try {
             var identity = platform.reportPayload();
             if (identity == null || identity.license() == null) throw new BusinessException(403, "当前实例尚未接入授权中心");
             var body = json.createObjectNode();
             body.set("license", json.valueToTree(identity.license()));
-            values.forEach(body::put);
+            values.forEach((key, value) -> body.set(key, json.valueToTree(value)));
+            String payload = json.writeValueAsString(body);
+            if ("reply-rules".equals(action) && payload.getBytes(StandardCharsets.UTF_8).length > 65_536)
+                throw new BusinessException(413, "自动回复合计内容过长，请缩短回复内容");
             var req = gateway.signedJsonRequest(URI.create(origin() + "/api/client/wechat-open/" + action),
-                    json.writeValueAsString(body)).timeout(Duration.ofSeconds(18)).build();
+                    payload).timeout(Duration.ofSeconds(18)).build();
             var response = http.send(req, HttpResponse.BodyHandlers.ofString());
             var result = json.readTree(response.body());
             if (result == null || !result.isObject()) throw new BusinessException(502, "授权中心返回格式无效");

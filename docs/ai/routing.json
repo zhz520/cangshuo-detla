@@ -108,12 +108,13 @@
     {
       "id": "wechat-operations",
       "risk": "P1",
-      "terms": ["公众号", "微信开放平台", "模板消息", "公众号通知", "自动回复", "粉丝标签", "渠道二维码", "图文草稿", "群发审批", "wxapi", "official wechat", "template message"],
+      "terms": ["公众号", "微信开放平台", "模板消息", "公众号通知", "自动回复", "粉丝标签", "粉丝同步", "渠道二维码", "图文草稿", "群发审批", "wxapi", "official wechat", "template message"],
       "paths": [
         "delta-game/delta-notification/*Wechat*",
         "delta-game/delta-notification/*Official*",
         "delta-game/delta-notification/src/main/java/com/delta/notification/controller/*Wechat*",
         "delta-game/delta-notification/src/main/java/com/delta/notification/service/*Wechat*",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java",
         "delta-admin-ui/src/views/wechat/*",
         "delta-admin-ui/src/api/wechat-operations.js",
         "delta-admin-ui/test/wechat-template-mapping.test.mjs",
@@ -128,6 +129,7 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatBindingPersistenceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java",
         "delta-admin-ui/test/wechat-template-mapping.test.mjs",
         "delta-mp/test/staff-binding-entry.test.mjs"
       ],
@@ -136,6 +138,7 @@
         "授权中心保存模板方案及扫码授权关系；组件密钥与刷新凭据不下发",
         "模板缺失不发微信请求",
         "事件重放不重发",
+        "粉丝同步单批最多 100 人，失败不落部分批次且不跨公众号",
         "租户与公众号归属",
         "真实群发/发布需单独授权"
       ],

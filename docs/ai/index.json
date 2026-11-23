@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.20.1",
-  "inputDigest": "sha256:238a7a7a36acc0cd587de1d09fa606a5ff0988868d682f59750f9350b594d9b2",
+  "catalogVersion": "1.20.2",
+  "inputDigest": "sha256:a7ee2358d5c482e562c128fc4e0e90cbbf316ee3138e643bcfa37e93417d30a5",
   "counts": {
     "modules": 19,
     "controllers": 116,
@@ -10,7 +10,7 @@
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 39,
-    "backendTests": 130,
+    "backendTests": 131,
     "adminTests": 40,
     "h5Tests": 24
   },
@@ -603,7 +603,8 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatCallbackServiceTest.java",
-        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatContentServiceTest.java"
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatContentServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java"
       ]
     },
     {

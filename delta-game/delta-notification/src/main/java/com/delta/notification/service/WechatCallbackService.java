@@ -154,8 +154,8 @@ public class WechatCallbackService {
         try {
             byte[] key = key(encodedKey).getEncoded(), packed = Base64.getDecoder().decode(encrypted);
             Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, key(encodedKey), new IvParameterSpec(Arrays.copyOfRange(packed, 0, 16)));
-            byte[] plain = unpkcs7(cipher.doFinal(Arrays.copyOfRange(packed, 16, packed.length)));
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key, 0, 16));
+            byte[] plain = unpkcs7(cipher.doFinal(packed));
             ByteBuffer buffer = ByteBuffer.wrap(plain);
             buffer.position(16);
             int length = buffer.getInt();
@@ -186,8 +186,11 @@ public class WechatCallbackService {
     }
 
     private static byte[] unpkcs7(byte[] value) {
+        if (value.length == 0) throw new IllegalArgumentException();
         int padding = value[value.length - 1] & 0xff;
         if (padding < 1 || padding > 32 || padding > value.length) throw new IllegalArgumentException();
+        for (int index = value.length - padding; index < value.length; index++)
+            if ((value[index] & 0xff) != padding) throw new IllegalArgumentException();
         return Arrays.copyOf(value, value.length - padding);
     }
 

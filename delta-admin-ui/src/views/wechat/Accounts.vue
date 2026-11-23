@@ -63,6 +63,9 @@
 
       <el-tabs v-model="activeTab" class="account-tabs">
         <el-tab-pane label="场景就绪" name="readiness">
+          <el-alert v-if="selectedAccount.mode === 'OPEN_PLATFORM' && !loadingCatalog && loadedAccountId === selectedId"
+            :title="catalog.length ? '仅从本号模板库选择；扫码授权不会切换现有业务通知发件号。' : '模板库为空：在微信公众号后台添加模板后，回来点击同步模板。'"
+            type="info" :closable="false" show-icon />
           <DataTable :loading="loadingReadiness" :data="readinessRows" row-key="key" empty-text="请先同步公众号模板">
             <el-table-column label="角色" width="110">
               <template #default="{ row }">{{ roleLabel(row.role) }}</template>
@@ -177,7 +180,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
 import { notificationConfigGuide } from '@/utils/notification-examples'
-import { existingFieldsForTemplate, suggestWechatFields } from './template-mapping'
+import { existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
   getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates,
@@ -395,6 +398,8 @@ function openTemplate(row) {
   const guide = notificationConfigGuide(`wechat.official.templates.${roleKeys[role] || 'admin'}`)
   const event = guide?.events?.find(item => item.key === scenario)
   const authority = authoritySchemes.value.find(item => item.role === role && item.scenario === scenario)
+  const suggested = !row.configured && selectedAccount.value?.mode === 'OPEN_PLATFORM'
+    ? suggestWechatTemplate(catalog.value, authority) : null
   const defaults = selectedAccount.value?.mode === 'OPEN_PLATFORM' ? [{ key: '', source: '' }]
     : authority?.fields && Object.keys(authority.fields).length
     ? Object.entries(authority.fields).map(([key, source]) => ({ key, source }))
@@ -403,8 +408,8 @@ function openTemplate(row) {
     : [{ key: 'thing1', source: 'message' }]
   Object.assign(templateForm, {
     configured: Boolean(row?.configured), role, scenario,
-    templateId: row?.templateId || '', templateHint: authority?.templateHint || '', example:authority?.example || '',
-    suggestions: authority?.fieldSuggestions || [], fields: defaults,
+    templateId: row?.templateId || suggested?.templateId || '', templateHint: authority?.templateHint || '', example:authority?.example || '',
+    suggestions: authority?.fieldSuggestions || [], fields: suggested?.fields || defaults,
     url: row?.url || '', miniAppId: row?.miniprogram?.appid || '', miniPagepath: row?.miniprogram?.pagepath || '', enabled: !row?.configured || row?.enabled !== false
   })
   mappedTemplateId = templateForm.templateId

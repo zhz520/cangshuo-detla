@@ -29,3 +29,20 @@ export function suggestWechatFields(content, suggestions, previous = {}) {
   }
   return rows.slice(0,20)
 }
+
+// A hint is not a template ID. Only preselect a unique exact title match from
+// the current account with entirely recognizable fields. Saving is explicit.
+export function suggestWechatTemplate(catalog, scheme) {
+  if (!scheme || !Array.isArray(catalog)) return null
+  const normalize = value => String(value || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase()
+  const hints = new Set([scheme.name, ...String(scheme.templateHint || '')
+    .replace(/^搜索关键词\s*[:：]\s*/, '').split(/[、,，;；]/)].map(normalize).filter(Boolean))
+  if (!hints.size) return null
+  const candidates = catalog.filter(item => item?.templateId && hints.has(normalize(item.title)))
+  if (candidates.length !== 1) return null
+  const template = candidates[0]
+  const allKeys = new Set([...String(template.content || '').matchAll(/{{([A-Za-z_]+[0-9]*)\.DATA}}/g)].map(match => match[1]))
+  const fields = suggestWechatFields(template.content, scheme.fieldSuggestions || [])
+  if (fields.length === 0 || fields.length !== allKeys.size || fields.some(row => !row.source)) return null
+  return { templateId: template.templateId, fields }
+}
