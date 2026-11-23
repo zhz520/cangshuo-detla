@@ -51,7 +51,7 @@ public class WechatOperationsService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveMenu(String accountId, Map<String, Object> body) {
         accounts.accountSummary(accountId);
-        JSONObject buttons = menuButtons(body.get("buttons"));
+        JSONObject buttons = WechatMenuDefinition.normalize(body.get("buttons"), true);
         jdbc.update("INSERT INTO wechat_menu_draft(account_id,buttons_json,status) VALUES(?,?,'DRAFT') " +
                         "ON DUPLICATE KEY UPDATE buttons_json=VALUES(buttons_json),status='DRAFT',updated_at=CURRENT_TIMESTAMP",
                 accountId, buttons.toJSONString());
@@ -59,11 +59,13 @@ public class WechatOperationsService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> publishMenu(String accountId) throws Exception {
-        Map<String, Object> draft = menu(accountId);
-        Object buttons = draft.get("buttons");
-        if (!(buttons instanceof Map<?, ?> map) || !(map.get("button") instanceof List<?> list) || list.isEmpty())
-            throw new BusinessException(400, "请先配置公众号菜单");
+    public Map<String, Object> publishMenu(String accountId, Object expected) throws Exception {
+        accounts.accountSummary(accountId);
+        var rows = jdbc.queryForList("SELECT buttons_json FROM wechat_menu_draft WHERE account_id=? FOR UPDATE", String.class, accountId);
+        if (rows.isEmpty()) throw new BusinessException(409, "请先保存公众号菜单草稿");
+        JSONObject buttons = WechatMenuDefinition.normalize(JSON.parseObject(rows.get(0)), false);
+        if (!buttons.equals(WechatMenuDefinition.normalize(expected, false)))
+            throw new BusinessException(409, "草稿已被其他管理员修改，请刷新后重新预览");
         JSONObject response = accounts.apiPost(accountId, "/cgi-bin/menu/create", buttons);
         requireSuccess(response, "公众号菜单发布失败");
         jdbc.update("UPDATE wechat_menu_draft SET status='PUBLISHED',published_at=CURRENT_TIMESTAMP WHERE account_id=?", accountId);
@@ -75,8 +77,7 @@ public class WechatOperationsService {
         accounts.accountSummary(accountId);
         JSONObject response = accounts.apiGet(accountId, "/cgi-bin/menu/get");
         requireSuccess(response, "读取公众号菜单失败");
-        JSONObject buttons = new JSONObject();
-        buttons.put("button", response.getJSONArray("button") == null ? new JSONArray() : response.getJSONArray("button"));
+        JSONObject buttons = WechatMenuDefinition.imported(response);
         jdbc.update("INSERT INTO wechat_menu_draft(account_id,buttons_json,status,remote_json,published_at) VALUES(?,?,'PUBLISHED',?,CURRENT_TIMESTAMP) " +
                         "ON DUPLICATE KEY UPDATE buttons_json=VALUES(buttons_json),status='PUBLISHED',remote_json=VALUES(remote_json),published_at=CURRENT_TIMESTAMP",
                 accountId, buttons.toJSONString(), response.toJSONString());
@@ -439,20 +440,6 @@ public class WechatOperationsService {
         result.put("materials", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_material WHERE account_id=?", Long.class, accountId));
         result.put("lastMessageAt", jdbc.queryForObject("SELECT MAX(created_at) FROM wechat_message WHERE account_id=?", Timestamp.class, accountId));
         return result;
-    }
-
-    private static JSONObject menuButtons(Object raw) {
-        JSONObject body = raw instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(raw));
-        JSONArray buttons = body == null ? null : body.getJSONArray("button");
-        if (buttons == null || buttons.isEmpty() || buttons.size() > 3) throw new BusinessException(400, "公众号菜单需要 1 至 3 个一级菜单");
-        buttons.forEach(item -> {
-            JSONObject button = item instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(item));
-            String name = text(button.getString("name"));
-            if (name.isBlank() || name.length() > 8) throw new BusinessException(400, "公众号菜单名称需要 1 至 8 个字符");
-            JSONArray sub = button.getJSONArray("sub_button");
-            if (sub != null && sub.size() > 5) throw new BusinessException(400, "单个一级菜单最多 5 个二级菜单");
-        });
-        return body;
     }
 
     private static void requireSuccess(JSONObject response, String message) {

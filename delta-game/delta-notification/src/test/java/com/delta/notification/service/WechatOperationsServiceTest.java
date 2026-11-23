@@ -38,6 +38,8 @@ class WechatOperationsServiceTest {
         jdbc = new JdbcTemplate(source);
         jdbc.execute("CREATE TABLE wechat_fan(account_id VARCHAR(36),openid VARCHAR(128),nickname VARCHAR(128),avatar VARCHAR(512)," +
                 "subscribed TINYINT,tags_json TEXT,last_sync_at TIMESTAMP,PRIMARY KEY(account_id,openid))");
+        jdbc.execute("CREATE TABLE wechat_menu_draft(account_id VARCHAR(36) PRIMARY KEY,buttons_json TEXT,status VARCHAR(16)," +
+                "remote_json TEXT,published_at TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         service = new WechatOperationsService(jdbc, accounts, openPlatform);
     }
 
@@ -90,6 +92,48 @@ class WechatOperationsServiceTest {
         assertThat(service.syncFans(ACCOUNT)).containsEntry("synced", 0);
 
         verify(accounts, never()).apiPost(eq(ACCOUNT), eq(USER_DETAILS), any());
+    }
+
+    @Test
+    void savesOnlyActionsForThisAccountsMenuAndRejectsStalePublish() throws Exception {
+        var old = Map.of("button", List.of(Map.of("name", "首页", "type", "view", "url", "https://example.com/old")));
+        var draft = Map.of("button", List.of(Map.of("name", "商城", "sub_button",
+                List.of(Map.of("name", "客服", "type", "click", "key", "help", "url", "https://example.com/unused")))));
+        service.saveMenu(ACCOUNT, Map.of("buttons", old));
+        service.saveMenu(ACCOUNT, Map.of("buttons", draft));
+        assertThatThrownBy(() -> service.publishMenu(ACCOUNT, old))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(409));
+        verify(accounts, never()).apiPost(eq(ACCOUNT), eq("/cgi-bin/menu/create"), any());
+        when(accounts.apiPost(eq(ACCOUNT), eq("/cgi-bin/menu/create"), any())).thenReturn(new JSONObject());
+        assertThat(service.publishMenu(ACCOUNT, draft)).containsEntry("status", "PUBLISHED");
+        assertThat(jdbc.queryForObject("SELECT buttons_json FROM wechat_menu_draft WHERE account_id=?", String.class, ACCOUNT))
+                .contains("\"key\":\"help\"").doesNotContain("unused");
+        assertThat(service.menu("other")).containsEntry("buttons", Map.of("button", List.of()));
+    }
+
+    @Test
+    void importReadsDefaultMenuEnvelopeAndDoesNotReplaceDraftWithAnEmptyResponse() throws Exception {
+        var button = Map.of("name", "首页", "type", "view", "url", "https://example.com/");
+        when(accounts.apiGet(ACCOUNT, "/cgi-bin/menu/get")).thenReturn(
+                new JSONObject(Map.of("menu", Map.of("button", List.of(button)), "conditionalmenu", List.of())),
+                new JSONObject(Map.of("menu", Map.of("button", List.of()))));
+        assertThat(service.importMenu(ACCOUNT)).containsEntry("status", "PUBLISHED");
+        assertThatThrownBy(() -> service.importMenu(ACCOUNT)).isInstanceOf(BusinessException.class);
+        assertThat(service.menu(ACCOUNT)).containsEntry("buttons", new JSONObject(Map.of("button", List.of(button))));
+    }
+
+    @Test
+    void rejectsInvalidActionsAndSupportsAnEmptyUnpublishedDraft() {
+        for (var invalid : List.of(
+                Map.of("name", "链接", "type", "view", "url", "not-a-link"),
+                Map.of("name", "一级菜单超过字节", "type", "click", "key", "foo"),
+                Map.of("name", "拍照", "type", "pic_sysphoto"),
+                Map.of("name", "一级", "sub_button", List.of(Map.of("name", "二级", "sub_button",
+                        List.of(Map.of("name", "三级", "type", "click", "key", "foo"))))))) {
+            assertThatThrownBy(() -> service.saveMenu(ACCOUNT, Map.of("buttons", Map.of("button", List.of(invalid)))))
+                    .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(400));
+        }
+        assertThat(service.saveMenu(ACCOUNT, Map.of("buttons", Map.of("button", List.of())))).containsEntry("status", "DRAFT");
     }
 
     @Test

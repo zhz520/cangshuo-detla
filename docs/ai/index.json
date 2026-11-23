@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.20.2",
-  "inputDigest": "sha256:a7ee2358d5c482e562c128fc4e0e90cbbf316ee3138e643bcfa37e93417d30a5",
+  "inputDigest": "sha256:74ef46fba5a7f692d51f0e0a0c50a3b90ae3e340f12908e73bf49e70647e56ee",
   "counts": {
     "modules": 19,
     "controllers": 116,
-    "adminViews": 61,
+    "adminViews": 62,
     "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 39,
     "backendTests": 131,
-    "adminTests": 40,
+    "adminTests": 41,
     "h5Tests": 24
   },
   "modules": [
@@ -545,7 +545,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 25,
+      "mainJavaCount": 26,
       "controllers": [
         {
           "name": "AdminNoticePushController",
@@ -1110,6 +1110,7 @@
       "delta-admin-ui/src/views/wechat/Binding.vue",
       "delta-admin-ui/src/views/wechat/Content.vue",
       "delta-admin-ui/src/views/wechat/Tools.vue",
+      "delta-admin-ui/src/views/wechat/WechatMenuEditor.vue",
       "delta-admin-ui/src/views/withdraw/WithdrawList.vue"
     ],
     "routes": [
@@ -1772,6 +1773,7 @@
       "delta-admin-ui/test/system-config.test.mjs",
       "delta-admin-ui/test/update-selection.test.mjs",
       "delta-admin-ui/test/wechat-binding.test.mjs",
+      "delta-admin-ui/test/wechat-menu-model.test.mjs",
       "delta-admin-ui/test/wechat-operations-theme.test.mjs",
       "delta-admin-ui/test/wechat-template-mapping.test.mjs",
       "delta-admin-ui/test/workbench-links.test.mjs"

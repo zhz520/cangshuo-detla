@@ -9,7 +9,7 @@
     <el-card shadow="never">
       <div class="account-toolbar">
         <div><strong>运营公众号</strong></div>
-        <el-select v-model="selectedId" placeholder="选择公众号" style="width:320px" @change="loadAll">
+        <el-select :model-value="selectedId" placeholder="选择公众号" style="width:320px" @change="changeAccount">
           <el-option v-for="item in accounts" :key="item.id" :label="`${item.name} · ${item.appId}`" :value="item.id" />
         </el-select>
       </div>
@@ -18,9 +18,7 @@
     <el-empty v-if="!selectedId" description="请先在公众号运营中新增并选择公众号" />
     <el-tabs v-else v-model="active" class="tool-tabs" @tab-change="loadTab">
       <el-tab-pane label="菜单" name="menu">
-        <div class="panel-head"><div><strong>公众号菜单</strong><span>先保存草稿，再发布到微信；也可以从微信读取当前菜单。</span></div><div class="panel-actions"><el-button :loading="busy" @click="loadMenu">读取草稿</el-button><el-button :loading="busy" @click="importMenu">从微信导入</el-button><el-button type="primary" :loading="busy" @click="publishMenu">发布菜单</el-button></div></div>
-        <el-input v-model="menuJson" type="textarea" :rows="18" spellcheck="false" placeholder='{"button":[{"type":"view","name":"进入商城","url":"https://..."}]}' class="code-editor" />
-        <div class="form-footer"><span class="muted">菜单结构以微信官方 JSON 为准；保存不会自动发布。</span><el-button type="primary" :loading="busy" @click="saveMenu">保存草稿</el-button></div>
+        <WechatMenuEditor :key="selectedId" :account-id="selectedId" :account-name="selectedAccount?.name" @dirty="menuDirty = $event" />
       </el-tab-pane>
 
       <el-tab-pane label="自动回复" name="replies">
@@ -114,10 +112,12 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
-import { getWechatAccounts, getWechatMenu, saveWechatMenu, publishWechatMenu, importWechatMenu, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans, getWechatTags, syncWechatTags, saveWechatTag, deleteWechatTag, getWechatMaterials, syncWechatMaterials, uploadWechatMaterial, getWechatStats } from '@/api/wechat-operations'
+import WechatMenuEditor from './WechatMenuEditor.vue'
+import { getWechatAccounts, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans, getWechatTags, syncWechatTags, saveWechatTag, deleteWechatTag, getWechatMaterials, syncWechatMaterials, uploadWechatMaterial, getWechatStats } from '@/api/wechat-operations'
 
 const accounts = ref([]), selectedId = ref(''), active = ref('menu'), busy = ref(false)
-const menuJson = ref('{\n  "button": []\n}')
+const menuDirty = ref(false)
+const selectedAccount = computed(() => accounts.value.find(account => account.id === selectedId.value))
 const rules = ref([]), qrs = ref([]), fans = ref([]), tags = ref([]), materials = ref([]), stats = ref({}), materialType = ref('image'), tagDialog = ref(false)
 const tagForm = reactive({ tagId: null, name: '' })
 const statCards = computed(() => [{label:'已同步粉丝',value:stats.value.fans||0},{label:'已关注',value:stats.value.subscribed||0},{label:'消息数',value:stats.value.messages||0},{label:'二维码扫码',value:stats.value.qrScans||0},{label:'素材数',value:stats.value.materials||0}])
@@ -125,7 +125,7 @@ const ruleDialog = ref(false), qrDialog = ref(false)
 let ruleAccountId = ''
 const ruleTypes = { KEYWORD: '关键词', SUBSCRIBE: '关注后', DEFAULT: '默认回复' }
 const replyTypes = { TEXT: '文字', IMAGE: '图片', VOICE: '语音', VIDEO: '视频' }
-const managedReplies = computed(() => accounts.value.find(account => account.id === selectedId.value)?.mode === 'OPEN_PLATFORM')
+const managedReplies = computed(() => selectedAccount.value?.mode === 'OPEN_PLATFORM')
 const ruleForm = reactive({ id: null, ruleType: 'KEYWORD', keyword: '', matchMode: 'CONTAINS', replyType: 'TEXT', content: '', mediaId: '', priority: 0, enabled: true })
 const qrForm = reactive({ name: '', scene: '', type: 'TEMP', expireSeconds: 604800 })
 function ruleTypeLabel(value) { return ruleTypes[value] || value }
@@ -135,10 +135,18 @@ async function loadAccounts() {
   busy.value = true
   try { const { data } = await getWechatAccounts(); accounts.value = Array.isArray(data) ? data : []; if (!selectedId.value || !accounts.value.some(item => item.id === selectedId.value)) selectedId.value = accounts.value[0]?.id || ''; if (selectedId.value) await loadTab() } catch (error) { ElMessage.error(error?.message || '公众号读取失败') } finally { busy.value = false }
 }
-async function loadAll() { await loadTab() }
+async function changeAccount(next) {
+  if (next === selectedId.value) return
+  if (menuDirty.value) {
+    try { await ElMessageBox.confirm('当前菜单有未保存改动。放弃改动并切换公众号？', '切换公众号', { type: 'warning' }) }
+    catch { return }
+  }
+  selectedId.value = next
+  menuDirty.value = false
+  await loadTab()
+}
 async function loadTab() {
   if (!selectedId.value) return
-  if (active.value === 'menu') return loadMenu()
   if (active.value === 'replies') return loadRules()
   if (active.value === 'qrcodes') return loadQrs()
   if (active.value === 'fans') return loadFans()
@@ -146,10 +154,6 @@ async function loadTab() {
   if (active.value === 'materials') return loadMaterials()
   if (active.value === 'stats') return loadStats()
 }
-async function loadMenu() { busy.value = true; try { const { data } = await getWechatMenu(selectedId.value); menuJson.value = JSON.stringify(data?.buttons || { button: [] }, null, 2) } catch (error) { ElMessage.error(error?.message || '菜单读取失败') } finally { busy.value = false } }
-async function saveMenu() { let buttons; try { buttons = JSON.parse(menuJson.value) } catch { return ElMessage.warning('菜单 JSON 格式不正确') } busy.value = true; try { await saveWechatMenu(selectedId.value, { buttons }); ElMessage.success('菜单草稿已保存') } catch (error) { ElMessage.error(error?.message || '菜单保存失败') } finally { busy.value = false } }
-async function importMenu() { try { await ElMessageBox.confirm('从微信读取当前菜单会覆盖本地草稿，继续？', '读取公众号菜单', { type: 'warning' }) } catch { return } busy.value = true; try { const { data } = await importWechatMenu(selectedId.value); menuJson.value = JSON.stringify(data?.buttons || { button: [] }, null, 2); ElMessage.success('已读取微信菜单') } catch (error) { ElMessage.error(error?.message || '菜单读取失败') } finally { busy.value = false } }
-async function publishMenu() { try { await ElMessageBox.confirm('发布会直接覆盖公众号线上菜单，确认继续？', '发布公众号菜单', { type: 'warning' }) } catch { return } busy.value = true; try { await publishWechatMenu(selectedId.value); ElMessage.success('公众号菜单已发布') } catch (error) { ElMessage.error(error?.message || '菜单发布失败') } finally { busy.value = false } }
 watch(selectedId, () => {
   rules.value = []
   ruleDialog.value = false

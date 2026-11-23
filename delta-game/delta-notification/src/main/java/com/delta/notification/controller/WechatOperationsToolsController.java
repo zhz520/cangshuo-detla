@@ -38,9 +38,9 @@ public class WechatOperationsToolsController {
     @PostMapping("/admin/wechat/accounts/{id}/menu/publish")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     @OpLog(module = "wechat", operation = "发布公众号菜单")
-    public R<Map<String, Object>> publishMenu(@PathVariable String id, HttpServletRequest request) throws Exception {
+    public R<Map<String, Object>> publishMenu(@PathVariable String id, @RequestBody Map<String, Object> body, HttpServletRequest request) throws Exception {
         requireFeature(request);
-        return R.ok(service.publishMenu(id));
+        return R.ok(service.publishMenu(id, body.get("buttons")));
     }
 
     @PostMapping("/admin/wechat/accounts/{id}/menu/import")

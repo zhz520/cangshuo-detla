@@ -45,8 +45,8 @@ export function saveWechatMenu(id, data) {
   return request({ url: `/admin/wechat/accounts/${id}/menu`, method: 'post', data })
 }
 
-export function publishWechatMenu(id) {
-  return request({ url: `/admin/wechat/accounts/${id}/menu/publish`, method: 'post', data: {} })
+export function publishWechatMenu(id, data) {
+  return request({ url: `/admin/wechat/accounts/${id}/menu/publish`, method: 'post', data })
 }
 
 export function importWechatMenu(id) {

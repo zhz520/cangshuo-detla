@@ -117,6 +117,8 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java",
         "delta-admin-ui/src/views/wechat/*",
         "delta-admin-ui/src/api/wechat-operations.js",
+        "delta-admin-ui/src/components/RichTextEditor.vue",
+        "delta-admin-ui/test/wechat-menu-model.test.mjs",
         "delta-admin-ui/test/wechat-template-mapping.test.mjs",
         "delta-admin-ui/src/views/system/WechatNotices.vue",
         "delta-admin-ui/src/api/official-wechat.js",
@@ -139,6 +141,7 @@
         "模板缺失不发微信请求",
         "事件重放不重发",
         "粉丝同步单批最多 100 人，失败不落部分批次且不跨公众号",
+        "可视化菜单与保存草稿一致，发布拒绝旧预览；导入空响应不覆盖草稿",
         "租户与公众号归属",
         "真实群发/发布需单独授权"
       ],
