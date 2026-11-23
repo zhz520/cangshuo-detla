@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "tokens": {
+    "enter": "180ms",
+    "feedback": "160ms",
+    "distance": "4px",
+    "ease": "cubic-bezier(.2,.7,.2,1)",
+    "pulse": "1400ms"
+  },
+  "exceptions": {
+    "delta-mp/pages-cs/dashboard/index.vue": "Unregistered legacy staff dashboard. No customer-facing route; remove its private skeleton before re-registering."
+  },
+  "navigation": {
+    "forward": "Reveal the incoming content once. Do not wait for a leave animation.",
+    "return": "Restore list position, focus and drafts; do not run a second native slide.",
+    "sameView": "Filtering, paging, polling and retry do not remount the route.",
+    "redirect": "Animate the final destination, not the intermediate guard.",
+    "reduced": "Static content and accessible status; no movement or looping shimmer."
+  },
+  "feedback": {
+    "initial": "Delay visible busy feedback; use one region with the final layout footprint.",
+    "refresh": "Keep existing content and show refresh status at the initiating control.",
+    "append": "Keep all loaded rows. Show status or retry at the list tail.",
+    "submit": "Indicate pending at the action. Prevent duplicate business submissions independently of animation.",
+    "error": "Retain previous data where available. Never substitute an empty state for failure.",
+    "external": "Only our handoff and return pages are controlled; do not consume tickets, restart payment or delay an external gesture."
+  }
+}

@@ -11,7 +11,7 @@ from pathlib import Path
 
 TEXT_SUFFIXES = {'.html', '.js', '.css', '.json', '.svg'}
 INJECTED_ARCHIVE_FILES = {'cangshuo-version.json'}
-REFERENCE = re.compile(r'(?:^|["\'(])(/?(?:assets|static)/[^"\'\s<>)]+)')
+REFERENCE = re.compile(r'(?:^|["\'(])(/?(?:assets|static|pages-[\w-]+/static)/[^"\'\s<>)]+)')
 
 
 def references(root):

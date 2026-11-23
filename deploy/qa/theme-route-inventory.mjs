@@ -80,6 +80,14 @@ function flatten(routes, variant, parent = '', inherited = {}, ancestors = []) {
       purpose: catchAll ? 'intentional-404' : routePath.endsWith('/403') ? 'intentional-403' : 'function-page' }]
   })
 }
+// Keep navigation-only entries separate: they have no independently rendered view.
+function redirectInventory(routes, variant, parent = '') {
+  return routes.flatMap(route => {
+    const p = joinRoute(parent, route.path)
+    return [...(route.redirect ? [{ path: p, variant, target: route.redirect }] : []),
+      ...redirectInventory(route.children || [], variant, p)]
+  })
+}
 const customerQuery = {
   'pages/players/detail': { id: '900001' },
   'pages/product/detail': { id: '900001' },
@@ -140,6 +148,7 @@ export async function buildInventory() {
       adminPcLeaves: admin.filter(r => r.variant === 'pc').length, adminH5Leaves: admin.filter(r => r.variant === 'h5').length,
       adminPcFunctionPages: admin.filter(r => r.variant === 'pc' && r.purpose === 'function-page').length },
     themes: ['default', 'neumorphism', 'dark'], profiles, routes: { customer, admin },
+    redirects: [...redirectInventory(desktop, 'pc'), ...redirectInventory(h5, 'h5')],
     limitations: ['Inventory presence never constitutes rendering or business acceptance.', 'Fixtures use generated identities and records; list-empty states and seeded details are explicitly recorded per request.', 'No real login, payment, SMS, upload, settlement, authorization, upgrade, or production operation is exercised.', 'Closed dialogs, every status/data combination, actual iOS/Android/WeChat/QQ, mini-program builds, and subjective visual acceptance need separate validation.', 'Staff transfer fixture leaves staff_web_url empty; staff business pages are audited through the separate admin router.'] }
 }
 export async function writeInventory() {

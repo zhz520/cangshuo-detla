@@ -1,0 +1,26 @@
+# Not registered as uni-app routes. Verify imports and external links before removal.
+delta-mp/pages-cs/category/list.vue
+delta-mp/pages-cs/chat/list.vue
+delta-mp/pages-cs/chat/room.vue
+delta-mp/pages-cs/complaint/handle.vue
+delta-mp/pages-cs/complaint/list.vue
+delta-mp/pages-cs/dashboard/index.vue
+delta-mp/pages-cs/fulfillment/list.vue
+delta-mp/pages-cs/mine/index.vue
+delta-mp/pages-cs/order/assign.vue
+delta-mp/pages-cs/order/detail.vue
+delta-mp/pages-cs/order/list.vue
+delta-mp/pages-cs/player/audit.vue
+delta-mp/pages-cs/player/list.vue
+delta-mp/pages-cs/product/edit.vue
+delta-mp/pages-cs/product/list.vue
+delta-mp/pages-cs/profile/edit.vue
+delta-mp/pages-cs/quick-reply/index.vue
+delta-mp/pages-cs/refund/list.vue
+delta-mp/pages-cs/relay/list.vue
+delta-mp/pages-cs/replace/list.vue
+delta-mp/pages-cs/user/list.vue
+delta-mp/pages-cs/withdraw/handle.vue
+delta-mp/pages-cs/withdraw/list.vue
+delta-mp/pages-player/index/index.vue
+delta-mp/pages/agreement/index.vue

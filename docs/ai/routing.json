@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "routes": [
     {
+      "id": "ui-motion",
+      "risk": "P1",
+      "terms": ["动效", "过渡动画", "加载动画", "motion", "PageViewport", "LoadFeedback"],
+      "paths": ["contracts/ui-motion*", "scripts/check_ui_motion.mjs", "deploy/qa/theme-route-*", "deploy/qa/public-entry-motion.mjs", "deploy/qa/package*.json", "delta-admin-ui/src/components/PageViewport.vue", "delta-admin-ui/src/styles/motion-tokens.css", "delta-admin-ui/test/admin-routes-browser*", "delta-mp/styles/motion-tokens.scss", "delta-mp/utils/page-motion.mjs", "delta-mp/scripts/verify-motion-build.mjs"],
+      "docs": ["ARCHITECTURE.md"],
+      "tests": ["scripts/check_ui_motion.mjs"],
+      "checks": ["静态登记与浏览器证据分开", "减少动态效果", "保持导航和表单状态", "发布范围"],
+      "commands": ["node scripts/check_ui_motion.mjs"]
+    },
+    {
       "id": "money",
       "risk": "P0",
       "terms": ["支付", "退款", "提现", "押金", "结算", "钱包", "资金", "payment", "refund", "withdraw", "deposit", "settlement", "wallet"],

@@ -129,5 +129,5 @@
 
 DELTA-15 至 DELTA-23 的详细方案、边界、能力映射和实施顺序见 `D:\CodexData\outputs\delta-wxapi-integration\公众号能力整合任务.md`。
 
-DELTA-24 详情见 `D:\CodexData\outputs\project-optimization-plan-20261121\P1数据库与调度任务.md`；DELTA-14 仍待排期，不因记录进入实现。
+DELTA-24 详情见 `D:\CodexData\outputs\project-optimization-plan-20261121\P1数据库与调度任务.md`。DELTA-25 动效任务与验收见 [ARCHITECTURE](ARCHITECTURE.md)；未发布。
 

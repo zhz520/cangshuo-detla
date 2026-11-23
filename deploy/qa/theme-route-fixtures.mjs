@@ -1,13 +1,13 @@
 // Every identity, amount, phone mask, business record and response here is synthetic.
 // Unknown reads and all non-allowlisted writes fail closed; there is no backend fallback.
-export const fixtureVersion = '2026-11-13.1'
+export const fixtureVersion = '2026-11-23.3'
 export const fixtureToken = role => `SYNTHETIC-QA-ONLY-${role}-NOT-A-JWT`
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240"><rect width="360" height="240" fill="#dce5ed"/><text x="30" y="125" font-size="26" fill="#243443">SYNTHETIC QA</text></svg>')
 const page = records => ({ records, total: records.length, current: 1, size: 10, pages: records.length ? 1 : 0 })
 const profile = { id: 900001, userId: 900001, nickname: '合成测试用户', username: 'synthetic-qa', phone: '13800000000', avatar: image, balance: 500, status: 'ACTIVE', isOnline: 1, levelId: 900001, levelName: '合成测试等级', role: 'USER', hasPassword: true, isPlayer: true, playerStatus: 'ACTIVE' }
-const product = { id: 900001, name: '合成测试服务', title: '合成测试服务', categoryId: 900001, categoryName: '合成测试分类', price: 88, minPrice: 88, basePrice: 88, salePrice: 88, originalPrice: 99, image, cover: image, coverImage: image, images: image, description: '仅用于隔离视觉审计的合成测试说明。', content: '<p>合成测试内容，未连接业务系统。</p>', status: 1, sales: 12, salesCount: 12, specs: [], specGroups: [], priceRules: [], enabled: true }
+const product = { id: 900001, name: '合成测试服务', title: '合成测试服务', categoryId: 900001, categoryName: '合成测试分类', price: 88, minPrice: 88, basePrice: 88, salePrice: 88, originalPrice: 99, image, cover: image, coverImage: image, images: JSON.stringify([image]), description: '仅用于隔离视觉审计的合成测试说明。', content: '<p>合成测试内容，未连接业务系统。</p>', status: 1, sales: 12, salesCount: 12, specs: [], specGroups: [], priceRules: [], enabled: true }
 const player = { ...profile, nickname: '合成测试接单员', playerId: 900001, introduction: '合成资料，用于检查文本布局与详情状态。', canOrder: true, tags: ['合成测试'], categories: [], services: [], reviews: [], score: 5, rating: 5, orderCount: 12, completedCount: 12, totalOrders: 12, level: { id: 900001, name: '合成测试等级' }, gallery: [], materials: [] }
-const order = id => ({ id: Number(id || 900001), orderNo: `SYNTHETIC-${id || 900001}`, status: String(id) === '900002' ? 'PENDING_PAY' : 'IN_PROGRESS', productId: 900001, productName: product.name, productImage: image, categoryId: 900001, categoryName: product.categoryName, amount: 88, totalAmount: 88, paidAmount: 88, quantity: 1, commissionRate: 0.1, userId: 900001, playerId: 900001, playerName: player.nickname, playerNickname: player.nickname, userNickname: profile.nickname, createdAt: '2026-11-13T08:00:00', paidAt: '2026-11-13T08:01:00', specInfo: '合成测试规格', formData: '{}', dynamicFormData: '{}', remark: '合成测试订单，仅供本地截图。', players: [player], assignments: [], progress: [], serviceStatus: 'IN_PROGRESS' })
+const order = id => ({ id: Number(id || 900001), orderNo: `SYNTHETIC-${id || 900001}`, status: String(id) === '900002' ? 'PENDING_PAYMENT' : 'IN_PROGRESS', productId: 900001, productName: product.name, productImage: image, categoryId: 900001, categoryName: product.categoryName, amount: 88, totalAmount: 88, paidAmount: String(id) === '900002' ? 0 : 88, quantity: 1, commissionRate: 0.1, userId: 900001, playerId: 900001, playerName: player.nickname, playerNickname: player.nickname, userNickname: profile.nickname, createdAt: '2026-11-13T08:00:00', paidAt: String(id) === '900002' ? null : '2026-11-13T08:01:00', payDeadline: String(id) === '900002' ? new Date(Date.now() + 15 * 60000).toISOString() : null, specInfo: '合成测试规格', formData: '{}', dynamicFormData: '{}', remark: '合成测试订单，仅供本地截图。', players: [player], assignments: [], progress: [], serviceStatus: 'IN_PROGRESS' })
 const categories = [{ id: 900001, name: '合成测试分类', parentId: 0, icon: image, image, children: [] }]
 const levels = [{ id: 900001, name: '合成测试等级', sort: 1, enabled: true, commissionRate: 0.1 }]
 const features = ['identity_verification', 'advanced_income_reports', 'email_notifications', 'player_directory_layouts'].map(id => ({ id, name: `合成测试 ${id}`, enabled: true, entitled: true, status: 'ENABLED', expiresAt: null, included: true, purchased: true }))
@@ -25,6 +25,7 @@ const listReads = new Set([
   '/admin/statistics/user-spending-rank', '/cs/order/spending-rank', '/admin/identity/list',
 ])
 const arrayReads = new Set([
+  '/user/privacy/requests', '/user/rewards/eligible-orders',
   '/product/recommend/categories', '/system/banner/active', '/system/notice/active', '/system/notice/latest',
   '/system/recharge-packages', '/user/game-info/list', '/player/homepage/revisions',
   '/app/display/spend-ranking', '/app/display/purchase-feed', '/user/coupons/available', '/user/coupons/mine',
@@ -54,8 +55,14 @@ export function fixtureResponse({ pathname, method = 'GET', theme = 'default', a
     return answer({ basis: '合成零值收益数据', current: period, previous: period, changePercent: {} }, 'synthetic-empty-report')
   }
   if (p === '/user/profile') return answer(profile, 'seeded-user')
+  if (p === '/user/auth/login-policy') return answer({ primaryMethod: 'PHONE', reason: '' }, 'synthetic-phone-login')
+  if (p === '/user/auth/wechat/security') return answer({ phone: '138****0000', phoneBound: true, wechatBound: false, wechatAvailable: false, passwordSet: true }, 'synthetic-security')
+  if (p === '/product/flash-sale/active') return answer({ active: false }, 'synthetic-no-promotion')
+  if (/^\/order\/\d+\/reward$/.test(p)) return answer({ enabled: false, options: [] }, 'synthetic-no-reward')
+  if (p === '/player/deposit/refund/context') return answer({ paidAmount: 0, requiredAmount: 0, outstandingAmount: 0, payments: [], history: [] }, 'synthetic-empty-deposit')
   if (p === '/player/profile') return answer(player, 'seeded-player')
   if (p === '/cs/profile') return answer({ ...profile, role: auth, nickname: '合成测试工作人员' }, 'seeded-staff-profile')
+  if (p === '/user/auth/captcha' && method === 'GET') return answer({ captchaId: 'SYNTHETIC', image }, 'seeded-login-captcha')
   if (p === '/cs/auth/captcha') return answer({ enabled: false, required: false, captchaId: 'SYNTHETIC', image: '' }, 'synthetic-login-captcha-disabled')
   if (scenario === 'approval-500' && p === '/admin/player/list') return answer(page([{ ...player, level: 1, realName: '合成审核申请人', status: 'PENDING', gameLevel: '合成测试段位', serviceTypes: '合成测试服务', proofImages: image }]), 'seeded-pending-application')
   if (scenario === 'approval-500' && p === '/admin/player-level/list') return answer([{ id: 1, name: '合成测试等级 1', status: 1 }], 'seeded-level-id-1')
