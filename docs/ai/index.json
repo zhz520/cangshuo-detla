@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.20.3",
+  "catalogVersion": "1.21.0",
   "inputDigest": "sha256:a13515e8be7c1f43a5030e31e85fc279a8d4ee7125454d1aad6d98ff52b1fc19",
   "counts": {
     "modules": 19,
