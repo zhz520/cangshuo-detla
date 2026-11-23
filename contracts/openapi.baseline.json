@@ -8091,6 +8091,52 @@
         }
       }
     },
+    "/admin/wechat/accounts/open-platform/start" : {
+      "post" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "startOpenPlatform",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RAuthorization"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/open-platform/complete" : {
+      "post" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "completeOpenPlatform",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OpenPlatformCompletion"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RProgress"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/user" : {
       "post" : {
         "tags" : [ "admin-user-controller" ],
@@ -13557,6 +13603,24 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/open-platform/status" : {
+      "get" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "openPlatformStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RAvailability"
                 }
               }
             }
@@ -19469,6 +19533,70 @@
           }
         }
       },
+      "Authorization" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string"
+          },
+          "authorizationUrl" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RAuthorization" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Authorization"
+          }
+        }
+      },
+      "OpenPlatformCompletion" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Progress" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "account" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        }
+      },
+      "RProgress" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Progress"
+          }
+        }
+      },
       "RJSONObject" : {
         "type" : "object",
         "properties" : {
@@ -23398,6 +23526,32 @@
             "items" : {
               "$ref" : "#/components/schemas/PlayerLevel"
             }
+          }
+        }
+      },
+      "Availability" : {
+        "type" : "object",
+        "properties" : {
+          "ready" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RAvailability" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Availability"
           }
         }
       },

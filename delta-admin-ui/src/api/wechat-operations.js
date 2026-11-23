@@ -1,5 +1,10 @@
 import request from '@/utils/request'
 
+const openPlatformUrl = '/admin/wechat/accounts/open-platform'
+export const getWechatOpenStatus = () => request({ url: openPlatformUrl + '/status', method:'get', silent:true, timeout:22000 })
+export const startWechatOpenAuthorization = () => request({ url: openPlatformUrl + '/start', method:'post', data:{}, silent:true, timeout:22000 })
+export const completeWechatOpenAuthorization = state => request({ url: openPlatformUrl + '/complete', method:'post', data:{state}, silent:true, timeout:22000 })
+
 export function getWechatAccounts() {
   return request({ url: '/admin/wechat/accounts', method: 'get' })
 }

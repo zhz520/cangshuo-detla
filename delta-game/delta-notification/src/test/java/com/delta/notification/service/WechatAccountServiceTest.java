@@ -43,7 +43,8 @@ class WechatAccountServiceTest {
                 "url VARCHAR(2000),miniprogram_json VARCHAR(1000),source VARCHAR(16) NOT NULL DEFAULT 'LOCAL',enabled TINYINT NOT NULL DEFAULT 1," +
                 "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(account_id,role,scenario))");
         platform = Mockito.mock(PlatformService.class);
-        service = new WechatAccountService(jdbc, new SecretCipher("test-only-wechat-encryption-key-32-bytes"), platform);
+        service = new WechatAccountService(jdbc, new SecretCipher("test-only-wechat-encryption-key-32-bytes"), platform,
+                Mockito.mock(WechatOpenPlatformClient.class));
     }
 
     @Test
@@ -102,6 +103,44 @@ class WechatAccountServiceTest {
 
         assertThat(service.templateFor("ADMIN", "new_order").getString("templateId")).isEqualTo("admin-new-order");
         assertThat(service.templateFor("ADMIN", "new_order").getJSONObject("fields").getString("thing1")).isEqualTo("message");
+    }
+
+    @Test
+    void verifiedImportIsIdempotentAndNeverReplacesTheDirectLoginAccount() {
+        String original = String.valueOf(service.saveAccount(Map.of("name","直连号","appId","wx1234567890abcdef",
+                "appSecret","fixture-secret","defaultAccount",true)).get("id"));
+        var open = service.importAuthorizedAccount("wx0000000000000001","扫码号");
+        assertThat(open).containsEntry("mode","OPEN_PLATFORM").containsEntry("defaultAccount",false)
+                .doesNotContainKeys("appSecret","accessToken","refreshToken");
+        assertThat(service.importAuthorizedAccount("wx0000000000000001","扫码号").get("id")).isEqualTo(open.get("id"));
+        assertThat(service.importAuthorizedAccount("wx1234567890abcdef","扫码同一公众号"))
+                .containsEntry("id",original).containsEntry("mode","DIRECT");
+        assertThat(service.accounts()).hasSize(2);
+        assertThat(service.defaultAppId()).isEqualTo("wx1234567890abcdef");
+        assertThatThrownBy(() -> service.saveAccount(Map.of("name","手工","appId","wx0000000000000002","mode","OPEN_PLATFORM")))
+                .isInstanceOf(BusinessException.class);
+        service.deleteAccount(String.valueOf(open.get("id")));
+        assertThat(service.defaultAppId()).isEqualTo("wx1234567890abcdef");
+    }
+
+    @Test
+    void managedTemplateMustBelongToSelectedAccountAndUseItsActualFields() {
+        String first = service.importAuthorizedAccount("wx0000000000000001", "第一公众号").get("id").toString();
+        String second = service.importAuthorizedAccount("wx0000000000000002", "第二公众号").get("id").toString();
+        jdbc.update("INSERT INTO wechat_mp_template_catalog(account_id,template_id,title,content) VALUES(?,?,?,?)",
+                first, "actual-template", "订单通知", "状态：{{thing3.DATA}}\n时间：{{time7.DATA}}");
+        Map<String, Object> mapping = Map.of("role", "ADMIN", "scenario", "new_order", "templateId", "actual-template",
+                "fields", Map.of("thing3", "status", "time7", "time"));
+        assertThatThrownBy(() -> service.saveTemplate(second, mapping))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(409));
+        assertThatThrownBy(() -> service.saveTemplate(first, Map.of("role", "ADMIN", "scenario", "new_order",
+                "templateId", "actual-template", "fields", Map.of("thing1", "status"))))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(400));
+        service.saveTemplate(first, mapping);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_template WHERE account_id=?", Integer.class, first))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_template WHERE account_id=?", Integer.class, second))
+                .isZero();
     }
 
     @Test

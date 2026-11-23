@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Owns the tenant's official account credentials and the templates that are
@@ -35,10 +36,12 @@ public class WechatAccountService {
     public static final List<String> ROLES = List.of("USER", "PLAYER", "ADMIN", "CS");
     public static final List<String> SCENARIOS = List.of(
             "new_order", "order_status", "refund_status", "complaint_status", "staff_review");
+    private static final Pattern TEMPLATE_FIELD = Pattern.compile("\\{\\{([A-Za-z_]+[0-9]*)\\.DATA}}");
 
     private final JdbcTemplate jdbc;
     private final SecretCipher secrets;
     private final PlatformService platform;
+    private final WechatOpenPlatformClient openPlatform;
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NEVER)
@@ -80,6 +83,8 @@ public class WechatAccountService {
 
         Account existing = id.isBlank() ? null : requireAccount(id);
         if (!id.isBlank() && existing == null) throw new BusinessException(404, "公众号账号不存在");
+        if ("OPEN_PLATFORM".equals(mode) || (existing != null && "OPEN_PLATFORM".equals(existing.mode())))
+            throw new BusinessException(400, "开放平台公众号只能通过微信扫码授权，请勿手动填写");
         String newSecret = text(body.get("appSecret"));
         if (newSecret.length() > 256) throw new BusinessException(400, "公众号 AppSecret 过长");
         if (newSecret.isBlank() && (existing == null || existing.encryptedSecret().isBlank()) && "DIRECT".equals(mode))
@@ -119,16 +124,33 @@ public class WechatAccountService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> importAuthorizedAccount(String appId, String name) {
+        if (appId == null || !appId.matches("wx[A-Za-z0-9]{16}"))
+            throw new BusinessException(502, "授权中心公众号 AppID 无效");
+        String id = UUID.randomUUID().toString();
+        String display = truncate(name,80);
+        jdbc.update("INSERT INTO wechat_mp_account(id,name,app_id,account_mode,is_default,enabled) " +
+                "VALUES(?,?,?,'OPEN_PLATFORM',0,1) ON DUPLICATE KEY UPDATE " +
+                "name=CASE WHEN account_mode='OPEN_PLATFORM' THEN VALUES(name) ELSE name END," +
+                "enabled=CASE WHEN account_mode='OPEN_PLATFORM' THEN 1 ELSE enabled END," +
+                "last_error=CASE WHEN account_mode='OPEN_PLATFORM' THEN NULL ELSE last_error END", id,
+                display == null || display.isBlank() ? appId : display, appId);
+        // If this AppID already uses direct credentials, preserve settings and
+        // subscriber identity. An existing binding must never silently switch.
+        return accounts().stream().filter(row -> appId.equals(row.get("appId"))).findFirst()
+                .orElseThrow(() -> new BusinessException(502, "公众号授权未保存，请重试"));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void deleteAccount(String id) {
         Account account = requireAccount(id);
         if (account == null) throw new BusinessException(404, "公众号账号不存在");
         jdbc.update("DELETE FROM wechat_mp_template WHERE account_id=?", id);
         jdbc.update("DELETE FROM wechat_mp_template_catalog WHERE account_id=?", id);
         jdbc.update("DELETE FROM wechat_mp_account WHERE id=?", id);
-        Integer remaining = jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_account", Integer.class);
-        if (remaining != null && remaining > 0) {
-            String next = jdbc.queryForObject("SELECT id FROM wechat_mp_account ORDER BY created_at ASC LIMIT 1", String.class);
-            if (next != null) jdbc.update("UPDATE wechat_mp_account SET is_default=1 WHERE id=?", next);
+        if (account.defaultAccount()) {
+            List<String> candidates = jdbc.queryForList("SELECT id FROM wechat_mp_account WHERE account_mode='DIRECT' AND enabled=1 ORDER BY created_at ASC LIMIT 1", String.class);
+            if (!candidates.isEmpty()) jdbc.update("UPDATE wechat_mp_account SET is_default=1 WHERE id=?", candidates.get(0));
         }
     }
 
@@ -212,7 +234,8 @@ public class WechatAccountService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveTemplate(String accountId, Map<String, Object> body) {
-        requireAccount(accountId);
+        Account account = requireAccount(accountId);
+        if (account == null) throw new BusinessException(404, "公众号账号不存在");
         String role = text(body.get("role")).toUpperCase(Locale.ROOT);
         String scenario = text(body.get("scenario")).toLowerCase(Locale.ROOT);
         if (!ROLES.contains(role)) throw new BusinessException(400, "通知角色不正确");
@@ -226,6 +249,15 @@ public class WechatAccountService {
                 fields = JSON.parseObject(JSON.toJSONString(map));
         }
         fields = validateFields(fields);
+        if ("OPEN_PLATFORM".equals(account.mode())) {
+            List<String> matched = jdbc.query("SELECT content FROM wechat_mp_template_catalog WHERE account_id=? AND template_id=?",
+                    (rs, index) -> Objects.toString(rs.getString("content"), ""), accountId, templateId);
+            if (matched.isEmpty()) throw new BusinessException(409, "请先同步并选择本公众号拥有的微信模板");
+            Set<String> expected = new HashSet<>();
+            TEMPLATE_FIELD.matcher(matched.get(0)).results().forEach(match -> expected.add(match.group(1)));
+            if (!expected.isEmpty() && !expected.equals(fields.keySet()))
+                throw new BusinessException(400, "模板参数必须与该微信模板的变量一致");
+        }
         String url = text(body.get("url"));
         if (!url.isBlank()) validateUrl(url);
         JSONObject mini = null;
@@ -288,6 +320,9 @@ public class WechatAccountService {
                 row.put("scenario", scenario);
                 row.put("name", truncate(scheme.path("name").asText(""), 80));
                 row.put("templateHint", truncate(scheme.path("templateHint").asText(""), 160));
+                row.put("example", truncate(scheme.path("example").asText(""), 240));
+                JsonNode suggestions = scheme.path("fieldSuggestions");
+                if (suggestions.isArray() && suggestions.size() <= 20) row.put("fieldSuggestions", suggestions);
                 row.put("fields", fields);
                 row.put("url", truncate(scheme.path("url").asText(""), 2000));
                 row.put("version", scheme.path("version").asInt(1));
@@ -469,7 +504,7 @@ public class WechatAccountService {
 
     private Account defaultAccount() {
         List<Account> rows = jdbc.query("SELECT id,name,app_id,app_secret_encrypted,account_mode,enabled,is_default " +
-                        "FROM wechat_mp_account WHERE enabled=1 ORDER BY is_default DESC, created_at ASC LIMIT 1",
+                        "FROM wechat_mp_account WHERE enabled=1 AND account_mode='DIRECT' ORDER BY is_default DESC, created_at ASC LIMIT 1",
                 (rs, n) -> new Account(rs.getString("id"), rs.getString("name"), rs.getString("app_id"),
                         Objects.toString(rs.getString("app_secret_encrypted"), ""), rs.getString("account_mode"),
                         rs.getInt("enabled") == 1, rs.getInt("is_default") == 1));
@@ -487,6 +522,8 @@ public class WechatAccountService {
     }
 
     private String accessToken(Account account) throws Exception {
+        if (!account.enabled()) throw new BusinessException(403, "该公众号已停用");
+        if ("OPEN_PLATFORM".equals(account.mode())) return openPlatform.accessToken(account.appId());
         String cacheKey = account.id() + ":" + account.appId();
         AccessToken cached = accessTokens.get(cacheKey);
         if (cached != null && System.currentTimeMillis() < cached.expiresAt()) return cached.value();

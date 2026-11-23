@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.19.0",
-  "inputDigest": "sha256:2f421b4b2c5c9312949563948f143755b019f6d1dc784b79a77569b8f52bfa61",
+  "catalogVersion": "1.19.1",
+  "inputDigest": "sha256:238a7a7a36acc0cd587de1d09fa606a5ff0988868d682f59750f9350b594d9b2",
   "counts": {
     "modules": 19,
     "controllers": 116,
@@ -11,7 +11,7 @@
     "baseTables": 53,
     "migrations": 39,
     "backendTests": 130,
-    "adminTests": 39,
+    "adminTests": 40,
     "h5Tests": 24
   },
   "modules": [
@@ -545,7 +545,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 24,
+      "mainJavaCount": 25,
       "controllers": [
         {
           "name": "AdminNoticePushController",
@@ -580,7 +580,7 @@
         {
           "name": "WechatOperationsController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsController.java",
-          "endpoints": 8
+          "endpoints": 11
         },
         {
           "name": "WechatOperationsToolsController",
@@ -1687,6 +1687,7 @@
       {
         "module": "wechat-operations.js",
         "exports": [
+          "completeWechatOpenAuthorization",
           "createWechatQrCode",
           "deleteWechatAccount",
           "deleteWechatArticle",
@@ -1701,6 +1702,7 @@
           "getWechatMassSends",
           "getWechatMaterials",
           "getWechatMenu",
+          "getWechatOpenStatus",
           "getWechatQrCodes",
           "getWechatReadiness",
           "getWechatStats",
@@ -1718,6 +1720,7 @@
           "saveWechatTag",
           "saveWechatTemplate",
           "sendWechatMassSend",
+          "startWechatOpenAuthorization",
           "syncWechatFans",
           "syncWechatMaterials",
           "syncWechatTags",
@@ -1769,6 +1772,7 @@
       "delta-admin-ui/test/update-selection.test.mjs",
       "delta-admin-ui/test/wechat-binding.test.mjs",
       "delta-admin-ui/test/wechat-operations-theme.test.mjs",
+      "delta-admin-ui/test/wechat-template-mapping.test.mjs",
       "delta-admin-ui/test/workbench-links.test.mjs"
     ]
   },
@@ -2091,8 +2095,8 @@
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 536,
-    "operations": 536,
-    "schemas": 282
+    "endpoints": 539,
+    "operations": 539,
+    "schemas": 289
   }
 }

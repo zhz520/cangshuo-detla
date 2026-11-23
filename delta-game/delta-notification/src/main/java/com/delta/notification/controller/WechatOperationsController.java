@@ -4,6 +4,7 @@ import com.delta.common.annotation.OpLog;
 import com.delta.common.domain.R;
 import com.delta.notification.service.OfficialWechatService;
 import com.delta.notification.service.WechatAccountService;
+import com.delta.notification.service.WechatOpenPlatformClient;
 import com.delta.platform.PlatformService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,31 @@ import java.util.Map;
 public class WechatOperationsController {
     private final WechatAccountService accounts;
     private final PlatformService platform;
+    private final WechatOpenPlatformClient openPlatform;
+
+    @GetMapping("/admin/wechat/accounts/open-platform/status")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<WechatOpenPlatformClient.Availability> openPlatformStatus(HttpServletRequest request) {
+        requireFeature(request);
+        return R.ok(openPlatform.status());
+    }
+
+    @PostMapping("/admin/wechat/accounts/open-platform/start")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "发起公众号扫码授权")
+    public R<WechatOpenPlatformClient.Authorization> startOpenPlatform(HttpServletRequest request) {
+        requireFeature(request);
+        return R.ok(openPlatform.start());
+    }
+
+    @PostMapping("/admin/wechat/accounts/open-platform/complete")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<WechatOpenPlatformClient.Progress> completeOpenPlatform(@RequestBody OpenPlatformCompletion body, HttpServletRequest request) {
+        requireFeature(request);
+        return R.ok(openPlatform.progress(body.state(), accounts));
+    }
+
+    public record OpenPlatformCompletion(String state) {}
 
     @GetMapping("/admin/wechat/accounts")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")

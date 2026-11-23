@@ -841,6 +841,24 @@
   },
   {
     "controller": "WechatOperationsController",
+    "handler": "completeOpenPlatform",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/open-platform/complete"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "startOpenPlatform",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/open-platform/start"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "openPlatformStatus",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/open-platform/status"
+  },
+  {
+    "controller": "WechatOperationsController",
     "handler": "delete",
     "method": "DELETE",
     "path": "/admin/wechat/accounts/{id}"

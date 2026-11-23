@@ -62,10 +62,21 @@ export interface AppProductDetailVO {
   categoryName?: string
 }
 
+export interface Authorization {
+  state?: string
+  authorizationUrl?: string
+  expiresAt?: string
+}
+
 export interface AutoVerifyView {
   matched?: boolean
   status?: string
   message?: string
+}
+
+export interface Availability {
+  ready?: boolean
+  reason?: string
 }
 
 export interface Banner {
@@ -482,6 +493,10 @@ export interface Notice {
   sortOrder?: number
   popupDisplay?: number
   deleted?: number
+}
+
+export interface OpenPlatformCompletion {
+  state?: string
 }
 
 export interface OperationLog {
@@ -1274,6 +1289,11 @@ export interface Product {
   deleted?: number
 }
 
+export interface Progress {
+  status?: string
+  account?: Record<string, unknown>
+}
+
 export interface ProgressRequest {
   content?: string
   images?: string
@@ -1334,10 +1354,22 @@ export interface RAppProductDetailVO {
   data?: AppProductDetailVO
 }
 
+export interface RAuthorization {
+  code?: number
+  msg?: string
+  data?: Authorization
+}
+
 export interface RAutoVerifyView {
   code?: number
   msg?: string
   data?: AutoVerifyView
+}
+
+export interface RAvailability {
+  code?: number
+  msg?: string
+  data?: Availability
 }
 
 export interface RBatchResult {
@@ -1824,6 +1856,12 @@ export interface RProduct {
   code?: number
   msg?: string
   data?: Product
+}
+
+export interface RProgress {
+  code?: number
+  msg?: string
+  data?: Progress
 }
 
 export interface RPublicPlayerVO {
