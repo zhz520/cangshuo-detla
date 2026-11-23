@@ -71,6 +71,7 @@ test('paid request policy covers reads, details and writes without blocking publ
   assert.deepEqual(paidRequestAccess('/admin/platform/reports/income?startDate=2026-01-01'), { feature: 'advanced_income_reports', permission: 'finance.read' })
   assert.deepEqual(paidRequestAccess('/admin/identity/applications/7'), { feature: 'identity_verification', permission: 'user.manage' })
   assert.deepEqual(paidRequestAccess('/admin/wechat/notifications/8/retry'), { feature: 'official_wechat_notifications', permission: 'system.manage' })
+  assert.deepEqual(paidRequestAccess('/admin/wechat/accounts/abc/templates/sync'), { feature: 'official_wechat_notifications', permission: 'system.manage' })
   assert.deepEqual(paidRequestAccess('/admin/email-notifications/records/8/retry'), { feature: 'email_notifications', permission: 'system.manage' })
   assert.deepEqual(paidRequestAccess('/admin/player-layout'), { feature: 'player_directory_layouts', permission: 'system.manage' })
   assert.equal(paidRequestAccess('/admin/platform/features'), null)

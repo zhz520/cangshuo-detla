@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:39bf65b3344a4239d2ab6c50e47c1692eddf0a0b13b9eaec6624911bc85a204a",
+  "inputDigest": "sha256:c0b2c9c63a016a8ec07f73fd55f3ff53242378f41c56396511c5b744c9071c3a",
   "counts": {
     "modules": 19,
-    "controllers": 111,
-    "adminViews": 57,
-    "adminRoutes": 68,
+    "controllers": 113,
+    "adminViews": 59,
+    "adminRoutes": 71,
     "h5Pages": 60,
     "baseTables": 53,
-    "migrations": 36,
-    "backendTests": 125,
+    "migrations": 37,
+    "backendTests": 127,
     "adminTests": 38,
     "h5Tests": 24
   },
@@ -205,7 +205,7 @@
       "dependsOn": [
         "delta-common"
       ],
-      "mainJavaCount": 111,
+      "mainJavaCount": 112,
       "controllers": [
         {
           "name": "ChatController",
@@ -544,7 +544,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 16,
+      "mainJavaCount": 20,
       "controllers": [
         {
           "name": "AdminNoticePushController",
@@ -567,6 +567,16 @@
           "endpoints": 1
         },
         {
+          "name": "WechatOperationsController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsController.java",
+          "endpoints": 8
+        },
+        {
+          "name": "WechatOperationsToolsController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsToolsController.java",
+          "endpoints": 13
+        },
+        {
           "name": "WechatWebLoginController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatWebLoginController.java",
           "endpoints": 10
@@ -578,7 +588,9 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/NotificationTemplateDataServiceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatBindingPersistenceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
-        "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java"
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/SecretCipherTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java"
       ]
     },
     {
@@ -1074,7 +1086,9 @@
       "delta-admin-ui/src/views/user/IdentityReview.vue",
       "delta-admin-ui/src/views/user/SpendingRank.vue",
       "delta-admin-ui/src/views/user/UserList.vue",
+      "delta-admin-ui/src/views/wechat/Accounts.vue",
       "delta-admin-ui/src/views/wechat/Binding.vue",
+      "delta-admin-ui/src/views/wechat/Tools.vue",
       "delta-admin-ui/src/views/withdraw/WithdrawList.vue"
     ],
     "routes": [
@@ -1106,9 +1120,11 @@
       "/user",
       "/user/identity-review",
       "/user/list",
+      "/wechat",
       "/withdraw",
       "403",
       ":pathMatch(.*)*",
+      "accounts",
       "admin",
       "banner",
       "category",
@@ -1143,6 +1159,7 @@
       "sms-account",
       "spending-rank",
       "themes",
+      "tools",
       "updates",
       "wechat-binding",
       "wechat-notices"
@@ -1634,6 +1651,34 @@
           "/system/sensitive-word",
           "/system/sensitive-word/list"
         ]
+      },
+      {
+        "module": "wechat-operations.js",
+        "exports": [
+          "createWechatQrCode",
+          "deleteWechatAccount",
+          "deleteWechatAutoReply",
+          "deleteWechatQrCode",
+          "deleteWechatTemplate",
+          "getWechatAccounts",
+          "getWechatAutoReplies",
+          "getWechatFans",
+          "getWechatMenu",
+          "getWechatQrCodes",
+          "getWechatReadiness",
+          "getWechatTemplateCatalog",
+          "importWechatMenu",
+          "publishWechatMenu",
+          "saveWechatAccount",
+          "saveWechatAutoReply",
+          "saveWechatMenu",
+          "saveWechatTemplate",
+          "syncWechatFans",
+          "syncWechatTemplates"
+        ],
+        "urls": [
+          "/admin/wechat/accounts"
+        ]
       }
     ],
     "tests": [
@@ -1979,13 +2024,17 @@
       {
         "kind": "baota",
         "path": "deploy/baota/migrations/20261119-player-deposit-override.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261123-wechat-operations.sql"
       }
     ],
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 487,
-    "operations": 487,
+    "endpoints": 508,
+    "operations": 508,
     "schemas": 282
   }
 }

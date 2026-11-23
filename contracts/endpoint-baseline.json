@@ -804,6 +804,132 @@
     "path": "/admin/user/{id}/status"
   },
   {
+    "controller": "WechatOperationsController",
+    "handler": "accounts",
+    "method": "GET",
+    "path": "/admin/wechat/accounts"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "save",
+    "method": "POST",
+    "path": "/admin/wechat/accounts"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "autoReplies",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/autoreplies"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "createAutoReply",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/autoreplies"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "deleteAutoReply",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}/autoreplies/{ruleId}"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "updateAutoReply",
+    "method": "PUT",
+    "path": "/admin/wechat/accounts/{id}/autoreplies/{ruleId}"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "fans",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/fans"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "syncFans",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/fans/sync"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "menu",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/menu"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "saveMenu",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/menu"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "importMenu",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/menu/import"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "publishMenu",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/menu/publish"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "qrCodes",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/qrcodes"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "createQr",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/qrcodes"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "deleteQr",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}/qrcodes/{qrId}"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "readiness",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/readiness"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "templates",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/templates"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "saveTemplate",
+    "method": "PUT",
+    "path": "/admin/wechat/accounts/{id}/templates"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "sync",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/templates/sync"
+  },
+  {
+    "controller": "WechatOperationsController",
+    "handler": "deleteTemplate",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}/templates/{role}/{scenario}"
+  },
+  {
     "controller": "OfficialWechatController",
     "handler": "notices",
     "method": "GET",

@@ -106,6 +106,42 @@
       "commands": ["cd delta-admin-ui && node --test test/sms-account.test.mjs test/feature-market.test.mjs"]
     },
     {
+      "id": "wechat-operations",
+      "risk": "P1",
+      "terms": ["公众号", "微信开放平台", "模板消息", "公众号通知", "自动回复", "粉丝标签", "渠道二维码", "图文草稿", "群发审批", "wxapi", "official wechat", "template message"],
+      "paths": [
+        "delta-game/delta-notification/*Wechat*",
+        "delta-game/delta-notification/*Official*",
+        "delta-game/delta-notification/src/main/java/com/delta/notification/controller/*Wechat*",
+        "delta-game/delta-notification/src/main/java/com/delta/notification/service/*Wechat*",
+        "delta-admin-ui/src/views/wechat/*",
+        "delta-admin-ui/src/views/system/WechatNotices.vue",
+        "delta-admin-ui/src/api/official-wechat.js",
+        "delta-mp/pages/wechat/*",
+        "delta-mp/store/official-wechat.js"
+      ],
+      "docs": ["CONFIGURATION.md", "BUSINESS_RULES.md", "ARCHITECTURE.md"],
+      "tests": [
+        "delta-game/delta-admin/src/test/java/com/delta/admin/OfficialWechatAuthorizationTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatBindingPersistenceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
+        "delta-mp/test/staff-binding-entry.test.mjs"
+      ],
+      "checks": [
+        "每公众号模板 ID 独立",
+        "授权中心只存方案不下发组件密钥",
+        "模板缺失不发微信请求",
+        "事件重放不重发",
+        "租户与公众号归属",
+        "真实群发/发布需单独授权"
+      ],
+      "commands": [
+        "cd delta-game && mvn -pl delta-admin -am test",
+        "cd delta-admin-ui && npm test",
+        "python -B scripts/ai_context.py validate --strict"
+      ]
+    },
+    {
       "id": "order-team",
       "risk": "P1",
       "terms": ["协同", "换人", "再次邀请", "接单大厅", "订单指派", "队友"],

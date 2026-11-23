@@ -42,6 +42,8 @@ public class OfficialWechatService {
  private final PlatformService platform;
  @org.springframework.beans.factory.annotation.Autowired(required=false)
  private com.delta.common.sms.service.SmsGatewayClient smsGateway;
+ @org.springframework.beans.factory.annotation.Autowired(required=false)
+ private WechatAccountService accounts;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  @Autowired(required = false) private TenantKeyEncoder tenantKeys;
  @Autowired(required = false) private TenantProperties tenantProperties;
@@ -102,6 +104,7 @@ public class OfficialWechatService {
  }
  private synchronized String token()throws Exception{
   AccessToken cached=accessTokens.get(scope());if(cached!=null&&System.currentTimeMillis()<cached.until())return cached.value();
+  if(accounts!=null){String managed=accounts.accessTokenOrNull();if(managed!=null){accessTokens.put(scope(),new AccessToken(managed,System.currentTimeMillis()+3600_000L));return managed;}}
   var result=post("https://api.weixin.qq.com/cgi-bin/stable_token",Map.of("grant_type","client_credential","appid",configs.getConfigValue("wechat.official.app_id",""),"secret",configs.getConfigValue("wechat.official.app_secret","")));
   String value=result.getString("access_token");if(value==null||value.isBlank())throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");
   accessTokens.put(scope(),new AccessToken(value,System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L));return value;
@@ -135,7 +138,8 @@ public class OfficialWechatService {
   if(!"true".equals(configs.getConfigValue("wechat.official.enabled","false")))throw new BusinessException(503,"公众号通知尚未启用");
   boolean staff="ADMIN".equals(type)||"CS".equals(type);
   String redirectKey=staff?"wechat.official.staff_redirect_url":"wechat.official.redirect_url";
-  String appId=configs.getConfigValue("wechat.official.app_id",""),redirect=configs.getConfigValue(redirectKey,"");URI uri;
+  String appId=accounts!=null&&accounts.hasDefaultAccount()?accounts.defaultAppId():configs.getConfigValue("wechat.official.app_id","");
+  String redirect=configs.getConfigValue(redirectKey,"");URI uri;
   if(staff)redirect=redirect.replace("/mobile/wechat-binding","/h5/wechat-binding");
   try{uri=URI.create(redirect);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getFragment()!=null||uri.getQuery()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new BusinessException(400,staff?"请先配置管理员与客服的公众号绑定回调页":"请先配置客户与打手的公众号绑定回调页");}
   if(appId.isBlank())throw new BusinessException(400,"请先配置公众号AppID");
@@ -173,6 +177,7 @@ public class OfficialWechatService {
   jdbc.update("UPDATE wechat_notice_queue SET status='PENDING',attempts=0,next_at=CURRENT_TIMESTAMP WHERE user_type=? AND user_id=? AND status IN ('RETRY','FAILED') AND last_error='RECIPIENT_NOT_BOUND' AND created_at>?",type,id,LocalDateTime.now().minusDays(1));
  }
  public String exchangeOpenid(String code)throws Exception{
+  if(accounts!=null&&accounts.hasDefaultAccount()){String managed=accounts.exchangeOpenid(code);if(managed!=null)return managed;}
   String appId=configs.getConfigValue("wechat.official.app_id","").trim();
   String secret=configs.getConfigValue("wechat.official.app_secret","").trim();
   if(appId.isBlank()||secret.isBlank())throw new BusinessException(503,"公众号登录尚未配置");
@@ -215,6 +220,7 @@ public class OfficialWechatService {
  }
  private List<String> missingTemplateGroups(String type){
   String role=templateRole(type);if(role==null)return TEMPLATE_GROUPS;
+  if(accounts!=null&&accounts.hasDefaultAccount())return accounts.missingScenarios(type);
   JSONObject templates;
   try{templates=JSON.parseObject(configs.getConfigValue("wechat.official.templates."+role,"{}"));}catch(Exception error){return TEMPLATE_GROUPS;}
   List<String> missing=new ArrayList<>();
@@ -240,6 +246,11 @@ public class OfficialWechatService {
  private JSONObject post(String url,Object body)throws Exception{var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(JSON.toJSONString(body))).build(),HttpResponse.BodyHandlers.ofString());if(response.statusCode()!=200||response.body().length()>100000)throw new DeliveryError("WECHAT_HTTP_ERROR");return JSON.parseObject(response.body());}
  JSONObject templateFor(String userType,String group){return templateFor(userType,null,group);}
  JSONObject templateFor(String userType,String event,String group){
+  if(accounts!=null&&accounts.hasDefaultAccount()){
+   JSONObject managed=accounts.templateFor(userType,group);
+   if(managed==null)throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
+   return managed;
+  }
   String role=switch(Objects.toString(userType,"").toUpperCase(java.util.Locale.ROOT)){case "USER","GUEST"->"user";case "PLAYER"->"player";case "ADMIN","BOTH"->"admin";case "CS"->"cs";default->null;};
   if(role!=null){
    try{

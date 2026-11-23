@@ -313,6 +313,26 @@ const desktopRoutes = [
       { path: 'income-analysis', name: 'IncomeAnalysis', component: () => import('@/views/platform/IncomeAnalysis.vue'), meta: { title: '收益对比分析', roles: ['admin'], permission: 'finance.read', feature: 'advanced_income_reports' } }
     ]
   },
+  {
+    path: '/wechat',
+    component: Layout,
+    redirect: '/wechat/accounts',
+    meta: { title: '公众号运营', icon: 'ChatDotRound', roles: ['admin'] },
+    children: [
+      {
+        path: 'accounts',
+        name: 'WechatAccounts',
+        component: () => import('@/views/wechat/Accounts.vue'),
+        meta: { title: '公众号运营', roles: ['admin'], permission: 'system.manage', feature: 'official_wechat_notifications' }
+      },
+      {
+        path: 'tools',
+        name: 'WechatTools',
+        component: () => import('@/views/wechat/Tools.vue'),
+        meta: { title: '运营工具', roles: ['admin'], permission: 'system.manage', feature: 'official_wechat_notifications' }
+      }
+    ]
+  },
   // 系统管理 (仅 admin)
   {
     path: '/system',

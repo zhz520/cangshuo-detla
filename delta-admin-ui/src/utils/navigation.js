@@ -19,6 +19,9 @@ const sections = [
   { id: 'finance', title: '财务结算', items: [
     { id: 'finance', title: '结算与统计', icon: 'DataAnalysis', paths: ['/statistics/income-daily', '/settlements', '/withdraw', '/deposit-refunds', '/rewards', '/platform/income-analysis', '/system/recharge-packages'] }
   ] },
+  { id: 'wechat', title: '公众号运营', items: [
+    { id: 'wechat-ops', title: '公众号运营', icon: 'ChatDotRound', paths: ['/wechat/accounts', '/wechat/tools'] }
+  ] },
   { id: 'settings', title: '平台设置', items: [
     { id: 'content', title: '内容与活动', icon: 'Picture', paths: ['/system/banner', '/system/notice', '/system/content', '/system/reward-grab', '/system/player-layout'] },
     { id: 'system', title: '系统管理', icon: 'Setting', paths: ['/system/config', '/system/sms-account', '/system/identity-account', '/system/admin', '/system/roles', '/system/wechat-notices', '/system/email-notifications', '/system/sensitive-words', '/system/operation-log'] }

@@ -39,6 +39,16 @@ test('paid feature routes are hidden until the platform reports them enabled',()
   assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/system/player-layout','/system/wechat-notices','/system/email-notifications'])
 })
 
+test('公众号运营入口随付费权益显示且保留账号管理子页',()=>{
+  const routes=[screen('/dashboard','仪表盘'),{
+    path:'/wechat',meta:{title:'公众号运营',roles:['admin']},children:[{
+      path:'accounts',meta:{title:'公众号运营',roles:['admin'],permission:'system.manage',feature:'official_wechat_notifications'}
+    }]
+  }]
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>false)),['/dashboard'])
+  assert.deepEqual(paths(buildNavigation(routes,'admin',()=>true,()=>true)),['/dashboard','/wechat/accounts'])
+})
+
 test('identity review moves into user detail while the feature market entry stays in navigation', () => {
   const navigation = readFileSync(new URL('../src/utils/navigation.js', import.meta.url), 'utf8')
   assert.match(navigation, /\/platform\/features/)

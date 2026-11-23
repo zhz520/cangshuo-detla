@@ -209,6 +209,9 @@ public class PlatformService implements com.delta.common.sms.service.InstanceIde
 
     synchronized JsonNode remoteProject() { return store().load().remoteProject(); }
 
+    /** Verified project snapshot exposed for tenant-local notification configuration. */
+    public synchronized JsonNode projectSnapshot() { return remoteProject(); }
+
     public synchronized void requireFeature(String id) {
         requireFeature(id, null);
     }
