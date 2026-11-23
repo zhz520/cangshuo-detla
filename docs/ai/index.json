@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:2ef6c471d81e2ff487c3f0fe1a4f8643333078ce0ea8f9c229cdba904fc6aef2",
+  "inputDigest": "sha256:ed90045867a1ee016061b3d1a45f33d77342ac359a1f85ad770a2eac3f62383b",
   "counts": {
     "modules": 19,
     "controllers": 116,
@@ -11,7 +11,7 @@
     "baseTables": 53,
     "migrations": 39,
     "backendTests": 130,
-    "adminTests": 38,
+    "adminTests": 39,
     "h5Tests": 24
   },
   "modules": [
@@ -1765,6 +1765,7 @@
       "delta-admin-ui/test/system-config.test.mjs",
       "delta-admin-ui/test/update-selection.test.mjs",
       "delta-admin-ui/test/wechat-binding.test.mjs",
+      "delta-admin-ui/test/wechat-operations-theme.test.mjs",
       "delta-admin-ui/test/workbench-links.test.mjs"
     ]
   },

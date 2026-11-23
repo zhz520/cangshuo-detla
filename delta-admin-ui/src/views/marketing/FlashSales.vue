@@ -52,5 +52,5 @@ onMounted(async () => { try { const result = await getProductList({ page: 1, siz
 </script>
 
 <style scoped>
-.flash-sale-page { display:grid; gap:16px; }.form { display:grid; gap:2px; }.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media(max-width:768px){.grid{grid-template-columns:1fr}}
+.flash-sale-page { display:grid; gap:16px; color:var(--el-text-color-primary); }.form { display:grid; gap:2px; }.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media(max-width:768px){.grid{grid-template-columns:1fr}}
 </style>
