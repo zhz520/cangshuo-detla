@@ -24,7 +24,7 @@ public class WithdrawNotifyTask {
 
     @Scheduled(cron = "0 0 * * * ?")
     public void execute() {
-        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+        TenantScheduler.run("withdraw-notify", tenantRegistry,this::executeForTenant);
     }
 
     private void executeForTenant() {

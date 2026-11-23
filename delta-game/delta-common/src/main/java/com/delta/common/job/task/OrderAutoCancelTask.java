@@ -22,7 +22,7 @@ public class OrderAutoCancelTask {
 
     @Scheduled(cron = "0 */5 * * * ?")
     public void execute() {
-        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+        TenantScheduler.run("order-auto-cancel", tenantRegistry,this::executeForTenant);
     }
 
     private void executeForTenant() {

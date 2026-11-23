@@ -17,7 +17,7 @@ public class PlatformReporter {
     @Scheduled(initialDelayString = "${platform.report.initial-delay-ms:15000}",
             fixedDelayString = "${platform.report.interval-ms:300000}")
     public void report() {
-        TenantScheduler.run(tenantRegistry,this::reportForTenant);
+        TenantScheduler.run("platform-snapshot-report", tenantRegistry,this::reportForTenant);
     }
     private void reportForTenant() {
         try { remote.refresh(); }

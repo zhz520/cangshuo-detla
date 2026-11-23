@@ -40,7 +40,7 @@ public class PendingIncomeReleaseTask {
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
     public void run() {
-        TenantScheduler.run(tenantRegistry,this::runForTenant);
+        TenantScheduler.run("pending-income-release", tenantRegistry,this::runForTenant);
     }
 
     private void runForTenant() {

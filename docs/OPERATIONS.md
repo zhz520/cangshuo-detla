@@ -4,6 +4,16 @@
 
 ## 1. 本地构建
 
+数据库迁移登记：
+
+```powershell
+python -B scripts/migration_registry.py
+python -B scripts/migration_registry.py --check
+python -B scripts/migration_registry.py --check --strict
+```
+
+`--check` 校验 `deploy/migration/migration-registry.json` 中的文件、大小和 SHA-256；`--strict` 会把重复校验和作为失败。当前两对重复项是启动脚本与部署副本的已知镜像，审计时不能静默合并或删除。
+
 ### 后端
 
 ```powershell

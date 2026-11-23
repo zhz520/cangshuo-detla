@@ -22,7 +22,7 @@ public class StatisticsTask {
 
     @Scheduled(cron = "0 0 1 * * ?")
     public void execute() {
-        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+        TenantScheduler.run("statistics-daily", tenantRegistry,this::executeForTenant);
     }
 
     private void executeForTenant() {

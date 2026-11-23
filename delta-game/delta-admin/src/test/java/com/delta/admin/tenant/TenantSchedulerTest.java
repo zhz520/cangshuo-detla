@@ -7,6 +7,9 @@ import com.delta.common.tenant.TenantScheduler;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,5 +38,34 @@ class TenantSchedulerTest {
 
         assertThat(calls).hasValue(2);
         assertThat(TenantContext.currentIdOrNull()).isNull();
+    }
+
+    @Test
+    void namedJobSkipsOverlappingRunsAndStillCleansTenantContext() throws Exception {
+        TenantProperties properties = new TenantProperties();
+        properties.setEnabled(true);
+        TenantProperties.Tenant a = new TenantProperties.Tenant();
+        a.setHosts(List.of("a.example.com"));
+        properties.getTenants().put("tenant-a", a);
+        TenantRegistry registry = new TenantRegistry(properties);
+        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+        AtomicInteger calls = new AtomicInteger();
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var running = executor.submit(() -> TenantScheduler.run("test-job", registry, () -> {
+                calls.incrementAndGet();
+                entered.countDown();
+                release.await(5, TimeUnit.SECONDS);
+            }));
+            assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+            TenantScheduler.run("test-job", registry, calls::incrementAndGet);
+            assertThat(calls).hasValue(1);
+            release.countDown();
+            running.get(5, TimeUnit.SECONDS);
+            assertThat(TenantContext.currentIdOrNull()).isNull();
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
     }
 }

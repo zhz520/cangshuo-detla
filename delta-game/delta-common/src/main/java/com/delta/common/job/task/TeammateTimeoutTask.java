@@ -24,7 +24,7 @@ public class TeammateTimeoutTask {
 
     @Scheduled(cron = "0 */10 * * * ?")
     public void execute() {
-        TenantScheduler.run(tenantRegistry,this::executeForTenant);
+        TenantScheduler.run("teammate-timeout", tenantRegistry,this::executeForTenant);
     }
 
     private void executeForTenant() {

@@ -29,7 +29,7 @@ public class WxPaymentRecoveryTask {
 
     @Scheduled(fixedDelay=30000,initialDelay=30000)
     public void recover() {
-        TenantScheduler.run(tenantRegistry,this::recoverForTenant);
+        TenantScheduler.run("wechat-payment-recovery", tenantRegistry,this::recoverForTenant);
     }
 
     private void recoverForTenant() {

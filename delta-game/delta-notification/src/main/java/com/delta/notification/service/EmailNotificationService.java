@@ -219,7 +219,7 @@ public class EmailNotificationService {
 
     @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
     public void deliver() {
-        TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+        TenantScheduler.run("email-notice-delivery", tenantRegistry,this::deliverForTenant);
     }
 
     private synchronized void deliverForTenant() {

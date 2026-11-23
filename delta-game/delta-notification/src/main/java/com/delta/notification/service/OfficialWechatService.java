@@ -68,7 +68,7 @@ public class OfficialWechatService {
  }
  @Scheduled(fixedDelay=15000,initialDelay=30000)
  public void deliver(){
-  TenantScheduler.run(tenantRegistry,this::deliverForTenant);
+  TenantScheduler.run("wechat-notice-delivery", tenantRegistry,this::deliverForTenant);
  }
  private synchronized void deliverForTenant(){
   try{

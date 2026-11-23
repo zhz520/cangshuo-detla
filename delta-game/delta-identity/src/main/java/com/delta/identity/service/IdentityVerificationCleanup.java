@@ -19,7 +19,7 @@ public class IdentityVerificationCleanup {
 
     @Scheduled(fixedDelay = 3_600_000, initialDelay = 60_000)
     public void clearAbandonedDrafts() {
-        TenantScheduler.run(tenantRegistry,this::clearForTenant);
+        TenantScheduler.run("identity-retention-cleanup", tenantRegistry,this::clearForTenant);
     }
 
     private void clearForTenant() {

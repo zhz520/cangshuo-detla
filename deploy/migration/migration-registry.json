@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "scripts/migration_registry.py",
+  "migrations": [
+    {
+      "id": "20261023-player-directory",
+      "file": "deploy/baota/migrations/20261023-player-directory.sql",
+      "source": "APPLY",
+      "sha256": "5a4639f7ad192b1b8aa51b07fdc8df640523e6157d1e7898f5753065a706f03a",
+      "bytes": 321
+    },
+    {
+      "id": "20261023-player-homepage",
+      "file": "deploy/baota/migrations/20261023-player-homepage.sql",
+      "source": "APPLY",
+      "sha256": "8744c8e036b4e9b4374981257f80a5925802f52d8571a91e6dffb3a256c0580b",
+      "bytes": 1478
+    },
+    {
+      "id": "20261024-reward-grab",
+      "file": "deploy/baota/migrations/20261024-reward-grab.sql",
+      "source": "APPLY",
+      "sha256": "dd49ab2f5593056059ff66176a6329121a87b7e3c6e8262d691262a4954ea5fc",
+      "bytes": 2869
+    },
+    {
+      "id": "20261024-user-password-management",
+      "file": "deploy/baota/migrations/20261024-user-password-management.sql",
+      "source": "APPLY",
+      "sha256": "8785a61bb56df75186068c8e863c0cde0766196d4dcb0a70d25f11150a7e2cae",
+      "bytes": 784
+    },
+    {
+      "id": "20261025-player-pricing",
+      "file": "deploy/baota/migrations/20261025-player-pricing.sql",
+      "source": "APPLY",
+      "sha256": "1c58bd16c0ec6c8a7a2e722a817e127874eeda588d006fae6861fe7b9743832b",
+      "bytes": 2557
+    },
+    {
+      "id": "20261101-client-phone-unique",
+      "file": "deploy/baota/migrations/20261101-client-phone-unique.sql",
+      "source": "APPLY",
+      "sha256": "faada6ef403233cf64f1baf8578d9d78199ce3735de43a22446c8bd023bc508e",
+      "bytes": 1005
+    },
+    {
+      "id": "20261102-identity-verification",
+      "file": "deploy/baota/migrations/20261102-identity-verification.sql",
+      "source": "APPLY",
+      "sha256": "b2708b571868765fff83e7869271c5fc7152c8d91f7fcdc6d7b543094446e9e3",
+      "bytes": 966
+    },
+    {
+      "id": "20261102-player-deposit-modes",
+      "file": "deploy/baota/migrations/20261102-player-deposit-modes.sql",
+      "source": "APPLY",
+      "sha256": "fe81f3903430cf910f6b02697698fa53afb63110dcc1debff5bd07fde8e2ef98",
+      "bytes": 1344
+    },
+    {
+      "id": "20261106-guest-checkout",
+      "file": "deploy/baota/migrations/20261106-guest-checkout.sql",
+      "source": "APPLY",
+      "sha256": "c249b51acdd5e600afcd1aba318e2b491c8d20f7707573218f6ac09bfbd3279b",
+      "bytes": 2621
+    },
+    {
+      "id": "20261106-workbench",
+      "file": "deploy/baota/migrations/20261106-workbench.sql",
+      "source": "APPLY",
+      "sha256": "070245a6b1f3ae5af1f060c3d577b360632c666ec434fb77f3e088b367717421",
+      "bytes": 654
+    },
+    {
+      "id": "20261107-settlement-hold",
+      "file": "deploy/baota/migrations/20261107-settlement-hold.sql",
+      "source": "APPLY",
+      "sha256": "0e4e1f6050720aa99e9db293d5ce3b2295094445d7bbdbd1fef5bbda6023c8db",
+      "bytes": 2241
+    },
+    {
+      "id": "20261107-user-favorites-follows",
+      "file": "deploy/baota/migrations/20261107-user-favorites-follows.sql",
+      "source": "APPLY",
+      "sha256": "5bd4a5a566bf7ef2d313a718b04c14a4bb03400347ffafa081566b83c2ccfe28",
+      "bytes": 634
+    },
+    {
+      "id": "20261108-dashboard-analytics",
+      "file": "deploy/baota/migrations/20261108-dashboard-analytics.sql",
+      "source": "APPLY",
+      "sha256": "80af96e04f719c092e9d7577b28d7375334ae3225c9595a92f82a56865cdf865",
+      "bytes": 903
+    },
+    {
+      "id": "20261108-notification-center",
+      "file": "deploy/baota/migrations/20261108-notification-center.sql",
+      "source": "APPLY",
+      "sha256": "48d4ed482607cd3bd94be6df2d1886d5dde7e051c07268fd8e99d95e5dbf39eb",
+      "bytes": 2030
+    },
+    {
+      "id": "20261108-two-stage-refunds",
+      "file": "deploy/baota/migrations/20261108-two-stage-refunds.sql",
+      "source": "APPLY",
+      "sha256": "c3cb7ef532f29f6d45de1bd82b5fbc275d6969602c32ca47178ec2f013d22446",
+      "bytes": 2201
+    },
+    {
+      "id": "20261109-official-wechat-one-wechat",
+      "file": "deploy/baota/migrations/20261109-official-wechat-one-wechat.sql",
+      "source": "APPLY",
+      "sha256": "8b0e2a1cf6a4195f333a6ad12f7a760a108f69785e088ccf5e358292a48d3f6a",
+      "bytes": 1147
+    },
+    {
+      "id": "20261112-coupon-multi-claim",
+      "file": "deploy/baota/migrations/20261112-coupon-multi-claim.sql",
+      "source": "APPLY",
+      "sha256": "6778ec1d9689bd0d8159eb561061996e6508c2cd1e11de0579f3641c16cda56c",
+      "bytes": 1887
+    },
+    {
+      "id": "20261112-marketing-display",
+      "file": "deploy/baota/migrations/20261112-marketing-display.sql",
+      "source": "APPLY",
+      "sha256": "bbd2484caef98b77639ac463302091308961b718230978afdf09df9cc59ba099",
+      "bytes": 792
+    },
+    {
+      "id": "20261116-privacy-request-review-note",
+      "file": "deploy/baota/migrations/20261116-privacy-request-review-note.sql",
+      "source": "APPLY",
+      "sha256": "5150fa5bec6d3067eddb3f2bba4066efdf13dbfc4e7d171a3a8b1ca26b84216f",
+      "bytes": 514
+    },
+    {
+      "id": "20261117-identity-attempt-limit",
+      "file": "deploy/baota/migrations/20261117-identity-attempt-limit.sql",
+      "source": "APPLY",
+      "sha256": "acbe48bf1439aae7b7365325a5cdb43b33f836306d1947693a44b6bc7d0912e7",
+      "bytes": 1139
+    },
+    {
+      "id": "20261117-sms-authority-delivery-key",
+      "file": "deploy/baota/migrations/20261117-sms-authority-delivery-key.sql",
+      "source": "APPLY",
+      "sha256": "032613d87bcb32629226774e6a83ab04872f1a25a3eaa8915eb83adc6a6e5309",
+      "bytes": 504
+    },
+    {
+      "id": "20261118-player-deposit-refund",
+      "file": "deploy/baota/migrations/20261118-player-deposit-refund.sql",
+      "source": "APPLY",
+      "sha256": "c6e8ed5cbb1e670e7f09b2f8082de7566409b34d45700e80dd72835ef3b6ee48",
+      "bytes": 1268
+    },
+    {
+      "id": "20261119-player-deposit-override",
+      "file": "deploy/baota/migrations/20261119-player-deposit-override.sql",
+      "source": "APPLY",
+      "sha256": "a3e0764d1f0751768c406b384517f4c7cccc1a732e39e7dc3bc0308aaf4a96b1",
+      "bytes": 431
+    },
+    {
+      "id": "20261123-wechat-operations",
+      "file": "deploy/baota/migrations/20261123-wechat-operations.sql",
+      "source": "APPLY",
+      "sha256": "23cea1a6ac840fe063d21ed0a4fe7dec490978a5afd87bd7c039005f09313df5",
+      "bytes": 3894
+    },
+    {
+      "id": "delta_game",
+      "file": "delta_game.sql",
+      "source": "BASELINE",
+      "sha256": "d94990b51e39535b57f1aada8855f983a0dbbb40d2116ff12511e4cb37ae1b86",
+      "bytes": 102751
+    },
+    {
+      "id": "delta_game_recharge_migration",
+      "file": "delta_game_recharge_migration.sql",
+      "source": "BASELINE",
+      "sha256": "71091b276a79f76da0be53298b315bdf857fff0ff5e07aff6a1366e45c60f04f",
+      "bytes": 232
+    },
+    {
+      "id": "analytics-v1",
+      "file": "delta-game/delta-admin/src/main/resources/db/analytics-v1.sql",
+      "source": "STARTUP",
+      "sha256": "80af96e04f719c092e9d7577b28d7375334ae3225c9595a92f82a56865cdf865",
+      "bytes": 903
+    },
+    {
+      "id": "governance-v1",
+      "file": "delta-game/delta-admin/src/main/resources/db/governance-v1.sql",
+      "source": "STARTUP",
+      "sha256": "d2c70b31cd49579acd3697557ff8d94944dffc0726cc66afe98f07e7a2c10122",
+      "bytes": 10038
+    },
+    {
+      "id": "workbench",
+      "file": "delta-game/delta-admin/src/main/resources/db/workbench.sql",
+      "source": "STARTUP",
+      "sha256": "070245a6b1f3ae5af1f060c3d577b360632c666ec434fb77f3e088b367717421",
+      "bytes": 654
+    }
+  ],
+  "duplicateChecksums": [
+    {
+      "sha256": "070245a6b1f3ae5af1f060c3d577b360632c666ec434fb77f3e088b367717421",
+      "files": [
+        "deploy/baota/migrations/20261106-workbench.sql",
+        "delta-game/delta-admin/src/main/resources/db/workbench.sql"
+      ]
+    },
+    {
+      "sha256": "80af96e04f719c092e9d7577b28d7375334ae3225c9595a92f82a56865cdf865",
+      "files": [
+        "deploy/baota/migrations/20261108-dashboard-analytics.sql",
+        "delta-game/delta-admin/src/main/resources/db/analytics-v1.sql"
+      ]
+    }
+  ]
+}
