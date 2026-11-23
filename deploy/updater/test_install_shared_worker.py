@@ -15,6 +15,7 @@ class SharedWorkerInstallTests(unittest.TestCase):
         unit = install_shared_worker.build_unit(template, "cangshuo-shared-worker:1.13.0")
         self.assertIn("cangshuo-shared-worker:1.13.0", unit)
         self.assertNotIn("@IMAGE@", unit)
+        self.assertIn("ExecStop=-/usr/bin/docker stop --time 20 delta-shared-worker", unit)
         config = json.loads(Path(__file__).with_name("shared-worker.json.example").read_text(encoding="utf-8"))
         if os.name != "nt":
             shared_release.validate_config(config)
