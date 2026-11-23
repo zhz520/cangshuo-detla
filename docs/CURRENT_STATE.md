@@ -7,7 +7,7 @@
 | 项目 | 当前值 |
 | --- | --- |
 | 源码工作区 | `D:\codeStudy\code\cangshuo-detla`（源码主仓；线上制品看正式标签） |
-| 当前开发候选 | `1.20.2`（已在 520 实装，未晋级共享组） |
+| 当前开发候选 | `1.20.3`（手机菜单预览修复；待 520 验证） |
 | 正式标签与提交 | `v1.19.0` → `4d349268a3463b99b02f03f6898e70ea405f3029` |
 | GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.19.0` |
 | 授权中心 | `0.8.4`，提交 `ff55a88`；SQLite 完整性检查通过 |
