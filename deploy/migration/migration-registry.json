@@ -174,8 +174,8 @@
       "id": "20261123-wechat-content",
       "file": "deploy/baota/migrations/20261123-wechat-content.sql",
       "source": "APPLY",
-      "sha256": "adf75a4e5e18d118a1e052af664a1bbc7b9964c7726dd7bab611377e6c957d0e",
-      "bytes": 1228
+      "sha256": "d723527d45e3de79ad8a4de6d98677de53b76b529955c2b2e262431f152418c8",
+      "bytes": 1296
     },
     {
       "id": "20261123-wechat-operations",
@@ -209,8 +209,8 @@
       "id": "governance-v1",
       "file": "delta-game/delta-admin/src/main/resources/db/governance-v1.sql",
       "source": "STARTUP",
-      "sha256": "2e74648a25899d3ef0ac5746e4fc6555229ac5334ec73341039253dcb4faea7a",
-      "bytes": 12883
+      "sha256": "c91b6ead7290a6b669dd066f594f5bfcb8c88ae7eb44963bfe06a59dc4eb964e",
+      "bytes": 12947
     },
     {
       "id": "workbench",

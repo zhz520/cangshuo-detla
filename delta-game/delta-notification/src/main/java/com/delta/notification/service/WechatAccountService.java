@@ -368,6 +368,31 @@ public class WechatAccountService {
         return post("https://api.weixin.qq.com" + pathAndQuery + separator + "access_token=" + encode(token), body);
     }
 
+    public JSONObject uploadMaterial(String accountId, String type, String filename, String contentType, byte[] bytes) throws Exception {
+        if (bytes == null || bytes.length == 0 || bytes.length > 10 * 1024 * 1024) throw new BusinessException(400, "素材必须为 1 字节至 10MB");
+        String normalized = Objects.toString(type, "").toLowerCase(Locale.ROOT);
+        if (!Set.of("image", "voice", "video", "thumb").contains(normalized)) throw new BusinessException(400, "不支持的素材类型");
+        String token = accessToken(accountId);
+        String safeName = Objects.toString(filename, "material").replaceAll("[^A-Za-z0-9._-]", "_");
+        String boundary = "----delta" + UUID.randomUUID().toString().replace("-", "");
+        String head = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"media\"; filename=\"" + safeName +
+                "\"\r\nContent-Type: " + Objects.toString(contentType, "application/octet-stream") + "\r\n\r\n";
+        String tail = "\r\n--" + boundary + "--\r\n";
+        byte[] headBytes = head.getBytes(StandardCharsets.UTF_8), tailBytes = tail.getBytes(StandardCharsets.UTF_8);
+        byte[] body = new byte[headBytes.length + bytes.length + tailBytes.length];
+        System.arraycopy(headBytes, 0, body, 0, headBytes.length);
+        System.arraycopy(bytes, 0, body, headBytes.length, bytes.length);
+        System.arraycopy(tailBytes, 0, body, headBytes.length + bytes.length, tailBytes.length);
+        HttpResponse<String> response = http.send(HttpRequest.newBuilder(URI.create("https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=" +
+                        encode(token) + "&type=" + encode(normalized)))
+                        .timeout(Duration.ofSeconds(30))
+                        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),
+                HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200 || response.body().length() > 100_000) throw new BusinessException(502, "微信公众号素材服务暂时不可用");
+        return JSON.parseObject(response.body());
+    }
+
     public String exchangeOpenid(String code) throws Exception {
         Account account = defaultAccount();
         if (account == null) return null;

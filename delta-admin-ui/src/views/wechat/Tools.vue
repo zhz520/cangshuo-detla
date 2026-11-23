@@ -64,7 +64,7 @@
         <DataTable :loading="busy" :data="tags" row-key="tagId" empty-text="还没有标签"><el-table-column prop="name" label="标签名称" min-width="220"/><el-table-column prop="fanCount" label="粉丝数" width="110"/><el-table-column label="操作" width="140" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openTag(row)">编辑</el-button><el-button link type="danger" @click="removeTag(row)">删除</el-button></template></el-table-column></DataTable>
       </el-tab-pane>
       <el-tab-pane label="素材" name="materials">
-        <div class="panel-head"><div><strong>公众号素材</strong><span>同步微信已有素材；上传能力仍在后续范围内。</span></div><div class="panel-actions"><el-select v-model="materialType" style="width:130px"><el-option label="图片" value="image"/><el-option label="语音" value="voice"/><el-option label="视频" value="video"/><el-option label="图文" value="news"/></el-select><el-button type="primary" @click="syncMaterials">同步素材</el-button></div></div>
+        <div class="panel-head"><div><strong>公众号素材</strong><span>同步微信已有素材或从后台上传素材。</span></div><div class="panel-actions"><el-select v-model="materialType" style="width:130px"><el-option label="图片" value="image"/><el-option label="语音" value="voice"/><el-option label="视频" value="video"/><el-option label="图文" value="news"/></el-select><el-upload :show-file-list="false" :http-request="uploadMaterial"><el-button type="primary">上传素材</el-button></el-upload><el-button type="primary" @click="syncMaterials">同步素材</el-button></div></div>
         <DataTable :loading="busy" :data="materials" row-key="mediaId" empty-text="还没有同步素材"><el-table-column prop="name" label="名称" min-width="220"/><el-table-column prop="type" label="类型" width="100"/><el-table-column prop="mediaId" label="Media ID" min-width="240" show-overflow-tooltip/><el-table-column prop="updateTime" label="更新时间" min-width="170"/><el-table-column label="链接" width="80"><template #default="{ row }"><a v-if="row.url" :href="row.url" target="_blank" rel="noopener noreferrer">查看</a><span v-else>-</span></template></el-table-column></DataTable>
       </el-tab-pane>
       <el-tab-pane label="统计" name="stats">
@@ -114,7 +114,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
-import { getWechatAccounts, getWechatMenu, saveWechatMenu, publishWechatMenu, importWechatMenu, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans, getWechatTags, syncWechatTags, saveWechatTag, deleteWechatTag, getWechatMaterials, syncWechatMaterials, getWechatStats } from '@/api/wechat-operations'
+import { getWechatAccounts, getWechatMenu, saveWechatMenu, publishWechatMenu, importWechatMenu, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans, getWechatTags, syncWechatTags, saveWechatTag, deleteWechatTag, getWechatMaterials, syncWechatMaterials, uploadWechatMaterial, getWechatStats } from '@/api/wechat-operations'
 
 const accounts = ref([]), selectedId = ref(''), active = ref('menu'), busy = ref(false)
 const menuJson = ref('{\n  "button": []\n}')
@@ -165,6 +165,7 @@ async function saveTag(){busy.value=true;try{await saveWechatTag(selectedId.valu
 async function removeTag(row){try{await ElMessageBox.confirm(`确认删除标签“${row.name}”？`,'删除标签',{type:'warning'})}catch{return}try{await deleteWechatTag(selectedId.value,row.tagId);ElMessage.success('标签已删除');await loadTags()}catch(e){ElMessage.error(e?.message||'标签删除失败')}}
 async function loadMaterials(){busy.value=true;try{materials.value=(await getWechatMaterials(selectedId.value,materialType.value)).data||[]}catch(e){ElMessage.error(e?.message||'素材读取失败')}finally{busy.value=false}}
 async function syncMaterials(){busy.value=true;try{const {data}=await syncWechatMaterials(selectedId.value,materialType.value);ElMessage.success(`已同步 ${data?.synced||0} 个素材`);await loadMaterials()}catch(e){ElMessage.error(e?.message||'素材同步失败')}finally{busy.value=false}}
+async function uploadMaterial(options){if(materialType.value==='news')return ElMessage.warning('图文素材请使用草稿接口');busy.value=true;try{await uploadWechatMaterial(selectedId.value,materialType.value,options.file);ElMessage.success('素材已上传');await loadMaterials()}catch(e){ElMessage.error(e?.message||'素材上传失败')}finally{busy.value=false}}
 async function loadStats(){try{stats.value=(await getWechatStats(selectedId.value)).data||{}}catch(e){ElMessage.error(e?.message||'统计读取失败')}}
 onMounted(loadAccounts)
 </script>

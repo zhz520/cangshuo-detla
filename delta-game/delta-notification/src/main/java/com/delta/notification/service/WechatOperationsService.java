@@ -344,6 +344,20 @@ public class WechatOperationsService {
         return Map.of("synced", synced, "type", normalized);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> uploadMaterial(String accountId, String type, String filename, String contentType, byte[] bytes) throws Exception {
+        String normalized = text(type).toLowerCase(Locale.ROOT);
+        JSONObject response = accounts.uploadMaterial(accountId, normalized, filename, contentType, bytes);
+        requireSuccess(response, "上传公众号素材失败");
+        String mediaId = response.getString("media_id");
+        if (mediaId == null || mediaId.isBlank()) throw new BusinessException(502, "微信未返回素材 Media ID");
+        String url = response.getString("url");
+        jdbc.update("INSERT INTO wechat_material(account_id,media_id,material_type,name,url,update_time) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) " +
+                        "ON DUPLICATE KEY UPDATE name=VALUES(name),url=VALUES(url),update_time=CURRENT_TIMESTAMP",
+                accountId, mediaId, normalized, truncate(filename, 200), truncate(url, 1024));
+        return materials(accountId, normalized).stream().filter(row -> mediaId.equals(row.get("mediaId"))).findFirst().orElseThrow();
+    }
+
     public Map<String, Object> stats(String accountId) {
         accounts.accountSummary(accountId);
         Map<String, Object> result = new LinkedHashMap<>();

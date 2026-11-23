@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:ed90045867a1ee016061b3d1a45f33d77342ac359a1f85ad770a2eac3f62383b",
+  "inputDigest": "sha256:2f421b4b2c5c9312949563948f143755b019f6d1dc784b79a77569b8f52bfa61",
   "counts": {
     "modules": 19,
     "controllers": 116,
@@ -575,7 +575,7 @@
         {
           "name": "WechatContentController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatContentController.java",
-          "endpoints": 9
+          "endpoints": 11
         },
         {
           "name": "WechatOperationsController",
@@ -585,7 +585,7 @@
         {
           "name": "WechatOperationsToolsController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsToolsController.java",
-          "endpoints": 22
+          "endpoints": 23
         },
         {
           "name": "WechatWebLoginController",
@@ -1707,7 +1707,9 @@
           "getWechatTags",
           "getWechatTemplateCatalog",
           "importWechatMenu",
+          "publishWechatArticle",
           "publishWechatMenu",
+          "pushWechatArticle",
           "saveWechatAccount",
           "saveWechatArticle",
           "saveWechatAutoReply",
@@ -1720,7 +1722,8 @@
           "syncWechatMaterials",
           "syncWechatTags",
           "syncWechatTemplates",
-          "transitionWechatMassSend"
+          "transitionWechatMassSend",
+          "uploadWechatMaterial"
         ],
         "urls": [
           "/admin/wechat/accounts"
@@ -2088,8 +2091,8 @@
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 533,
-    "operations": 533,
+    "endpoints": 536,
+    "operations": 536,
     "schemas": 282
   }
 }

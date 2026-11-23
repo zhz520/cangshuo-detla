@@ -870,6 +870,18 @@
     "path": "/admin/wechat/accounts/{id}/articles/{articleId}"
   },
   {
+    "controller": "WechatContentController",
+    "handler": "publishArticle",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/articles/{articleId}/publish"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "pushArticle",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/articles/{articleId}/push"
+  },
+  {
     "controller": "WechatOperationsToolsController",
     "handler": "autoReplies",
     "method": "GET",
@@ -946,6 +958,12 @@
     "handler": "syncMaterials",
     "method": "POST",
     "path": "/admin/wechat/accounts/{id}/materials/sync"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "uploadMaterial",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/materials/upload"
   },
   {
     "controller": "WechatOperationsToolsController",

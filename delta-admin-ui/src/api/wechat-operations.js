@@ -116,4 +116,5 @@ export function saveWechatTag(id, tagId, data) { return request({ url: tagId ? `
 export function deleteWechatTag(id, tagId) { return request({ url: `/admin/wechat/accounts/${id}/tags/${tagId}`, method: 'delete', data: {} }) }
 export function getWechatMaterials(id, type) { return request({ url: `/admin/wechat/accounts/${id}/materials`, method: 'get', params: { type } }) }
 export function syncWechatMaterials(id, type) { return request({ url: `/admin/wechat/accounts/${id}/materials/sync`, method: 'post', params: { type }, data: {} }) }
+export function uploadWechatMaterial(id, type, file) { const form = new FormData(); form.append('file', file); form.append('type', type); return request({ url: `/admin/wechat/accounts/${id}/materials/upload`, method: 'post', data: form }) }
 export function getWechatStats(id) { return request({ url: `/admin/wechat/accounts/${id}/stats`, method: 'get' }) }

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -179,6 +180,16 @@ public class WechatOperationsToolsController {
     @OpLog(module = "wechat", operation = "同步公众号素材")
     public R<Map<String, Object>> syncMaterials(@PathVariable String id, @RequestParam(required = false) String type, HttpServletRequest request) throws Exception {
         requireFeature(request); return R.ok(service.syncMaterials(id, type));
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/materials/upload")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "上传公众号素材")
+    public R<Map<String, Object>> uploadMaterial(@PathVariable String id, @RequestParam MultipartFile file,
+                                                  @RequestParam(required = false) String type,
+                                                  HttpServletRequest request) throws Exception {
+        requireFeature(request);
+        return R.ok(service.uploadMaterial(id, type, file.getOriginalFilename(), file.getContentType(), file.getBytes()));
     }
 
     @GetMapping("/admin/wechat/accounts/{id}/stats")
