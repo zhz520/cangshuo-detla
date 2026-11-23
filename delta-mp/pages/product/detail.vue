@@ -27,6 +27,7 @@
           <view class="head-copy">
             <text class="product-name">{{ product.name }}</text>
             <text v-if="product.subtitle" class="product-subtitle">{{ product.subtitle }}</text>
+            <text v-if="flashSale.active" class="flash-badge">限时秒杀 · 每账号限 1 单 · 剩余 {{ flashSale.remainingStock }} 份</text>
             <view class="rating-row" @click="openReviews">
               <text class="rating-star">★</text>
               <text class="rating-value">{{ ratingLabel }}</text>
@@ -149,7 +150,7 @@ import ScreenHeader from '@/components/ScreenHeader.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { productDescriptionHtml } from '@/utils/product-content'
-import { getProductRichDetail, getProductDetail } from '@/api/product'
+import { getProductRichDetail, getProductDetail, getFlashSale } from '@/api/product'
 import { getReviewsByProduct } from '@/api/review'
 import { openCustomerService } from '@/utils/customer-service'
 import { useSiteStore } from '@/store/site'
@@ -160,6 +161,7 @@ const siteStore = useSiteStore()
 const userStore = useUserStore()
 const designatedPlayerId = ref('')
 const product = ref(null)
+const flashSale = ref({ active: false })
 const swiperIdx = ref(0)
 const favorite = ref(false)
 const favoriteBusy = ref(false)
@@ -179,8 +181,9 @@ onShareTimeline(() => {
   return { title: p.name + ' ¥' + Number(p.price || 0).toFixed(2), query: 'id=' + p.id, imageUrl: p.coverImage || p.image || '' }
 })
 
-const priceInt = computed(() => Number(product.value?.price || 0).toFixed(2).split('.')[0])
-const priceDec = computed(() => Number(product.value?.price || 0).toFixed(2).split('.')[1])
+const displayPrice = computed(() => flashSale.value.active ? flashSale.value.price : product.value?.price)
+const priceInt = computed(() => Number(displayPrice.value || 0).toFixed(2).split('.')[0])
+const priceDec = computed(() => Number(displayPrice.value || 0).toFixed(2).split('.')[1])
 const ratingLabel = computed(() => Number(product.value?.avgRating || 5).toFixed(1))
 const reviewCountLabel = computed(() => reviewTotal.value ? '(' + reviewTotal.value + '条评价)' : '暂无评价')
 const limitLabel = computed(() => {
@@ -214,6 +217,7 @@ onLoad(async (opts) => {
     product.value = basic.data
   }
   if (product.value?.id) {
+    try { flashSale.value = (await getFlashSale(product.value.id)).data || { active: false } } catch { flashSale.value = { active: false } }
     await Promise.allSettled([syncFavoriteStatus(), loadReviews()])
   }
 })
@@ -286,9 +290,10 @@ async function goChat() {
 }
 function goBuy() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })
-  const price = product.value?.price || 0
+  const price = displayPrice.value || 0
   const name = encodeURIComponent(product.value.name)
-  uni.navigateTo({ url: '/pages/order/create?productId=' + product.value.id + '&amount=' + price + '&productName=' + name + (designatedPlayerId.value ? '&playerId=' + designatedPlayerId.value : '') })
+  const player = flashSale.value.active ? '' : designatedPlayerId.value
+  uni.navigateTo({ url: '/pages/order/create?productId=' + product.value.id + '&amount=' + price + '&productName=' + name + (player ? '&playerId=' + player : '') + (flashSale.value.active ? '&flashSale=1' : '') })
 }
 </script>
 <style lang="scss" scoped>
@@ -351,6 +356,7 @@ function goBuy() {
 .head-copy { flex: 1; min-width: 0; }
 .product-name { display: block; color: var(--store-text); font-size: 40rpx; font-weight: 850; line-height: 1.28; letter-spacing: -0.02em; }
 .product-subtitle { display: block; margin-top: 8rpx; color: var(--store-regular); font-size: 24rpx; line-height: 1.45; }
+.flash-badge { display: inline-flex; margin-top: 12rpx; padding: 6rpx 14rpx; border-radius: 999rpx; background: #fff0e8; color: #c4471b; font-size: 22rpx; font-weight: 700; }
 .rating-row { display: flex; align-items: center; gap: 8rpx; margin-top: 16rpx; color: var(--store-regular); font-size: 22rpx; }
 .rating-star { color: var(--store-text); font-size: 24rpx; }
 .rating-value { color: var(--store-text); font-weight: 800; }

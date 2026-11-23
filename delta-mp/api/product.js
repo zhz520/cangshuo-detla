@@ -9,6 +9,9 @@ export const getProductDetail = (id) => get(`/product/${id}`, {}, { auth: false 
 /** 商品详情 - 聚合API（含规格+价格规则+评价概要+评分分布+分类名+最低价） */
 export const getProductRichDetail = (id) => get(`/app/product/${id}`, {}, { auth: false })
 
+/** 当前商品进行中的秒杀活动（公开接口） */
+export const getFlashSale = (productId) => get('/product/flash-sale/active', { productId }, { auth: false })
+
 /** 推荐商品（公开接口），categoryId 不传或空为全部热门 */
 export const getRecommendProducts = (params = {}, opts = {}) => get('/product/recommend', params, { auth: false, ...opts })
 /** 热门推荐分类列表（首页 Tab：全部、护航专区推荐、热门推荐等） */
