@@ -20,13 +20,15 @@ public class WechatContentService {
 
     public List<Map<String, Object>> articles(String accountId) {
         accounts.accountSummary(accountId);
-        return jdbc.query("SELECT id,title,author,digest,cover_url,remote_media_id,status,created_at,updated_at " +
+        return jdbc.query("SELECT id,title,author,digest,content_html,cover_url,cover_media_id,remote_media_id,publish_id,status,created_at,updated_at " +
                         "FROM wechat_article_draft WHERE account_id=? ORDER BY updated_at DESC",
                 (rs, n) -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("id", rs.getLong("id")); row.put("title", rs.getString("title"));
                     row.put("author", rs.getString("author")); row.put("digest", rs.getString("digest"));
-                    row.put("coverUrl", rs.getString("cover_url")); row.put("remoteMediaId", rs.getString("remote_media_id"));
+                    row.put("contentHtml", rs.getString("content_html"));
+                    row.put("coverUrl", rs.getString("cover_url")); row.put("coverMediaId", rs.getString("cover_media_id"));
+                    row.put("remoteMediaId", rs.getString("remote_media_id")); row.put("publishId", rs.getString("publish_id"));
                     row.put("status", rs.getString("status")); row.put("createdAt", rs.getTimestamp("created_at"));
                     row.put("updatedAt", rs.getTimestamp("updated_at")); return row;
                 }, accountId);
@@ -40,12 +42,13 @@ public class WechatContentService {
         String digest = optional(body.get("digest"), 500);
         String html = optional(body.get("contentHtml"), 1_000_000);
         String coverUrl = optional(body.get("coverUrl"), 512);
+        String coverMediaId = optional(body.get("coverMediaId"), 128);
         if (id == null) {
-            jdbc.update("INSERT INTO wechat_article_draft(account_id,title,author,digest,content_html,cover_url,status) VALUES(?,?,?,?,?,?,'DRAFT')",
-                    accountId, title, author, digest, html, coverUrl);
+            jdbc.update("INSERT INTO wechat_article_draft(account_id,title,author,digest,content_html,cover_url,cover_media_id,status) VALUES(?,?,?,?,?,?,?,'DRAFT')",
+                    accountId, title, author, digest, html, coverUrl, coverMediaId);
             id = jdbc.queryForObject("SELECT id FROM wechat_article_draft WHERE account_id=? AND title=? ORDER BY id DESC LIMIT 1", Long.class, accountId, title);
-        } else if (jdbc.update("UPDATE wechat_article_draft SET title=?,author=?,digest=?,content_html=?,cover_url=?,status='DRAFT' WHERE id=? AND account_id=?",
-                title, author, digest, html, coverUrl, id, accountId) == 0) throw new BusinessException(404, "图文草稿不存在");
+        } else if (jdbc.update("UPDATE wechat_article_draft SET title=?,author=?,digest=?,content_html=?,cover_url=?,cover_media_id=?,status='DRAFT',remote_media_id=NULL,publish_id=NULL WHERE id=? AND account_id=?",
+                title, author, digest, html, coverUrl, coverMediaId, id, accountId) == 0) throw new BusinessException(404, "图文草稿不存在");
         Long savedId = id;
         return articles(accountId).stream().filter(row -> savedId.equals(row.get("id"))).findFirst().orElseThrow();
     }
@@ -54,6 +57,57 @@ public class WechatContentService {
     public void deleteArticle(String accountId, long id) {
         if (jdbc.update("DELETE FROM wechat_article_draft WHERE id=? AND account_id=?", id, accountId) == 0)
             throw new BusinessException(404, "图文草稿不存在");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> pushArticle(String accountId, long id) throws Exception {
+        Map<String, Object> article = article(accountId, id);
+        if (article == null) throw new BusinessException(404, "图文草稿不存在");
+        String html = optional(article.get("contentHtml"), 1_000_000);
+        String coverMediaId = optional(article.get("coverMediaId"), 128);
+        if (html.isBlank()) throw new BusinessException(400, "请先填写图文正文");
+        if (coverMediaId.isBlank()) throw new BusinessException(400, "推送微信草稿前需要填写封面素材 Media ID");
+        JSONObject node = new JSONObject();
+        node.put("title", article.get("title"));
+        node.put("author", Objects.toString(article.get("author"), ""));
+        node.put("digest", Objects.toString(article.get("digest"), ""));
+        node.put("content", html);
+        node.put("thumb_media_id", coverMediaId);
+        node.put("need_open_comment", 0);
+        node.put("only_fans_can_comment", 0);
+        JSONObject response = accounts.apiPost(accountId, "/cgi-bin/draft/add", Map.of("articles", List.of(node)));
+        if (response.getIntValue("errcode") != 0) throw new BusinessException(502, "推送微信草稿失败（错误码 " + response.getIntValue("errcode") + "）");
+        String mediaId = response.getString("media_id");
+        if (mediaId == null || mediaId.isBlank()) throw new BusinessException(502, "微信未返回图文草稿 Media ID");
+        jdbc.update("UPDATE wechat_article_draft SET remote_media_id=?,status='PUSHED',publish_id=NULL WHERE id=? AND account_id=?", mediaId, id, accountId);
+        return article(accountId, id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> publishArticle(String accountId, long id) throws Exception {
+        Map<String, Object> article = article(accountId, id);
+        if (article == null) throw new BusinessException(404, "图文草稿不存在");
+        if (!"PUSHED".equals(article.get("status"))) throw new BusinessException(409, "请先推送微信草稿");
+        String mediaId = optional(article.get("remoteMediaId"), 128);
+        if (mediaId.isBlank()) throw new BusinessException(409, "微信草稿 Media ID 不存在，请重新推送");
+        JSONObject response = accounts.apiPost(accountId, "/cgi-bin/freepublish/submit", Map.of("media_id", mediaId));
+        if (response.getIntValue("errcode") != 0) throw new BusinessException(502, "发布公众号图文失败（错误码 " + response.getIntValue("errcode") + "）");
+        jdbc.update("UPDATE wechat_article_draft SET publish_id=?,status='PUBLISHED' WHERE id=? AND account_id=?",
+                response.getString("publish_id"), id, accountId);
+        return article(accountId, id);
+    }
+
+    private Map<String, Object> article(String accountId, long id) {
+        List<Map<String, Object>> rows = jdbc.query("SELECT id,title,author,digest,content_html AS contentHtml,cover_url AS coverUrl," +
+                        "cover_media_id AS coverMediaId,remote_media_id AS remoteMediaId,publish_id AS publishId,status,created_at AS createdAt,updated_at AS updatedAt " +
+                        "FROM wechat_article_draft WHERE id=? AND account_id=?",
+                (rs, n) -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    for (String column : List.of("id","title","author","digest","contentHtml","coverUrl","coverMediaId","remoteMediaId","publishId","status")) row.put(column, rs.getObject(column));
+                    row.put("createdAt", rs.getTimestamp("createdAt")); row.put("updatedAt", rs.getTimestamp("updatedAt"));
+                    return row;
+                }, id, accountId);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     public List<Map<String, Object>> tasks(String accountId) {

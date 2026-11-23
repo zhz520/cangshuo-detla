@@ -91,6 +91,8 @@ export function saveWechatArticle(id, articleId, data) {
 export function deleteWechatArticle(id, articleId) {
   return request({ url: `/admin/wechat/accounts/${id}/articles/${articleId}`, method: 'delete', data: {} })
 }
+export function pushWechatArticle(id, articleId) { return request({ url: `/admin/wechat/accounts/${id}/articles/${articleId}/push`, method: 'post', data: {} }) }
+export function publishWechatArticle(id, articleId) { return request({ url: `/admin/wechat/accounts/${id}/articles/${articleId}/publish`, method: 'post', data: {} }) }
 
 export function getWechatMassSends(id) {
   return request({ url: `/admin/wechat/accounts/${id}/mass-sends`, method: 'get' })

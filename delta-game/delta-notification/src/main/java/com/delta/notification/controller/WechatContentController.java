@@ -48,6 +48,22 @@ public class WechatContentController {
         required(request); service.deleteArticle(id, articleId); return R.ok();
     }
 
+    @PostMapping("/admin/wechat/accounts/{id}/articles/{articleId}/push")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "推送公众号图文草稿")
+    public R<Map<String, Object>> pushArticle(@PathVariable String id, @PathVariable long articleId,
+                                              HttpServletRequest request) throws Exception {
+        required(request); return R.ok(service.pushArticle(id, articleId));
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/articles/{articleId}/publish")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "发布公众号图文")
+    public R<Map<String, Object>> publishArticle(@PathVariable String id, @PathVariable long articleId,
+                                                 HttpServletRequest request) throws Exception {
+        required(request); return R.ok(service.publishArticle(id, articleId));
+    }
+
     @GetMapping("/admin/wechat/accounts/{id}/mass-sends")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     public R<List<Map<String, Object>>> tasks(@PathVariable String id, HttpServletRequest request) {
