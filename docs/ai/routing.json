@@ -136,6 +136,8 @@
           "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatNotificationDeliveryTest.java",
           "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatBindingGatewayContractTest.java",
           "delta-admin-ui/test/wechat-auto-template-browser.mjs",
+        "delta-admin-ui/test/login-wechat-template-entry-browser.mjs",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/controller/RetiredWechatSysConfigTest.java",
           "delta-game/delta-admin/src/test/java/com/delta/admin/WechatNotificationSenderRequestTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java",
         "delta-admin-ui/test/wechat-template-mapping.test.mjs",

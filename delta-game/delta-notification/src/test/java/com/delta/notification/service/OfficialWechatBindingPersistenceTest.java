@@ -36,7 +36,7 @@ class OfficialWechatBindingPersistenceTest {
         configs = Mockito.mock(SysConfigService.class);
         platform = Mockito.mock(PlatformService.class);
         var sender = Mockito.mock(WechatNotificationSender.class);
-        Mockito.when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","LEGACY","","legacy",List.of()));
+        Mockito.when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","UNAVAILABLE","","",List.of()));
         service = new OfficialWechatService(
                 jdbc, sender, Mockito.mock(WechatOpenPlatformClient.class),
                 configs,
@@ -85,14 +85,14 @@ class OfficialWechatBindingPersistenceTest {
     }
 
     @Test
-    void bindingStatusListsMissingRoleTemplatesWithoutBlockingBinding() {
+    void loginBindingAloneDoesNotMakeAnUnconfiguredSenderReady() {
         service.saveBinding("ADMIN", 11L, "openid-admin-123");
         Mockito.when(platform.featureEnabled(OfficialWechatService.FEATURE_ID)).thenReturn(true);
         Mockito.when(configs.getConfigValue("wechat.official.enabled", "auto")).thenReturn("true");
 
         var status = service.binding("ADMIN", 11L);
 
-        assertThat(status).containsEntry("bound", true).containsEntry("templateReady", false);
+        assertThat(status).containsEntry("enabled", false).containsEntry("bound", false).containsEntry("templateReady", false);
         assertThat((List<String>) status.get("missingTemplateGroups"))
                 .containsExactly("new_order", "order_status", "refund_status", "complaint_status", "staff_review");
     }

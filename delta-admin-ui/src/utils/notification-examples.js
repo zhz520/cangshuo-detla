@@ -265,11 +265,14 @@ export function notificationConfigExample(configKey) {
 
 export function notificationConfigGuide(configKey) {
   const parsed = parseConfigKey(configKey)
-  if (!parsed) return null
-  const role = ROLE_META[parsed.roleKey]
-  const channel = parsed.channel
+  return parsed ? notificationRoleGuide(parsed.channel, parsed.roleKey) : null
+}
+
+export function notificationRoleGuide(channel, roleKey) {
+  if (!['wechat', 'sms'].includes(channel) || !Object.hasOwn(ROLE_META, roleKey)) return null
+  const role = ROLE_META[roleKey]
   return {
-    ...parsed,
+    channel, roleKey,
     roleLabel: role.label,
     roleDescription: role.description,
     provider: channel === 'wechat' ? '微信公众号后台' : '阿里云短信控制台',
@@ -282,7 +285,7 @@ export function notificationConfigGuide(configKey) {
       trigger: item.trigger,
       content: channel === 'wechat' ? item.wechatContent : item.smsContent,
       fields: { ...(channel === 'wechat' ? item.wechatFields : item.smsFields) },
-      finalExample: ROLE_SAMPLES[parsed.roleKey][item.key]
+      finalExample: ROLE_SAMPLES[roleKey][item.key]
     })),
     providerSteps: channel === 'wechat'
       ? [

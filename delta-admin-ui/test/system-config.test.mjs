@@ -54,14 +54,19 @@ test('official notification fields follow the paid feature and save only visible
   )
 })
 
-test('official notification settings expose one dedicated template group per role', () => {
+test('account-bound templates never enter the generic login form or its save payload', () => {
   const legacy = config('wechat.official.template.new_order', '旧版通用模板', '公众号通知')
   const roles = ['user', 'player', 'admin', 'cs'].map(role =>
     config(`wechat.official.templates.${role}`, `${role}专属模板`, '公众号通知'))
   const enabled = new Set(['official_wechat_notifications'])
 
-  assert.equal(isSystemConfigVisible(legacy, enabled), false)
-  assert.deepEqual(editableSystemConfigs([legacy, ...roles], enabled).map(item => item.configKey), roles.map(item => item.configKey))
+  const login = config('wechat.official.app_id', '公众号 AppID', '公众号通知')
+  for (const field of [legacy, ...roles]) {
+    assert.equal(isSystemConfigVisible(field, enabled), false)
+    assert.equal(configSection(field.configKey), '')
+  }
+  assert.deepEqual(editableSystemConfigs([legacy, login, ...roles], enabled), [login])
+  assert.ok(!configTabs.flatMap(tab => tab.panels).some(panel => panel.id === 'wechat-templates'))
 })
 
 test('system config groups keep a stable menu order and expose item counts', () => {

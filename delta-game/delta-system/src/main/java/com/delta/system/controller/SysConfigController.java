@@ -8,6 +8,7 @@ import com.delta.system.entity.SysConfig;
 import com.delta.system.dto.RechargePackage;
 import com.delta.system.service.SysConfigService;
 import com.delta.system.support.SysConfigMetadataRepair;
+import com.delta.system.support.RetiredWechatTemplateKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +34,10 @@ public class SysConfigController {
     @GetMapping("/list")
     public R<List<SysConfig>> list() {
         ensureBuiltinConfigs();
-        List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>().orderByAsc(SysConfig::getId))
+        List<SysConfig> list=sysConfigService.list(new LambdaQueryWrapper<SysConfig>()
+                        .notLikeRight(SysConfig::getConfigKey, RetiredWechatTemplateKeys.EVENT)
+                        .notLikeRight(SysConfig::getConfigKey, RetiredWechatTemplateKeys.ROLE)
+                        .orderByAsc(SysConfig::getId))
                 .stream().filter(config -> !retiredOrDedicated(config.getConfigKey())).toList();
         repairMetadata(list);
         list.forEach(c -> {if(secret(c.getConfigKey()) && c.getConfigValue()!=null && !c.getConfigValue().isBlank()) c.setConfigValue("********");});
@@ -184,11 +188,6 @@ public class SysConfigController {
         ensureConfig("wechat.official.staff_redirect_url","管理员与客服绑定回调页","","text","公众号通知","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/h5/wechat-binding；旧 /mobile/wechat-binding 配置会自动改写；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
         syncConfigMetadata("wechat.official.staff_redirect_url","管理员与客服绑定回调页","工作人员后台的HTTPS绑定页，例如 https://staff.example.com/h5/wechat-binding；旧 /mobile/wechat-binding 配置会自动改写；不含#和查询参数，并在微信后台配置该后台域名为网页授权域名");
         migrateLegacyStaffRedirect();
-        ensureConfig("wechat.official.templates.user","客户专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
-        ensureConfig("wechat.official.templates.player","打手专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
-        ensureConfig("wechat.official.templates.admin","管理员专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
-        ensureConfig("wechat.official.templates.cs","客服专属模板组","{}","json","公众号通知","按事件直接填写微信模板ID和参数；支持当前官方thing/character_string/time/amount等字段类型");
-        for(String event:java.util.List.of("new_order","order_accepted","order_completed","material_reviewed","withdraw_reviewed"))ensureConfig("wechat.official.template."+event,"模板映射："+event,"{}","json","公众号通知","JSON：templateId及fields；系统数据源可在公众号通知配置页按分类查看，字段名需与微信模板一致");
         ensureConfig("site.tech_support_text", "技术支持文字", "KK云网络提供技术支持", "text", "站点配置",
                 "显示在用户、打手和客服“我的”页面底部，最多80个字符");
         ensureConfig("site.tech_support_url", "技术支持链接", "", "text", "站点配置",
@@ -318,6 +317,7 @@ public class SysConfigController {
     }
 
     private boolean retiredOrDedicated(String key) {
+        if (RetiredWechatTemplateKeys.matches(key)) return true;
         return key != null && (key.startsWith("sms.gateway.") || key.startsWith("sms.notification.templates.")
                 || key.startsWith("sms.aliyun.template_code.") || key.startsWith("sms.aliyun.access_key_")
                 || java.util.Set.of("sms.aliyun.enabled", "sms.aliyun.endpoint", "sms.aliyun.sign_name",
@@ -327,6 +327,7 @@ public class SysConfigController {
     }
     private boolean secret(String key) {return java.util.Set.of("wx.pay.api-v3-key","wx.pay.official-appsecret","sms.aliyun.access_key_secret","sms.gateway.secret","risk.media.token","wechat.official.app_secret","email.notifications.password").contains(key==null?"":key);}
     private void updateValue(SysConfig submitted) {
+        RetiredWechatTemplateKeys.rejectWrite(submitted.getConfigKey());
         SysConfig old=submitted.getId()==null?null:sysConfigService.getById(submitted.getId());
         if(old==null) throw new com.delta.common.exception.BusinessException(404,"配置项不存在");
         String key=old.getConfigKey(),value=submitted.getConfigValue();
@@ -371,8 +372,6 @@ public class SysConfigController {
                 throw new com.delta.common.exception.BusinessException(400,"邀请奖励金额须为 0.01 至 100000 元，最多两位小数");
             }
         }
-        if(key.startsWith("wechat.official.template.")) validateOfficialTemplate(value);
-        if(key.startsWith("wechat.official.templates.")) validateOfficialRoleTemplates(value);
         if(key.startsWith("sms.notification.templates.")) validateSmsRoleTemplates(value);
         if(java.util.Set.of("risk.media.endpoint","wechat.official.redirect_url","wechat.official.staff_redirect_url").contains(key)&&!value.isBlank())try{var uri=java.net.URI.create(value);if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null||uri.getFragment()!=null)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"请填写有效HTTPS地址");}
         if("risk.freeze_threshold".equals(key))try{int n=Integer.parseInt(value);if(n<1||n>100)throw new IllegalArgumentException();}catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"违规阈值须为1至100之间整数");}
@@ -464,11 +463,17 @@ public class SysConfigController {
     /** Prevent save operations that would leave every web login entry unreachable. */
     private void validateCombined(List<SysConfig> submitted) {
         Map<String, String> values = new java.util.HashMap<>();
-        for (SysConfig row : sysConfigService.list()) values.put(row.getConfigKey(), row.getConfigValue());
+        for (SysConfig row : sysConfigService.list(new LambdaQueryWrapper<SysConfig>().in(SysConfig::getConfigKey,
+                List.of("auth.phone.enabled", "auth.password.enabled", "auth.wechat.enabled", "auth.primary_method",
+                        "wechat.official.app_id", "wechat.official.app_secret")))) values.put(row.getConfigKey(), row.getConfigValue());
         for (SysConfig row : submitted) {
-            if (row == null || row.getId() == null || row.getConfigValue() == null) continue;
+            if (row == null || row.getId() == null) continue;
+            RetiredWechatTemplateKeys.rejectWrite(row.getConfigKey());
             SysConfig old = sysConfigService.getById(row.getId());
-            if (old != null) values.put(old.getConfigKey(), row.getConfigValue());
+            if (old != null) {
+                RetiredWechatTemplateKeys.rejectWrite(old.getConfigKey());
+                if (row.getConfigValue() != null) values.put(old.getConfigKey(), row.getConfigValue());
+            }
         }
         boolean phone = "true".equalsIgnoreCase(values.getOrDefault("auth.phone.enabled", "true"));
         boolean password = "true".equalsIgnoreCase(values.getOrDefault("auth.password.enabled", "true"));
@@ -481,60 +486,6 @@ public class SysConfigController {
             throw new com.delta.common.exception.BusinessException(400, "至少保留一种可用的网页登录方式，并先完成公众号配置后再关闭手机与密码登录");
         if ("WECHAT".equalsIgnoreCase(values.getOrDefault("auth.primary_method", "PHONE")) && !wechat && !phone)
             throw new com.delta.common.exception.BusinessException(400, "微信凭据未配置。请保留手机验证码登录作为兜底");
-    }
-
-    private void validateOfficialTemplate(String value) {
-        try {
-            var obj = com.alibaba.fastjson2.JSON.parseObject(value);
-            validateOfficialTemplateNode(obj);
-        } catch (Exception e) {
-            throw new com.delta.common.exception.BusinessException(400,"模板映射须包含templateId和有效fields字段映射");
-        }
-    }
-
-    private void validateOfficialTemplateNode(com.alibaba.fastjson2.JSONObject obj) {
-        if (obj == null) throw new IllegalArgumentException();
-        if (obj.isEmpty()) return;
-        if (obj.getString("templateId") == null || obj.getString("templateId").isBlank()) throw new IllegalArgumentException();
-        var fields = obj.getJSONObject("fields");
-        if (fields == null || fields.isEmpty() || fields.size() > 20) throw new IllegalArgumentException();
-        for (String field : fields.keySet()) {
-            if (!field.matches("[A-Za-z_]+[0-9]*")
-                    || !NotificationTemplateSources.KEYS.contains(fields.getString(field))) {
-                throw new IllegalArgumentException();
-            }
-        }
-        String url = obj.getString("url");
-        if (url != null && !url.isBlank()) {
-            if (url.length() > 2000) throw new IllegalArgumentException();
-            var uri = java.net.URI.create(url.trim());
-            String scheme = java.util.Objects.toString(uri.getScheme(),"").toLowerCase(java.util.Locale.ROOT);
-            if (!java.util.Set.of("http","https").contains(scheme) || uri.getHost() == null || uri.getUserInfo() != null || uri.getFragment() != null) throw new IllegalArgumentException();
-        }
-        var mini = obj.getJSONObject("miniprogram");
-        if (mini != null) {
-            String appid = java.util.Objects.toString(mini.getString("appid"),"").trim();
-            String pagepath = java.util.Objects.toString(mini.getString("pagepath"),"").trim();
-            if (!appid.isBlank() || !pagepath.isBlank()) {
-                if (!appid.matches("[A-Za-z0-9_-]{2,64}") || pagepath.isBlank() || pagepath.length() > 200) throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    private void validateOfficialRoleTemplates(String value) {
-        try {
-            var templates = com.alibaba.fastjson2.JSON.parseObject(value);
-            if (templates == null) throw new IllegalArgumentException();
-            java.util.Set<String> groups = java.util.Set.of("new_order","order_status","order_accepted","order_completed","material_reviewed","withdraw_reviewed","refund_status","complaint_status","staff_review");
-            for (String group : templates.keySet()) {
-                if (!groups.contains(group)) throw new IllegalArgumentException();
-                Object node = templates.get(group);
-                if (!(node instanceof com.alibaba.fastjson2.JSONObject template)) throw new IllegalArgumentException();
-                validateOfficialTemplateNode(template);
-            }
-        } catch (Exception e) {
-            throw new com.delta.common.exception.BusinessException(400,"角色模板组须按事件分组配置templateId和有效fields字段映射");
-        }
     }
 
     private void validateSmsRoleTemplates(String value) {

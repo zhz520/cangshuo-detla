@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.21.0",
-  "inputDigest": "sha256:a13515e8be7c1f43a5030e31e85fc279a8d4ee7125454d1aad6d98ff52b1fc19",
+  "inputDigest": "sha256:8ddc1a9517844bae4732ec0cccbd49ce54b9780de0d0f2283fd589c9292a852e",
   "counts": {
     "modules": 19,
     "controllers": 117,
@@ -10,8 +10,8 @@
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 41,
-    "backendTests": 136,
-    "adminTests": 43,
+    "backendTests": 137,
+    "adminTests": 44,
     "h5Tests": 24
   },
   "modules": [
@@ -150,6 +150,7 @@
         "delta-game/delta-admin/src/test/java/com/delta/admin/chat/GuestChatAuthorizationTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/config/DatabaseCompatibilityTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/config/ProductionSecurityValidatorTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/controller/RetiredWechatSysConfigTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/controller/RuntimeIdentityControllerTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigControllerRepairTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/controller/SysConfigPublicSiteTest.java",
@@ -859,7 +860,7 @@
         "delta-common",
         "delta-system"
       ],
-      "mainJavaCount": 55,
+      "mainJavaCount": 56,
       "controllers": [
         {
           "name": "AdminChatController",
@@ -1768,6 +1769,7 @@
       "delta-admin-ui/test/image-url.test.mjs",
       "delta-admin-ui/test/latest-task.test.mjs",
       "delta-admin-ui/test/login-security.test.mjs",
+      "delta-admin-ui/test/login-wechat-template-entry-browser.mjs",
       "delta-admin-ui/test/marketing-admin.test.mjs",
       "delta-admin-ui/test/mobile-dashboard.test.mjs",
       "delta-admin-ui/test/mobile-layout-normalization.test.mjs",

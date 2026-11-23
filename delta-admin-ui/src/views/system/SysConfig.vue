@@ -50,7 +50,9 @@
                 <h3><component :is="panelIcons[panel.id] || Document" aria-hidden="true" />{{ panel.title }}</h3>
                 <el-button v-if="panel.id === 'deposit'" link type="primary"
                   @click="router.push(mobileShell ? '/h5/player-level' : '/player-level')">设置各等级提现押金</el-button>
-                <span v-else-if="panel.status" class="settings-tag" :class="{ incomplete:panel.status === 'incomplete' }">
+                <el-button v-if="panel.id === 'wechat' && can('system.manage') && platformFeatureAllowed('official_wechat_notifications')"
+                  link type="primary" native-type="button" @click="router.push(mobileShell ? '/h5/wechat/accounts' : '/wechat/accounts')">管理公众号模板</el-button>
+                <span v-if="panel.status" class="settings-tag" :class="{ incomplete:panel.status === 'incomplete' }">
                   {{ panel.status === 'incomplete' ? '未配置' : '已配置' }}
                 </span>
               </div>
@@ -119,7 +121,7 @@ import SystemConfigField from '@/components/SystemConfigField.vue'
 import { batchUpdateSysConfig, getSysConfigList, uploadWxPayCertificate } from '@/api/system'
 import { can } from '@/utils/staff-permissions'
 import { enabledPlatformFeatures, loadPlatformFeatureVisibility, platformFeatureAllowed, platformFeatureError } from '@/utils/platform-feature-visibility'
-import { editableSystemConfigs } from '@/utils/system-config'
+import { editableSystemConfigs, isSmsTemplateField } from '@/utils/system-config'
 import { configGroups, configTabs, configSection, configReadiness, defaultConfigTab, orderConfigFields } from '@/utils/config-sections'
 
 const MembershipLevels = defineAsyncComponent(() => import('@/views/marketing/MembershipLevels.vue'))
@@ -179,11 +181,10 @@ function dirtyFields(tab) {
 const unsaved = tab => !props.readOnly && (dirtyFields(tab).length > 0 || !!editorDirty[tab])
 const hasDrafts = computed(() => allowedTabs.value.some(tab => unsaved(tab.id)))
 const readiness = tab => props.readOnly ? null : configReadiness(tab, snapshotLoaded.value ? previousValues.value : null)
-const templateField = key => /^(wechat\.official\.templates|sms\.notification\.templates)\.(user|player|admin|cs)$/.test(key)
 const displayedPanels = computed(() => active.value.panels.flatMap(panel => {
   const all = orderConfigFields(fieldsByPanel.value.get(panel.id) || [])
   if (!all.length) return []
-  return [{ ...panel, fields: all.filter(item => !templateField(item.configKey)), templates: all.filter(item => templateField(item.configKey)),
+  return [{ ...panel, fields: all.filter(item => !isSmsTemplateField(item.configKey)), templates: all.filter(item => isSmsTemplateField(item.configKey)),
     status: ['wechat','sms'].includes(panel.id) ? readiness(active.value.id) : null }]
 }))
 function templateSelected(panel) {

@@ -1,7 +1,6 @@
 package com.delta.notification.service;
 
 import com.delta.common.exception.BusinessException;
-import com.delta.system.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,12 +13,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WechatNotificationSender {
     private final JdbcTemplate jdbc;
-    private final SysConfigService configs;
 
     public record Candidate(String id, String name, String appId) {}
     public record Selection(String mode, String status, String accountId, String appId, List<Candidate> candidates) {
         boolean managed() { return "MANAGED".equals(status); }
-        boolean ready() { return managed() || "DIRECT".equals(status) || "LEGACY".equals(status); }
+        boolean ready() { return managed() || "DIRECT".equals(status); }
     }
     public record Choice(String mode, String accountId) {}
 
@@ -37,11 +35,6 @@ public class WechatNotificationSender {
         if (!"AUTO".equals(choice.mode())) return idle(choice,"UNAVAILABLE",candidates);
         var direct = candidates("DIRECT");
         if (!direct.isEmpty()) return selected(choice,"DIRECT",direct.get(0),candidates);
-        String legacy = configs.getConfigValue("wechat.official.app_id","");
-        if (legacy != null && !legacy.isBlank() && !java.util.Objects.toString(
-                configs.getConfigValue("wechat.official.app_secret",""),"").isBlank() &&
-                jdbc.queryForList("SELECT id FROM wechat_mp_account WHERE app_id=? AND enabled=0",String.class,legacy.trim()).isEmpty())
-            return new Selection("AUTO","LEGACY","",legacy.trim(),candidates);
         if (candidates.size() == 1) return selected(choice,"MANAGED",candidates.get(0),candidates);
         return idle(choice,candidates.isEmpty() ? "UNAVAILABLE" : "CHOICE_REQUIRED",candidates);
     }

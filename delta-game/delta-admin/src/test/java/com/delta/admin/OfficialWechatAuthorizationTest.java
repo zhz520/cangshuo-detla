@@ -64,7 +64,7 @@ class OfficialWechatAuthorizationTest {
         var platform = mock(PlatformService.class);
         var redis = mock(StringRedisTemplate.class);
         var sender = mock(WechatNotificationSender.class);
-        when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","LEGACY","","wx1234567890",List.of()));
+        when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","DIRECT","direct","wx1234567890",List.of()));
         var service = new OfficialWechatService(jdbc, sender, mock(WechatOpenPlatformClient.class),configs,
                 new com.delta.notification.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
         doThrow(new BusinessException(403, "domain denied"))
@@ -107,12 +107,11 @@ class OfficialWechatAuthorizationTest {
         @SuppressWarnings("unchecked") var values = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
         when(configs.getConfigValue("wechat.official.enabled", "auto")).thenReturn("true");
-        when(configs.getConfigValue("wechat.official.app_id", "")).thenReturn("wx1234567890");
         when(configs.getConfigValue("wechat.official.redirect_url", "")).thenReturn("https://shop.example.com/");
         when(configs.getConfigValue("wechat.official.staff_redirect_url", ""))
                 .thenReturn("https://staff.example.com/mobile/wechat-binding");
         var sender = mock(WechatNotificationSender.class);
-        when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","LEGACY","","wx1234567890",List.of()));
+        when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","DIRECT","direct","wx1234567890",List.of()));
         var service = new OfficialWechatService(jdbc, sender, mock(WechatOpenPlatformClient.class),configs,
                 new com.delta.notification.service.NotificationTemplateDataService(jdbc), permissions, platform, redis);
 

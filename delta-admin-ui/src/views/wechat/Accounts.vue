@@ -193,7 +193,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
-import { notificationConfigGuide } from '@/utils/notification-examples'
+import { notificationRoleGuide } from '@/utils/notification-examples'
 import { existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
@@ -255,8 +255,8 @@ const roleNames = { USER: '客户', PLAYER: '打手', ADMIN: '管理员', CS: '�
 const mappingStatusLabels = { READY: '映射就绪', DISABLED: '已停用', CATALOG_MISSING: '模板已移除', TEMPLATE_MISSING: '缺模板' }
 const selectedAccount = computed(() => accounts.value.find(row => row.id === selectedId.value) || null)
 const callbackUrl = computed(() => selectedId.value ? `${window.location.origin}/common/wechat/callback/${selectedId.value}` : '')
-const sourceGroups = computed(() => notificationConfigGuide('wechat.official.templates.admin')?.sourceGroups || [])
-const eventMap = computed(() => Object.fromEntries((notificationConfigGuide('wechat.official.templates.admin')?.events || []).map(item => [item.key, item])))
+const sourceGroups = computed(() => notificationRoleGuide('wechat', 'admin')?.sourceGroups || [])
+const eventMap = computed(() => Object.fromEntries((notificationRoleGuide('wechat', 'admin')?.events || []).map(item => [item.key, item])))
 
 function roleLabel(role) { return roleNames[role] || role || '-' }
 function scenarioLabel(scenario) { return eventMap.value[scenario]?.label || scenario }
@@ -453,7 +453,7 @@ function openTemplate(row) {
   if (!row || loadedAccountId.value !== selectedId.value || loadingCatalog.value) return
   templateAccountId = selectedId.value
   const { role, scenario } = row
-  const guide = notificationConfigGuide(`wechat.official.templates.${roleKeys[role] || 'admin'}`)
+  const guide = notificationRoleGuide('wechat', roleKeys[role] || 'admin')
   const event = guide?.events?.find(item => item.key === scenario)
   const authority = authoritySchemes.value.find(item => item.role === role && item.scenario === scenario)
   const suggested = !row.configured && selectedAccount.value?.mode === 'OPEN_PLATFORM'

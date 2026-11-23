@@ -7,6 +7,7 @@ import com.delta.system.dto.RechargePackage;
 import com.delta.system.entity.SysConfig;
 import com.delta.system.mapper.SysConfigMapper;
 import com.delta.system.service.SysConfigService;
+import com.delta.system.support.RetiredWechatTemplateKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -36,6 +37,7 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
 
     @Override
     public String getConfigValue(String key) {
+        if (RetiredWechatTemplateKeys.matches(key)) return null;
         String cached = redisService.getCacheObject(CACHE_PREFIX + key);
         if (cached != null) return cached;
         SysConfig config = getOne(new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, key));
@@ -138,12 +140,23 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
     }
 
     @Override
+    public boolean save(SysConfig entity) {
+        RetiredWechatTemplateKeys.rejectWrite(entity.getConfigKey());
+        return super.save(entity);
+    }
+
+    private void checkUpdateKey(SysConfig entity) {
+        RetiredWechatTemplateKeys.rejectWrite(entity.getConfigKey());
+        if (entity.getId() == null) return;
+        SysConfig old = getById(entity.getId());
+        if (old == null) return;
+        RetiredWechatTemplateKeys.rejectWrite(old.getConfigKey());
+        if (entity.getConfigKey() == null) entity.setConfigKey(old.getConfigKey());
+    }
+
+    @Override
     public boolean updateById(SysConfig entity) {
-        // 先查出 configKey 再清缓存（前端可能只传 id + configValue）
-        if (entity.getConfigKey() == null && entity.getId() != null) {
-            SysConfig old = getById(entity.getId());
-            if (old != null) entity.setConfigKey(old.getConfigKey());
-        }
+        checkUpdateKey(entity);
         boolean ok = super.updateById(entity);
         if (ok && entity.getConfigKey() != null) {
             redisService.deleteObject(CACHE_PREFIX + entity.getConfigKey());
@@ -152,14 +165,12 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
     }
 
     @Override
-    public boolean updateBatchById(java.util.Collection<SysConfig> entityList) {
-        boolean ok = super.updateBatchById(entityList);
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean updateBatchById(java.util.Collection<SysConfig> entityList, int batchSize) {
+        entityList.forEach(this::checkUpdateKey);
+        boolean ok = super.updateBatchById(entityList, batchSize);
         if (ok) {
             for (SysConfig entity : entityList) {
-                if (entity.getConfigKey() == null && entity.getId() != null) {
-                    SysConfig old = getById(entity.getId());
-                    if (old != null) entity.setConfigKey(old.getConfigKey());
-                }
                 if (entity.getConfigKey() != null) {
                     redisService.deleteObject(CACHE_PREFIX + entity.getConfigKey());
                 }

@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+import { isSmsTemplateField } from '@/utils/system-config'
 import { computed } from 'vue'
 import ImageUpload from '@/components/ImageUpload.vue'
 import NotificationTemplateEditor from '@/components/NotificationTemplateEditor.vue'
@@ -72,7 +73,7 @@ const help = computed(() => hintOverrides[props.item.configKey] ?? props.item.re
 const choices = computed(() => choiceMap[props.item.configKey])
 const secret = computed(() => secretKeys.has(props.item.configKey))
 const configured = computed(() => props.savedValue === '********')
-const template = computed(() => /^(wechat\.official\.templates|sms\.notification\.templates)\.(user|player|admin|cs)$/.test(props.item.configKey))
+const template = computed(() => isSmsTemplateField(props.item.configKey))
 const wide = computed(() => template.value || ['textarea','image'].includes(props.item.valueType))
 const depositAmount = computed(() => props.item.configKey === 'player.deposit_amount')
 const numberValue = computed(() => props.item.configValue === '' || props.item.configValue == null ? undefined : Number(props.item.configValue))

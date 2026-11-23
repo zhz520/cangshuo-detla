@@ -1,3 +1,5 @@
+import { isAccountTemplateKey } from './system-config.js'
+
 const panel = (id, title, fields = []) => ({ id, title, fields })
 const page = (id, title, panels = [], editor) => ({ id, title, panels, editor })
 
@@ -7,7 +9,7 @@ export const configGroups = [
     page('display', '前台展示', [panel('display', '展示策略', ['最近购买动态', '消费排行', '展示打手列表'])]),
   ] },
   { id: 'account', title: '账户与安全', description: '登录认证与风控', tabs: [
-    page('login', '登录与微信', [panel('login', '注册与登录', ['网页主登录方式', '微信优先时提供手机号入口', '允许辅助密码登录']), panel('wechat', '微信登录及公众号', ['启用网页微信登录', '公众号 AppID', '公众号 AppSecret', '启用公众号通知', '客户与打手绑定回调页', '管理员与客服绑定回调页']), panel('wechat-templates', '公众号通知模板', ['角色模板', '触发事件', '模板参数'])]),
+    page('login', '登录与微信', [panel('login', '注册与登录', ['网页主登录方式', '微信优先时提供手机号入口', '允许辅助密码登录']), panel('wechat', '微信登录及公众号', ['启用网页微信登录', '公众号 AppID', '公众号 AppSecret', '启用公众号通知', '客户与打手绑定回调页', '管理员与客服绑定回调页'])]),
     page('identity', '实名认证', [panel('identity', '实名策略', ['实名认证提示方式'])]),
     page('risk', '内容风控', [panel('risk', '审核与冻结', ['图片语音审核方式', '违规冻结阈值', '检测接口', '检测接口令牌'])]),
     page('age', '年龄确认', [panel('age', '访问策略', ['打开前台时确认已满 18 岁'])]),
@@ -47,7 +49,7 @@ export function configSection(key) {
   if (key === 'auth.age_confirmation.enabled') return 'age'
   if (key === 'auth.wechat.enabled') return 'wechat'
   if (/^auth\./.test(key)) return 'login'
-  if (/^wechat\.official\.templates\./.test(key)) return 'wechat-templates'
+  if (isAccountTemplateKey(key)) return ''
   if (/^wechat\.official\./.test(key)) return 'wechat'
   if (/^identity\./.test(key)) return 'identity'
   if (/^risk\./.test(key)) return 'risk'

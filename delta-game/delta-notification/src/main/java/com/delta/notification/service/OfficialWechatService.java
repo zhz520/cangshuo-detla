@@ -2,8 +2,6 @@ package com.delta.notification.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.common.tenant.TenantKeyEncoder;
-import com.delta.common.tenant.TenantContext;
-import com.delta.common.tenant.TenantProperties;
 import com.delta.common.tenant.TenantRegistry;
 import com.delta.common.tenant.TenantScheduler;
 
@@ -17,19 +15,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import org.springframework.transaction.event.*;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -48,14 +42,9 @@ public class OfficialWechatService {
  private WechatAccountService accounts;
  private final org.springframework.data.redis.core.StringRedisTemplate redis;
  @Autowired(required = false) private TenantKeyEncoder tenantKeys;
- @Autowired(required = false) private TenantProperties tenantProperties;
  @Autowired(required = false) private TenantRegistry tenantRegistry;
  private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
- private final ConcurrentHashMap<String,AccessToken> accessTokens=new ConcurrentHashMap<>();
  public static final String FEATURE_ID="official_wechat_notifications";
- private static final List<String> TEMPLATE_GROUPS=List.of("new_order","order_status","refund_status","complaint_status","staff_review");
- private static final DefaultRedisScript<Long> RELEASE_BINDING_LOCK=new DefaultRedisScript<>(
-   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",Long.class);
  public void enqueue(String event,String type,Long user,Long order,String message,String dedupeKey){
   if(user==null||dedupeKey==null||dedupeKey.isBlank())return;
   Integer exists=jdbc.queryForObject("SELECT COUNT(*) FROM wechat_notice_queue WHERE dedupe_key=?",Integer.class,dedupeKey);
@@ -96,8 +85,7 @@ public class OfficialWechatService {
  }
  private List<String> recipient(WechatNotificationSender.Selection sender,Object type,Object id){
   if(!sender.ready())return List.of();
-  if(sender.managed())return jdbc.queryForList("SELECT openid FROM wechat_notice_recipient WHERE app_id=? AND user_type=? AND user_id=?",String.class,sender.appId(),type,id);
-  return jdbc.queryForList("SELECT openid FROM wechat_official_binding WHERE user_type=? AND user_id=?",String.class,type,id);
+  return jdbc.queryForList("SELECT openid FROM wechat_notice_recipient WHERE app_id=? AND user_type=? AND user_id=?",String.class,sender.appId(),type,id);
  }
  private boolean enabled(WechatNotificationSender.Selection sender){
   String setting=configs.getConfigValue("wechat.official.enabled","auto");
@@ -107,22 +95,20 @@ public class OfficialWechatService {
   var bindings=recipient(sender,row.get("user_type"),row.get("user_id"));
   if(bindings.isEmpty())throw new DeliveryError("RECIPIENT_NOT_BOUND");
   String event=(String)row.get("event_type");String group=groupForEvent(event);
-  JSONObject template=sender.accountId().isEmpty()?templateFor((String)row.get("user_type"),event,group):
-    accounts.templateFor(sender.accountId(),(String)row.get("user_type"),group);
+  JSONObject template=accounts.templateFor(sender.accountId(),(String)row.get("user_type"),group);
   if(template==null)throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
   String templateId=template.getString("templateId");var fields=template.getJSONObject("fields");if(templateId==null||templateId.isBlank()||fields==null||fields.isEmpty())throw new DeliveryError("TEMPLATE_NOT_CONFIGURED");
   Map<String,String> values=templateData.resolve(row);
   Map<String,Object> data=new LinkedHashMap<>();for(String field:fields.keySet()){if(!field.matches("[A-Za-z_]+[0-9]*"))throw new DeliveryError("TEMPLATE_CONFIG_INVALID");String source=fields.getString(field),value=values.get(source);if(value==null)throw new DeliveryError("TEMPLATE_CONFIG_INVALID");data.put(field,Map.of("value",templateFieldValue(field,source,value)));}
   Map<String,Object> payload=messagePayload(bindings.get(0),templateId,data,template.getString("url"),template.getJSONObject("miniprogram"),"cangshuo-"+row.get("id"));
   String token;
-  try{token=sender.accountId().isEmpty()?legacyToken(sender.appId()):accounts.notificationToken(sender);}
+  try{token=accounts.notificationToken(sender);}
   catch(Exception error){throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");} // no send attempted
   var result=post("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+encode(token),payload);
   if(result==null || !result.containsKey("errcode"))throw new DeliveryError("WECHAT_HTTP_ERROR");
   if(result.getIntValue("errcode")!=0){
    int code=result.getIntValue("errcode");
-   if(Set.of(40001,40014,42001).contains(code))accessTokens.remove(scope()+":"+sender.appId());
-   if(code==43004 && sender.managed()){
+   if(code==43004){
     jdbc.update("DELETE FROM wechat_notice_recipient WHERE app_id=? AND user_type=? AND user_id=? AND openid=?",
       sender.appId(),row.get("user_type"),row.get("user_id"),bindings.get(0));
     throw new DeliveryError("RECIPIENT_NOT_SUBSCRIBED");
@@ -130,19 +116,12 @@ public class OfficialWechatService {
    throw new DeliveryError("WECHAT_"+code);
   }
  }
- private synchronized String legacyToken(String appId)throws Exception{
-  String key=scope()+":"+appId;
-  AccessToken cached=accessTokens.get(key);if(cached!=null&&System.currentTimeMillis()<cached.until())return cached.value();
-  var result=post("https://api.weixin.qq.com/cgi-bin/stable_token",Map.of("grant_type","client_credential","appid",appId,"secret",configs.getConfigValue("wechat.official.app_secret","")));
-  String value=result.getString("access_token");if(value==null||value.isBlank())throw new DeliveryError("WECHAT_TOKEN_UNAVAILABLE");
-  accessTokens.put(key,new AccessToken(value,System.currentTimeMillis()+Math.max(60,result.getIntValue("expires_in")-120)*1000L));return value;
- }
  public Map<String,Object> binding(String rawType,Long id){
   String type=canonicalUserType(rawType);
   var sender=senders.current();
   boolean licensed=platform.featureEnabled(FEATURE_ID),enabled=licensed&&enabled(sender);
   boolean bound=!recipient(sender,type,id).isEmpty();
-  List<String> missingTemplates=!sender.ready()?TEMPLATE_GROUPS:sender.accountId().isEmpty()?missingTemplateGroups(type):accounts.missingScenarios(sender.accountId(),type);
+  List<String> missingTemplates=!sender.ready()?WechatAccountService.SCENARIOS:accounts.missingScenarios(sender.accountId(),type);
   Map<String,Object> result=new LinkedHashMap<>();
   result.put("licensed",licensed);result.put("enabled",enabled);result.put("bound",bound);result.put("role",type);
   result.put("templateReady",missingTemplates.isEmpty());result.put("missingTemplateGroups",missingTemplates);
@@ -197,39 +176,21 @@ public class OfficialWechatService {
   var sender=senders.current();
   if(!enabled(sender)||!sender.appId().equals(claim.getString("appId"))||!sender.accountId().equals(claim.getString("accountId"))
       ||!sender.status().equals(claim.getString("sender")))throw new BusinessException(409,"通知发送公众号已变更，请重新绑定");
+  String openid;
   if(sender.managed()){
-   String openid=openPlatform.bindingOpenid(sender.appId(),code);
+   openid=openPlatform.bindingOpenid(sender.appId(),code);
    var follower=accounts.apiGet(sender.accountId(),"/cgi-bin/user/info?openid="+encode(openid)+"&lang=zh_CN");
    if(follower==null || follower.getIntValue("errcode")!=0 || !follower.containsKey("subscribe"))
     throw new BusinessException(502,"暂时无法核验关注状态，请稍后重新绑定");
    if(follower.getIntValue("subscribe")!=1 || !openid.equals(follower.getString("openid")))
     throw new BusinessException(409,"请先关注当前通知公众号，再重新绑定");
-   saveVerifiedRecipient(sender.appId(),type,id,openid);
-   wakeUnbound(type,id);
-   return;
+  }else{
+   openid=exchangeDirectCode(sender.appId(),accounts.directNotificationSecret(sender),code);
+   if ("USER".equals(type) && jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 AND status=1 FOR UPDATE",Long.class,id).isEmpty())
+    throw new BusinessException(403,"账号暂不可用，请联系客服");
   }
-  String openid=exchangeDirectCode(sender.appId(),"DIRECT".equals(sender.status())?accounts.directNotificationSecret(sender):
-    configs.getConfigValue("wechat.official.app_secret","").trim(),code);
-  String lockKey="wechat:binding:openid:"+openid,lockValue=UUID.randomUUID().toString();
-  Boolean acquired=redis.opsForValue().setIfAbsent(namespaced(lockKey),lockValue,Duration.ofSeconds(15));
-  if(!Boolean.TRUE.equals(acquired))throw new BusinessException(409,"该微信正在绑定其他账号，请稍后刷新重试");
-  boolean synchronizationActive=TransactionSynchronizationManager.isSynchronizationActive();
-  if(synchronizationActive)TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
-   @Override public void afterCompletion(int status){releaseBindingLock(lockKey,lockValue);}
-  });
-  try{
-   // Login, transfer and detach lock a USER before changing the shared binding row.
-   if ("USER".equals(type)) {
-    if (jdbc.queryForList("SELECT id FROM `user` WHERE id=? AND deleted=0 AND status=1 FOR UPDATE", Long.class, id).isEmpty())
-     throw new BusinessException(403,"账号暂不可用，请联系客服");
-    var current = jdbc.queryForList("SELECT openid FROM wechat_official_binding WHERE user_type='USER' AND user_id=? FOR UPDATE", String.class, id);
-    if (!current.isEmpty() && !current.get(0).equals(openid))
-     throw new BusinessException(409,"当前账号已绑定其他微信，请在账号安全中管理绑定");
-   }
-   saveBinding(type,id,openid);
-  }finally{
-   if(!synchronizationActive)releaseBindingLock(lockKey,lockValue);
-  }
+  // Both OAuth flows prove the OpenID only for this sender. Never write a login binding here.
+  saveVerifiedRecipient(sender.appId(),type,id,openid);
   wakeUnbound(type,id);
  }
  private void wakeUnbound(String type,Long id){
@@ -247,8 +208,7 @@ public class OfficialWechatService {
   String type=canonicalUserType(rawType);
   var sender=senders.current();
   if(!sender.ready())throw new BusinessException(409,"请先选择通知发送公众号");
-  if(sender.managed())jdbc.update("DELETE FROM wechat_notice_recipient WHERE app_id=? AND user_type=? AND user_id=?",sender.appId(),type,id);
-  else removeBinding(type,id);
+  jdbc.update("DELETE FROM wechat_notice_recipient WHERE app_id=? AND user_type=? AND user_id=?",sender.appId(),type,id);
  }
  public String exchangeOpenid(String code)throws Exception{
   if(accounts!=null&&accounts.hasDefaultAccount()){String managed=accounts.exchangeOpenid(code);if(managed!=null)return managed;}
@@ -256,7 +216,7 @@ public class OfficialWechatService {
   String secret=configs.getConfigValue("wechat.official.app_secret","").trim();
   return exchangeDirectCode(appId,secret,code);
  }
- private String exchangeDirectCode(String appId,String secret,String code)throws Exception{
+ String exchangeDirectCode(String appId,String secret,String code)throws Exception{
   if(appId.isBlank()||secret.isBlank())throw new BusinessException(503,"公众号登录尚未配置");
   String url="https://api.weixin.qq.com/sns/oauth2/access_token?appid="+encode(appId)+"&secret="+encode(secret)+"&code="+encode(code)+"&grant_type=authorization_code";
   var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
@@ -292,53 +252,13 @@ public class OfficialWechatService {
  private boolean smsConfigured() {
   return smsGateway!=null && smsGateway.enabled() && "true".equalsIgnoreCase(configs.getConfigValue("sms.aliyun.otp_enabled","false"));
  }
- private void releaseBindingLock(String key,String value){
-  try{redis.execute(RELEASE_BINDING_LOCK,List.of(namespaced(key)),value);}catch(Exception error){log.warn("释放公众号绑定锁失败",error);}
- }
- private List<String> missingTemplateGroups(String type){
-  String role=templateRole(type);if(role==null)return TEMPLATE_GROUPS;
-
-  JSONObject templates;
-  try{templates=JSON.parseObject(configs.getConfigValue("wechat.official.templates."+role,"{}"));}catch(Exception error){return TEMPLATE_GROUPS;}
-  List<String> missing=new ArrayList<>();
-  for(String group:TEMPLATE_GROUPS){
-   Object node=templates==null?null:templates.get(group);
-   if(!(node instanceof JSONObject template)||!validTemplate(template))missing.add(group);
-  }
-  return missing;
- }
- private static boolean validTemplate(JSONObject template){
-  return template!=null&&Objects.toString(template.getString("templateId"),"").isBlank()==false
-    &&template.getJSONObject("fields")!=null&&!template.getJSONObject("fields").isEmpty();
- }
  static String canonicalUserType(String value){
   String type=Objects.toString(value,"").trim().toUpperCase(Locale.ROOT);
   if("BOTH".equals(type))return "ADMIN";
   if(Set.of("USER","GUEST","PLAYER","ADMIN","CS").contains(type))return type;
   throw new BusinessException(400,"当前账号身份不支持公众号通知绑定");
  }
- private static String templateRole(String value){
-  return switch(canonicalUserType(value)){case "USER","GUEST"->"user";case "PLAYER"->"player";case "ADMIN"->"admin";case "CS"->"cs";default->null;};
- }
  JSONObject post(String url,Object body)throws Exception{var response=http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(10)).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(JSON.toJSONString(body))).build(),HttpResponse.BodyHandlers.ofString());if(response.statusCode()!=200||response.body().length()>100000)throw new DeliveryError("WECHAT_HTTP_ERROR");return JSON.parseObject(response.body());}
- JSONObject templateFor(String userType,String group){return templateFor(userType,null,group);}
- JSONObject templateFor(String userType,String event,String group){
-
-  String role=switch(Objects.toString(userType,"").toUpperCase(java.util.Locale.ROOT)){case "USER","GUEST"->"user";case "PLAYER"->"player";case "ADMIN","BOTH"->"admin";case "CS"->"cs";default->null;};
-  if(role!=null){
-   try{
-    JSONObject roleTemplates=JSON.parseObject(configs.getConfigValue("wechat.official.templates."+role,"{}"));
-    Object node=roleTemplates.get(group);
-    if(node instanceof JSONObject template&&!template.isEmpty()){
-     if(template.getString("templateId")==null||template.getString("templateId").isBlank()||template.getJSONObject("fields")==null||template.getJSONObject("fields").isEmpty())throw new DeliveryError("TEMPLATE_CONFIG_INVALID");
-     return template;
-    }
-   }catch(DeliveryError error){throw error;}catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
-  }
-  String legacyGroup=legacyGroupFor(event,group);
-  try{return JSON.parseObject(configs.getConfigValue("wechat.official.template."+legacyGroup,"{}"));}
-  catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
- }
  static String groupForEvent(String event){return switch(event){
   case "NEW_ORDER","ORDER_PAID"->"new_order";
   case "ORDER_ASSIGNED","ORDER_ACCEPTED","ORDER_STARTED","ORDER_COMPLETED","ORDER_CONFIRMED","ORDER_CANCELLED","ORDER_REFUNDED"->"order_status";
@@ -347,16 +267,6 @@ public class OfficialWechatService {
   case "PLAYER_APPLICATION_SUBMITTED","PLAYER_APPROVED","PLAYER_REJECTED","MATERIAL_SUBMITTED","MATERIAL_REVIEWED","PLAYER_FROZEN","PLAYER_UNFROZEN"->"staff_review";
   default->"order_status";
  };}
- private static String legacyGroupFor(String event,String group){
-  if(event==null)return group;
-  return switch(event){
-   case "ORDER_COMPLETED","ORDER_CONFIRMED"->"order_completed";
-   case "MATERIAL_SUBMITTED","MATERIAL_REVIEWED","PLAYER_FROZEN","PLAYER_APPLICATION_SUBMITTED","PLAYER_APPROVED","PLAYER_REJECTED","PLAYER_UNFROZEN"->"material_reviewed";
-   case "REFUND_REQUESTED","REFUND_CS_REVIEWING","REFUND_CS_REVIEWED","REFUND_ADMIN_APPROVED","REFUND_ADMIN_REJECTED","REFUND_PROCESSING","REFUND_SUCCEEDED","REFUND_FAILED","ORDER_REFUNDED","WITHDRAW_APPLY","WITHDRAW_COMPLETED","WITHDRAW_REJECTED"->"withdraw_reviewed";
-   default->"order_accepted";
-  };
- }
- private static String statusText(String event){return SmsNoticeService.statusText(event);}
  static int maxFieldLength(String field){if(field.startsWith("thing"))return 20;if(field.startsWith("character_string"))return 32;if(field.startsWith("time"))return 64;if(field.startsWith("amount"))return 20;if(field.startsWith("phone_number"))return 17;if(field.startsWith("car_number"))return 8;if(field.startsWith("const"))return 20;if(field.startsWith("phrase"))return 5;return 200;}
  static String fieldValue(String field,String value){String clean=Objects.toString(value,"").replaceAll("[\\r\\n\\t]+"," ").trim();int max=maxFieldLength(field),length=clean.codePointCount(0,clean.length());return length<=max?clean:clean.substring(0,clean.offsetByCodePoints(0,max));}
  static String templateFieldValue(String field,String source,String value){String clean=fieldValue(field,value);return field.startsWith("amount")&&NotificationTemplateDataService.moneySource(source)?amountText(clean):clean;}
@@ -379,8 +289,6 @@ public class OfficialWechatService {
   catch(Exception error){throw new DeliveryError("TEMPLATE_CONFIG_INVALID");}
  }
  private String namespaced(String key){return tenantKeys==null?key:tenantKeys.key(key);}
- private String scope(){if(tenantProperties==null||!tenantProperties.isEnabled())return "default";return TenantContext.requireId();}
- private record AccessToken(String value,long until){}
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
  private static class DeliveryError extends RuntimeException{DeliveryError(String code){super(code);}}
 }

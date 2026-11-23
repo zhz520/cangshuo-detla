@@ -46,15 +46,20 @@ class WechatNotificationDeliveryTest {
         db.execute("CREATE TABLE wechat_notice_recipient(app_id VARCHAR,user_type VARCHAR,user_id BIGINT,openid VARCHAR,PRIMARY KEY(app_id,user_type,user_id),UNIQUE(app_id,openid))");
         db.execute("CREATE TABLE wechat_official_binding(user_type VARCHAR,user_id BIGINT,openid VARCHAR)");
         db.execute("CREATE TABLE wechat_notice_queue(id VARCHAR PRIMARY KEY,dedupe_key VARCHAR UNIQUE,event_type VARCHAR,user_type VARCHAR,user_id BIGINT,order_id BIGINT,message VARCHAR,status VARCHAR,attempts INT DEFAULT 0,last_error VARCHAR,next_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-        senders=new WechatNotificationSender(db,configs);
+        senders=new WechatNotificationSender(db);
         accounts=spy(new WechatAccountService(db,null,platform,gateway));
         var data=mock(NotificationTemplateDataService.class);
         when(data.resolve(anyMap())).thenReturn(Map.of("message","fixture"));
         official=new OfficialWechatService(db,senders,gateway,configs,data,mock(StaffPermissions.class),platform,redis){
+            @Override String exchangeDirectCode(String appId,String secret,String code){
+                assertThat(appId).isEqualTo(B);
+                assertThat(secret).isEqualTo("direct-fixture");
+                assertThat(code).isEqualTo("direct-code");
+                return "direct-openid";
+            }
             @Override JSONObject post(String url,Object body){
                 urls.add(url);
                 payloads.add((Map<?,?>)body);
-                if(url.endsWith("/stable_token"))return JSONObject.of("access_token","legacy-token","expires_in",7200);
                 return JSONObject.of("errcode",responseCode);
             }
         };
@@ -116,7 +121,7 @@ class WechatNotificationDeliveryTest {
         assertThat(urls).isEmpty();verifyNoInteractions(gateway);
     }
     @Test void disabledTemplateOrOtherAccountTemplateDoesNotTriggerAnyRequest(){
-        account("a",A,"OPEN_PLATFORM");account("b",B,"OPEN_PLATFORM");manual("a");bind(A,OPENID);
+        account("a",A,"OPEN_PLATFORM");account("b",B,"OPEN_PLATFORM");manual("a");bind(A,OPENID);legacyTemplates();
         db.update("UPDATE wechat_mp_template SET enabled=0 WHERE account_id='a'");
         enqueue();official.deliver();assertThat(field("last_error")).isEqualTo("TEMPLATE_NOT_CONFIGURED");
         assertThat(urls).isEmpty();verifyNoInteractions(gateway);
@@ -127,7 +132,7 @@ class WechatNotificationDeliveryTest {
         assertThat(senders.current().status()).isEqualTo("MANAGED");
         when(configs.getConfigValue("wechat.official.app_id","")).thenReturn("orphan-app");
         when(configs.getConfigValue("wechat.official.app_secret","")).thenReturn("configured");
-        assertThat(senders.current().status()).isEqualTo("LEGACY");
+        assertThat(senders.current().status()).isEqualTo("MANAGED");
         db.update("UPDATE wechat_mp_account SET enabled=0 WHERE id='d'");
         assertThat(senders.current().status()).isEqualTo("MANAGED");
         assertThatThrownBy(()->manual("d")).isInstanceOf(BusinessException.class);
@@ -144,24 +149,85 @@ class WechatNotificationDeliveryTest {
         assertThat(urls).isEmpty();verifyNoInteractions(gateway);
     }
 
-    @Test void directThenLegacyRetainPrecedenceAndLegacyIdentity() throws Exception {
-        account("a",A,"OPEN_PLATFORM");account("d","direct-app","DIRECT");
+    void legacyTemplates(){
+        String old="{\"templateId\":\"old-template\",\"fields\":{\"thing1\":\"message\"}}";
+        when(configs.getConfigValue("wechat.official.templates.user","{}")).thenReturn("{\"new_order\":"+old+"}");
+        when(configs.getConfigValue("wechat.official.template.order_accepted","{}")).thenReturn(old);
+    }
+    @Test void legacyCredentialsAndTemplatesAloneCannotStartDelivery() throws Exception {
         when(configs.getConfigValue("wechat.official.enabled","auto")).thenReturn("true");
-        when(configs.getConfigValue("wechat.official.app_id","")).thenReturn("legacy-app");
-        when(configs.getConfigValue("wechat.official.app_secret","")).thenReturn("legacy-fixture");
-        when(configs.getConfigValue("wechat.official.templates.user","{}")).thenReturn("{\"new_order\":{\"templateId\":\"old-template\",\"fields\":{\"thing1\":\"message\"}}}");
-        doReturn("direct-token").when(accounts).notificationToken(argThat(s->s!=null && s.status().equals("DIRECT")));
-        db.update("INSERT INTO wechat_official_binding VALUES('USER',7,'old-openid')");
-        assertThat(senders.current().status()).isEqualTo("DIRECT");
-        enqueue();official.deliver();assertThat(urls.get(0)).endsWith("direct-token");
-        assertThat(payloads.get(0).get("touser")).isEqualTo("old-openid");
+        when(configs.getConfigValue("wechat.official.app_id","")).thenReturn(A);
+        when(configs.getConfigValue("wechat.official.app_secret","")).thenReturn("fixture");
+        legacyTemplates();bind(A,OPENID);
+        enqueue();official.deliver();
+        assertThat(senders.current().status()).isEqualTo("UNAVAILABLE");
+        assertThat(field("attempts")).isEqualTo("0");
+        assertThat(official.binding("USER",7L)).containsEntry("enabled",false).containsEntry("templateReady",false);
+        assertThat(urls).isEmpty();verifyNoInteractions(gateway);verify(accounts,never()).notificationToken(any());
+    }
+    @Test void directSenderMissingMappingNeverUsesSystemOrOtherAccountTemplate() throws Exception {
+        account("d",B,"DIRECT");account("a",A,"OPEN_PLATFORM");bind(B,"scoped-direct-openid");
+        when(configs.getConfigValue("wechat.official.enabled","auto")).thenReturn("true");
+        legacyTemplates();
+        db.update("DELETE FROM wechat_mp_template WHERE account_id='d'");
+        enqueue();official.deliver();
+        assertThat(field("last_error")).isEqualTo("TEMPLATE_NOT_CONFIGURED");
+        assertThat(official.binding("USER",7L)).containsEntry("bound",true).containsEntry("templateReady",false);
+        assertThat(urls).isEmpty();verify(accounts,never()).notificationToken(any());verifyNoInteractions(gateway);
+    }
+    @Test void directSenderCannotClaimAnotherAppsBindingOrAnUnscopedLoginOpenid() throws Exception {
+        account("d",B,"DIRECT");bind(A,"other-app-openid");
+        db.update("INSERT INTO wechat_official_binding VALUES('USER',7,'login-only')");
+        when(configs.getConfigValue("wechat.official.enabled","auto")).thenReturn("true");
+        enqueue();official.deliver();
+        assertThat(field("last_error")).isEqualTo("RECIPIENT_NOT_BOUND");
+        assertThat(official.binding("USER",7L)).containsEntry("bound",false);
+        assertThat(db.queryForList("SELECT app_id FROM wechat_notice_recipient",String.class)).containsExactly(A);
+        assertThat(urls).isEmpty();verify(accounts,never()).notificationToken(any());verifyNoInteractions(gateway);
+    }
+    @Test void directSenderUsesItsOwnOAuthBindingAndLeavesLoginUntouched() throws Exception {
+        account("a",A,"OPEN_PLATFORM");account("d",B,"DIRECT");
+        bind(A,"another-app-openid");
+        db.update("INSERT INTO wechat_official_binding VALUES('USER',7,'login-openid')");
+        when(configs.getConfigValue("wechat.official.enabled","auto")).thenReturn("true");
+        doReturn("direct-token").when(accounts).notificationToken(senders.current());
+        enqueue();
+
+        db.execute("CREATE TABLE `user`(id BIGINT PRIMARY KEY,deleted INT,status INT)");
+        db.update("INSERT INTO `user` VALUES(7,0,1)");
+        String state="1".repeat(32);
+        @SuppressWarnings("unchecked") ValueOperations<String,String> values=mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.getAndDelete("wechat:binding:"+state)).thenReturn(JSONObject.of(
+            "type","USER","id",7,"appId",B,"accountId","d","sender","DIRECT").toJSONString());
+        doReturn("direct-fixture").when(accounts).directNotificationSecret(senders.current());
+        official.finishBinding("USER",7L,"direct-code",state,"shop.test");
+        assertThat(official.binding("USER",7L)).containsEntry("bound",true);
+        official.deliver();
+        verify(accounts).notificationToken(senders.current());
+        assertThat(field("status")).isEqualTo("SENT");
+        assertThat(urls).singleElement().asString().endsWith("direct-token");
+        assertThat(payloads.get(0).get("touser")).isEqualTo("direct-openid");
         assertThat(payloads.get(0).get("template_id")).isEqualTo("tpl-d");
-        db.update("DELETE FROM wechat_mp_account WHERE id='d'");
-        assertThat(senders.current().status()).isEqualTo("LEGACY");
-        official.enqueue("ORDER_PAID","USER",7L,null,"fixture","two");official.deliver();
-        assertThat(urls).hasSize(3);assertThat(urls.get(2)).endsWith("legacy-token");
-        assertThat(payloads.get(2).get("template_id")).isEqualTo("old-template");
+        official.removeNotificationBinding("USER",7L);
+        assertThat(db.queryForList("SELECT app_id FROM wechat_notice_recipient",String.class)).containsExactly(A);
+        assertThat(db.queryForObject("SELECT openid FROM wechat_official_binding",String.class)).isEqualTo("login-openid");
         verifyNoInteractions(gateway);
+    }
+    @Test void roleAndScenarioComeFromSelectedAccountOnly(){
+        account("a",A,"OPEN_PLATFORM");account("b",B,"OPEN_PLATFORM");manual("b");
+        for(String role:List.of("USER","PLAYER","ADMIN","CS")){
+            String id="tpl-b-"+role;
+            db.update("INSERT INTO wechat_mp_template_catalog VALUES('b',?)",id);
+            db.update("INSERT INTO wechat_mp_template(account_id,role,scenario,template_id,fields_json,enabled) VALUES('b',?,'order_status',?,'{\"thing1\":\"message\"}',1)",role,id);
+            db.update("INSERT INTO wechat_notice_recipient VALUES(?,?,7,?)",B,role,"bound-"+role);
+            official.enqueue("ORDER_COMPLETED",role,7L,null,"fixture",role);
+            official.deliver();
+            var payload=payloads.get(payloads.size()-1);
+            assertThat(payload.get("touser")).isEqualTo("bound-"+role);
+            assertThat(payload.get("template_id")).isEqualTo(id);
+        }
+        assertThat(urls).hasSize(4).allMatch(url->url.endsWith("token-B"));
     }
     @Test void lostSubscriptionAndPreSendTokenFailureAreDistinguished(){
         account("a",A,"OPEN_PLATFORM");bind(A,OPENID);bind(B,OPENID);
