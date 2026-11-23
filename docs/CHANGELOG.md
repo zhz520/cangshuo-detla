@@ -2,7 +2,7 @@
 
 本文件只保留对当前决策有用的版本摘要和最近一次发布的完整证据。逐版本原始记录已归档到 D 盘，见 [README.md](README.md) 的归档说明。
 
-## 2026-11-23 · 1.19.0（开发候选，未发布）
+## 2026-11-23 · 1.19.0
 
 ### 变更
 
@@ -17,8 +17,18 @@
 - 管理端 114 项测试、H5 119 项测试通过；后端目标模块编译和定向测试通过。
 - Endpoint 533、OpenAPI 533 operations / 282 schemas、迁移登记、AI 上下文、模块边界和协作规则通过。
 - 管理端本机生产构建受 esbuild 临时文件锁影响，使用临时禁用 esbuild 完成验证，正式 Linux/CI 构建仍需复跑。
-- 520 候选部署：三端镜像 `1.19.0-20261123`，后台/H5/后端版本与 buildId 已核对，backend healthy，数据库 91 表，备份已保留。
-- 未发布 GitHub Release、未晋级共享组；真实公众号、真实支付、真实 MySQL 和共享组验收未完成。
+- 520 部署：三端镜像 `1.19.0-20261123`，后台/H5/后端版本与 buildId 已核对，backend healthy，数据库 91 表，备份已保留。
+- 共享组签名计划 `dc1cf3be-5a25-49f6-9f12-b1da441e69db` 预检 `VALID`、审计 `SUCCEEDED`；742/747/JAX 三端 buildId 同源，六个域名返回 200，三库各 91 表，财务 12 项 0 违规。
+- 授权中心 `0.7.11` 的「公众号模板」页、发布说明和三实例版本上报已验证。
+- 真实公众号、真实发送、真实支付和真机微信支付仍未验收；不能把部署成功当成外部业务验收。
+
+### 发布与生产
+
+- 标签：`v1.19.0` → `4d349268a3463b99b02f03f6898e70ea405f3029`；GitHub Release：`https://github.com/zhz520/cangshuo-detla/releases/tag/v1.19.0`。
+- 三件正式资产与 `release-manifest.json` 均已上传，GitHub 返回的 SHA-256 与本地 manifest 一致。
+- 520 发布目录 `/opt/apps/520/releases/1.19.0`；备份 `/opt/apps/520/backups/pre-1.19.0-20261123-1115`。
+- 共享组发布目录 `/www/delta/shared/releases/dc1cf3be-5a25-49f6-9f12-b1da441e69db`；备份 `/var/lib/delta-shared/updater/backups/dc1cf3be-5a25-49f6-9f12-b1da441e69db`。
+- 520 后台「秒杀活动」「公众号运营」和授权中心「公众号模板」页面实测可打开；742 后台同样通过，未出现空白页。
 
 ## 2026-11-22 · 1.18.5
 
