@@ -32,7 +32,7 @@ public class WechatOpenPlatformClient {
 
     public record Availability(boolean ready, String reason) {}
     public record Authorization(String state, String authorizationUrl, String expiresAt) {}
-    public record Progress(String status, Map<String, Object> account) {}
+    public record Progress(String status, Map<String, Object> account, boolean opened) {}
 
     public Availability status() {
         if (!gateway.configured()) return new Availability(false, "当前实例尚未配置授权中心接入凭据");
@@ -58,11 +58,11 @@ public class WechatOpenPlatformClient {
         String status = result.path("status").asText();
         if ("AUTHORIZED".equals(status)) {
             var item = result.path("account");
-            return new Progress(status, accounts.importAuthorizedAccount(item.path("appId").asText(), item.path("name").asText()));
+            return new Progress(status, accounts.importAuthorizedAccount(item.path("appId").asText(), item.path("name").asText()), true);
         }
         if (!java.util.Set.of("PENDING", "PROCESSING", "EXPIRED", "FAILED").contains(status))
             throw new BusinessException(502, "授权中心返回的扫码状态无效");
-        return new Progress(status, null);
+        return new Progress(status, null, result.path("opened").asBoolean());
     }
 
     public String accessToken(String appId) {

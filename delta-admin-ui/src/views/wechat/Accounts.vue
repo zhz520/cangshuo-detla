@@ -72,8 +72,8 @@
             </el-table-column>
             <el-table-column label="状态" width="150">
               <template #default="{ row }">
-                <el-tag :type="row.configured ? 'success' : 'warning'" size="small">
-                  {{ row.configured ? '就绪' : '缺模板' }}
+                <el-tag :type="row.status === 'READY' ? 'success' : row.status === 'DISABLED' ? 'info' : 'warning'" size="small">
+                  {{ mappingStatusLabels[row.status] || '缺模板' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -108,7 +108,8 @@
       <template #footer>
         <el-button @click="authorizationDialog=false">关闭</el-button>
         <a v-if="authorizationUrl && !authorizationOpened" class="el-button el-button--primary"
-          :href="authorizationUrl" target="_blank" rel="noopener noreferrer" @click="watchAuthorization">打开微信官方授权页 ↗</a>
+          :href="authorizationUrl" target="_blank" rel="noopener noreferrer" @click="watchAuthorization">打开扫码窗口 ↗</a>
+        <el-button v-if="authorizationOpened" type="primary" plain :loading="startingAuthorization" @click="startAuthorization">重新生成授权</el-button>
       </template>
     </el-dialog>
 
@@ -176,7 +177,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
 import { notificationConfigGuide } from '@/utils/notification-examples'
-import { suggestWechatFields } from './template-mapping'
+import { existingFieldsForTemplate, suggestWechatFields } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
   getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates,
@@ -192,7 +193,7 @@ const loading = ref(false)
 const loadingReadiness = ref(false)
 const loadingCatalog = ref(false)
 const loadedAccountId = ref('')
-let accountDataEpoch = 0, templateAccountId = ''
+let accountDataEpoch = 0, templateAccountId = '', mappedTemplateId = ''
 const syncing = ref(false)
 const savingAccount = ref(false)
 const savingTemplate = ref(false)
@@ -206,6 +207,7 @@ const accountForm = reactive({ id: '', name: '', appId: '', appSecret: '', mode:
 const templateForm = reactive({ configured: false, role: 'ADMIN', scenario: 'new_order', templateId: '', templateHint: '', example:'', suggestions:[], fields: [{ key: 'thing1', source: 'message' }], url: '', miniAppId: '', miniPagepath: '', enabled: true })
 const roleKeys = { USER: 'user', PLAYER: 'player', ADMIN: 'admin', CS: 'cs' }
 const roleNames = { USER: '客户', PLAYER: '打手', ADMIN: '管理员', CS: '客服' }
+const mappingStatusLabels = { READY: '映射就绪', DISABLED: '已停用', CATALOG_MISSING: '模板已移除', TEMPLATE_MISSING: '缺模板' }
 const selectedAccount = computed(() => accounts.value.find(row => row.id === selectedId.value) || null)
 const callbackUrl = computed(() => selectedId.value ? `${window.location.origin}/common/wechat/callback/${selectedId.value}` : '')
 const sourceGroups = computed(() => notificationConfigGuide('wechat.official.templates.admin')?.sourceGroups || [])
@@ -246,15 +248,16 @@ async function startAuthorization() {
     }
   } finally { startingAuthorization.value = false }
 }
-function watchAuthorization() {
+function watchAuthorization(event) {
+  if (authorizationOpened.value) { event.preventDefault(); return }
   authorizationOpened.value = true
-  authorizationMessage.value = '等待微信确认。授权后会自动加入公众号列表。'
+  authorizationMessage.value = '请在新窗口点击「继续前往微信」。窗口未弹出或已关闭，可重新生成授权。'
   const state = authorizationState, epoch = authorizationEpoch
   const active = () => authorizationDialog.value && epoch === authorizationEpoch && !disposed
   const poll = async () => {
     if (!active()) return
     if (!Number.isFinite(authorizationExpires) || Date.now() >= authorizationExpires) {
-      authorizationMessage.value = '扫码已过期，请关闭窗口并重新发起。'
+      authorizationMessage.value = '授权已过期，点击「重新生成授权」获取新窗口。'
       return
     }
     try {
@@ -270,9 +273,11 @@ function watchAuthorization() {
         return
       }
       if (['FAILED','EXPIRED'].includes(data.status)) {
-        authorizationMessage.value = '授权未完成，请关闭窗口后重试。'
+        authorizationMessage.value = '授权未完成，请点击「重新生成授权」重试。'
         return
       }
+      if (data.status === 'PROCESSING') authorizationMessage.value = '微信已返回授权结果，正在确认。'
+      else if (data.opened) authorizationMessage.value = '已发起微信扫码，请在微信官方页面确认。未能打开可重新生成授权。'
       authorizationTimer = setTimeout(poll, 2500)
     } catch (error) {
       if (active()) {
@@ -390,7 +395,8 @@ function openTemplate(row) {
   const guide = notificationConfigGuide(`wechat.official.templates.${roleKeys[role] || 'admin'}`)
   const event = guide?.events?.find(item => item.key === scenario)
   const authority = authoritySchemes.value.find(item => item.role === role && item.scenario === scenario)
-  const defaults = authority?.fields && Object.keys(authority.fields).length
+  const defaults = selectedAccount.value?.mode === 'OPEN_PLATFORM' ? [{ key: '', source: '' }]
+    : authority?.fields && Object.keys(authority.fields).length
     ? Object.entries(authority.fields).map(([key, source]) => ({ key, source }))
     : event?.fields && Object.keys(event.fields).length
     ? Object.entries(event.fields).map(([key, source]) => ({ key, source }))
@@ -399,8 +405,9 @@ function openTemplate(row) {
     configured: Boolean(row?.configured), role, scenario,
     templateId: row?.templateId || '', templateHint: authority?.templateHint || '', example:authority?.example || '',
     suggestions: authority?.fieldSuggestions || [], fields: defaults,
-    url: row?.url || '', miniAppId: row?.miniprogram?.appid || '', miniPagepath: row?.miniprogram?.pagepath || '', enabled: true
+    url: row?.url || '', miniAppId: row?.miniprogram?.appid || '', miniPagepath: row?.miniprogram?.pagepath || '', enabled: !row?.configured || row?.enabled !== false
   })
+  mappedTemplateId = templateForm.templateId
   if (row?.configured && row.fields && Object.keys(row.fields).length) {
     templateForm.fields = Object.entries(row.fields).map(([key, source]) => ({ key, source }))
   }
@@ -409,11 +416,15 @@ function openTemplate(row) {
 
 function applyCatalogMapping() {
   const item = catalog.value.find(row => row.templateId === templateForm.templateId)
-  if (!item) return
-  const authority = authoritySchemes.value.find(row => row.role === templateForm.role && row.scenario === templateForm.scenario)
-  const previous = { ...authority?.fields, ...(templateForm.configured ? Object.fromEntries(templateForm.fields.map(field=>[field.key,field.source])) : {}) }
+  const previous = existingFieldsForTemplate(templateForm.templateId, mappedTemplateId, templateForm.fields)
+  const changedTemplate = Boolean(mappedTemplateId) && mappedTemplateId !== templateForm.templateId
+  mappedTemplateId = templateForm.templateId
+  if (!item) {
+    if (changedTemplate) templateForm.fields = [{ key: '', source: '' }]
+    return
+  }
   const rows = suggestWechatFields(item.content, templateForm.suggestions, previous)
-  if (rows.length) templateForm.fields = rows
+  templateForm.fields = rows.length ? rows : [{ key: '', source: '' }]
 }
 
 async function saveTemplate() {

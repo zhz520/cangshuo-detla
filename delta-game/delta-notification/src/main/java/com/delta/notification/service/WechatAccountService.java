@@ -203,6 +203,9 @@ public class WechatAccountService {
     public Map<String, Object> readiness(String accountId) {
         Account account = requireAccount(accountId);
         if (account == null) throw new BusinessException(404, "公众号账号不存在");
+        boolean managed = "OPEN_PLATFORM".equals(account.mode());
+        Set<String> catalogIds = managed ? new HashSet<>(jdbc.queryForList(
+                "SELECT template_id FROM wechat_mp_template_catalog WHERE account_id=?", String.class, accountId)) : Set.of();
         Map<String, JSONObject> configured = templates(accountId);
         List<Map<String, Object>> templates = new ArrayList<>();
         for (String role : ROLES) for (String scenario : SCENARIOS) {
@@ -211,11 +214,14 @@ public class WechatAccountService {
             row.put("role", role);
             row.put("scenario", scenario);
             row.put("configured", template != null);
+            boolean enabled = template != null && template.getBooleanValue("enabled");
+            row.put("enabled", enabled);
             row.put("templateId", template == null ? "" : template.getString("templateId"));
             row.put("fields", template == null ? new JSONObject() : template.getJSONObject("fields"));
             row.put("url", template == null ? "" : Objects.toString(template.getString("url"), ""));
             row.put("miniprogram", template == null ? new JSONObject() : template.getJSONObject("miniprogram"));
-            row.put("status", template != null ? "READY" : "TEMPLATE_MISSING");
+            row.put("status", template == null ? "TEMPLATE_MISSING" : !enabled ? "DISABLED"
+                    : managed && !catalogIds.contains(template.getString("templateId")) ? "CATALOG_MISSING" : "READY");
             templates.add(row);
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -227,8 +233,9 @@ public class WechatAccountService {
         result.put("callbackConfigured", callbackConfigured(accountId));
         result.put("templates", templates);
         result.put("authoritySchemes", authoritySchemes());
-        result.put("ready", account.enabled() && !account.encryptedSecret().isBlank()
-                && templates.stream().allMatch(row -> Boolean.TRUE.equals(row.get("configured"))));
+        // Local configuration readiness is not a successful send or a live provider check.
+        result.put("ready", account.enabled() && (managed || !account.encryptedSecret().isBlank())
+                && templates.stream().allMatch(row -> "READY".equals(row.get("status"))));
         return result;
     }
 
@@ -242,6 +249,7 @@ public class WechatAccountService {
         if (!SCENARIOS.contains(scenario)) throw new BusinessException(400, "通知场景不正确");
         String templateId = required(body.get("templateId"), "请选择或填写微信模板 ID", 128);
         if (!templateId.matches("[A-Za-z0-9_-]{6,128}")) throw new BusinessException(400, "微信模板 ID 格式不正确");
+        boolean enabled = body.get("enabled") == null || bool(body.get("enabled"));
         JSONObject fields = body.get("fields") instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(body.get("fields")));
         if (fields == null || fields.isEmpty()) {
             Map<String, Object> authority = authorityScheme(role, scenario);
@@ -252,9 +260,16 @@ public class WechatAccountService {
         if ("OPEN_PLATFORM".equals(account.mode())) {
             List<String> matched = jdbc.query("SELECT content FROM wechat_mp_template_catalog WHERE account_id=? AND template_id=?",
                     (rs, index) -> Objects.toString(rs.getString("content"), ""), accountId, templateId);
-            if (matched.isEmpty()) throw new BusinessException(409, "请先同步并选择本公众号拥有的微信模板");
+            if (matched.isEmpty()) {
+                Integer stored = enabled ? 0 : jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_template " +
+                        "WHERE account_id=? AND role=? AND scenario=? AND template_id=?", Integer.class,
+                        accountId, role, scenario, templateId);
+                if (stored == null || stored == 0)
+                    throw new BusinessException(409, "请先同步并选择本公众号拥有的微信模板");
+            }
             Set<String> expected = new HashSet<>();
-            TEMPLATE_FIELD.matcher(matched.get(0)).results().forEach(match -> expected.add(match.group(1)));
+            if (!matched.isEmpty())
+                TEMPLATE_FIELD.matcher(matched.get(0)).results().forEach(match -> expected.add(match.group(1)));
             if (!expected.isEmpty() && !expected.equals(fields.keySet()))
                 throw new BusinessException(400, "模板参数必须与该微信模板的变量一致");
         }
@@ -266,7 +281,6 @@ public class WechatAccountService {
             applyMiniProgramValidation(mini);
         }
         String source = "AUTHORITY".equalsIgnoreCase(text(body.get("source"))) ? "AUTHORITY" : "LOCAL";
-        boolean enabled = body.get("enabled") == null || bool(body.get("enabled"));
         jdbc.update("INSERT INTO wechat_mp_template(account_id,role,scenario,template_id,fields_json,url,miniprogram_json,source,enabled) " +
                         "VALUES(?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE template_id=VALUES(template_id),fields_json=VALUES(fields_json)," +
                         "url=VALUES(url),miniprogram_json=VALUES(miniprogram_json),source=VALUES(source),enabled=VALUES(enabled)",
@@ -444,11 +458,12 @@ public class WechatAccountService {
 
     private Map<String, JSONObject> templates(String accountId) {
         Map<String, JSONObject> result = new HashMap<>();
-        jdbc.query("SELECT role,scenario,template_id,fields_json,url,miniprogram_json FROM wechat_mp_template WHERE account_id=? AND enabled=1",
+        jdbc.query("SELECT role,scenario,template_id,fields_json,url,miniprogram_json,enabled FROM wechat_mp_template WHERE account_id=?",
                 rs -> {
-                    result.put(rs.getString("role") + ":" + rs.getString("scenario"),
-                            templateRow(rs.getString("template_id"), rs.getString("fields_json"),
-                                    rs.getString("url"), rs.getString("miniprogram_json")));
+                    JSONObject row = templateRow(rs.getString("template_id"), rs.getString("fields_json"),
+                            rs.getString("url"), rs.getString("miniprogram_json"));
+                    row.put("enabled", rs.getBoolean("enabled"));
+                    result.put(rs.getString("role") + ":" + rs.getString("scenario"), row);
                 }, accountId);
         return result;
     }

@@ -1292,6 +1292,7 @@ export interface Product {
 export interface Progress {
   status?: string
   account?: Record<string, unknown>
+  opened?: boolean
 }
 
 export interface ProgressRequest {

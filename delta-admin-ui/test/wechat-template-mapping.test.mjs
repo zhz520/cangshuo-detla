@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { suggestWechatFields } from '../src/views/wechat/template-mapping.js'
+import { existingFieldsForTemplate, suggestWechatFields } from '../src/views/wechat/template-mapping.js'
+
+test('an equal variable name in another template does not inherit the previous meaning', () => {
+  const fields = [{key:'thing1',source:'orderNo'}]
+  const content = '商品名称：{{thing1.DATA}}'
+  const suggestions = [{type:'thing',source:'productName',label:'商品名称'}]
+  assert.deepEqual(suggestWechatFields(content, suggestions, existingFieldsForTemplate('old','old',fields)), fields)
+  assert.deepEqual(suggestWechatFields(content, suggestions, existingFieldsForTemplate('new','old',fields)), [{key:'thing1',source:'productName'}])
+})
 
 test('maps only recognized source and actual template key; unknown fields require operator input', () => {
   const suggestions = [{type:'thing',source:'productName',label:'服务名称'},

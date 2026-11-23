@@ -19579,6 +19579,9 @@
           "account" : {
             "type" : "object",
             "additionalProperties" : { }
+          },
+          "opened" : {
+            "type" : "boolean"
           }
         }
       },

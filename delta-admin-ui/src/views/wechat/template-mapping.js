@@ -10,6 +10,11 @@ const labels = {
   time: /^(?:通知时间|处理时间|更新时间|时间)$/
 }
 
+export function existingFieldsForTemplate(templateId, oldTemplateId, fields) {
+  if (!oldTemplateId || templateId !== oldTemplateId) return {}
+  return Object.fromEntries(fields.map(field => [field.key, field.source]))
+}
+
 export function suggestWechatFields(content, suggestions, previous = {}) {
   const rows = []
   for (const line of String(content || '').split(/\r?\n/)) {
