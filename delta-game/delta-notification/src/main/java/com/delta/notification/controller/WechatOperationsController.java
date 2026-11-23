@@ -5,6 +5,7 @@ import com.delta.common.domain.R;
 import com.delta.notification.service.OfficialWechatService;
 import com.delta.notification.service.WechatAccountService;
 import com.delta.notification.service.WechatOpenPlatformClient;
+import com.delta.notification.service.WechatTemplateSetupJobs;
 import com.delta.platform.PlatformService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class WechatOperationsController {
     private final WechatAccountService accounts;
     private final PlatformService platform;
     private final WechatOpenPlatformClient openPlatform;
+    private final WechatTemplateSetupJobs setup;
 
     @GetMapping("/admin/wechat/accounts/open-platform/status")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
@@ -33,17 +35,25 @@ public class WechatOperationsController {
     @OpLog(module = "wechat", operation = "发起公众号扫码授权")
     public R<WechatOpenPlatformClient.Authorization> startOpenPlatform(HttpServletRequest request) {
         requireFeature(request);
-        return R.ok(openPlatform.start());
+        return R.ok(setup.start(request.getServerName()));
     }
 
     @PostMapping("/admin/wechat/accounts/open-platform/complete")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     public R<WechatOpenPlatformClient.Progress> completeOpenPlatform(@RequestBody OpenPlatformCompletion body, HttpServletRequest request) {
         requireFeature(request);
-        return R.ok(openPlatform.progress(body.state(), accounts));
+        return R.ok(setup.progress(body.state()));
     }
 
     public record OpenPlatformCompletion(String state) {}
+
+    @PostMapping("/admin/wechat/accounts/{id}/templates/provision")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "重试公众号模板自动配置")
+    public R<Map<String,Object>> provision(@PathVariable String id,HttpServletRequest request) {
+        requireFeature(request);
+        return R.ok(setup.retry(id,request.getServerName()));
+    }
 
     @GetMapping("/admin/wechat/accounts")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
@@ -107,7 +117,9 @@ public class WechatOperationsController {
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     public R<Map<String, Object>> readiness(@PathVariable String id, HttpServletRequest request) {
         requireFeature(request);
-        return R.ok(accounts.readiness(id));
+        var result=accounts.readiness(id);
+        result.put("templateSetup",setup.report(id));
+        return R.ok(result);
     }
 
     private void requireFeature(HttpServletRequest request) {

@@ -150,14 +150,9 @@ export interface BindPhone {
 }
 
 export interface Candidate {
-  id?: number
-  nickname?: string
-  avatar?: string
-  avgRating?: number
-  completedOrders?: number
-  activeOrders?: number
-  levelId?: number
-  levelName?: string
+  id?: string
+  name?: string
+  appId?: string
 }
 
 export interface Candidates {
@@ -226,6 +221,11 @@ export interface ChatSession {
 
 export interface CheckoutRequest {
   moduleId?: string
+}
+
+export interface Choice {
+  mode?: string
+  accountId?: string
 }
 
 export interface Comparison {
@@ -1913,6 +1913,12 @@ export interface RSecurityStatus {
   data?: SecurityStatus
 }
 
+export interface RSelection {
+  code?: number
+  msg?: string
+  data?: Selection
+}
+
 export interface RSettings {
   code?: number
   msg?: string
@@ -2252,6 +2258,14 @@ export interface SecurityStatus {
   wechatAvailable?: boolean
   passwordSet?: boolean
   passwordLoginEnabled?: boolean
+}
+
+export interface Selection {
+  mode?: string
+  status?: string
+  accountId?: string
+  appId?: string
+  candidates?: Candidate[]
 }
 
 export interface SendCode {

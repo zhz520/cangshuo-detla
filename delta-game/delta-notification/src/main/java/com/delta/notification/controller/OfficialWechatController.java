@@ -38,7 +38,7 @@ public class OfficialWechatController {
     @DeleteMapping("/common/wechat/binding")
     @OpLog(module = "wechat", operation = "解除公众号通知绑定")
     public R<Void> remove() {
-        service.removeBinding(SecurityUtils.getUserType(), SecurityUtils.getUserId());
+        service.removeNotificationBinding(SecurityUtils.getUserType(), SecurityUtils.getUserId());
         return R.ok();
     }
 

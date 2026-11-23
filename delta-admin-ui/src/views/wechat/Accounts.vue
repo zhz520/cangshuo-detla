@@ -19,6 +19,14 @@
             :label="`${account.name} · ${account.appId}`" :value="account.id" />
         </el-select>
       </div>
+      <div class="account-toolbar" v-if="sender">
+        <div><strong>业务通知发件号</strong><span>{{ senderLabel }}</span></div>
+        <el-select aria-label="业务通知发件号" :disabled="changingSender" :model-value="sender.mode === 'MANUAL' ? sender.accountId : sender.mode" @change="chooseSender">
+          <el-option value="AUTO" label="自动选择（保留已有发件号）"/>
+          <el-option v-for="item in sender.candidates" :key="item.id" :value="item.id" :label="item.name + ' · ' + item.appId"/>
+          <el-option value="DISABLED" label="停用公众号业务通知"/>
+        </el-select>
+      </div>
       <DataTable :loading="loading" :data="accounts" row-key="id" height="260" empty-text="尚未绑定公众号">
         <el-table-column prop="name" label="公众号" min-width="170" />
         <el-table-column prop="appId" label="AppID" min-width="190" />
@@ -52,7 +60,10 @@
           <small>{{ selectedAccount.appId }} · {{ selectedAccount.mode === 'OPEN_PLATFORM' ? '开放平台' : '客户直连' }}</small>
         </div>
         <div class="summary-actions">
-          <el-button :loading="syncing" @click="syncTemplates">同步模板</el-button>
+          <el-button v-if="selectedAccount.mode === 'OPEN_PLATFORM'" :loading="syncing || setupPending" @click="retrySetup">
+            {{ setupPending ? '正在自动配置' : templateSetup.status === 'NOT_STARTED' ? '自动配置模板' : '重新检查模板' }}
+          </el-button>
+          <el-button v-else :loading="syncing" @click="syncTemplates">同步模板</el-button>
         </div>
       </div>
       <div v-if="selectedAccount.mode === 'DIRECT'" class="callback-hint">
@@ -63,9 +74,12 @@
 
       <el-tabs v-model="activeTab" class="account-tabs">
         <el-tab-pane label="场景就绪" name="readiness">
-          <el-alert v-if="selectedAccount.mode === 'OPEN_PLATFORM' && !loadingCatalog && loadedAccountId === selectedId"
-            :title="catalog.length ? '仅从本号模板库选择；扫码授权不会切换现有业务通知发件号。' : '模板库为空：在微信公众号后台添加模板后，回来点击同步模板。'"
-            type="info" :closable="false" show-icon />
+          <el-alert v-if="selectedAccount.mode === 'OPEN_PLATFORM' && loadedAccountId === selectedId"
+            :title="setupTitle" :type="templateSetup.status === 'ATTENTION' ? 'warning' : 'info'" :closable="false" show-icon>
+            <ul v-if="templateSetup.issues?.length"><li v-for="(issue,i) in templateSetup.issues" :key="i">
+              {{ [roleLabel(issue.role), scenarioLabel(issue.scenario)].filter(v=>v && v!=='-').join(' · ') }}：{{ issue.reason }}
+            </li></ul>
+          </el-alert>
           <DataTable :loading="loadingReadiness" :data="readinessRows" row-key="key" empty-text="请先同步公众号模板">
             <el-table-column label="角色" width="110">
               <template #default="{ row }">{{ roleLabel(row.role) }}</template>
@@ -183,7 +197,7 @@ import { notificationConfigGuide } from '@/utils/notification-examples'
 import { existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
-  getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates,
+  getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates, provisionWechatTemplates, getNoticeSender, changeNoticeSender,
   getWechatOpenStatus, startWechatOpenAuthorization, completeWechatOpenAuthorization
 } from '@/api/wechat-operations'
 
@@ -196,6 +210,34 @@ const loading = ref(false)
 const loadingReadiness = ref(false)
 const loadingCatalog = ref(false)
 const loadedAccountId = ref('')
+const sender = ref(null), changingSender = ref(false)
+const senderLabel = computed(() => {
+  const s = sender.value
+  if (s?.status === 'CHOICE_REQUIRED') return '有多个可用公众号，请选择发件号'
+  if (s?.status === 'DISABLED') return '已停用'
+  if (s?.status === 'UNAVAILABLE') return '暂无可用发件号'
+  return accounts.value.find(a=>a.id === s?.accountId)?.name || s?.appId || ''
+})
+async function chooseSender(value) {
+  const account = sender.value?.candidates?.find(a=>a.id === value)
+  const label = account?.name || (value === 'AUTO' ? '自动选择' : '停用通知')
+  try { await ElMessageBox.confirm('业务通知将使用「'+label+'」，不改变登录和支付配置。','确认发件设置') }
+  catch { return }
+  changingSender.value=true
+  try { sender.value=(await changeNoticeSender(account?{mode:'MANUAL',accountId:account.id}:{mode:value})).data }
+  catch(error){ ElMessage.error(apiError(error,'发件设置保存失败')) }
+  finally { changingSender.value=false }
+}
+const templateSetup = ref({status:'NOT_STARTED'})
+let setupTimer
+const setupPending = computed(() => ['PENDING','PROCESSING'].includes(templateSetup.value.status))
+const setupTitle = computed(() => {
+  const s = templateSetup.value
+  if (s.status === 'DONE') return '模板配置完成'
+  if (s.status === 'ATTENTION') return s.message || '部分模板需要处理，修正后可重新检查'
+  if (setupPending.value) return '正在后台配置模板，关闭页面不影响处理'
+  return '此号尚未运行自动配置'
+})
 let accountDataEpoch = 0, templateAccountId = '', mappedTemplateId = ''
 const syncing = ref(false)
 const savingAccount = ref(false)
@@ -272,7 +314,6 @@ function watchAuthorization(event) {
         selectedId.value = data.account.id
         ElMessage.success(data.account.mode === 'DIRECT' ? '授权已完成，保留原公众号直连配置' : '公众号已添加')
         await loadAccounts()
-        if (data.account.mode === 'OPEN_PLATFORM' && selectedId.value === data.account.id) await syncTemplates()
         return
       }
       if (['FAILED','EXPIRED'].includes(data.status)) {
@@ -291,13 +332,14 @@ function watchAuthorization(event) {
   }
   authorizationTimer = setTimeout(poll, 1500)
 }
-onUnmounted(() => { disposed = true; stopAuthorization() })
+onUnmounted(() => { disposed = true; ++accountDataEpoch; clearTimeout(setupTimer); stopAuthorization() })
 
 async function loadAccounts() {
   loading.value = true
   try {
     const { data } = await getWechatAccounts()
     accounts.value = Array.isArray(data) ? data : []
+    try {sender.value=(await getNoticeSender()).data} catch {sender.value=null;ElMessage.warning('业务通知发件设置读取失败，请刷新重试')}
     if (!selectedId.value || !accounts.value.some(row => row.id === selectedId.value)) selectedId.value = accounts.value[0]?.id || ''
     if (selectedId.value) await loadAccountData()
   } catch (error) {
@@ -307,12 +349,13 @@ async function loadAccounts() {
   }
 }
 
-async function loadAccountData() {
+async function loadAccountData(quiet = false) {
   if (!selectedId.value) return
   const accountId = selectedId.value
   const epoch = ++accountDataEpoch
-  loadingReadiness.value = true
-  loadingCatalog.value = true
+  clearTimeout(setupTimer)
+  loadingReadiness.value = quiet !== true
+  loadingCatalog.value = quiet !== true
   try {
     const [state, templates] = await Promise.all([getWechatReadiness(accountId), getWechatTemplateCatalog(accountId)])
     if (selectedId.value !== accountId || epoch !== accountDataEpoch) return
@@ -320,6 +363,8 @@ async function loadAccountData() {
     authoritySchemes.value = Array.isArray(state.data?.authoritySchemes) ? state.data.authoritySchemes : []
     catalog.value = Array.isArray(templates.data) ? templates.data : []
     loadedAccountId.value = accountId
+    templateSetup.value = state.data?.templateSetup || {status:'NOT_STARTED'}
+    if (setupPending.value && !disposed) setupTimer = setTimeout(() => loadAccountData(true),3000)
   } catch (error) {
     if (epoch === accountDataEpoch) ElMessage.error(error?.message || '公众号模板状态读取失败')
   } finally {
@@ -329,6 +374,8 @@ async function loadAccountData() {
 
 watch(selectedId, () => {
   ++accountDataEpoch
+  clearTimeout(setupTimer)
+  templateSetup.value = {status:'NOT_STARTED'}
   loadedAccountId.value = ''
   catalog.value = []
   readinessRows.value = []
@@ -384,6 +431,17 @@ async function syncTemplates() {
     await loadAccountData()
   } catch (error) {
     if (selectedId.value === accountId) ElMessage.error(error?.message || '模板同步失败')
+  } finally { syncing.value = false }
+}
+async function retrySetup() {
+  const id = selectedId.value
+  if (!id || syncing.value || setupPending.value) return
+  syncing.value = true
+  try {
+    await provisionWechatTemplates(id)
+    if (selectedId.value === id) await loadAccountData()
+  } catch (error) {
+    if (selectedId.value === id) ElMessage.error(apiError(error,'暂时无法启动模板配置'))
   } finally { syncing.value = false }
 }
 async function copyCallback() {

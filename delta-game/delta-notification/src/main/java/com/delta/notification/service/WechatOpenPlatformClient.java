@@ -54,10 +54,15 @@ public class WechatOpenPlatformClient {
         return new Authorization(state, url, result.path("expiresAt").asText(""));
     }
 
-    public Progress progress(String state, WechatAccountService accounts) {
+    void verifyAttemptOwner(String state) {
         if (!validState(state)) throw new BusinessException(404, "授权会话不存在");
         if (!SecurityUtils.getUserId().toString().equals(redis.get(STATE + state)))
             throw new BusinessException(404, "授权会话不存在或已过期");
+    }
+
+    // Called only by the tenant-scoped worker with a state created by this server.
+    Progress reconcileAttempt(String state, WechatAccountService accounts) {
+        if (!validState(state)) throw new BusinessException(404, "授权会话无效");
         var result = request("progress", Map.of("state", state));
         String status = result.path("status").asText();
         if ("AUTHORIZED".equals(status)) {
@@ -74,6 +79,21 @@ public class WechatOpenPlatformClient {
         if (!token.matches("[A-Za-z0-9_-]{1,2048}"))
             throw new BusinessException(502, "授权中心未返回有效的公众号访问凭据");
         return token;
+    }
+
+    public String bindingComponent(String appId) {
+        String component = request("binding-component", Map.of("appId", appId)).path("componentAppId").asText("");
+        if (!component.matches("wx[A-Za-z0-9]{16}"))
+            throw new BusinessException(502, "授权中心未返回有效的第三方平台 AppID");
+        return component;
+    }
+
+    public String bindingOpenid(String appId, String code) {
+        var response = request("binding-openid", Map.of("appId", appId, "code", code));
+        String openid = response.path("openid").asText("");
+        if (!appId.equals(response.path("appId").asText("")) || !openid.matches("[A-Za-z0-9_-]{10,128}"))
+            throw new BusinessException(400, "微信授权未完成，请重新绑定");
+        return openid;
     }
 
     public ReplyRules replyRules(String appId) {

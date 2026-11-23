@@ -25,6 +25,10 @@ export function syncWechatTemplates(id) {
   return request({ url: `/admin/wechat/accounts/${id}/templates/sync`, method: 'post', data: {} })
 }
 
+export const provisionWechatTemplates = id => request({url:`/admin/wechat/accounts/${id}/templates/provision`,method:'post'})
+export const getNoticeSender = () => request({ url:'/admin/wechat/notification-sender', method:'get' })
+export const changeNoticeSender = choice => request({ url:'/admin/wechat/notification-sender', method:'put', data:choice })
+
 export function saveWechatTemplate(id, data) {
   return request({ url: `/admin/wechat/accounts/${id}/templates`, method: 'put', data })
 }

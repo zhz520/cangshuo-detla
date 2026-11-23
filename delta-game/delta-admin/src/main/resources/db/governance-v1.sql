@@ -106,6 +106,14 @@ CREATE TABLE IF NOT EXISTS wechat_notice_queue (
  next_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uk_wechat_notice_dedupe(dedupe_key), KEY idx_wechat_notice_delivery(status,next_at)
 );
+CREATE TABLE IF NOT EXISTS wechat_template_setup_job (
+  id VARCHAR(70) PRIMARY KEY, kind VARCHAR(8) NOT NULL, status VARCHAR(16) NOT NULL,
+  domain_name VARCHAR(255) NOT NULL, state_cipher VARCHAR(256) NULL, account_id VARCHAR(36) NULL,
+  expires_at TIMESTAMP NULL, opened TINYINT NOT NULL DEFAULT 0, next_run TIMESTAMP NOT NULL,
+  lease_id VARCHAR(36) NULL, report_json TEXT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_wechat_setup_due(status,next_run)
+);
 CREATE TABLE IF NOT EXISTS wechat_mp_account (
   id VARCHAR(36) PRIMARY KEY, name VARCHAR(80) NOT NULL, app_id VARCHAR(64) NOT NULL,
   app_secret_encrypted VARCHAR(512) NULL, callback_token_encrypted VARCHAR(512) NULL,
@@ -148,6 +156,22 @@ CREATE TABLE IF NOT EXISTS wechat_channel_qr (
   scans INT NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_wechat_qr_scene(account_id,scene)
 );
+CREATE TABLE IF NOT EXISTS wechat_notice_sender (
+  id INT PRIMARY KEY,
+  mode VARCHAR(16) NOT NULL,
+  account_id VARCHAR(36) NOT NULL
+);
+
+-- Only server-verified, sender-scoped OAuth identities belong here (never backfill login bindings).
+CREATE TABLE IF NOT EXISTS wechat_notice_recipient (
+  app_id VARCHAR(64) NOT NULL,
+  user_type VARCHAR(16) NOT NULL,
+  user_id BIGINT NOT NULL,
+  openid VARCHAR(128) NOT NULL,
+  PRIMARY KEY(app_id,user_type,user_id),
+  UNIQUE(app_id,openid)
+);
+
 CREATE TABLE IF NOT EXISTS wechat_fan (
   account_id VARCHAR(36) NOT NULL, openid VARCHAR(128) NOT NULL, nickname VARCHAR(128) NULL, avatar VARCHAR(512) NULL,
   subscribed TINYINT NOT NULL DEFAULT 1, tags_json TEXT NULL, last_sync_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

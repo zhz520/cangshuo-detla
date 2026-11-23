@@ -32,7 +32,8 @@ class OfficialWechatRoleTemplateTest {
 
     @BeforeEach
     void setUp() {
-        service = new OfficialWechatService(jdbc, configs, new NotificationTemplateDataService(jdbc), permissions, platform, redis);
+        service = new OfficialWechatService(jdbc, mock(WechatNotificationSender.class), mock(WechatOpenPlatformClient.class),
+                configs, new NotificationTemplateDataService(jdbc), permissions, platform, redis);
     }
 
     @Test

@@ -178,11 +178,25 @@
       "bytes": 1296
     },
     {
+      "id": "20261123-wechat-notice-sender",
+      "file": "deploy/baota/migrations/20261123-wechat-notice-sender.sql",
+      "source": "APPLY",
+      "sha256": "0e8036e4c097067ed0c7cfe9ce6f632448d6efa54629d6eca3259309e28d93d1",
+      "bytes": 485
+    },
+    {
       "id": "20261123-wechat-operations",
       "file": "deploy/baota/migrations/20261123-wechat-operations.sql",
       "source": "APPLY",
       "sha256": "9b9640997b5cda76a52d581880f71eb490dbb868a66a3240bb46f6ff13ce8fad",
       "bytes": 4502
+    },
+    {
+      "id": "20261123-wechat-template-setup",
+      "file": "deploy/baota/migrations/20261123-wechat-template-setup.sql",
+      "source": "APPLY",
+      "sha256": "4b14a0492786c2ffce466f1c6a8c4c8ef6acdd0a852540c01bc0553774719925",
+      "bytes": 517
     },
     {
       "id": "delta_game",
@@ -209,8 +223,8 @@
       "id": "governance-v1",
       "file": "delta-game/delta-admin/src/main/resources/db/governance-v1.sql",
       "source": "STARTUP",
-      "sha256": "c91b6ead7290a6b669dd066f594f5bfcb8c88ae7eb44963bfe06a59dc4eb964e",
-      "bytes": 12947
+      "sha256": "03d2c1a2b23dff98c78dc4bb6276df8100e41357945794e21cb0d969cacfb8e7",
+      "bytes": 13974
     },
     {
       "id": "workbench",

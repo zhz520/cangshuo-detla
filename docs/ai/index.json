@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.20.3",
-  "inputDigest": "sha256:dfc1a731e0dec5ae1c4dcf05212ab4b845dbbfda704fdf1509875013db8e9b99",
+  "inputDigest": "sha256:a13515e8be7c1f43a5030e31e85fc279a8d4ee7125454d1aad6d98ff52b1fc19",
   "counts": {
     "modules": 19,
-    "controllers": 116,
+    "controllers": 117,
     "adminViews": 63,
     "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
-    "migrations": 39,
-    "backendTests": 131,
-    "adminTests": 42,
+    "migrations": 41,
+    "backendTests": 136,
+    "adminTests": 43,
     "h5Tests": 24
   },
   "modules": [
@@ -141,6 +141,7 @@
         "delta-game/delta-admin/src/test/java/com/delta/admin/UserLoginPolicyControllerTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/WechatAccountLinkControllerTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/WechatIdentityServiceTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/WechatNotificationSenderRequestTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/WechatWebLoginServiceTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/ArchitectureGuardrailsTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/architecture/OpenApiBaselineTest.java",
@@ -545,7 +546,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 26,
+      "mainJavaCount": 32,
       "controllers": [
         {
           "name": "AdminNoticePushController",
@@ -578,9 +579,14 @@
           "endpoints": 11
         },
         {
+          "name": "WechatNotificationSenderController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatNotificationSenderController.java",
+          "endpoints": 2
+        },
+        {
           "name": "WechatOperationsController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsController.java",
-          "endpoints": 11
+          "endpoints": 12
         },
         {
           "name": "WechatOperationsToolsController",
@@ -602,9 +608,13 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/SecretCipherTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatBindingGatewayContractTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatCallbackServiceTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatContentServiceTest.java",
-        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java"
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatNotificationDeliveryTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatOperationsServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatTemplateProvisionerTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatTemplateSetupJobsTest.java"
       ]
     },
     {
@@ -1690,6 +1700,7 @@
       {
         "module": "wechat-operations.js",
         "exports": [
+          "changeNoticeSender",
           "completeWechatOpenAuthorization",
           "createWechatQrCode",
           "deleteWechatAccount",
@@ -1698,6 +1709,7 @@
           "deleteWechatQrCode",
           "deleteWechatTag",
           "deleteWechatTemplate",
+          "getNoticeSender",
           "getWechatAccounts",
           "getWechatArticles",
           "getWechatAutoReplies",
@@ -1712,6 +1724,7 @@
           "getWechatTags",
           "getWechatTemplateCatalog",
           "importWechatMenu",
+          "provisionWechatTemplates",
           "publishWechatArticle",
           "publishWechatMenu",
           "pushWechatArticle",
@@ -1732,7 +1745,8 @@
           "uploadWechatMaterial"
         ],
         "urls": [
-          "/admin/wechat/accounts"
+          "/admin/wechat/accounts",
+          "/admin/wechat/notification-sender"
         ]
       }
     ],
@@ -1773,6 +1787,7 @@
       "delta-admin-ui/test/soft-theme.test.mjs",
       "delta-admin-ui/test/system-config.test.mjs",
       "delta-admin-ui/test/update-selection.test.mjs",
+      "delta-admin-ui/test/wechat-auto-template-browser.mjs",
       "delta-admin-ui/test/wechat-binding.test.mjs",
       "delta-admin-ui/test/wechat-menu-model.test.mjs",
       "delta-admin-ui/test/wechat-menu-preview-browser.mjs",
@@ -2094,14 +2109,22 @@
       },
       {
         "kind": "baota",
+        "path": "deploy/baota/migrations/20261123-wechat-notice-sender.sql"
+      },
+      {
+        "kind": "baota",
         "path": "deploy/baota/migrations/20261123-wechat-operations.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261123-wechat-template-setup.sql"
       }
     ],
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 539,
-    "operations": 539,
-    "schemas": 289
+    "endpoints": 542,
+    "operations": 542,
+    "schemas": 292
   }
 }

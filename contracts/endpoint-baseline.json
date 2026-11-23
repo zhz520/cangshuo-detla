@@ -1087,6 +1087,12 @@
   },
   {
     "controller": "WechatOperationsController",
+    "handler": "provision",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/templates/provision"
+  },
+  {
+    "controller": "WechatOperationsController",
     "handler": "sync",
     "method": "POST",
     "path": "/admin/wechat/accounts/{id}/templates/sync"
@@ -1096,6 +1102,18 @@
     "handler": "deleteTemplate",
     "method": "DELETE",
     "path": "/admin/wechat/accounts/{id}/templates/{role}/{scenario}"
+  },
+  {
+    "controller": "WechatNotificationSenderController",
+    "handler": "get",
+    "method": "GET",
+    "path": "/admin/wechat/notification-sender/"
+  },
+  {
+    "controller": "WechatNotificationSenderController",
+    "handler": "put",
+    "method": "PUT",
+    "path": "/admin/wechat/notification-sender/"
   },
   {
     "controller": "OfficialWechatController",
