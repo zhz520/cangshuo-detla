@@ -7,13 +7,24 @@
 | 项目 | 当前值 |
 | --- | --- |
 | 源码工作区 | `D:\codeStudy\code\cangshuo-detla`（源码主仓；线上制品看正式标签） |
-| 当前开发候选 | `1.19.0`（未发布、未部署） |
+| 当前开发候选 | `1.19.0`（520 已部署候选，尚未发布 GitHub Release） |
 | 正式标签与提交 | `v1.18.5` → `47a874f7abcd044514effb9af7088685f0171e96` |
 | GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.18.5` |
-| 授权中心 | `0.7.10`，生产容器 `cangshuo-detla-authority:0.7.10-20261122`；独立版本线 |
-| 520 演示线 | 后端/后台/H5 均为 `1.18.5`；不是共享组成员 |
+| 授权中心 | `0.7.11`，容器 `cangshuo-detla-authority:0.7.11-20261123`；独立版本线 |
+| 520 演示线 | 后端/后台/H5 均为 `1.19.0` 候选；不是共享组成员 |
 
 `main` 上发布标签之后的文档提交不表示生产被重新部署。不要从 `742`、`747`、`detla738` 等客户副本反向推断最新源码。
+
+### 2026-11-23 · 520 1.19.0 候选部署
+
+- 提交：`4d349268a3463b99b02f03f6898e70ea405f3029`，三件制品与 `release-manifest.json` 已上传 `/opt/apps/520/releases/1.19.0`，SHA-256 与 manifest 一致。
+- 镜像：后端 `kk-520-backend:1.19.0-20261123`，后台 `kk-520-admin:1.19.0-20261123`，H5 `kk-520-h5:1.19.0-20261123`；mysql/redis 未更换。
+- 版本文件：后台/H5 均为 `1.19.0`；后台 buildId `1aeefb705b4ef89f56d2f9534f53b409b1f6fa3ba15e4034edbca6d507b4f58d`，H5 buildId `0cb926d2abb6a519ae2aaa8a1a5ae8766e0ff199c288078bc51c427b06107508`，后端 buildId `113adc32f38c874e1c489165affe8d0aa56a9555e0738c11fc02d1391eb2d4af`。
+- 健康：backend/admin/h5/mysql/redis 均 running，backend healthy；`/health` 与公开站点配置返回 200；后端日志未发现 ERROR/Exception。
+- 数据库：`client520_game` 91 张表；新增 `schema_migrations`、公众号账号/模板/内容/群发/标签/素材和秒杀表已创建；启动脚本校验和已登记。
+- 备份：`/opt/apps/520/backups/pre-1.19.0-20261123-1115`（MySQL、uploads/platform、Compose）。`uploads.tar.gz` 5.3MB，DB 备份 gzip 校验通过。
+- 授权中心：`0.7.11` 镜像 `cangshuo-detla-authority:0.7.11-20261123`，healthy；备份 `/opt/apps/authority/backups/pre-0.7.11-20261123-1135/runtime.tar.gz`。
+- 未验证：真实公众号回调/发送、真实微信支付、真实素材/草稿发布、720/750/747/JAX 共享组、三套主题逐页人工验收。520 仅为候选验收，不是正式发布。
 
 ## 2. 生产共享组
 
