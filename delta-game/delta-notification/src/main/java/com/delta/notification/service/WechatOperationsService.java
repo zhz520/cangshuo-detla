@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Basic official-account operations. Only account-scoped data is stored here;
@@ -24,8 +25,12 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class WechatOperationsService {
+    private static final int FAN_SYNC_LIMIT = 500;
+    private static final int WECHAT_FAN_BATCH_SIZE = 100;
+    private static final int FAN_LIST_PAGE_LIMIT = 10;
     private final JdbcTemplate jdbc;
     private final WechatAccountService accounts;
+    private final WechatOpenPlatformClient openPlatform;
 
     public Map<String, Object> menu(String accountId) {
         accounts.accountSummary(accountId);
@@ -46,7 +51,7 @@ public class WechatOperationsService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveMenu(String accountId, Map<String, Object> body) {
         accounts.accountSummary(accountId);
-        JSONObject buttons = menuButtons(body.get("buttons"));
+        JSONObject buttons = WechatMenuDefinition.normalize(body.get("buttons"), true);
         jdbc.update("INSERT INTO wechat_menu_draft(account_id,buttons_json,status) VALUES(?,?,'DRAFT') " +
                         "ON DUPLICATE KEY UPDATE buttons_json=VALUES(buttons_json),status='DRAFT',updated_at=CURRENT_TIMESTAMP",
                 accountId, buttons.toJSONString());
@@ -54,11 +59,13 @@ public class WechatOperationsService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> publishMenu(String accountId) throws Exception {
-        Map<String, Object> draft = menu(accountId);
-        Object buttons = draft.get("buttons");
-        if (!(buttons instanceof Map<?, ?> map) || !(map.get("button") instanceof List<?> list) || list.isEmpty())
-            throw new BusinessException(400, "请先配置公众号菜单");
+    public Map<String, Object> publishMenu(String accountId, Object expected) throws Exception {
+        accounts.accountSummary(accountId);
+        var rows = jdbc.queryForList("SELECT buttons_json FROM wechat_menu_draft WHERE account_id=? FOR UPDATE", String.class, accountId);
+        if (rows.isEmpty()) throw new BusinessException(409, "请先保存公众号菜单草稿");
+        JSONObject buttons = WechatMenuDefinition.normalize(JSON.parseObject(rows.get(0)), false);
+        if (!buttons.equals(WechatMenuDefinition.normalize(expected, false)))
+            throw new BusinessException(409, "草稿已被其他管理员修改，请刷新后重新预览");
         JSONObject response = accounts.apiPost(accountId, "/cgi-bin/menu/create", buttons);
         requireSuccess(response, "公众号菜单发布失败");
         jdbc.update("UPDATE wechat_menu_draft SET status='PUBLISHED',published_at=CURRENT_TIMESTAMP WHERE account_id=?", accountId);
@@ -70,8 +77,7 @@ public class WechatOperationsService {
         accounts.accountSummary(accountId);
         JSONObject response = accounts.apiGet(accountId, "/cgi-bin/menu/get");
         requireSuccess(response, "读取公众号菜单失败");
-        JSONObject buttons = new JSONObject();
-        buttons.put("button", response.getJSONArray("button") == null ? new JSONArray() : response.getJSONArray("button"));
+        JSONObject buttons = WechatMenuDefinition.imported(response);
         jdbc.update("INSERT INTO wechat_menu_draft(account_id,buttons_json,status,remote_json,published_at) VALUES(?,?,'PUBLISHED',?,CURRENT_TIMESTAMP) " +
                         "ON DUPLICATE KEY UPDATE buttons_json=VALUES(buttons_json),status='PUBLISHED',remote_json=VALUES(remote_json),published_at=CURRENT_TIMESTAMP",
                 accountId, buttons.toJSONString(), response.toJSONString());
@@ -79,7 +85,8 @@ public class WechatOperationsService {
     }
 
     public List<Map<String, Object>> autoReplies(String accountId) {
-        accounts.accountSummary(accountId);
+        Map<String, Object> account = accounts.accountSummary(accountId);
+        if (managedReplies(account)) return openPlatform.replyRules((String) account.get("appId")).rules();
         return jdbc.query("SELECT id,rule_type,keyword,match_mode,reply_type,content,media_id,priority,enabled,updated_at " +
                         "FROM wechat_autoreply_rule WHERE account_id=? ORDER BY priority DESC,id",
                 (rs, n) -> {
@@ -100,7 +107,8 @@ public class WechatOperationsService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveAutoReply(String accountId, Long id, Map<String, Object> body) {
-        accounts.accountSummary(accountId);
+        Map<String, Object> account = accounts.accountSummary(accountId);
+        boolean managed = managedReplies(account);
         String ruleType = upper(body.get("ruleType"), "KEYWORD");
         if (!Set.of("KEYWORD", "SUBSCRIBE", "DEFAULT").contains(ruleType)) throw new BusinessException(400, "自动回复规则类型不正确");
         String keyword = text(body.get("keyword"));
@@ -109,12 +117,39 @@ public class WechatOperationsService {
         if (!Set.of("CONTAINS", "EXACT").contains(matchMode)) throw new BusinessException(400, "关键词匹配方式不正确");
         String replyType = upper(body.get("replyType"), "TEXT");
         if (!Set.of("TEXT", "IMAGE", "VOICE", "VIDEO").contains(replyType)) throw new BusinessException(400, "回复类型不正确");
+        if (managed && !"TEXT".equals(replyType)) throw new BusinessException(400, "开放平台自动回复仅支持文字");
         String content = text(body.get("content"));
         String mediaId = text(body.get("mediaId"));
         if ("TEXT".equals(replyType) && (content.isBlank() || content.length() > 1000)) throw new BusinessException(400, "文字回复不能为空且最多 1000 字");
         if (!"TEXT".equals(replyType) && (mediaId.isBlank() || mediaId.length() > 128)) throw new BusinessException(400, "媒体回复需要填写已上传的素材 Media ID");
         int priority = body.get("priority") instanceof Number number ? Math.max(-1000, Math.min(1000, number.intValue())) : 0;
         boolean enabled = !(body.get("enabled") instanceof Boolean value) || value;
+        if (managed) {
+            String appId = (String) account.get("appId");
+            var snapshot = openPlatform.replyRules(appId);
+            List<Map<String, Object>> rules = new ArrayList<>(snapshot.rules());
+            long ruleId;
+            int position;
+            if (id == null) {
+                if (rules.size() >= 100) throw new BusinessException(400, "一个公众号最多配置 100 条自动回复");
+                do { ruleId = ThreadLocalRandom.current().nextLong(1, 1L << 53); }
+                while (managedRuleIndex(rules, ruleId) >= 0);
+                position = rules.size();
+            } else {
+                ruleId = id;
+                position = managedRuleIndex(rules, ruleId);
+                if (position < 0) throw new BusinessException(404, "自动回复规则不存在");
+                rules.remove(position);
+            }
+            var rule = Map.<String, Object>of("id", ruleId, "ruleType", ruleType,
+                    "keyword", "KEYWORD".equals(ruleType) ? keyword : "", "matchMode", matchMode,
+                    "replyType", replyType, "content", content, "priority", priority, "enabled", enabled);
+            rules.add(position, rule);
+            var saved = openPlatform.replaceReplyRules(appId, snapshot.revision(), rules).rules();
+            int index = managedRuleIndex(saved, ruleId);
+            if (index < 0) throw new BusinessException(502, "授权中心未返回已保存的自动回复");
+            return saved.get(index);
+        }
         if (id == null) {
             jdbc.update("INSERT INTO wechat_autoreply_rule(account_id,rule_type,keyword,match_mode,reply_type,content,media_id,priority,enabled) " +
                             "VALUES(?,?,?,?,?,?,?,?,?)", accountId, ruleType, keyword.isBlank() ? null : keyword, matchMode,
@@ -133,8 +168,30 @@ public class WechatOperationsService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteAutoReply(String accountId, long id) {
+        Map<String, Object> account = accounts.accountSummary(accountId);
+        if (managedReplies(account)) {
+            String appId = (String) account.get("appId");
+            var snapshot = openPlatform.replyRules(appId);
+            List<Map<String, Object>> rules = new ArrayList<>(snapshot.rules());
+            int index = managedRuleIndex(rules, id);
+            if (index < 0) throw new BusinessException(404, "自动回复规则不存在");
+            rules.remove(index);
+            openPlatform.replaceReplyRules(appId, snapshot.revision(), rules);
+            return;
+        }
         if (jdbc.update("DELETE FROM wechat_autoreply_rule WHERE id=? AND account_id=?", id, accountId) == 0)
             throw new BusinessException(404, "自动回复规则不存在");
+    }
+
+    private static boolean managedReplies(Map<String, Object> account) {
+        return account != null && "OPEN_PLATFORM".equals(account.get("mode"));
+    }
+
+    private static int managedRuleIndex(List<Map<String, Object>> rules, long id) {
+        for (int index = 0; index < rules.size(); index++) {
+            if (rules.get(index).get("id") instanceof Number candidate && candidate.longValue() == id) return index;
+        }
+        return -1;
     }
 
     public List<Map<String, Object>> qrCodes(String accountId) {
@@ -207,24 +264,20 @@ public class WechatOperationsService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> syncFans(String accountId) throws Exception {
         accounts.accountSummary(accountId);
+        List<String> openids = collectFollowerIds(accountId);
         Map<String, Map<String, Object>> found = new LinkedHashMap<>();
-        String next = "";
-        for (int page = 0; page < 10; page++) {
-            String path = "/cgi-bin/user/get" + (next.isBlank() ? "" : "?next_openid=" + URLEncoder.encode(next, StandardCharsets.UTF_8));
-            JSONObject result = accounts.apiGet(accountId, path);
-            requireSuccess(result, "同步公众号粉丝失败");
-            JSONObject data = result.getJSONObject("data");
-            JSONArray openids = data == null ? null : data.getJSONArray("openid");
-            if (openids == null || openids.isEmpty()) break;
-            List<Map<String, Object>> batch = new ArrayList<>();
-            for (Object openid : openids) batch.add(Map.of("openid", String.valueOf(openid), "lang", "zh_CN"));
+        for (int offset = 0; offset < openids.size(); offset += WECHAT_FAN_BATCH_SIZE) {
+            List<String> chunk = openids.subList(offset, Math.min(offset + WECHAT_FAN_BATCH_SIZE, openids.size()));
+            Set<String> requested = new HashSet<>(chunk);
+            List<Map<String, String>> batch = chunk.stream()
+                    .map(openid -> Map.of("openid", openid, "lang", "zh_CN")).toList();
             JSONObject users = accounts.apiPost(accountId, "/cgi-bin/user/info/batchget", Map.of("user_list", batch));
             requireSuccess(users, "读取公众号粉丝资料失败");
             JSONArray list = users.getJSONArray("user_info_list");
             if (list != null) for (Object raw : list) {
                 JSONObject user = raw instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(raw));
                 String openid = user.getString("openid");
-                if (openid == null || !openid.matches("[A-Za-z0-9_-]{10,128}")) continue;
+                if (!requested.contains(openid)) continue;
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("nickname", truncate(user.getString("nickname"), 128));
                 row.put("avatar", truncate(user.getString("headimgurl"), 512));
@@ -232,8 +285,6 @@ public class WechatOperationsService {
                 row.put("tags", user.getJSONArray("tagid_list") == null ? new JSONArray() : user.getJSONArray("tagid_list"));
                 found.put(openid, row);
             }
-            next = result.getString("next_openid");
-            if (next == null || next.isBlank()) break;
         }
         for (var entry : found.entrySet()) {
             jdbc.update("INSERT INTO wechat_fan(account_id,openid,nickname,avatar,subscribed,tags_json,last_sync_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP) " +
@@ -242,6 +293,27 @@ public class WechatOperationsService {
                     JSON.toJSONString(entry.getValue().get("tags")));
         }
         return Map.of("synced", found.size(), "total", found.size());
+    }
+
+    private List<String> collectFollowerIds(String accountId) throws Exception {
+        Set<String> distinct = new LinkedHashSet<>();
+        Set<String> seenCursors = new HashSet<>();
+        String next = "";
+        for (int page = 0; page < FAN_LIST_PAGE_LIMIT && distinct.size() < FAN_SYNC_LIMIT; page++) {
+            String path = "/cgi-bin/user/get" + (next.isBlank() ? "" : "?next_openid=" + URLEncoder.encode(next, StandardCharsets.UTF_8));
+            JSONObject result = accounts.apiGet(accountId, path);
+            requireSuccess(result, "同步公众号粉丝失败");
+            JSONObject data = result.getJSONObject("data");
+            JSONArray openids = data == null ? null : data.getJSONArray("openid");
+            if (openids == null || openids.isEmpty()) break;
+            for (Object raw : openids) {
+                if (raw instanceof String openid && openid.matches("[A-Za-z0-9_-]{10,128}")) distinct.add(openid);
+                if (distinct.size() == FAN_SYNC_LIMIT) break;
+            }
+            next = result.getString("next_openid");
+            if (next == null || next.isBlank() || !seenCursors.add(next)) break;
+        }
+        return new ArrayList<>(distinct);
     }
 
     public List<Map<String, Object>> tags(String accountId) {
@@ -368,20 +440,6 @@ public class WechatOperationsService {
         result.put("materials", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_material WHERE account_id=?", Long.class, accountId));
         result.put("lastMessageAt", jdbc.queryForObject("SELECT MAX(created_at) FROM wechat_message WHERE account_id=?", Timestamp.class, accountId));
         return result;
-    }
-
-    private static JSONObject menuButtons(Object raw) {
-        JSONObject body = raw instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(raw));
-        JSONArray buttons = body == null ? null : body.getJSONArray("button");
-        if (buttons == null || buttons.isEmpty() || buttons.size() > 3) throw new BusinessException(400, "公众号菜单需要 1 至 3 个一级菜单");
-        buttons.forEach(item -> {
-            JSONObject button = item instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(item));
-            String name = text(button.getString("name"));
-            if (name.isBlank() || name.length() > 8) throw new BusinessException(400, "公众号菜单名称需要 1 至 8 个字符");
-            JSONArray sub = button.getJSONArray("sub_button");
-            if (sub != null && sub.size() > 5) throw new BusinessException(400, "单个一级菜单最多 5 个二级菜单");
-        });
-        return body;
     }
 
     private static void requireSuccess(JSONObject response, String message) {

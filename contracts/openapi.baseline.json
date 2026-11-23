@@ -1753,6 +1753,50 @@
         }
       }
     },
+    "/admin/wechat/notification-sender" : {
+      "get" : {
+        "tags" : [ "wechat-notification-sender-controller" ],
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSelection"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "wechat-notification-sender-controller" ],
+        "operationId" : "put",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Choice"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RSelection"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/templates" : {
       "get" : {
         "tags" : [ "wechat-operations-controller" ],
@@ -2297,7 +2341,7 @@
     "/admin/reward-grab/settings" : {
       "get" : {
         "tags" : [ "reward-grab-settings-controller" ],
-        "operationId" : "get",
+        "operationId" : "get_1",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -7341,6 +7385,32 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/templates/provision" : {
+      "post" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "provision",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/tags" : {
       "get" : {
         "tags" : [ "wechat-operations-tools-controller" ],
@@ -7607,6 +7677,17 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -8084,6 +8165,52 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/open-platform/start" : {
+      "post" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "startOpenPlatform",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RAuthorization"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/open-platform/complete" : {
+      "post" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "completeOpenPlatform",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OpenPlatformCompletion"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RProgress"
                 }
               }
             }
@@ -13564,6 +13691,24 @@
         }
       }
     },
+    "/admin/wechat/accounts/open-platform/status" : {
+      "get" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "openPlatformStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RAvailability"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/user/list" : {
       "get" : {
         "tags" : [ "admin-user-controller" ],
@@ -16857,6 +17002,69 @@
           }
         }
       },
+      "Choice" : {
+        "type" : "object",
+        "properties" : {
+          "mode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Candidate" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "appId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RSelection" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Selection"
+          }
+        }
+      },
+      "Selection" : {
+        "type" : "object",
+        "properties" : {
+          "mode" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "type" : "string"
+          },
+          "appId" : {
+            "type" : "string"
+          },
+          "candidates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Candidate"
+            }
+          }
+        }
+      },
       "UserRequest" : {
         "type" : "object",
         "properties" : {
@@ -19469,6 +19677,73 @@
           }
         }
       },
+      "Authorization" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string"
+          },
+          "authorizationUrl" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RAuthorization" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Authorization"
+          }
+        }
+      },
+      "OpenPlatformCompletion" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Progress" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "account" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "opened" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "RProgress" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Progress"
+          }
+        }
+      },
       "RJSONObject" : {
         "type" : "object",
         "properties" : {
@@ -21575,39 +21850,6 @@
           }
         }
       },
-      "Candidate" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "nickname" : {
-            "type" : "string"
-          },
-          "avatar" : {
-            "type" : "string"
-          },
-          "avgRating" : {
-            "type" : "number"
-          },
-          "completedOrders" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "activeOrders" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "levelId" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "levelName" : {
-            "type" : "string"
-          }
-        }
-      },
       "Candidates" : {
         "type" : "object",
         "properties" : {
@@ -23398,6 +23640,32 @@
             "items" : {
               "$ref" : "#/components/schemas/PlayerLevel"
             }
+          }
+        }
+      },
+      "Availability" : {
+        "type" : "object",
+        "properties" : {
+          "ready" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RAvailability" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "msg" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Availability"
           }
         }
       },

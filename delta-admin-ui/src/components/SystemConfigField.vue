@@ -40,6 +40,7 @@ const choiceMap = {
   'player.deposit_mode': [['REQUIRED','入驻时缴押金'], ['NONE','无需押金'], ['BEFORE_WITHDRAW','入驻免押金，提现前按等级补交']],
   'risk.media.review_mode': [['AUTO','自动检测，失败转人工'], ['MANUAL','直接人工审核']],
   'auth.primary_method': [['PHONE','手机号优先'], ['WECHAT','微信优先']],
+  'wechat.official.enabled': [['auto','自动（仅扫码授权号）'], ['true','启用'], ['false','停用']],
   'identity.prompt_mode': [['OFF','关闭'], ['REMIND','提醒'], ['REQUIRED','指定操作必须实名']],
   'wx.pay.h5-type': [['WAP','移动网页'], ['IOS','iOS'], ['ANDROID','Android']],
   'sms.aliyun.endpoint': [['dysmsapi.aliyuncs.com', 'dysmsapi.aliyuncs.com']],

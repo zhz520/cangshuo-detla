@@ -43,7 +43,8 @@ class WechatAccountServiceTest {
                 "url VARCHAR(2000),miniprogram_json VARCHAR(1000),source VARCHAR(16) NOT NULL DEFAULT 'LOCAL',enabled TINYINT NOT NULL DEFAULT 1," +
                 "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(account_id,role,scenario))");
         platform = Mockito.mock(PlatformService.class);
-        service = new WechatAccountService(jdbc, new SecretCipher("test-only-wechat-encryption-key-32-bytes"), platform);
+        service = new WechatAccountService(jdbc, new SecretCipher("test-only-wechat-encryption-key-32-bytes"), platform,
+                Mockito.mock(WechatOpenPlatformClient.class));
     }
 
     @Test
@@ -102,6 +103,72 @@ class WechatAccountServiceTest {
 
         assertThat(service.templateFor("ADMIN", "new_order").getString("templateId")).isEqualTo("admin-new-order");
         assertThat(service.templateFor("ADMIN", "new_order").getJSONObject("fields").getString("thing1")).isEqualTo("message");
+    }
+
+    @Test
+    void verifiedImportIsIdempotentAndNeverReplacesTheDirectLoginAccount() {
+        String original = String.valueOf(service.saveAccount(Map.of("name","直连号","appId","wx1234567890abcdef",
+                "appSecret","fixture-secret","defaultAccount",true)).get("id"));
+        var open = service.importAuthorizedAccount("wx0000000000000001","扫码号");
+        assertThat(open).containsEntry("mode","OPEN_PLATFORM").containsEntry("defaultAccount",false)
+                .doesNotContainKeys("appSecret","accessToken","refreshToken");
+        assertThat(service.importAuthorizedAccount("wx0000000000000001","扫码号").get("id")).isEqualTo(open.get("id"));
+        assertThat(service.importAuthorizedAccount("wx1234567890abcdef","扫码同一公众号"))
+                .containsEntry("id",original).containsEntry("mode","DIRECT");
+        assertThat(service.accounts()).hasSize(2);
+        assertThat(service.defaultAppId()).isEqualTo("wx1234567890abcdef");
+        assertThatThrownBy(() -> service.saveAccount(Map.of("name","手工","appId","wx0000000000000002","mode","OPEN_PLATFORM")))
+                .isInstanceOf(BusinessException.class);
+        service.deleteAccount(String.valueOf(open.get("id")));
+        assertThat(service.defaultAppId()).isEqualTo("wx1234567890abcdef");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void disabledMappingKeepsItsSettingsButCannotBeSentUntilReenabled() {
+        String accountId = service.saveAccount(Map.of("name", "测试直连号", "appId", "wx1234567890abcdef",
+                "appSecret", "fixture-only", "defaultAccount", true)).get("id").toString();
+        var off = service.saveTemplate(accountId, Map.of("role", "ADMIN", "scenario", "new_order", "templateId", "sample-template",
+                "fields", Map.of("thing1", "productName"), "enabled", false));
+        var rows = (java.util.List<Map<String, Object>>) off.get("templates");
+        assertThat(rows).filteredOn(row -> row.get("role").equals("ADMIN") && row.get("scenario").equals("new_order"))
+                .singleElement().satisfies(row -> assertThat(row).containsEntry("configured", true).containsEntry("enabled", false)
+                        .containsEntry("status", "DISABLED").containsEntry("templateId", "sample-template"));
+        assertThat(service.templateFor("ADMIN", "new_order")).isNull();
+        service.saveTemplate(accountId, Map.of("role", "ADMIN", "scenario", "new_order", "templateId", "sample-template",
+                "fields", Map.of("thing1", "productName"), "enabled", true));
+        assertThat(service.templateFor("ADMIN", "new_order").getJSONObject("fields").getString("thing1")).isEqualTo("productName");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void managedTemplateMustBelongToSelectedAccountAndUseItsActualFields() {
+        String first = service.importAuthorizedAccount("wx0000000000000001", "第一公众号").get("id").toString();
+        String second = service.importAuthorizedAccount("wx0000000000000002", "第二公众号").get("id").toString();
+        jdbc.update("INSERT INTO wechat_mp_template_catalog(account_id,template_id,title,content) VALUES(?,?,?,?)",
+                first, "actual-template", "订单通知", "状态：{{thing3.DATA}}\n时间：{{time7.DATA}}");
+        Map<String, Object> mapping = Map.of("role", "ADMIN", "scenario", "new_order", "templateId", "actual-template",
+                "fields", Map.of("thing3", "status", "time7", "time"));
+        assertThatThrownBy(() -> service.saveTemplate(second, mapping))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(409));
+        assertThatThrownBy(() -> service.saveTemplate(first, Map.of("role", "ADMIN", "scenario", "new_order",
+                "templateId", "actual-template", "fields", Map.of("thing1", "status"))))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(400));
+        service.saveTemplate(first, mapping);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_template WHERE account_id=?", Integer.class, first))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM wechat_mp_template WHERE account_id=?", Integer.class, second))
+                .isZero();
+        jdbc.update("DELETE FROM wechat_mp_template_catalog WHERE account_id=?", first);
+        var rows = (java.util.List<Map<String, Object>>) service.readiness(first).get("templates");
+        assertThat(rows).filteredOn(row -> row.get("role").equals("ADMIN") && row.get("scenario").equals("new_order"))
+                .singleElement().satisfies(row -> assertThat(row).containsEntry("status", "CATALOG_MISSING"));
+        assertThatThrownBy(() -> service.saveTemplate(first, mapping))
+                .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(409));
+        var disabled = new java.util.HashMap<>(mapping);
+        disabled.put("enabled", false);
+        service.saveTemplate(first, disabled);
+        assertThat(jdbc.queryForObject("SELECT enabled FROM wechat_mp_template WHERE account_id=?", Integer.class, first)).isZero();
     }
 
     @Test

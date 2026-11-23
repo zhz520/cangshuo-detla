@@ -62,10 +62,21 @@ export interface AppProductDetailVO {
   categoryName?: string
 }
 
+export interface Authorization {
+  state?: string
+  authorizationUrl?: string
+  expiresAt?: string
+}
+
 export interface AutoVerifyView {
   matched?: boolean
   status?: string
   message?: string
+}
+
+export interface Availability {
+  ready?: boolean
+  reason?: string
 }
 
 export interface Banner {
@@ -139,14 +150,9 @@ export interface BindPhone {
 }
 
 export interface Candidate {
-  id?: number
-  nickname?: string
-  avatar?: string
-  avgRating?: number
-  completedOrders?: number
-  activeOrders?: number
-  levelId?: number
-  levelName?: string
+  id?: string
+  name?: string
+  appId?: string
 }
 
 export interface Candidates {
@@ -215,6 +221,11 @@ export interface ChatSession {
 
 export interface CheckoutRequest {
   moduleId?: string
+}
+
+export interface Choice {
+  mode?: string
+  accountId?: string
 }
 
 export interface Comparison {
@@ -482,6 +493,10 @@ export interface Notice {
   sortOrder?: number
   popupDisplay?: number
   deleted?: number
+}
+
+export interface OpenPlatformCompletion {
+  state?: string
 }
 
 export interface OperationLog {
@@ -1274,6 +1289,12 @@ export interface Product {
   deleted?: number
 }
 
+export interface Progress {
+  status?: string
+  account?: Record<string, unknown>
+  opened?: boolean
+}
+
 export interface ProgressRequest {
   content?: string
   images?: string
@@ -1334,10 +1355,22 @@ export interface RAppProductDetailVO {
   data?: AppProductDetailVO
 }
 
+export interface RAuthorization {
+  code?: number
+  msg?: string
+  data?: Authorization
+}
+
 export interface RAutoVerifyView {
   code?: number
   msg?: string
   data?: AutoVerifyView
+}
+
+export interface RAvailability {
+  code?: number
+  msg?: string
+  data?: Availability
 }
 
 export interface RBatchResult {
@@ -1826,6 +1859,12 @@ export interface RProduct {
   data?: Product
 }
 
+export interface RProgress {
+  code?: number
+  msg?: string
+  data?: Progress
+}
+
 export interface RPublicPlayerVO {
   code?: number
   msg?: string
@@ -1872,6 +1911,12 @@ export interface RSecurityStatus {
   code?: number
   msg?: string
   data?: SecurityStatus
+}
+
+export interface RSelection {
+  code?: number
+  msg?: string
+  data?: Selection
 }
 
 export interface RSettings {
@@ -2213,6 +2258,14 @@ export interface SecurityStatus {
   wechatAvailable?: boolean
   passwordSet?: boolean
   passwordLoginEnabled?: boolean
+}
+
+export interface Selection {
+  mode?: string
+  status?: string
+  accountId?: string
+  appId?: string
+  candidates?: Candidate[]
 }
 
 export interface SendCode {

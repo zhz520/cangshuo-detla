@@ -176,7 +176,7 @@ public class SysConfigController {
         ensureConfig("risk.media.review_mode","图片语音审核方式","AUTO","text","内容风控","AUTO：优先自动检测，未配置或不可用时转人工；MANUAL：不调用自动检测，直接进入人工审核");
         ensureConfig("risk.media.endpoint","图片语音系统检测接口","","text","内容风控","HTTPS检测网关，执行图片OCR与语音转写风控，返回verdict: SAFE或BLOCK；未配置或不可用时转人工审核");
         ensureConfig("risk.media.token","检测接口令牌","","text","内容风控","仅发送到已配置的HTTPS检测接口，保存后不回显");
-        ensureConfig("wechat.official.enabled","启用公众号模板通知","false","boolean","公众号通知","公众号模板消息与原小程序订阅通知相互独立");
+        ensureConfig("wechat.official.enabled","公众号模板通知","auto","select","公众号通知","自动模式仅启用托管发送账号，不影响直连账号");
         ensureConfig("wechat.official.app_id","公众号AppID","","text","公众号通知","填写具备模板消息权限的公众号AppID");
         ensureConfig("wechat.official.app_secret","公众号AppSecret","","text","公众号通知","保存后不回显");
         ensureConfig("wechat.official.redirect_url","客户与打手绑定回调页","","text","公众号通知","客户 H5 的HTTPS地址，例如 https://shop.example.com/# 前的主页面地址；授权后会回到客户 H5 并继续完成客户或打手绑定");
@@ -351,6 +351,8 @@ public class SysConfigController {
             try {int n=Integer.parseInt(value);if(n<0||n>720)throw new IllegalArgumentException();}
             catch(Exception e){throw new com.delta.common.exception.BusinessException(400,"售后观察期须为0至720小时");}
         }
+        if("wechat.official.enabled".equals(key)&&!java.util.Set.of("auto","true","false").contains(value))
+            throw new com.delta.common.exception.BusinessException(400,"公众号通知开关无效");
         if("withdraw.require_identity_match".equals(key)&&!java.util.Set.of("true","false").contains(value))
             throw new com.delta.common.exception.BusinessException(400,"提现实名校验开关无效");
         if ("auth.age_confirmation.enabled".equals(key) && !java.util.Set.of("true", "false").contains(value))

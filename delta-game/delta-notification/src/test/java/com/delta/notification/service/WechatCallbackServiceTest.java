@@ -6,9 +6,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.stream.Collectors;
 
@@ -18,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class WechatCallbackServiceTest {
+    private static final byte[] AES_KEY = "fixture-key-for-wechat-32-bytes!".getBytes(StandardCharsets.US_ASCII);
     private JdbcTemplate jdbc;
     private WechatCallbackService service;
 
@@ -41,7 +47,7 @@ class WechatCallbackServiceTest {
         WechatAccountService accounts = mock(WechatAccountService.class);
         when(accounts.callbackToken("acc")).thenReturn("callback-token");
         when(accounts.appId("acc")).thenReturn("wx1234567890");
-        when(accounts.aesKey("acc")).thenReturn("");
+        when(accounts.aesKey("acc")).thenReturn(Base64.getEncoder().withoutPadding().encodeToString(AES_KEY));
         service = new WechatCallbackService(jdbc, accounts);
     }
 
@@ -61,6 +67,40 @@ class WechatCallbackServiceTest {
     void rejectsForgedSignatureBeforeReadingTheMessage() {
         assertThatThrownBy(() -> service.handle("acc", "bad", null, "1720000000", "nonce", null, "<xml/>"))
                 .isInstanceOfSatisfying(BusinessException.class, error -> assertThat(error.getCode()).isEqualTo(403));
+    }
+
+    @Test
+    void standardEncryptedCallbackCanReturnAnEncryptedKeywordReply() throws Exception {
+        String timestamp = "1720000000", nonce = "nonce";
+        byte[] xml = ("<xml><ToUserName>gh_account</ToUserName><FromUserName>openid_1234567890</FromUserName>" +
+                "<CreateTime>1720000000</CreateTime><MsgType>text</MsgType><Content>你好</Content><MsgId>456</MsgId></xml>")
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] appId = "wx1234567890".getBytes(StandardCharsets.US_ASCII);
+        int packetSize = 20 + xml.length + appId.length;
+        int pad = 32 - packetSize % 32;
+        var packet = ByteBuffer.allocate(packetSize + pad);
+        packet.put(new byte[16]).putInt(xml.length).put(xml).put(appId);
+        byte[] padding = new byte[pad];
+        Arrays.fill(padding, (byte) pad);
+        packet.put(padding);
+        String inbound = Base64.getEncoder().encodeToString(crypto(Cipher.ENCRYPT_MODE, packet.array()));
+        String signed = signature("callback-token", timestamp, nonce, inbound);
+        String output = service.handle("acc", null, signed, timestamp, nonce, "aes",
+                "<xml><Encrypt><![CDATA[" + inbound + "]]></Encrypt></xml>");
+
+        String encryptedReply = output.split("<Encrypt><!\\[CDATA\\[")[1].split("]]>")[0];
+        assertThat(output).contains(signature("callback-token", timestamp, nonce, encryptedReply));
+        var reply = ByteBuffer.wrap(crypto(Cipher.DECRYPT_MODE, Base64.getDecoder().decode(encryptedReply)));
+        reply.position(16);
+        byte[] message = new byte[reply.getInt()];
+        reply.get(message);
+        assertThat(new String(message, StandardCharsets.UTF_8)).contains("欢迎咨询", "openid_1234567890");
+    }
+
+    private static byte[] crypto(int mode, byte[] input) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+        cipher.init(mode, new SecretKeySpec(AES_KEY, "AES"), new IvParameterSpec(AES_KEY, 0,16));
+        return cipher.doFinal(input);
     }
 
     private static String signature(String token, String timestamp, String nonce, String... extra) throws Exception {

@@ -27,7 +27,8 @@ class WechatContentServiceTest {
         jdbc.execute("DROP TABLE IF EXISTS wechat_article_draft");
         jdbc.execute("DROP TABLE IF EXISTS wechat_mass_send_task");
         jdbc.execute("CREATE TABLE wechat_article_draft(id BIGINT AUTO_INCREMENT PRIMARY KEY,account_id VARCHAR(36),title VARCHAR(120)," +
-                "author VARCHAR(64),digest VARCHAR(500),content_html TEXT,cover_url VARCHAR(512),remote_media_id VARCHAR(128),status VARCHAR(16)," +
+                "author VARCHAR(64),digest VARCHAR(500),content_html TEXT,cover_url VARCHAR(512),cover_media_id VARCHAR(128)," +
+                "remote_media_id VARCHAR(128),publish_id VARCHAR(128),status VARCHAR(16)," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE wechat_mass_send_task(id BIGINT AUTO_INCREMENT PRIMARY KEY,account_id VARCHAR(36),name VARCHAR(80)," +
                 "target_type VARCHAR(16),target_json TEXT,msg_type VARCHAR(16),content_json TEXT,status VARCHAR(24),created_by BIGINT,approved_by BIGINT," +

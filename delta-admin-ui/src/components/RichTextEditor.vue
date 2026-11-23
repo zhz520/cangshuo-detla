@@ -10,10 +10,10 @@
         <label class="toolbar-field">文字颜色<input type="color" aria-label="文字颜色" :value="textColor" @input="setColor('foreColor', $event.target.value)" /></label>
         <label class="toolbar-field">底色<input type="color" aria-label="文字底色" :value="backgroundColor" @input="setColor('hiliteColor', $event.target.value)" /></label>
         <el-button-group>
-          <el-button size="small" title="加粗" @mousedown.prevent @click="exec('bold')"><strong>B</strong></el-button>
-          <el-button size="small" title="斜体" @mousedown.prevent @click="exec('italic')"><em>I</em></el-button>
-          <el-button size="small" title="下划线" @mousedown.prevent @click="exec('underline')"><u>U</u></el-button>
-          <el-button size="small" title="删除线" @mousedown.prevent @click="exec('strikeThrough')"><s>S</s></el-button>
+          <el-button size="small" title="加粗" aria-label="加粗" @mousedown.prevent @click="exec('bold')"><strong>B</strong></el-button>
+          <el-button size="small" title="斜体" aria-label="斜体" @mousedown.prevent @click="exec('italic')"><em>I</em></el-button>
+          <el-button size="small" title="下划线" aria-label="下划线" @mousedown.prevent @click="exec('underline')"><u>U</u></el-button>
+          <el-button size="small" title="删除线" aria-label="删除线" @mousedown.prevent @click="exec('strikeThrough')"><s>S</s></el-button>
         </el-button-group>
         <el-button-group>
           <el-button size="small" @mousedown.prevent @click="exec('formatBlock', 'h2')">标题</el-button>
@@ -26,16 +26,16 @@
           <el-button size="small" @mousedown.prevent @click="exec('insertUnorderedList')">● 列表</el-button>
           <el-button size="small" @mousedown.prevent @click="exec('insertOrderedList')">1. 列表</el-button>
           <el-button size="small" @mousedown.prevent @click="insertLink">链接</el-button>
-          <el-button size="small" :loading="uploading" @mousedown.prevent @click="insertImage">图片</el-button>
+          <el-button v-if="showImage" size="small" :loading="uploading" @mousedown.prevent @click="insertImage">图片</el-button>
           <el-button size="small" @mousedown.prevent @click="exec('removeFormat')">清除格式</el-button>
         </el-button-group>
       </template>
-      <el-button-group>
+      <el-button-group v-if="showSource">
         <el-button size="small" :type="mode === 'visual' ? 'primary' : ''" @click="setMode('visual')">可视化</el-button>
         <el-button size="small" :type="mode === 'source' ? 'primary' : ''" @click="setMode('source')">源代码</el-button>
       </el-button-group>
     </div>
-    <div v-show="mode === 'visual'" ref="editorRef" class="editor-content" contenteditable="true" role="textbox" aria-label="公告内容" aria-multiline="true"
+    <div v-show="mode === 'visual'" ref="editorRef" class="editor-content" contenteditable="true" role="textbox" :aria-label="label" aria-multiline="true"
       @input="onInput" @blur="onInput" @keyup="saveSelection" @mouseup="saveSelection" @touchend="saveSelection" @paste="paste" />
     <el-input v-show="mode === 'source'" v-model="source" type="textarea" :rows="rows" @input="publishSource" />
   </div>
@@ -45,7 +45,11 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadFile } from '@/api/business'
 import { sanitizeRichText } from '@/utils/rich-text'
-const props = defineProps({ modelValue: { type: String, default: '' }, rows: { type: Number, default: 10 } })
+const props = defineProps({
+  modelValue: { type: String, default: '' }, rows: { type: Number, default: 10 },
+  showSource: { type: Boolean, default: true }, showImage: { type: Boolean, default: true },
+  label: { type: String, default: '公告内容' }
+})
 const emit = defineEmits(['update:modelValue'])
 const editorRef = ref(null), mode = ref('visual'), source = ref(props.modelValue), uploading = ref(false)
 const fontSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 48]

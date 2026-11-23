@@ -1,5 +1,10 @@
 import request from '@/utils/request'
 
+const openPlatformUrl = '/admin/wechat/accounts/open-platform'
+export const getWechatOpenStatus = () => request({ url: openPlatformUrl + '/status', method:'get', silent:true, timeout:22000 })
+export const startWechatOpenAuthorization = () => request({ url: openPlatformUrl + '/start', method:'post', data:{}, silent:true, timeout:22000 })
+export const completeWechatOpenAuthorization = state => request({ url: openPlatformUrl + '/complete', method:'post', data:{state}, silent:true, timeout:22000 })
+
 export function getWechatAccounts() {
   return request({ url: '/admin/wechat/accounts', method: 'get' })
 }
@@ -19,6 +24,10 @@ export function getWechatTemplateCatalog(id) {
 export function syncWechatTemplates(id) {
   return request({ url: `/admin/wechat/accounts/${id}/templates/sync`, method: 'post', data: {} })
 }
+
+export const provisionWechatTemplates = id => request({url:`/admin/wechat/accounts/${id}/templates/provision`,method:'post'})
+export const getNoticeSender = () => request({ url:'/admin/wechat/notification-sender', method:'get' })
+export const changeNoticeSender = choice => request({ url:'/admin/wechat/notification-sender', method:'put', data:choice })
 
 export function saveWechatTemplate(id, data) {
   return request({ url: `/admin/wechat/accounts/${id}/templates`, method: 'put', data })
@@ -40,8 +49,8 @@ export function saveWechatMenu(id, data) {
   return request({ url: `/admin/wechat/accounts/${id}/menu`, method: 'post', data })
 }
 
-export function publishWechatMenu(id) {
-  return request({ url: `/admin/wechat/accounts/${id}/menu/publish`, method: 'post', data: {} })
+export function publishWechatMenu(id, data) {
+  return request({ url: `/admin/wechat/accounts/${id}/menu/publish`, method: 'post', data })
 }
 
 export function importWechatMenu(id) {

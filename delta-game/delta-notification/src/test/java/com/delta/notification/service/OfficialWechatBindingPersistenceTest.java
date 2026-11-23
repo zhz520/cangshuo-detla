@@ -35,8 +35,10 @@ class OfficialWechatBindingPersistenceTest {
                 "PRIMARY KEY(user_type,user_id),UNIQUE(openid))");
         configs = Mockito.mock(SysConfigService.class);
         platform = Mockito.mock(PlatformService.class);
+        var sender = Mockito.mock(WechatNotificationSender.class);
+        Mockito.when(sender.current()).thenReturn(new WechatNotificationSender.Selection("AUTO","LEGACY","","legacy",List.of()));
         service = new OfficialWechatService(
-                jdbc,
+                jdbc, sender, Mockito.mock(WechatOpenPlatformClient.class),
                 configs,
                 new NotificationTemplateDataService(jdbc),
                 Mockito.mock(StaffPermissions.class),
@@ -86,7 +88,7 @@ class OfficialWechatBindingPersistenceTest {
     void bindingStatusListsMissingRoleTemplatesWithoutBlockingBinding() {
         service.saveBinding("ADMIN", 11L, "openid-admin-123");
         Mockito.when(platform.featureEnabled(OfficialWechatService.FEATURE_ID)).thenReturn(true);
-        Mockito.when(configs.getConfigValue("wechat.official.enabled", "false")).thenReturn("true");
+        Mockito.when(configs.getConfigValue("wechat.official.enabled", "auto")).thenReturn("true");
 
         var status = service.binding("ADMIN", 11L);
 
