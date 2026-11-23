@@ -10,10 +10,16 @@
 | 当前开发候选 | `1.20.0`（已装入 520 验收，未晋级共享组） |
 | 正式标签与提交 | `v1.19.0` → `4d349268a3463b99b02f03f6898e70ea405f3029` |
 | GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.19.0` |
-| 授权中心 | `0.8.0`，容器 `cangshuo-detla-authority:0.8.0-20261123`；独立版本线 |
+| 授权中心 | `0.8.1`，容器 `cangshuo-detla-authority:0.8.1-20261123`；独立版本线 |
 | 520 演示线 | 后端/后台/H5 均为 `1.20.0`；不是共享组成员 |
 
 `main` 上发布标签之后的文档提交不表示生产被重新部署。不要从 `742`、`747`、`detla738` 等客户副本反向推断最新源码。
+
+### 2026-11-23 · 授权中心 0.8.1 补齐微信回调
+
+- 仅更新授权中心（`e393bae58c941f17cd6f06cc4e0fe1df0e4bd386`）；备份 `/opt/apps/authority/backups/pre-0.8.1-20261123-160545` 的 SQLite、运行文件、Compose 已校验。
+- 管理接口线上返回两条正确回调，独立的消息回调路径已由 HTTPS 反代命中；未配置时返回拒绝，不回假成功。127 项本地测试与桌面 Chrome、移动 Chrome 通过。
+- 签名、解密、跨公众号和重放使用隔离样本验证；未配置第三方平台凭据或票据，未收到真实微信回调。只记录最近接收时间，不保存或转发正文。未改 SaaS、520 或共享组。
 
 ### 2026-11-23 · 微信开放平台上线试跑
 
@@ -22,17 +28,7 @@
 - 备份均已校验：520 `/opt/apps/520/backups/pre-1.20.0-20261123-135044`（MySQL、uploads/platform、Compose 与环境文件）；授权中心 `/opt/apps/authority/backups/pre-0.8.0-20261123-134042`（一致性 SQLite、运行文件、Compose）。
 - 线上浏览器验收：授权中心登录页、520 公众号运营页和 440px H5 首页正常。520 管理员可看到扫码入口；未配置时明确提示「尚未启用微信开放平台」，未发送发起授权请求。授权中心公网 Origin 已就绪，第三方平台凭据与真实票据尚未配置；扫码、授权后同步与真实发送未验。本次未发布 GitHub 正式资产、未更新 742、747、JAX。
 
-### 2026-11-23 · 520 1.19.0 部署
-
-- 提交：`4d349268a3463b99b02f03f6898e70ea405f3029`，三件制品与 `release-manifest.json` 已上传 `/opt/apps/520/releases/1.19.0`，SHA-256 与 manifest 一致。
-- 镜像：后端 `kk-520-backend:1.19.0-20261123`，后台 `kk-520-admin:1.19.0-20261123`，H5 `kk-520-h5:1.19.0-20261123`；mysql/redis 未更换。
-- 版本文件：后台/H5 均为 `1.19.0`；后台 buildId `1aeefb705b4ef89f56d2f9534f53b409b1f6fa3ba15e4034edbca6d507b4f58d`，H5 buildId `0cb926d2abb6a519ae2aaa8a1a5ae8766e0ff199c288078bc51c427b06107508`，后端 buildId `113adc32f38c874e1c489165affe8d0aa56a9555e0738c11fc02d1391eb2d4af`。
-- 健康：backend/admin/h5/mysql/redis 均 running，backend healthy；`/health` 与公开站点配置返回 200；后端日志未发现 ERROR/Exception。
-- 数据库：`client520_game` 91 张表；新增 `schema_migrations`、公众号账号/模板/内容/群发/标签/素材和秒杀表已创建；启动脚本校验和已登记。
-- 备份：`/opt/apps/520/backups/pre-1.19.0-20261123-1115`（MySQL、uploads/platform、Compose）。`uploads.tar.gz` 5.3MB，DB 备份 gzip 校验通过。
-- 授权中心：`0.7.11` 镜像 `cangshuo-detla-authority:0.7.11-20261123`，healthy；备份 `/opt/apps/authority/backups/pre-0.7.11-20261123-1135/runtime.tar.gz`。
-- 页面验收：后台「营销活动 → 秒杀活动」「公众号运营」可打开，无空白页；授权中心「公众号模板」页可打开。
-- 未验证：真实公众号回调/发送、真实微信支付、真实素材/草稿发布、三套主题逐页人工验收。共享组已部署同源制品。
+上一个正式版及 520 回退制品见 [1.19.0 发布记录](CHANGELOG.md#2026-11-23--1190)。
 
 ## 2. 生产共享组
 
