@@ -7,7 +7,7 @@
 | 项目 | 当前值 |
 | --- | --- |
 | 源码工作区 | `D:\codeStudy\code\cangshuo-detla`（源码主仓；线上制品看正式标签） |
-| 当前正式版本 | `1.18.5` |
+| 当前开发候选 | `1.19.0`（未发布、未部署） |
 | 正式标签与提交 | `v1.18.5` → `47a874f7abcd044514effb9af7088685f0171e96` |
 | GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.18.5` |
 | 授权中心 | `0.7.10`，生产容器 `cangshuo-detla-authority:0.7.10-20261122`；独立版本线 |
