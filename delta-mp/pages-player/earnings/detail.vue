@@ -15,20 +15,21 @@
           {{ Number(item.amount) > 0 ? '+' : '' }}¥{{ Number(item.amount).toFixed(2) }}
         </text>
       </view>
-      <PageState :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无收益明细" @retry="retry" />
-      <view v-if="records.length && loading" class="loading-tip">正在加载…</view>
+      <PageState :phase="phase" :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无收益明细" @retry="retry" />
+      <LoadFeedback v-if="records.length && loading" :phase="phase" />
       <view v-else-if="records.length && finished && !error" class="loading-tip">已显示全部收益明细</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import PageState from '@/components/PageState.vue'
 import { getEarningsDetail } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
 const TX_TYPE_MAP = { REWARD_PAY:'打赏支出', REWARD_INCOME:'打赏收入', REWARD_REFUND:'打赏退款', REWARD_REVERSAL:'打赏冲正', PAY: '支付', REFUND: '退款', WITHDRAW: '提现', INCOME: '订单收益', RECHARGE: '充值' }
-const { items: records, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
+const { items: records, loading, phase, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
   pageSize: 20,
   async fetchPage({ pageNum, pageSize }) {
     const { data } = await getEarningsDetail({ pageNum, pageSize }, { loading: false, silent: true })

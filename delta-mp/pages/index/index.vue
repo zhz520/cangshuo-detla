@@ -16,7 +16,7 @@
       </view>
     </ScreenHeader>
 
-    <scroll-view scroll-y class="home-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="tab" scroll-y class="home-scroll" :show-scrollbar="false">
       <view class="home-content">
         <view v-if="isNeo" class="neo-home-head">
           <text class="neo-home-kicker">PLAY BEYOND LIMITS</text>
@@ -28,7 +28,7 @@
           v-if="banners.length"
           class="hero-card hero-swiper"
           :class="{ banner: isNeo }"
-          :autoplay="banners.length > 1"
+          :autoplay="!reducedMotion && (banners.length > 1)"
           :interval="4500"
           :circular="banners.length > 1"
           :indicator-dots="banners.length > 1"
@@ -68,7 +68,7 @@
             <image class="notice-label-icon" src="/static/icons/header-megaphone.svg" mode="aspectFit" />
             <text class="notice-label-text">公告</text>
           </view>
-          <swiper class="notice-swiper" vertical :autoplay="notices.length > 1" :interval="3500" :duration="500" :circular="notices.length > 1" :disable-touch="true">
+          <swiper class="notice-swiper" vertical :autoplay="!reducedMotion && (notices.length > 1)" :interval="3500" :duration="500" :circular="notices.length > 1" :disable-touch="!reducedMotion">
             <swiper-item v-for="item in notices" :key="item.id">
               <view class="notice-swiper-item">
                 <text class="notice-title">{{ item.title }}</text>
@@ -143,7 +143,7 @@
           <view class="product-grid">
             <ProductCard v-for="p in recommendProducts" :key="p.id" :product="p" cover-mode="aspectFit" />
           </view>
-          <PageState v-if="recommendLoading || recommendError" :loading="recommendLoading" :error="recommendError" @retry="loadRecommendProducts" />
+          <PageState v-if="recommendLoading || recommendError" :phase="recommendProducts.length ? 'refresh' : 'initial'" :loading="recommendLoading" :error="recommendError" @retry="loadRecommendProducts" />
           <view v-else-if="!recommendProducts.length" class="recommend-empty" @click="goCategoryPage">
             <text>暂时没有推荐商品</text>
             <text class="recommend-empty-link">去分类页看看 ›</text>
@@ -213,6 +213,10 @@
 </template>
 
 <script setup>
+import { useHomeNotices } from '@/composables/useHomeNotices'
+import { useHomeRecommendations } from '@/composables/useHomeRecommendations'
+import { useReducedMotion } from '@/composables/useReducedMotion'
+const reducedMotion = useReducedMotion()
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { computed, ref } from 'vue'
@@ -276,29 +280,11 @@ onShareTimeline(() => ({
 }))
 const banners = ref([])
 const categories = ref([])
-const notices = ref([])
 const purchaseFeed = ref([])
 const purchaseFeedEnabled = ref(false)
-const recommendProducts = ref([])
-const recommendLoading = ref(true)
-const recommendError = ref('')
-/** 热门推荐 Tab：全部 + 接口返回的分类（护航专区推荐、热门推荐等） */
-const recommendTabs = ref([])
-const currentRecommendCategoryId = ref('')
-const currentSort = ref('default')
 const homeSortOptions = productSortOptions
-const showHomeActions = ref(false)
-let recommendRequest = 0
-const showNoticePopup = ref(false)
-const popupNotices = ref([])
-const popupCurrentIndex = ref(0)
-const noticeHtml = computed(() => productDescriptionHtml(popupNotices.value[popupCurrentIndex.value]?.content || ''))
-const showNoticeList = ref(false)
-
-function noticeRevision(notice) {
-  // A new admin revision (content, status or popup toggle) gets a new acknowledgement key.
-  return `${notice.id}:${notice.updatedAt || notice.createdAt || ''}`
-}
+const { recommendProducts, recommendLoading, recommendError, recommendTabs, currentRecommendCategoryId, currentSort, showHomeActions, switchRecommendCategory, chooseHomeSort, loadRecommendProducts, loadRecommendations } = useHomeRecommendations({ getRecommendProducts, getRecommendCategories, productSortParams })
+const { notices, showNoticeList, popupCurrentIndex, popupNotices, showNoticePopup, noticeHtml, openNoticeDetail, closeNoticePopup, loadNotices } = useHomeNotices({ siteStore, clientStorage, getActiveNotices, productDescriptionHtml })
 
 function formatTime(t) {
   if (!t) return ''
@@ -313,42 +299,11 @@ async function loadData() {
     const list = res.data?.records || res.data
     banners.value = Array.isArray(list) ? list : []
   })
-  const noticeLoad = getActiveNotices(opts).then(async res => {
-    const list = res.data?.records || res.data
-    notices.value = Array.isArray(list) ? list : []
-    // Wait for the current public setting before deciding whether a dismissed
-    // notice should be shown again on this page entry.
-    await config
-    if (notices.value.length) {
-      // 筛选出需要弹窗展示的公告
-      const popupList = notices.value.filter(n => n.popupDisplay === 1)
-      if (popupList.length > 0) {
-        const seenIds = clientStorage.get('seenNoticeIds') || []
-        const unseenList = popupList.filter(n => !seenIds.includes(noticeRevision(n)))
-        // In every-refresh mode one JS session may render the home tab many times;
-        // switching tabs must not reopen it. A real browser refresh recreates the store.
-        const displayList = siteStore.noticePopupEveryVisit
-          ? (siteStore.hasShownNoticePopupThisSession() ? [] : popupList)
-          : unseenList
-        if (displayList.length > 0) {
-          siteStore.markNoticePopupShownThisSession()
-          popupNotices.value = displayList
-          popupCurrentIndex.value = 0
-          showNoticePopup.value = true
-        }
-      }
-    }
-  })
+  const noticeLoad = loadNotices(opts, config)
   const categoryLoad = getCategoryTree(opts).then(res => {
     categories.value = Array.isArray(res.data) ? res.data.slice(0, 8) : []
   })
-  const recommendLoad = getRecommendCategories(opts).then(res => {
-    if (Array.isArray(res.data)) {
-      recommendTabs.value = res.data.map(c => ({ id: String(c.id), name: c.name }))
-      if (!recommendTabs.value.some(tab => tab.id === currentRecommendCategoryId.value))
-        currentRecommendCategoryId.value = recommendTabs.value[0]?.id || ''
-    }
-  }).catch(() => {}).then(loadRecommendProducts)
+  const recommendLoad = loadRecommendations(opts)
   await Promise.allSettled([bannerLoad, noticeLoad, categoryLoad, recommendLoad])
 }
 
@@ -373,37 +328,6 @@ onPullDownRefresh(async () => {
   await loadData()
   uni.stopPullDownRefresh()
 })
-
-function switchRecommendCategory(id) {
-  if (currentRecommendCategoryId.value === id) return
-  currentRecommendCategoryId.value = id
-  loadRecommendProducts()
-}
-
-function chooseHomeSort(value) {
-  currentSort.value = value
-  showHomeActions.value = false
-  loadRecommendProducts()
-}
-
-async function loadRecommendProducts() {
-  const request = ++recommendRequest
-  recommendLoading.value = !recommendProducts.value.length
-  recommendError.value = ''
-  const params = { ...productSortParams(currentSort.value) }
-  if (currentRecommendCategoryId.value) params.categoryId = currentRecommendCategoryId.value
-  try {
-    const res = await getRecommendProducts(params, { loading: false, silent: true })
-    if (request === recommendRequest) recommendProducts.value = res.data?.records || res.data || []
-  } catch {
-    if (request === recommendRequest) {
-      recommendProducts.value = []
-      recommendError.value = '推荐商品加载失败，请重试。'
-    }
-  } finally {
-    if (request === recommendRequest) recommendLoading.value = false
-  }
-}
 
 function goSearch() {
   uni.navigateTo({ url: '/pages/product/list?focus=1' })
@@ -440,25 +364,6 @@ function goCategory(id) {
 
 function goDisplay(tab = 'rank') {
   uni.navigateTo({ url: `/pages/display/index?tab=${encodeURIComponent(tab)}` })
-}
-
-function openNoticeDetail(item) {
-  popupNotices.value = [item]
-  popupCurrentIndex.value = 0
-  showNoticePopup.value = true
-}
-
-function closeNoticePopup() {
-  showNoticePopup.value = false
-  // 记录已看过的弹窗公告ID
-  const seenIds = clientStorage.get('seenNoticeIds') || []
-  popupNotices.value.forEach(n => {
-    const revision = noticeRevision(n)
-    if (n.id && !seenIds.includes(revision)) {
-      seenIds.push(revision)
-    }
-  })
-  clientStorage.set('seenNoticeIds', seenIds.slice(-100))
 }
 
 async function goCustomerService() {

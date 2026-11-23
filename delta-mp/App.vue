@@ -10,7 +10,10 @@ import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 import { getTokenByRole } from '@/utils/auth'
 // #ifdef H5
+import { getCurrentInstance } from 'vue'
+import { installPageMotion } from '@/utils/page-motion.mjs'
 import { installViewportAdapter } from '@/utils/viewport'
+const appInstance = getCurrentInstance()
 // #endif
 
 let foreground = true
@@ -42,6 +45,7 @@ function syncRemindPolling() {
 onLaunch(() => {
   // #ifdef H5
   installViewportAdapter()
+  installPageMotion(appInstance.appContext.config.globalProperties.$router)
   const oauth=new URLSearchParams(window.location.search)
   const invite=String(oauth.get('invite')||oauth.get('inviteCode')||'').trim().toUpperCase()
   if(/^[A-Z2-9]{8}$/.test(invite))clientStorage.set('invite_code',invite)
@@ -100,6 +104,7 @@ onHide(() => { foreground = false; useRemindStore().stopPolling(); useChatStore(
 @import '@/uni.scss';
 @import '@/styles/monochrome.scss';
 @import '@/styles/responsive.scss';
+@import '@/styles/motion-tokens.scss';
 @import '@/styles/experience.scss';
 @import '@/styles/default-2026.scss';
 /* #ifdef H5 */

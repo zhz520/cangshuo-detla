@@ -6,7 +6,7 @@
       </view>
     </ScreenHeader>
 
-    <scroll-view scroll-y class="mine-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="tab" scroll-y class="mine-scroll" :show-scrollbar="false">
       <view class="mine-content">
         <view class="profile-row" @click="userStore.isLoggedIn ? go('/pages/mine/profile') : goLogin()">
           <AppImage :width="240" class="avatar" :src="userStore.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />

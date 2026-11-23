@@ -20,27 +20,25 @@
 
     <view class="sort-bar"><ProductSortPicker v-model="currentSort" @update:model-value="refresh" /></view>
 
-    <scroll-view scroll-y class="list" @scrolltolower="loadMore">
+    <scroll-view data-delta-content="page" scroll-y class="list" @scrolltolower="loadMore">
       <view v-if="products.length" class="product-grid">
         <ProductCard v-for="p in products" :key="p.id" :product="p" :designated-player-id="designatedPlayerId" :cover-height="460" cover-mode="aspectFit" />
       </view>
-      <view v-if="loading && !products.length" class="loading-box">
-        <view class="loading-dot" />
-        <text>正在加载服务</text>
-      </view>
+      <PageState v-if="loading || error" :phase="phase" :loading="loading" :error="error && products.length ? '仍显示上次结果。' + error : error" @retry="retry" />
       <view v-else-if="!loading && !products.length" class="empty-box">
         <image class="empty-icon" src="/static/icons/svc-sold.svg" mode="aspectFit" />
         <text class="empty-title">没有找到相关服务</text>
         <text class="empty-desc">换个关键词或看看其他分类</text>
       </view>
-      <view v-if="loading && products.length" class="loading-more">加载中…</view>
-      <view v-else-if="finished && products.length" class="loading-more">没有更多了</view>
+      <view v-if="!error && !loading && finished && products.length" class="loading-more">没有更多了</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import PageState from '@/components/PageState.vue'
+import { usePagedList } from '@/composables/usePagedList'
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
 import ProductCard from '@/components/ProductCard.vue'
 import ProductSortPicker from '@/components/ProductSortPicker.vue'
 import ScreenHeader from '@/components/ScreenHeader.vue'
@@ -51,15 +49,19 @@ import { getPublicPlayer } from '@/api/player'
 const designatedPlayerId = ref('')
 const designatedPlayer = ref(null)
 const keyword = ref('')
-const products = ref([])
-const pageNum = ref(1)
-const loading = ref(false)
-const finished = ref(false)
 const categoryId = ref('')
 const parentCategoryId = ref('')
 const autoFocus = ref(false)
 const currentSort = ref('default')
-let generation = 0
+const { items: products, query, phase, loading, finished, error, retry, setQuery, refresh: reload, loadMore, dispose } = usePagedList({
+  retainOnQueryChange: true,
+  async fetchPage({ pageNum, pageSize, query }) {
+    const res = await getProductList({ ...JSON.parse(query), pageNum, pageSize }, { silent: true })
+    const data = res.data
+    return { records: data?.records || data?.rows, total: data?.total }
+  }
+})
+onUnload(dispose)
 
 onLoad((opts) => {
   if (opts.playerId) {
@@ -70,43 +72,18 @@ onLoad((opts) => {
   if (opts.parentCategoryId) parentCategoryId.value = opts.parentCategoryId
   if (opts.keyword) keyword.value = opts.keyword
   if (opts.focus) autoFocus.value = true
-  loadData()
+  refresh()
 })
 
 function doSearch() { refresh() }
 function clearSearch() { keyword.value = ''; refresh() }
 function refresh() {
-  generation++
-  pageNum.value = 1
-  products.value = []
-  finished.value = false
-  loadData()
-}
-async function loadData() {
-  const request = generation
-  const page = pageNum.value
-  loading.value = true
-  const params = { pageNum: page, pageSize: 10, ...productSortParams(currentSort.value) }
+  const params = { ...productSortParams(currentSort.value) }
   if (keyword.value) params.keyword = keyword.value
   if (categoryId.value) params.categoryId = categoryId.value
   if (parentCategoryId.value) params.parentCategoryId = parentCategoryId.value
-  try {
-    const res = await getProductList(params)
-    if (request !== generation) return
-    const list = res.data?.records || res.data?.rows || []
-    finished.value = list.length < 10
-    products.value = page === 1 ? list : [...products.value, ...list]
-  } catch (_) {
-    if (request === generation && page > 1) pageNum.value = page - 1
-  } finally {
-    if (request === generation) loading.value = false
-  }
-}
-function loadMore() {
-  if (!loading.value && !finished.value) {
-    pageNum.value++
-    loadData()
-  }
+  const key = JSON.stringify(params)
+  return key === query.value ? reload() : setQuery(key)
 }
 </script>
 <style lang="scss" scoped>
@@ -194,7 +171,7 @@ function loadMore() {
   box-sizing: border-box;
 }
 .product-grid { display: flex; flex-direction: column; gap: 20rpx; }
-.loading-box, .empty-box {
+.empty-box {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -203,16 +180,7 @@ function loadMore() {
   color: var(--store-muted);
   font-size: 23rpx;
 }
-.loading-dot {
-  width: 34rpx;
-  height: 34rpx;
-  margin-bottom: 16rpx;
-  border: 3rpx solid #dddddd;
-  border-top-color: var(--store-text);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+
 .empty-icon { width: 100rpx; height: 100rpx; opacity: .45; margin-bottom: 18rpx; }
 .empty-title { color: var(--store-text); font-size: 28rpx; font-weight: 800; }
 .empty-desc { margin-top: 8rpx; color: var(--store-muted); font-size: 22rpx; }

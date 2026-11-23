@@ -1,11 +1,12 @@
 import { readonly, ref } from 'vue'
 
-// Only the player hall and work list use this state machine. fetchPage returns { records, total? }.
-export function usePagedList({ fetchPage, initialQuery = '', pageSize = 10 }) {
+// fetchPage returns { records, total? }. Superseded reads never commit.
+export function usePagedList({ fetchPage, initialQuery = '', pageSize = 10, retainOnQueryChange = false }) {
   const query = ref(initialQuery)
   const items = ref([])
   const pageNum = ref(0) // Last successfully committed page, never the requested page.
   const loading = ref(false)
+  const phase = ref('initial')
   const error = ref('')
   const finished = ref(false)
   let version = 0
@@ -26,6 +27,7 @@ export function usePagedList({ fetchPage, initialQuery = '', pageSize = 10 }) {
     const preceding = pendingByQuery.get(task.query)
     const isCurrent = () => !disposed && task.version === version
     active = task
+    phase.value = kind === 'append' ? 'more' : (pageNum.value || items.value.length) ? 'refresh' : 'initial'
     loading.value = true
     error.value = ''
     failedKind = null
@@ -99,7 +101,7 @@ export function usePagedList({ fetchPage, initialQuery = '', pageSize = 10 }) {
     if (disposed || value === query.value) return active?.promise || Promise.resolve(false)
     cancel()
     query.value = value
-    items.value = []
+    if (!retainOnQueryChange) items.value = []
     pageNum.value = 0
     finished.value = false
     error.value = ''
@@ -112,7 +114,7 @@ export function usePagedList({ fetchPage, initialQuery = '', pageSize = 10 }) {
     disposed = true
   }
 
-  return { query: readonly(query), items, pageNum, loading, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose }
+  return { query: readonly(query), items, pageNum, loading, phase: readonly(phase), error, finished, refresh, loadMore, retry, setQuery, cancel, dispose }
 }
 
 function mergeRecords(previous, incoming) {

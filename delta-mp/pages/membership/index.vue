@@ -1,8 +1,8 @@
 <template>
   <view class="membership-page">
-    <view v-if="loading" class="empty">加载中…</view>
-    <view v-else-if="!data.enabled" class="empty">会员等级功能暂未开启</view>
-    <template v-else>
+    <PageState v-if="loading || error" :loading="loading" :phase="loaded ? 'refresh' : 'initial'" :error="error" @retry="load" />
+    <view v-if="loaded && !data.enabled" class="empty">会员等级功能暂未开启</view>
+    <template v-else-if="loaded">
       <view class="hero">
         <text class="eyebrow">MEMBERSHIP</text>
         <text class="tier">{{ data.tier?.name || '普通会员' }}</text>
@@ -28,10 +28,13 @@
 </template>
 
 <script setup>
+import PageState from '@/components/PageState.vue'
 import { computed, onMounted, ref } from 'vue'
 import { getMembership } from '@/api/membership'
 
 const loading = ref(true)
+const loaded = ref(false)
+const error = ref('')
 const data = ref({ enabled: false })
 const remaining = computed(() => Math.max(0, Number(data.value.nextThreshold || 0) - Number(data.value.netSpend || 0)))
 const progress = computed(() => {
@@ -48,16 +51,20 @@ function discountText(rate) {
   return (value * 10).toFixed(1).replace(/\.0$/, '') + ' 折'
 }
 
-onMounted(async () => {
+async function load() {
+  loading.value = true
+  error.value = ''
   try {
     const response = await getMembership()
     data.value = response.data || { enabled: false }
-  } catch (_) {
-    data.value = { enabled: false }
+    loaded.value = true
+  } catch (e) {
+    error.value = e?.msg || e?.message || '暂时无法加载，请重试'
   } finally {
     loading.value = false
   }
-})
+}
+onMounted(load)
 </script>
 
 <style lang="scss" scoped>

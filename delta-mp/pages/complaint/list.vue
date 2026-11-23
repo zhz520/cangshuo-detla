@@ -31,13 +31,14 @@
         </view>
       </view>
 
-      <view v-if="loading" class="load-tip">加载中...</view>
+      <LoadFeedback v-if="loading" :phase="items.length ? 'more' : 'initial'" />
       <view v-else-if="finished && items.length > 0" class="load-tip">没有更多了</view>
     </scroll-view>
   </view>
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import StatusTag from '@/components/StatusTag.vue'

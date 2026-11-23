@@ -22,13 +22,14 @@
           <button class="btn-reject" :disabled="!!pendingActions[item.orderId]" :loading="pendingActions[item.orderId] === 'reject'" @click="doReject(item)">拒绝</button>
         </view>
       </view>
-      <PageState :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无邀请记录" @retry="retry" />
-      <view v-if="records.length && loading" class="loading-tip">正在加载…</view>
+      <PageState :phase="phase" :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无邀请记录" @retry="retry" />
+      <LoadFeedback v-if="records.length && loading" :phase="phase" />
       <view v-else-if="records.length && finished && !error" class="loading-tip">已显示全部邀请</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
@@ -44,7 +45,7 @@ let highlightedOrder = ''
 onLoad(options => { highlightedOrder = /^\d{1,19}$/.test(options?.orderId || '') ? options.orderId : '' })
 const resolvedActions = new Map()
 let disposed = false
-const { query: tab, items: records, loading, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose } = usePagedList({
+const { query: tab, items: records, loading, phase, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose } = usePagedList({
   initialQuery: 'received',
   pageSize: 20,
   async fetchPage({ pageNum, pageSize, query }) {

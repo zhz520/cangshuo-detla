@@ -27,7 +27,7 @@ export function request(options) {
   const role = options.role || getCurrentRole()
   // Only coalesce simultaneous reads, never cache responses or combine writes.
   if ((options.method || 'GET') !== 'GET') { readGeneration++; return performRequest(options) }
-  const key = JSON.stringify([readGeneration, options.url, options.data || {}, role, options.auth === false ? '' : getTokenByRole(role), options.header || {}, options.loading !== false, options.redirectOnUnauthorized !== false])
+  const key = JSON.stringify([readGeneration, options.url, options.data || {}, role, options.auth === false ? '' : getTokenByRole(role), options.header || {}, options.loading !== false, options.silent === true, options.redirectOnUnauthorized !== false])
   if (pendingReads.has(key)) return pendingReads.get(key)
   const task = performRequest(options).finally(() => { if (pendingReads.get(key) === task) pendingReads.delete(key) })
   pendingReads.set(key, task)
@@ -213,7 +213,7 @@ export function uploadFile(filePath, endpoint = '/common/file/upload', options =
             handleUnauthorized(role, token)
             reject(data)
           } else {
-            uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
+            if (!options.silent) uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
             reject(data)
           }
         } else if (res.statusCode === 401) {
@@ -224,7 +224,7 @@ export function uploadFile(filePath, endpoint = '/common/file/upload', options =
         }
       },
       fail(err) {
-        uni.showToast({ title: '上传失败', icon: 'none' })
+        if (!options.silent) uni.showToast({ title: '上传失败', icon: 'none' })
         reject(err)
       }
     })

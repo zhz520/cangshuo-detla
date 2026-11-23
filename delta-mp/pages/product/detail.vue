@@ -11,7 +11,7 @@
 
     <view class="detail-body">
       <view class="banner-wrap">
-        <swiper class="banner" autoplay :interval="4200" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
+        <swiper class="banner" :autoplay="!reducedMotion" :interval="4200" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
           <swiper-item v-for="(img, i) in images" :key="i">
             <AppImage :src="img" mode="aspectFit" fallback="/static/icons/图片.svg" class="banner-img" @click="previewImg(i)" />
           </swiper-item>
@@ -123,7 +123,7 @@
           <text class="sheet-title">全部评价<span v-if="reviewTotal"> ({{ reviewTotal }})</span></text>
           <text class="sheet-close" @click="showReviews = false">✕</text>
         </view>
-        <scroll-view scroll-y class="sheet-body">
+        <scroll-view data-delta-content="page" scroll-y class="sheet-body">
           <view v-for="review in reviews" :key="review.id" class="review-item">
             <AppImage class="review-avatar" :src="review.userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
             <view class="review-main">
@@ -145,6 +145,8 @@
   </view>
 </template>
 <script setup>
+import { useReducedMotion } from '@/composables/useReducedMotion'
+const reducedMotion = useReducedMotion()
 import AppImage from '@/components/AppImage.vue'
 import ScreenHeader from '@/components/ScreenHeader.vue'
 import { ref, computed } from 'vue'

@@ -8,11 +8,18 @@ export function viewportMetrics({ width, height, visualHeight = height, visualTo
   return { width: Math.min(540, width), height, visibleHeight, top, bottom, keyboardOpen }
 }
 
+// Positive engine/version signal only: iOS Chrome and unknown WebViews use visualViewport.
+export function enableChromiumKeyboardResize(meta, brands) {
+  if (!meta || !brands?.some(({ brand, version }) => brand === 'Chromium' && Number.parseInt(version, 10) >= 108)) return
+  if (!meta.content.includes('interactive-widget=')) meta.content += ', interactive-widget=resizes-content'
+}
+
 let installed = false
 
 export function installViewportAdapter() {
   if (installed || typeof window === 'undefined') return
   installed = true
+  enableChromiumKeyboardResize(document.querySelector('meta[name="viewport"]'), navigator.userAgentData?.brands)
   const root = document.documentElement
   const viewport = window.visualViewport
   let frame = 0

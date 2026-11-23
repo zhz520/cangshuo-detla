@@ -17,8 +17,8 @@
         </view>
         <button class="invite-btn" :disabled="sending || !!sentIds[p.id] || p.activeOrders >= maxConcurrent" @click="openInvite(p)">{{ sentIds[p.id] ? '已邀请' : '邀请' }}</button>
       </view>
-      <PageState :loading="loading && !players.length" :error="error" :empty="!players.length" empty-text="暂无可邀请的队友" @retry="retry" />
-      <view v-if="players.length && loading" class="loading-tip">正在加载…</view>
+      <PageState :phase="phase" :loading="loading && !players.length" :error="error" :empty="!players.length" empty-text="暂无可邀请的队友" @retry="retry" />
+      <LoadFeedback v-if="players.length && loading" :phase="phase" />
       <view v-else-if="players.length && finished && !error" class="loading-tip">已显示全部队友</view>
     </scroll-view>
     <!-- 分成方式选择弹窗 -->
@@ -47,6 +47,7 @@
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
@@ -62,7 +63,7 @@ const sending = ref(false)
 const submitError = ref('')
 const sentIds = ref({})
 let disposed = false
-const { query, items: players, loading, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose } = usePagedList({
+const { query, items: players, loading, phase, error, finished, refresh, loadMore, retry, setQuery, cancel, dispose } = usePagedList({
   pageSize: 20,
   async fetchPage({ pageNum, pageSize, query, isCurrent }) {
     if (!/^\d+$/.test(String(orderId.value))) throw new Error('缺少有效订单编号，请返回订单重新进入')

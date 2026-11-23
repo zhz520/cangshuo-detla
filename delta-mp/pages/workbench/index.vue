@@ -8,8 +8,9 @@
       <button v-for="choice in filters" :key="choice.value" size="mini" :class="{ active: choice.value === filter }" @click="choose(choice.value)">{{ choice.label }}</button>
     </view>
     <text class="hint">已读只清除提醒，业务办结后才会从待办移除。</text>
+    <LoadFeedback v-if="loading" :phase="items.length ? 'refresh' : 'initial'" />
     <view v-if="error" class="hint" @click="load">{{ error }} · 点此重试</view>
-    <text v-else-if="!items.length" class="hint">{{ loading ? '加载中…' : '暂无待办' }}</text>
+    <text v-else-if="!loading && !items.length" class="hint">暂无待办</text>
     <view v-for="item in items" :key="item.kind + ':' + item.id" class="task">
       <view class="task-copy">
         <text v-if="item.unread" class="dot" aria-label="未读" />
@@ -29,6 +30,7 @@
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref, watch } from 'vue'
 import { onHide, onLoad, onShow } from '@dcloudio/uni-app'
 import { getTasks, readTask, acknowledgeTask, readAllTasks } from '@/api/workbench'

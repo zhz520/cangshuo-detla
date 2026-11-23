@@ -5,7 +5,7 @@
         <image src="/static/icons/header-search.svg" mode="aspectFit" />
       </view>
     </ScreenHeader>
-    <view class="category-body" :class="{ 'neo-body': isNeo }">
+    <view data-delta-content="tab" class="category-body" :class="{ 'neo-body': isNeo }">
       <!-- 左侧父级分类 -->
       <scroll-view v-if="!isNeo" scroll-y class="side" :show-scrollbar="false">
         <view
@@ -74,7 +74,7 @@
             </view>
             <view class="row-arrow" aria-hidden="true"><image src="/static/icons/arrow-right.svg" mode="aspectFit" /></view>
           </view>
-          <view v-if="productLoading" class="loading-tip">加载中...</view>
+          <LoadFeedback v-if="productLoading" :phase="products.length ? 'more' : 'initial'" />
           <view v-if="!productLoading && products.length === 0" class="empty-tip">暂无商品</view>
           <view v-if="productFinished && products.length > 0" class="loading-tip">没有更多了</view>
         </view>
@@ -85,6 +85,7 @@
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { clientStorage } from '@/utils/client-storage'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'

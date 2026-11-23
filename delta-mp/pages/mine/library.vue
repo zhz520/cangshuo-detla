@@ -31,7 +31,7 @@
           </view>
         </template>
       </PageState>
-      <view v-if="rows.length && loading" class="load-tip">加载中...</view>
+      <LoadFeedback v-if="rows.length && loading" :phase="pageNum > 1 ? 'more' : 'refresh'" />
       <view v-else-if="rows.length && finished" class="load-tip">已显示全部</view>
       <view class="list-bottom-space" />
     </scroll-view>
@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import AppImage from '@/components/AppImage.vue'

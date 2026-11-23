@@ -32,9 +32,9 @@
       </picker>
       <text class="filter-total">{{ total }} 位</text>
     </view>
-    <scroll-view scroll-y class="directory-scroll" @scrolltolower="loadMore">
+    <scroll-view data-delta-content="tab" scroll-y class="directory-scroll" @scrolltolower="loadMore">
       <view class="directory-content">
-      <view v-if="loading && !players.length" class="hint">加载中...</view>
+      <LoadFeedback v-if="loading && !players.length" />
       <view v-else-if="loadError" class="hint" @click="refresh">加载失败，点击重试</view>
       <template v-if="!loadError">
         <view class="result-heading">
@@ -48,7 +48,7 @@
           <PlayerListCard v-for="player in visiblePlayers" :key="player.id" :player="player" :compact="layout==='compact'" />
         </view>
         <EmptyState v-if="!loading && !loadError && !visiblePlayers.length" text="暂无符合条件的打手" />
-        <view v-if="loading" class="hint">加载中...</view>
+        <LoadFeedback v-if="loading && players.length" phase="more" />
         <view v-else-if="finished && players.length" class="hint">没有更多了</view>
       </template>
       <view class="bottom-space" />
@@ -59,6 +59,7 @@
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
