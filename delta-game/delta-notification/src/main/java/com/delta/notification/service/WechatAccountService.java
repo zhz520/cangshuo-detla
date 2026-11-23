@@ -329,6 +329,22 @@ public class WechatAccountService {
         return account == null || account.encryptedSecret().isBlank() ? "" : secrets.decrypt(account.encryptedSecret());
     }
 
+    public String callbackToken(String accountId) {
+        String encrypted = jdbc.queryForObject("SELECT callback_token_encrypted FROM wechat_mp_account WHERE id=?", String.class, accountId);
+        return encrypted == null || encrypted.isBlank() ? "" : secrets.decrypt(encrypted);
+    }
+
+    public String aesKey(String accountId) {
+        String encrypted = jdbc.queryForObject("SELECT aes_key_encrypted FROM wechat_mp_account WHERE id=?", String.class, accountId);
+        return encrypted == null || encrypted.isBlank() ? "" : secrets.decrypt(encrypted);
+    }
+
+    public String appId(String accountId) {
+        Account account = requireAccount(accountId);
+        if (account == null) throw new BusinessException(404, "公众号账号不存在");
+        return account.appId();
+    }
+
     public String accessTokenOrNull() throws Exception {
         Account account = defaultAccount();
         return account == null ? null : accessToken(account);

@@ -57,6 +57,11 @@
           <el-button type="primary" plain @click="openTemplate()">新增模板映射</el-button>
         </div>
       </div>
+      <div class="callback-hint">
+        <span>微信服务器回调 URL</span>
+        <code>{{ callbackUrl }}</code>
+        <el-button link type="primary" @click="copyCallback">复制</el-button>
+      </div>
 
       <el-tabs v-model="activeTab" class="account-tabs">
         <el-tab-pane label="场景就绪" name="readiness">
@@ -196,6 +201,7 @@ const templateForm = reactive({ configured: false, role: 'ADMIN', scenario: 'new
 const roleKeys = { USER: 'user', PLAYER: 'player', ADMIN: 'admin', CS: 'cs' }
 const roleNames = { USER: '客户', PLAYER: '打手', ADMIN: '管理员', CS: '客服' }
 const selectedAccount = computed(() => accounts.value.find(row => row.id === selectedId.value) || null)
+const callbackUrl = computed(() => selectedId.value ? `${window.location.origin}/common/wechat/callback/${selectedId.value}` : '')
 const sourceGroups = computed(() => notificationConfigGuide('wechat.official.templates.admin')?.sourceGroups || [])
 const eventMap = computed(() => Object.fromEntries((notificationConfigGuide('wechat.official.templates.admin')?.events || []).map(item => [item.key, item])))
 
@@ -281,6 +287,10 @@ async function syncTemplates() {
     ElMessage.error(error?.message || '模板同步失败')
   } finally { syncing.value = false }
 }
+async function copyCallback() {
+  try { await navigator.clipboard.writeText(callbackUrl.value); ElMessage.success('回调地址已复制') }
+  catch { ElMessage.warning('复制失败，请手动复制回调地址') }
+}
 
 function openTemplate(row = null) {
   const role = row?.role || 'ADMIN', scenario = row?.scenario || 'new_order'
@@ -344,6 +354,8 @@ onMounted(loadAccounts)
 .account-summary strong, .account-summary small { display:block; }
 .account-summary strong { margin-top:3px; font-size:18px; }
 .account-summary small { margin-top:4px; color:var(--el-text-color-secondary); }
+.callback-hint { display:flex; align-items:center; gap:10px; padding:10px 20px; border:1px solid var(--el-border-color-lighter); border-top:0; border-radius:0 0 14px 14px; background:var(--el-fill-color-lighter); color:var(--el-text-color-secondary); font-size:12px; }
+.callback-hint code { min-width:0; overflow-wrap:anywhere; color:var(--el-text-color-primary); }
 .summary-label { color:var(--el-text-color-secondary); font-size:12px; }
 .summary-actions { display:flex; gap:8px; }
 .account-tabs :deep(.el-tabs__header) { margin-bottom:12px; }
@@ -361,6 +373,7 @@ onMounted(loadAccounts)
   .account-toolbar :deep(.el-select) { width:100% !important; }
   .summary-actions { width:100%; }
   .summary-actions :deep(.el-button) { flex:1; }
+  .callback-hint { align-items:flex-start; flex-wrap:wrap; }
   .form-grid, .form-grid.three { grid-template-columns:1fr; }
   .field-row { grid-template-columns:1fr; }
 }

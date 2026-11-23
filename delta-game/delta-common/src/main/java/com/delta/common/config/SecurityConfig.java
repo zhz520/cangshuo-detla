@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/order/quote", "/order/available-players").permitAll()
                 .requestMatchers(HttpMethod.POST, "/pay/wx/notify", "/pay/wx/refund-notify").permitAll()
                 .requestMatchers(HttpMethod.GET, "/pay/wx/official/callback").permitAll()
+                .requestMatchers(HttpMethod.GET, "/common/wechat/callback/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/common/wechat/callback/**").permitAll()
                 .requestMatchers("/maintenance/**").hasRole("ADMIN")
                 .requestMatchers("/auth/logout").hasAnyRole("ADMIN", "CS", "USER", "GUEST", "PLAYER")
                 .requestMatchers("/ws/**").permitAll()

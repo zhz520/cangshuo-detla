@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.delta.common.tenant.TenantRegistry;
 import com.delta.common.tenant.TenantStartup;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 @Component
 @Order(-100)
@@ -25,7 +27,9 @@ public class GovernanceSchema implements ApplicationRunner {
 
     private void initializeCurrentTenant() throws Exception {
         try(var connection=jdbc.getDataSource().getConnection()) {
-            ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/governance-v1.sql"));
+            ClassPathResource governance = new ClassPathResource("db/governance-v1.sql");
+            ScriptUtils.executeSqlScript(connection, governance);
+            recordScript(governance, "governance-v1.sql", "STARTUP");
             boolean reviewNote = false;
             for (String table : java.util.List.of("privacy_request", "PRIVACY_REQUEST")) {
                 try (var columns = connection.getMetaData().getColumns(connection.getCatalog(), null, table, null)) {
@@ -39,12 +43,23 @@ public class GovernanceSchema implements ApplicationRunner {
                     statement.executeUpdate("ALTER TABLE privacy_request ADD COLUMN review_note VARCHAR(500)");
                 }
             }
-            ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/workbench.sql"));
+            ClassPathResource workbench = new ClassPathResource("db/workbench.sql");
+            ScriptUtils.executeSqlScript(connection, workbench);
+            recordScript(workbench, "workbench.sql", "STARTUP");
         }
         // Inserts only. Existing role and customer settings are never overwritten on startup.
         if(jdbc.queryForObject("SELECT COUNT(*) FROM staff_role WHERE code='ADMIN'",Long.class)==0)
             jdbc.update("INSERT INTO staff_role(code,name,permissions,builtin) VALUES ('ADMIN','管理员',?,1)","[\"*\",\"order.refund\"]");
         if(jdbc.queryForObject("SELECT COUNT(*) FROM staff_role WHERE code='CS'",Long.class)==0)
             jdbc.update("INSERT INTO staff_role(code,name,permissions,builtin) VALUES ('CS','客服',?,1)","[\"order.read\",\"order.manage\",\"player.manage\",\"media.review\",\"chat.manage\",\"user.read\"]");
+    }
+
+    private void recordScript(ClassPathResource resource, String id, String source) throws Exception {
+        byte[] bytes;
+        try (var input = resource.getInputStream()) { bytes = input.readAllBytes(); }
+        String checksum = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        jdbc.update("INSERT INTO schema_migrations(id,checksum,source) VALUES(?,?,?) " +
+                        "ON DUPLICATE KEY UPDATE checksum=VALUES(checksum),source=VALUES(source),applied_at=CURRENT_TIMESTAMP",
+                id, checksum, source);
     }
 }

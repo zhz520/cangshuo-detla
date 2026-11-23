@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:c0b2c9c63a016a8ec07f73fd55f3ff53242378f41c56396511c5b744c9071c3a",
+  "inputDigest": "sha256:250e1b3373e7104c322ced05b6399b30fadde8e4c2e2f4015a5779ab8adb511e",
   "counts": {
     "modules": 19,
-    "controllers": 113,
+    "controllers": 114,
     "adminViews": 59,
     "adminRoutes": 71,
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 37,
-    "backendTests": 127,
+    "backendTests": 128,
     "adminTests": 38,
     "h5Tests": 24
   },
@@ -544,7 +544,7 @@
         "delta-system",
         "delta-user"
       ],
-      "mainJavaCount": 20,
+      "mainJavaCount": 22,
       "controllers": [
         {
           "name": "AdminNoticePushController",
@@ -565,6 +565,11 @@
           "name": "WechatAccountLinkController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatAccountLinkController.java",
           "endpoints": 1
+        },
+        {
+          "name": "WechatCallbackController",
+          "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatCallbackController.java",
+          "endpoints": 2
         },
         {
           "name": "WechatOperationsController",
@@ -590,7 +595,8 @@
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/OfficialWechatRoleTemplateTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/SecretCipherTest.java",
         "delta-game/delta-notification/src/test/java/com/delta/notification/service/SmsNoticeServiceTest.java",
-        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java"
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatAccountServiceTest.java",
+        "delta-game/delta-notification/src/test/java/com/delta/notification/service/WechatCallbackServiceTest.java"
       ]
     },
     {
@@ -2033,8 +2039,8 @@
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 508,
-    "operations": 508,
+    "endpoints": 510,
+    "operations": 510,
     "schemas": 282
   }
 }

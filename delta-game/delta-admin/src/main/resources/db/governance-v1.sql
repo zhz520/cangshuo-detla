@@ -2,6 +2,10 @@ CREATE TABLE IF NOT EXISTS staff_role (
  code VARCHAR(64) PRIMARY KEY, name VARCHAR(100) NOT NULL, permissions TEXT NOT NULL,
  enabled INT NOT NULL DEFAULT 1, builtin INT NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  id VARCHAR(128) PRIMARY KEY, checksum CHAR(64) NOT NULL, source VARCHAR(32) NOT NULL,
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS staff_role_member (
  admin_id BIGINT PRIMARY KEY, role_code VARCHAR(64) NOT NULL
 );
@@ -120,6 +124,12 @@ CREATE TABLE IF NOT EXISTS wechat_fan (
   account_id VARCHAR(36) NOT NULL, openid VARCHAR(128) NOT NULL, nickname VARCHAR(128) NULL, avatar VARCHAR(512) NULL,
   subscribed TINYINT NOT NULL DEFAULT 1, tags_json TEXT NULL, last_sync_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(account_id,openid)
+);
+CREATE TABLE IF NOT EXISTS wechat_message (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, account_id VARCHAR(36) NOT NULL, msg_id VARCHAR(128) NULL,
+  openid VARCHAR(128) NOT NULL, direction VARCHAR(16) NOT NULL DEFAULT 'IN', msg_type VARCHAR(24) NOT NULL,
+  content TEXT NULL, event_key VARCHAR(128) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_wechat_message_msgid(account_id,msg_id), KEY idx_wechat_message_time(account_id,created_at)
 );
 CREATE TABLE IF NOT EXISTS sms_notice_queue (
  id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, delivery_key VARCHAR(64) NULL, event_type VARCHAR(64) NOT NULL,

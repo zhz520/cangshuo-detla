@@ -92,3 +92,17 @@ CREATE TABLE IF NOT EXISTS wechat_fan (
   last_sync_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(account_id, openid)
 );
+
+CREATE TABLE IF NOT EXISTS wechat_message (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  account_id VARCHAR(36) NOT NULL,
+  msg_id VARCHAR(128) NULL,
+  openid VARCHAR(128) NOT NULL,
+  direction VARCHAR(16) NOT NULL DEFAULT 'IN',
+  msg_type VARCHAR(24) NOT NULL,
+  content TEXT NULL,
+  event_key VARCHAR(128) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_wechat_message_msgid(account_id, msg_id),
+  KEY idx_wechat_message_time(account_id, created_at)
+);

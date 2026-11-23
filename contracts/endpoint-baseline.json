@@ -1146,6 +1146,18 @@
     "path": "/common/wechat/binding/start"
   },
   {
+    "controller": "WechatCallbackController",
+    "handler": "verify",
+    "method": "GET",
+    "path": "/common/wechat/callback/{accountId}"
+  },
+  {
+    "controller": "WechatCallbackController",
+    "handler": "message",
+    "method": "POST",
+    "path": "/common/wechat/callback/{accountId}"
+  },
+  {
     "controller": "DashboardAnalyticsController",
     "handler": "dashboard",
     "method": "GET",
