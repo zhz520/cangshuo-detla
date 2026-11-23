@@ -63,13 +63,11 @@
         <LoadFeedback :error="platformFeatureError" label="功能菜单" @retry="loadPlatformFeatureVisibility(true)" />
         <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
         <router-view v-slot="{ Component, route: pageRoute }">
-          <transition name="page-fade" mode="out-in">
-            <div :key="`${pageRoute.path}:${pageVersion}`" class="layout-page-frame">
-              <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :is="Component" read-only />
-              <DemoReadOnlyPage v-else-if="demoMode && !pageRoute.meta.errorPage" />
-              <component v-else :is="Component" />
-            </div>
-          </transition>
+          <PageViewport v-if="Component" :path="pageRoute.path">
+            <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :key="`config:${pageVersion}`" :is="Component" read-only />
+            <DemoReadOnlyPage :key="`demo:${pageVersion}`" v-else-if="demoMode && !pageRoute.meta.errorPage" />
+            <component v-else :key="pageVersion" :is="Component" />
+          </PageViewport>
         </router-view>
       </el-main>
     </el-container>
@@ -94,6 +92,7 @@ import DemoReadOnlyPage from '@/components/DemoReadOnlyPage.vue'
 import {buildNavigation} from '@/utils/navigation'
 import {enabledPlatformFeatures,loadPlatformFeatureVisibility,platformFeatureAllowed,platformFeatureError} from '@/utils/platform-feature-visibility'
 import { loadingFeedback } from '@/utils/loading-feedback'
+import PageViewport from '@/components/PageViewport.vue'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Expand, ArrowDown, ChatDotRound, List, Bell, Menu } from '@element-plus/icons-vue'

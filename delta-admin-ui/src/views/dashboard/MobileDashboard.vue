@@ -12,7 +12,7 @@
             <small>今天也把每一单稳稳接住</small>
           </div>
         </div>
-        <button type="button" class="hero-refresh" :class="{ spinning: loading || analyticsLoading || shiftLoading }" :disabled="loading || analyticsLoading || shiftLoading" aria-label="刷新工作台" @click="refreshAll">↻</button>
+        <button type="button" class="hero-refresh" :class="{ 'feedback-spin': loading || analyticsLoading || shiftLoading }" :disabled="loading || analyticsLoading || shiftLoading" aria-label="刷新工作台" @click="refreshAll">↻</button>
       </div>
       <div class="hero-shift" :class="{ online: shift.online }">
         <div class="hero-shift-copy">
@@ -347,8 +347,7 @@ onMounted(() => { loadAnalytics(); loadShift() })
 .hero-person strong { overflow:hidden; color:#fff; font-size:21px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
 .hero-person small { color:#aab3bf; font-size:10px; }
 .hero-refresh { width:34px; height:34px; flex:none; border:1px solid rgba(255,255,255,.16); border-radius:50%; background:rgba(255,255,255,.06); color:#fff; font-size:19px; cursor:pointer; }
-.hero-refresh.spinning { animation:hero-spin .9s linear infinite; }
-@keyframes hero-spin { to { transform:rotate(360deg); } }
+
 .hero-shift { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:17px; padding-top:14px; border-top:1px solid rgba(255,255,255,.1); }
 .hero-shift-copy { min-width:0; }
 .hero-shift-copy > div { display:flex; align-items:center; gap:7px; }

@@ -1,40 +1,9 @@
 <template>
   <div class="chat-service">
     <!-- 左侧会话列表 -->
-    <div v-show="!isCompact || !mobileChatOpen" class="session-panel">
-      <div class="panel-header">
-        <span>客服会话</span>
-        <el-button link type="primary" @click="fetchSessions">刷新</el-button>
-      </div>
-      <div class="session-list">
-        <div
-          v-for="s in sessions"
-          :key="s.id"
-          class="session-item"
-          :class="{ active: isSessionActive(s) }"
-          role="button"
-          tabindex="0"
-          @click="selectSession(s)"
-          @keydown.enter.prevent="selectSession(s)"
-          @keydown.space.prevent="selectSession(s)"
-        >
-          <div class="session-row">
-            <el-avatar :src="thumbnailUrl(s.avatar || '/static/images/delta-default-avatar.png',160)" :size="38" class="session-avatar">{{ (s.targetName || '')[0] || '用' }}</el-avatar>
-            <div class="session-body">
-              <div class="session-top">
-                <span class="session-name">{{ s.targetName || '用户 #' + s.id }}</span>
-                <span class="session-time">{{ formatTime(s.lastMessageAt) }}</span>
-              </div>
-              <div class="session-bottom">
-                <span class="session-last-msg">{{ s.lastMessage || '暂无消息' }}</span>
-                <span v-if="s.unreadCount > 0 && !isSessionActive(s)" class="unread-badge">{{ s.unreadCount > 99 ? '99+' : s.unreadCount }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-if="sessions.length === 0" class="empty-tip">暂无会话</div>
-      </div>
-    </div>
+    <ChatSessionPanel v-show="!isCompact || !mobileChatOpen" :sessions="sessions"
+      :active-id="(!isCompact || mobileChatOpen) ? currentSession?.id : null"
+      :loading="sessionsLoading" :error="sessionsError" @select="selectSession" @refresh="fetchSessions" />
 
     <!-- 右侧聊天区 -->
     <div v-show="!isCompact || mobileChatOpen" class="chat-panel">
@@ -335,6 +304,8 @@
 </template>
 
 <script setup>
+import ChatSessionPanel from './ChatSessionPanel.vue'
+import { useLoadTask } from '@/composables/useLoadTask'
 import { useRoute } from 'vue-router'
 import { useWorkbenchStore } from '@/stores/workbench'
 import request from '@/utils/request'
@@ -370,13 +341,10 @@ const orderTagTypeMap = {
 function orderTagType(s) { return orderTagTypeMap[s] || '' }
 
 // ===== 会话列表 =====
-const sessions = ref([])
-async function fetchSessions() {
-  try {
-    const res = await csChatSessionList({ pageNum: 1, pageSize: 100, type: 'USER_CS' })
-    sessions.value = res.data?.records || res.data || []
-  } catch { sessions.value = [] }
-}
+const { data: sessions, loading: sessionsLoading, error: sessionsError, run: fetchSessions } = useLoadTask(async () => {
+  const { data } = await csChatSessionList({ pageNum: 1, pageSize: 100, type: 'USER_CS' }, { silent: true })
+  return data?.records || data || []
+}, [])
 
 async function closeCurrentSession() {
   if (!currentSession.value || currentSession.value.status === 'CLOSED') return
@@ -411,9 +379,6 @@ const inputText = ref('')
 const sending = ref(false)
 const msgContainer = ref(null)
 
-function isSessionActive(session) {
-  return currentSession.value?.id === session.id && (!isCompact.value || mobileChatOpen.value)
-}
 watch([isCompact, mobileChatOpen], () => {
   chatStore.currentSessionId = currentSession.value && (!isCompact.value || mobileChatOpen.value) ? currentSession.value.id : null
   scrollToBottom()
@@ -846,50 +811,6 @@ onUnmounted(() => {
   border: 1px solid #e6e7e9;
 }
 
-/* 左侧会话列表 */
-.session-panel {
-  width: 280px;
-  border-right: 1px solid #e6e7e9;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-.panel-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e6e7e9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  font-size: 15px;
-}
-.session-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.session-item {
-  padding: 12px 16px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.2s;
-}
-.session-item:hover { background: #f5f6f7; }
-.session-item.active { background: #f3f4f5; border-left: 3px solid #17191c; }
-.session-row { display: flex; align-items: center; gap: 10px; width: 100%; }
-.session-avatar { flex-shrink: 0; }
-.session-body { flex: 1; overflow: hidden; }
-.session-top { display: flex; justify-content: space-between; align-items: center; }
-.session-name { font-size: 14px; font-weight: 500; color: #17191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.session-time { font-size: 11px; color: #b9bdc4; flex-shrink: 0; margin-left: 8px; }
-.session-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-.session-last-msg { font-size: 12px; color: #73777e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.unread-badge {
-  min-width: 18px; height: 18px; line-height: 18px; padding: 0 5px;
-  font-size: 11px; color: #fff; background: #c94f59; border-radius: 10px;
-  text-align: center; flex-shrink: 0; margin-left: 6px;
-}
-
 /* 右侧聊天区 */
 .chat-panel {
   flex: 1;
@@ -1125,7 +1046,6 @@ onUnmounted(() => {
 }
 @media (max-width: 1024px) {
   .chat-service { height: 100%; }
-  .session-panel { width: 100%; border-right: 0; min-height: 0; }
   .chat-header { padding: 8px; gap: 8px; flex-wrap: wrap; max-height: 30%; overflow-y: auto; }
   .chat-title { min-width: 0; overflow-wrap: anywhere; word-break: break-word; flex: 1; }
   .order-link { font-size: 12px; overflow-wrap: anywhere; }

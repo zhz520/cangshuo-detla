@@ -26,7 +26,7 @@
         <el-button link type="danger" :disabled="batchBusy" @click="batchDelete">批量删除</el-button>
       </BatchActionBar>
 
-      <el-table ref="tableRef" :data="list" v-loading="loading" stripe row-key="id" @selection-change="onSelectionChange">
+      <el-table ref="tableRef" :data="list" v-loading="loading" :empty-text="readFailed ? '商品列表未能加载' : undefined" stripe row-key="id" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column label="图片" width="80"><template #default="{ row }"><el-image lazy v-if="row.coverImage" :src="thumbnailUrl(row.coverImage,160)" style="width:50px;height:50px;border-radius:8px" fit="cover" :preview-src-list="[row.coverImage]" preview-teleported /></template></el-table-column>
@@ -81,6 +81,7 @@ import { thumbnailUrl } from '@/utils/image'
 
 const { isCompact } = useResponsive()
 const loading = ref(false), list = ref([]), total = ref(0), categories = ref([])
+const readFailed = ref(false)
 const tableRef = ref(null), selectedRows = ref([]), batchBusy = ref(false)
 const selectedIds = computed(() => selectedRows.value.map(row => row.id))
 const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', categoryId: '', status: '' })
@@ -98,6 +99,12 @@ async function fetchData() {
     const res = await getProductList(query)
     list.value = res.data.records
     total.value = Number(res.data.total)
+    readFailed.value = false
+  } catch (error) {
+    // The interceptor owns the page alert and retry. Keep the last good rows;
+    // do not reinterpret a failed read as a successful empty result.
+    if (!error?.requestHandled) throw error
+    readFailed.value = true
   } finally { loading.value = false }
 }
 async function handleToggleStatus(row) {

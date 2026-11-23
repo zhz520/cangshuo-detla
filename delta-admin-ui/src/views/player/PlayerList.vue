@@ -16,7 +16,7 @@
             <el-option label="已驳回" value="REJECTED" /><el-option label="已冻结" value="FROZEN" />
           </el-select>
         </el-form-item>
-        <el-form-item><el-button type="primary" @click="fetchData">查询</el-button><el-button @click="query.keyword='';query.status='';fetchData()">重置</el-button></el-form-item>
+        <el-form-item><el-button type="primary" :loading="refreshVisible" @click="fetchData">查询</el-button><el-button @click="query.keyword='';query.status='';fetchData()">重置</el-button></el-form-item>
       </el-form>
       <BatchActionBar v-if="isAdmin" :count="selectedRows.length" :disabled="batchBusy" hint="批量操作会逐项校验审核、等级和冻结状态" @clear="clearSelection">
         <el-button link :disabled="batchBusy" @click="batchApprove">批量通过</el-button>
@@ -24,7 +24,9 @@
         <el-button link :disabled="batchBusy" @click="batchLevelVisible = true">批量调整等级</el-button>
         <el-button link :disabled="batchBusy" @click="batchUnfreeze">批量解冻</el-button>
       </BatchActionBar>
-      <el-table ref="tableRef" row-key="id" :data="list" v-loading="loading" stripe @selection-change="onSelectionChange">
+      <LoadFeedback :error="listError" label="打手列表" @retry="fetchData" />
+      <el-table :aria-busy="loading" ref="tableRef" row-key="id" :data="list" v-loading="refreshVisible && !list.length" :inert="loading" stripe @selection-change="onSelectionChange">
+        <template #empty>{{ listError || loading ? '—' : '暂无数据' }}</template>
         <el-table-column v-if="isAdmin" type="selection" width="48" :selectable="row => !batchBusy && row.id > 0" />
         <el-table-column label="头像" width="70">
           <template #default="{ row }">
@@ -245,23 +247,8 @@
       </template>
     </el-dialog>
     <!-- 打手订单弹窗 -->
-    <el-dialog v-model="ordersVisible" :title="ordersPlayerName + ' 的订单'" width="800px" destroy-on-close>
-      <el-table :data="playerOrders" v-loading="ordersLoading" stripe size="small">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="productName" label="商品" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="amount" label="金额" width="90">
-          <template #default="{ row }">¥{{ row.amount }}</template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="orderTagType(row.status)" size="small">{{ orderStatusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="下单时间" width="170" />
-      </el-table>
-      <Pagination :total="ordersTotal" v-model:page="ordersQuery.pageNum" v-model:limit="ordersQuery.pageSize" @pagination="fetchPlayerOrders" />
-    </el-dialog>
+    <PlayerOrdersDialog v-if="ordersPlayer" :key="ordersPlayer.id" :player="ordersPlayer"
+      :is-admin="isAdmin" @closed="ordersPlayer = null" />
     <!-- 冻结弹窗 -->
     <el-dialog v-if="isAdmin" v-model="reviewsVisible" :title="reviewsPlayerName + ' 的评价'" width="850px" destroy-on-close>
       <el-table :data="playerReviews" v-loading="reviewsLoading" stripe empty-text="暂无评价">
@@ -299,6 +286,10 @@
   </div>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
+import { useDelayedBusy } from '@/composables/useDelayedBusy'
+import { useLoadTask } from '@/composables/useLoadTask'
+import PlayerOrdersDialog from './PlayerOrdersDialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { watch } from 'vue'
 import request from '@/utils/request'
@@ -307,7 +298,7 @@ import GrabVerificationStats from '@/components/GrabVerificationStats.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { computed, ref, reactive, onMounted } from 'vue'
-import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminSetPlayerDepositAmount, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname, adminOrderList, csOrderList } from '@/api/business'
+import { adminPlayerList, adminPlayerDetail, adminPlayerTransactions, adminPlayerDeposits, adminSetPlayerDepositAmount, adminPlayerApprove, adminPlayerReject, adminPlayerUpdateStatus, adminPlayerFreeze, adminPlayerUnfreeze, adminPlayerDelete, adminPlayerUpdate, adminPlayerBatchApprove, adminPlayerBatchReject, adminPlayerBatchLevel, adminPlayerBatchUnfreeze, csPlayerList, csPlayerDetail, csPlayerTransactions, csPlayerAudit, csPlayerFreeze, csPlayerUnfreeze, csPlayerUpdateNickname } from '@/api/business'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminReviewList, adminReviewDelete } from '@/api/business'
@@ -325,7 +316,14 @@ const levelOptions=ref([]),mediaBusy=ref(false)
 function levelLabel(id){return levelOptions.value.find(l=>l.id===id)?.name || `Lv.${id||1}`}
 onMounted(async()=>{if(isAdmin)levelOptions.value=(await playerLevelList()).data||[]})
 async function setOffline(row){await ElMessageBox.confirm('确认让该打手下班？需要打手本人操作才能重新上班。','打手下班');await request.put('/cs/player/'+row.id+'/online-status',{online:false});await fetchData()}
-const loading = ref(false), list = ref([]), total = ref(0)
+const { data: result, loading, error: listError, run: loadPlayers } = useLoadTask(async params => {
+  const readPlayers = isAdmin ? adminPlayerList : csPlayerList
+  const { data } = await readPlayers(params, { silent: true })
+  return { records: data.records, total: Number(data.total) }
+}, { records: [], total: 0 })
+const refreshVisible = useDelayedBusy(loading)
+const list = computed(() => result.value.records)
+const total = computed(() => result.value.total)
 const tableRef = ref(null), selectedRows = ref([]), batchBusy = ref(false)
 const batchRejectVisible = ref(false), batchRejectReason = ref('')
 const batchLevelVisible = ref(false), batchLevelId = ref(null)
@@ -361,12 +359,7 @@ function paymentStatusText(s) { return ({ PAID: '已到账', PAYING: '支付中'
 function money(value) { return Number(value || 0).toFixed(2) }
 async function fetchData() {
   clearSelection()
-  loading.value = true
-  try {
-    const fn = isAdmin ? adminPlayerList : csPlayerList
-    const res = await fn(query)
-    list.value = res.data.records; total.value = Number(res.data.total)
-  } finally { loading.value = false }
+  await loadPlayers({ ...query })
 }
 async function runBatch(action, label) {
   if (!selectedIds.value.length || batchBusy.value) return
@@ -657,44 +650,8 @@ async function deleteReview(review) {
   await Promise.all([fetchPlayerReviews(), fetchData()])
   if (detailVisible.value && detailData.value?.id === reviewsQuery.playerId) showDetail(reviewsQuery.playerId)
 }
-const orderStatusMap = {
-  PENDING_PAYMENT: '待支付', PAID: '待接单', ASSIGNED: '已指派', ACCEPTED: '已接单',
-  WAITING_TEAMMATE: '组队中', IN_PROGRESS: '进行中', COMPLETED: '待确认',
-  CONFIRMED: '已完成', REVIEWED: '已评价', CANCELLED: '已取消',
-  REFUNDING: '退款中', REFUNDED: '已退款', DISPUTED: '争议中', ARBITRATED: '已仲裁'
-}
-const orderTagTypeMap = {
-  PENDING_PAYMENT: 'info', PAID: '', ASSIGNED: '', ACCEPTED: '',
-  WAITING_TEAMMATE: '', IN_PROGRESS: 'warning', COMPLETED: 'success',
-  CONFIRMED: 'success', REVIEWED: 'success', CANCELLED: 'info',
-  REFUNDING: 'danger', REFUNDED: 'info', DISPUTED: 'danger', ARBITRATED: 'info'
-}
-function orderStatusLabel(s) { return orderStatusMap[s] || s }
-function orderTagType(s) { return orderTagTypeMap[s] || '' }
-
-const ordersVisible = ref(false), ordersLoading = ref(false)
-const playerOrders = ref([]), ordersTotal = ref(0), ordersPlayerName = ref('')
-const ordersQuery = reactive({ pageNum: 1, pageSize: 10, playerId: null })
-
-function showPlayerOrders(row) {
-  ordersPlayerName.value = row.nickname || ('ID: ' + row.id)
-  ordersQuery.playerId = row.id
-  ordersQuery.pageNum = 1
-  playerOrders.value = []
-  ordersVisible.value = true
-  fetchPlayerOrders()
-}
-async function fetchPlayerOrders() {
-  ordersLoading.value = true
-  try {
-    const params = { pageNum: ordersQuery.pageNum, pageSize: ordersQuery.pageSize }
-    if (ordersQuery.playerId) params.playerId = ordersQuery.playerId
-    const fn = isAdmin ? adminOrderList : csOrderList
-    const res = await fn(params)
-    playerOrders.value = res.data?.records || []
-    ordersTotal.value = Number(res.data?.total || 0)
-  } finally { ordersLoading.value = false }
-}
+const ordersPlayer = ref(null)
+function showPlayerOrders(row) { ordersPlayer.value = row }
 
 watch(() => route.query.taskId, id => {
   query.taskId = typeof id === 'string' && /^\d{1,19}$/.test(id) ? id : ''
