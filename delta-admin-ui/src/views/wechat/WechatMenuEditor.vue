@@ -73,21 +73,7 @@
       </div>
       <div v-if="ready" class="menu-panel preview">
         <div class="panel-title"><strong>手机预览</strong></div>
-        <div class="preview-phone">
-          <div class="preview-title">{{ accountName || '微信公众号' }}</div>
-          <div class="preview-body"><span v-if="previewText">{{ previewText }}</span></div>
-          <div v-if="previewRoot?.children.length" class="preview-sub">
-            <button v-for="child in previewRoot.children" :key="child.id" type="button" @click="preview(child)">
-              {{ child.name || '未命名子菜单' }}
-            </button>
-          </div>
-          <div class="preview-nav">
-            <button v-for="root in roots" :key="root.id" type="button" :aria-expanded="root.children.length ? previewRoot?.id === root.id : undefined" @click="preview(root)">
-              {{ root.name || '未命名菜单' }}
-            </button>
-            <span v-if="!roots.length" class="muted">菜单将显示在这里</span>
-          </div>
-        </div>
+        <WechatMenuPhonePreview :roots="roots" :account-name="accountName" />
       </div>
     </div>
   </section>
@@ -95,6 +81,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import WechatMenuPhonePreview from './WechatMenuPhonePreview.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getWechatMenu, getWechatMaterials, saveWechatMenu, importWechatMenu, publishWechatMenu } from '@/api/wechat-operations'
 import { menuTypes, menuType, menuFieldLabels, utf8Size, menuLimit, newMenuButton, readMenuButtons, writeMenuButtons, menuErrors, moveMenuButton } from './menu-model'
@@ -102,7 +89,7 @@ import { menuTypes, menuType, menuFieldLabels, utf8Size, menuLimit, newMenuButto
 const props = defineProps({ accountId: { type: String, required: true }, accountName: String })
 const emit = defineEmits(['dirty'])
 const roots = ref([]), saved = ref(''), status = ref('DRAFT'), activeId = ref(null)
-const previewRoot = ref(null), previewText = ref(''), ready = ref(false), loadFailed = ref(false), busy = ref(false)
+const ready = ref(false), loadFailed = ref(false), busy = ref(false)
 const media = ref([])
 const wire = computed(() => writeMenuButtons(roots.value))
 const dirty = computed(() => ready.value && saved.value !== JSON.stringify(wire.value))
@@ -141,17 +128,7 @@ async function removeActive() {
   const list = siblings.value
   const index = activeIndex.value
   list.splice(index, 1)
-  if (previewRoot.value?.id === target.id) previewRoot.value = null
   select(list[index] || list[index - 1] || parent)
-}
-function preview(node) {
-  if (node.children.length) {
-    previewRoot.value = previewRoot.value?.id === node.id ? null : node
-    previewText.value = ''
-  } else {
-    previewRoot.value = null
-    previewText.value = menuType(node.type)?.label || '未配置动作'
-  }
 }
 function readBack(data) {
   const rootIndex = roots.value.findIndex(item => item.id === (activeParent.value?.id || activeId.value))
@@ -161,7 +138,6 @@ function readBack(data) {
   status.value = data?.status || 'DRAFT'
   ready.value = true
   emit('dirty', false)
-  previewRoot.value = null
   const root = roots.value[rootIndex] || roots.value[0]
   select(wasChild ? root?.children[childIndex] || root : root)
 }
@@ -224,19 +200,11 @@ onMounted(loadMenu)
 .panel-title{min-height:36px;margin-bottom:8px}
 .menu-list,.menu-errors{list-style:none;margin:0;padding:0;display:grid;gap:5px}
 .menu-list.children{margin:4px 0 6px 12px;padding-left:8px;border-left:1px solid var(--el-border-color-light)}
-.menu-item,.preview-phone button{display:flex;align-items:center;justify-content:space-between;width:100%;gap:4px;text-align:left;overflow-wrap:anywhere;border:1px solid var(--el-border-color-light);border-radius:6px;color:var(--el-text-color-primary);background:var(--el-bg-color);padding:6px 8px;min-height:44px;cursor:pointer;font:inherit}
-.menu-item.selected,.menu-item:hover,.preview-phone button:hover{border-color:var(--el-color-primary);background:var(--el-fill-color-light)}
-.menu-item:focus-visible,.preview-phone button:focus-visible{outline:2px solid var(--el-color-primary);outline-offset:2px}
+.menu-item{display:flex;align-items:center;justify-content:space-between;width:100%;gap:4px;text-align:left;overflow-wrap:anywhere;border:1px solid var(--el-border-color-light);border-radius:6px;color:var(--el-text-color-primary);background:var(--el-bg-color);padding:6px 8px;min-height:44px;cursor:pointer;font:inherit}
+.menu-item.selected,.menu-item:hover{border-color:var(--el-color-primary);background:var(--el-fill-color-light)}
+.menu-item:focus-visible{outline:2px solid var(--el-color-primary);outline-offset:2px}
 .menu-item small,.muted{color:var(--el-text-color-secondary);font-size:12px}
 .row-actions{margin-top:12px}.menu-errors{color:var(--el-color-danger);font-size:13px}
-.preview-phone{border:1px solid var(--el-border-color-light);border-radius:14px;overflow:hidden;background:var(--el-fill-color-extra-light)}
-.preview-title,.preview-nav{background:var(--el-bg-color);padding:8px;overflow-wrap:anywhere;text-align:center}
-.preview-title{font-weight:600;border-bottom:1px solid var(--el-border-color-light)}
-.preview-body{min-height:140px;padding:10px;color:var(--el-text-color-secondary)}
-.preview-nav,.preview-sub{display:flex;gap:4px;flex-wrap:wrap}
-.preview-nav{border-top:1px solid var(--el-border-color-light)}
-.preview-sub{padding:0 8px 8px}
-.preview-nav button,.preview-sub button{flex:1 1 0;min-width:0;justify-content:center;text-align:center}
 @media(max-width:1180px){.menu-workspace{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)}.preview{grid-column:1/-1}}
 @media(max-width:660px){.menu-workspace{grid-template-columns:minmax(0,1fr)}}
 </style>
