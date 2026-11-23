@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +24,10 @@ public class WechatCallbackService {
     private final JdbcTemplate jdbc;
     private final WechatAccountService accounts;
     private final SecureRandom random = new SecureRandom();
+    private final ConcurrentHashMap<String, RateWindow> rateWindows = new ConcurrentHashMap<>();
 
     public String verify(String accountId, String signature, String timestamp, String nonce, String echostr) {
+        rateLimit(accountId);
         String token = accounts.callbackToken(accountId);
         if (token.isBlank()) throw new BusinessException(503, "公众号回调尚未配置");
         if (!safeEquals(signature(token, timestamp, nonce), signature)) throw new BusinessException(403, "公众号回调签名无效");
@@ -33,6 +36,7 @@ public class WechatCallbackService {
 
     public String handle(String accountId, String signature, String msgSignature, String timestamp, String nonce,
                          String encryptType, String body) {
+        rateLimit(accountId);
         String token = accounts.callbackToken(accountId);
         if (token.isBlank()) throw new BusinessException(503, "公众号回调尚未配置");
         String plain = body == null ? "" : body;
@@ -192,6 +196,16 @@ public class WechatCallbackService {
         int prefix = value.indexOf("_");
         return prefix >= 0 ? value.substring(prefix + 1) : value;
     }
+
+    private void rateLimit(String accountId) {
+        long minute = System.currentTimeMillis() / 60_000L;
+        RateWindow window = rateWindows.compute(accountId, (key, previous) ->
+                previous == null || previous.minute != minute ? new RateWindow(minute, 1) : new RateWindow(minute, previous.count + 1));
+        if (window.count > 120) throw new BusinessException(429, "公众号回调请求过于频繁");
+        if (rateWindows.size() > 2000) rateWindows.entrySet().removeIf(entry -> entry.getValue().minute < minute - 1);
+    }
+
+    private record RateWindow(long minute, int count) {}
 
     private static String text(Object value) { return value == null ? "" : String.valueOf(value); }
     private static String truncate(String value, int max) { return value == null || value.length() <= max ? value : value.substring(0, max); }
