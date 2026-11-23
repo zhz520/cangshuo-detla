@@ -164,6 +164,13 @@
       "bytes": 431
     },
     {
+      "id": "20261123-flash-sale",
+      "file": "deploy/baota/migrations/20261123-flash-sale.sql",
+      "source": "APPLY",
+      "sha256": "c8ae01f74c7c966784b01f83cda68491d62b7ecf2a71bf848842f6ff56670642",
+      "bytes": 1062
+    },
+    {
       "id": "20261123-wechat-operations",
       "file": "deploy/baota/migrations/20261123-wechat-operations.sql",
       "source": "APPLY",
@@ -195,8 +202,8 @@
       "id": "governance-v1",
       "file": "delta-game/delta-admin/src/main/resources/db/governance-v1.sql",
       "source": "STARTUP",
-      "sha256": "d2c70b31cd49579acd3697557ff8d94944dffc0726cc66afe98f07e7a2c10122",
-      "bytes": 10038
+      "sha256": "21183bc847d588ca101fa424663411c1a262932dddd9ea5cfc5ffebdd1e85760",
+      "bytes": 11081
     },
     {
       "id": "workbench",

@@ -152,6 +152,16 @@
       "commands": ["cd delta-mp && node --test test/player-order-actions.test.mjs"]
     },
     {
+      "id": "flash-sale",
+      "risk": "P0",
+      "terms": ["秒杀", "flash sale", "flash-sale", "独立库存", "限时价"],
+      "paths": ["delta-game/delta-order/*FlashSale*", "delta-game/delta-order/src/main/java/com/delta/order/controller/FlashSaleController.java", "delta-game/delta-order/src/main/java/com/delta/order/service/FlashSaleService.java", "delta-admin-ui/src/views/marketing/FlashSales.vue", "delta-admin-ui/src/api/flash-sale.js"],
+      "docs": ["BUSINESS_RULES.md", "CONFIGURATION.md"],
+      "tests": ["delta-game/delta-admin/src/test/java/com/delta/admin/FlashSaleServiceTest.java"],
+      "checks": ["金额与固定价快照", "库存条件更新", "每账号限制", "租户隔离", "MySQL 事务", "不得叠加优惠"],
+      "commands": ["cd delta-game && mvn -pl delta-admin -am -Dtest=FlashSaleServiceTest -Dsurefire.failIfNoSpecifiedTests=false test"]
+    },
+    {
       "id": "product-media",
       "risk": "P1",
       "terms": ["商品详情", "商品描述", "商品图片", "富文本", "购买暂停", "联系客服购买"],

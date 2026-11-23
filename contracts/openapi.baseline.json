@@ -3008,6 +3008,69 @@
         }
       }
     },
+    "/admin/flash-sales/{id}" : {
+      "put" : {
+        "tags" : [ "flash-sale-controller" ],
+        "operationId" : "update_15",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "flash-sale-controller" ],
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/email-notifications/settings" : {
       "get" : {
         "tags" : [ "email-notification-controller" ],
@@ -3055,7 +3118,7 @@
     "/admin/coupons/{id}" : {
       "put" : {
         "tags" : [ "coupon-admin-controller" ],
-        "operationId" : "update_15",
+        "operationId" : "update_16",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -3093,7 +3156,7 @@
     "/admin/category-field" : {
       "put" : {
         "tags" : [ "admin-category-field-controller" ],
-        "operationId" : "update_16",
+        "operationId" : "update_17",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -8222,6 +8285,51 @@
         }
       }
     },
+    "/admin/flash-sales" : {
+      "get" : {
+        "tags" : [ "flash-sale-controller" ],
+        "operationId" : "list_3",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "flash-sale-controller" ],
+        "operationId" : "create_6",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/email-notifications/test" : {
       "post" : {
         "tags" : [ "email-notification-controller" ],
@@ -8394,7 +8502,7 @@
     "/admin/coupons" : {
       "get" : {
         "tags" : [ "coupon-admin-controller" ],
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -8410,7 +8518,7 @@
       },
       "post" : {
         "tags" : [ "coupon-admin-controller" ],
-        "operationId" : "create_6",
+        "operationId" : "create_7",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -8628,7 +8736,7 @@
     "/user/game-info/list" : {
       "get" : {
         "tags" : [ "user-game-info-controller" ],
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -8988,7 +9096,7 @@
     "/system/sensitive-word/list" : {
       "get" : {
         "tags" : [ "sensitive-word-controller" ],
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9028,7 +9136,7 @@
     "/system/recharge-packages" : {
       "get" : {
         "tags" : [ "recharge-package-controller" ],
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -9046,7 +9154,7 @@
     "/system/quick-reply/list" : {
       "get" : {
         "tags" : [ "quick-reply-controller" ],
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9105,7 +9213,7 @@
     "/system/operation-log/list" : {
       "get" : {
         "tags" : [ "operation-log-controller" ],
-        "operationId" : "list_8",
+        "operationId" : "list_9",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9145,7 +9253,7 @@
     "/system/notice/list" : {
       "get" : {
         "tags" : [ "notice-controller" ],
-        "operationId" : "list_9",
+        "operationId" : "list_10",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9214,7 +9322,7 @@
     "/system/content/list" : {
       "get" : {
         "tags" : [ "content-config-controller" ],
-        "operationId" : "list_10",
+        "operationId" : "list_11",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -9312,7 +9420,7 @@
     "/system/config/list" : {
       "get" : {
         "tags" : [ "sys-config-controller" ],
-        "operationId" : "list_11",
+        "operationId" : "list_12",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -9330,7 +9438,7 @@
     "/system/banner/list" : {
       "get" : {
         "tags" : [ "banner-controller" ],
-        "operationId" : "list_12",
+        "operationId" : "list_13",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9399,7 +9507,7 @@
       },
       "delete" : {
         "tags" : [ "admin-controller" ],
-        "operationId" : "delete_3",
+        "operationId" : "delete_4",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -9426,7 +9534,7 @@
     "/system/admin/list" : {
       "get" : {
         "tags" : [ "admin-controller" ],
-        "operationId" : "list_13",
+        "operationId" : "list_14",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9484,7 +9592,7 @@
       },
       "delete" : {
         "tags" : [ "product-controller" ],
-        "operationId" : "delete_4",
+        "operationId" : "delete_5",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -9572,7 +9680,7 @@
     "/product/list" : {
       "get" : {
         "tags" : [ "product-controller" ],
-        "operationId" : "list_14",
+        "operationId" : "list_15",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -9642,6 +9750,33 @@
         }
       }
     },
+    "/product/flash-sale/active" : {
+      "get" : {
+        "tags" : [ "flash-sale-controller" ],
+        "operationId" : "active_3",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/product/category/{categoryId}/form-fields" : {
       "get" : {
         "tags" : [ "category-form-field-controller" ],
@@ -9690,7 +9825,7 @@
     "/product/category/list" : {
       "get" : {
         "tags" : [ "category-controller" ],
-        "operationId" : "list_15",
+        "operationId" : "list_16",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -9839,7 +9974,7 @@
     "/player/withdraw/list" : {
       "get" : {
         "tags" : [ "withdraw-controller" ],
-        "operationId" : "list_16",
+        "operationId" : "list_17",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10174,7 +10309,7 @@
     "/player/deposit/refund/list" : {
       "get" : {
         "tags" : [ "player-deposit-refund-controller" ],
-        "operationId" : "list_17",
+        "operationId" : "list_18",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -10228,7 +10363,7 @@
     "/player/account/list" : {
       "get" : {
         "tags" : [ "player-account-controller" ],
-        "operationId" : "list_18",
+        "operationId" : "list_19",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -10703,7 +10838,7 @@
     "/message/list" : {
       "get" : {
         "tags" : [ "message-controller" ],
-        "operationId" : "list_19",
+        "operationId" : "list_20",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10926,7 +11061,7 @@
     "/cs/withdraw/list" : {
       "get" : {
         "tags" : [ "cs-withdraw-controller" ],
-        "operationId" : "list_20",
+        "operationId" : "list_21",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -10994,7 +11129,7 @@
     "/cs/user/list" : {
       "get" : {
         "tags" : [ "cs-user-controller" ],
-        "operationId" : "list_21",
+        "operationId" : "list_22",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11045,7 +11180,7 @@
     "/cs/replace/list" : {
       "get" : {
         "tags" : [ "cs-replace-controller" ],
-        "operationId" : "list_22",
+        "operationId" : "list_23",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11104,7 +11239,7 @@
     "/cs/relay/list" : {
       "get" : {
         "tags" : [ "cs-relay-controller" ],
-        "operationId" : "list_23",
+        "operationId" : "list_24",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11266,7 +11401,7 @@
     "/cs/product/list" : {
       "get" : {
         "tags" : [ "cs-product-controller" ],
-        "operationId" : "list_24",
+        "operationId" : "list_25",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11395,7 +11530,7 @@
     "/cs/player/list" : {
       "get" : {
         "tags" : [ "cs-player-controller" ],
-        "operationId" : "list_25",
+        "operationId" : "list_26",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11591,7 +11726,7 @@
     "/cs/order/list" : {
       "get" : {
         "tags" : [ "cs-order-controller" ],
-        "operationId" : "list_26",
+        "operationId" : "list_27",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11734,7 +11869,7 @@
     "/cs/deposit-refunds/list" : {
       "get" : {
         "tags" : [ "cs-deposit-refund-controller" ],
-        "operationId" : "list_27",
+        "operationId" : "list_28",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11854,7 +11989,7 @@
     "/cs/complaint/list" : {
       "get" : {
         "tags" : [ "cs-complaint-controller" ],
-        "operationId" : "list_28",
+        "operationId" : "list_29",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -11996,7 +12131,7 @@
     "/cs/category/list" : {
       "get" : {
         "tags" : [ "cs-category-controller" ],
-        "operationId" : "list_29",
+        "operationId" : "list_30",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -12239,7 +12374,7 @@
     "/app/product/list" : {
       "get" : {
         "tags" : [ "app-product-controller" ],
-        "operationId" : "list_30",
+        "operationId" : "list_31",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -12289,7 +12424,7 @@
     "/app/players" : {
       "get" : {
         "tags" : [ "public-player-controller" ],
-        "operationId" : "list_31",
+        "operationId" : "list_32",
         "parameters" : [ {
           "name" : "pageNum",
           "in" : "query",
@@ -12574,7 +12709,7 @@
     "/admin/withdraw/list" : {
       "get" : {
         "tags" : [ "admin-withdraw-controller" ],
-        "operationId" : "list_32",
+        "operationId" : "list_33",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -12685,7 +12820,7 @@
     "/admin/user/list" : {
       "get" : {
         "tags" : [ "admin-user-controller" ],
-        "operationId" : "list_33",
+        "operationId" : "list_34",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -12906,7 +13041,7 @@
     "/admin/settlements" : {
       "get" : {
         "tags" : [ "settlement-ledger-controller" ],
-        "operationId" : "list_34",
+        "operationId" : "list_35",
         "parameters" : [ {
           "name" : "from",
           "in" : "query",
@@ -12969,7 +13104,7 @@
     "/admin/rewards" : {
       "get" : {
         "tags" : [ "reward-controller" ],
-        "operationId" : "list_35",
+        "operationId" : "list_36",
         "parameters" : [ {
           "name" : "page",
           "in" : "query",
@@ -13041,7 +13176,7 @@
     "/admin/review/list" : {
       "get" : {
         "tags" : [ "admin-review-controller" ],
-        "operationId" : "list_36",
+        "operationId" : "list_37",
         "parameters" : [ {
           "name" : "pageNum",
           "in" : "query",
@@ -13153,7 +13288,7 @@
     "/admin/recommend-category/list" : {
       "get" : {
         "tags" : [ "admin-recommend-category-controller" ],
-        "operationId" : "list_37",
+        "operationId" : "list_38",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -13171,7 +13306,7 @@
     "/admin/privacy/requests" : {
       "get" : {
         "tags" : [ "privacy-controller" ],
-        "operationId" : "list_38",
+        "operationId" : "list_39",
         "parameters" : [ {
           "name" : "taskId",
           "in" : "query",
@@ -13285,7 +13420,7 @@
     "/admin/player/list" : {
       "get" : {
         "tags" : [ "admin-player-controller" ],
-        "operationId" : "list_39",
+        "operationId" : "list_40",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -13392,7 +13527,7 @@
     "/admin/player-level/list" : {
       "get" : {
         "tags" : [ "admin-player-level-controller" ],
-        "operationId" : "list_40",
+        "operationId" : "list_41",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -13446,7 +13581,7 @@
     "/admin/platform/themes" : {
       "get" : {
         "tags" : [ "theme-controller" ],
-        "operationId" : "list_41",
+        "operationId" : "list_42",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -13825,7 +13960,7 @@
     "/admin/order/list" : {
       "get" : {
         "tags" : [ "admin-order-controller" ],
-        "operationId" : "list_42",
+        "operationId" : "list_43",
         "parameters" : [ {
           "name" : "query",
           "in" : "query",
@@ -13889,7 +14024,7 @@
     "/admin/invites" : {
       "get" : {
         "tags" : [ "invite-admin-controller" ],
-        "operationId" : "list_43",
+        "operationId" : "list_44",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -13907,7 +14042,7 @@
     "/admin/identity/applications" : {
       "get" : {
         "tags" : [ "identity-verification-controller" ],
-        "operationId" : "list_44",
+        "operationId" : "list_45",
         "parameters" : [ {
           "name" : "taskId",
           "in" : "query",
@@ -14145,7 +14280,7 @@
     "/admin/category-field/list" : {
       "get" : {
         "tags" : [ "admin-category-field-controller" ],
-        "operationId" : "list_45",
+        "operationId" : "list_46",
         "parameters" : [ {
           "name" : "categoryId",
           "in" : "query",
@@ -14314,7 +14449,7 @@
     "/user/game-info/{id}" : {
       "delete" : {
         "tags" : [ "user-game-info-controller" ],
-        "operationId" : "delete_5",
+        "operationId" : "delete_6",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14359,7 +14494,7 @@
     "/system/sensitive-word/{id}" : {
       "delete" : {
         "tags" : [ "sensitive-word-controller" ],
-        "operationId" : "delete_6",
+        "operationId" : "delete_7",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14386,7 +14521,7 @@
     "/system/roles/{code}" : {
       "delete" : {
         "tags" : [ "staff-role-controller" ],
-        "operationId" : "delete_7",
+        "operationId" : "delete_8",
         "parameters" : [ {
           "name" : "code",
           "in" : "path",
@@ -14412,7 +14547,7 @@
     "/system/quick-reply/{id}" : {
       "delete" : {
         "tags" : [ "quick-reply-controller" ],
-        "operationId" : "delete_8",
+        "operationId" : "delete_9",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14439,7 +14574,7 @@
     "/system/notice/{id}" : {
       "delete" : {
         "tags" : [ "notice-controller" ],
-        "operationId" : "delete_9",
+        "operationId" : "delete_10",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14466,7 +14601,7 @@
     "/system/content/{id}" : {
       "delete" : {
         "tags" : [ "content-config-controller" ],
-        "operationId" : "delete_10",
+        "operationId" : "delete_11",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14493,7 +14628,7 @@
     "/system/banner/{id}" : {
       "delete" : {
         "tags" : [ "banner-controller" ],
-        "operationId" : "delete_11",
+        "operationId" : "delete_12",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14520,7 +14655,7 @@
     "/product/category/{id}" : {
       "delete" : {
         "tags" : [ "category-controller" ],
-        "operationId" : "delete_12",
+        "operationId" : "delete_13",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14547,7 +14682,7 @@
     "/player/account/{id}" : {
       "delete" : {
         "tags" : [ "player-account-controller" ],
-        "operationId" : "delete_13",
+        "operationId" : "delete_14",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14574,7 +14709,7 @@
     "/cs/category/{id}" : {
       "delete" : {
         "tags" : [ "cs-category-controller" ],
-        "operationId" : "delete_14",
+        "operationId" : "delete_15",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14601,7 +14736,7 @@
     "/admin/wechat/accounts/{id}" : {
       "delete" : {
         "tags" : [ "wechat-operations-controller" ],
-        "operationId" : "delete_15",
+        "operationId" : "delete_16",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14700,7 +14835,7 @@
     "/admin/review/{id}" : {
       "delete" : {
         "tags" : [ "admin-review-controller" ],
-        "operationId" : "delete_16",
+        "operationId" : "delete_17",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14727,7 +14862,7 @@
     "/admin/recommend-category/{id}" : {
       "delete" : {
         "tags" : [ "admin-recommend-category-controller" ],
-        "operationId" : "delete_17",
+        "operationId" : "delete_18",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -14808,7 +14943,7 @@
     "/admin/category-field/{id}" : {
       "delete" : {
         "tags" : [ "admin-category-field-controller" ],
-        "operationId" : "delete_18",
+        "operationId" : "delete_19",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",

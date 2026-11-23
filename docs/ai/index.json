@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:250e1b3373e7104c322ced05b6399b30fadde8e4c2e2f4015a5779ab8adb511e",
+  "inputDigest": "sha256:8a7990c3c715f05303d05b370a71e5939fcd92a77117199db194f1273024c4d2",
   "counts": {
     "modules": 19,
-    "controllers": 114,
-    "adminViews": 59,
-    "adminRoutes": 71,
+    "controllers": 115,
+    "adminViews": 60,
+    "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
-    "migrations": 37,
-    "backendTests": 128,
+    "migrations": 38,
+    "backendTests": 129,
     "adminTests": 38,
     "h5Tests": 24
   },
@@ -111,6 +111,7 @@
         "delta-game/delta-admin/src/test/java/com/delta/admin/CsProfilePasswordTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/CsRoutingServiceTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/EmailNotificationControllerIntegrationTest.java",
+        "delta-game/delta-admin/src/test/java/com/delta/admin/FlashSaleServiceTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/GlobalExceptionHandlerTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/GovernanceIntegrationTest.java",
         "delta-game/delta-admin/src/test/java/com/delta/admin/GuestCheckoutIntegrationTest.java",
@@ -609,7 +610,7 @@
         "delta-product",
         "delta-system"
       ],
-      "mainJavaCount": 49,
+      "mainJavaCount": 51,
       "controllers": [
         {
           "name": "ComplaintAttachmentController",
@@ -620,6 +621,11 @@
           "name": "ComplaintController",
           "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/ComplaintController.java",
           "endpoints": 4
+        },
+        {
+          "name": "FlashSaleController",
+          "file": "delta-game/delta-order/src/main/java/com/delta/order/controller/FlashSaleController.java",
+          "endpoints": 5
         },
         {
           "name": "OrderController",
@@ -1049,6 +1055,7 @@
       "delta-admin-ui/src/views/error/404.vue",
       "delta-admin-ui/src/views/login/index.vue",
       "delta-admin-ui/src/views/marketing/Coupons.vue",
+      "delta-admin-ui/src/views/marketing/FlashSales.vue",
       "delta-admin-ui/src/views/marketing/Invites.vue",
       "delta-admin-ui/src/views/marketing/MembershipLevels.vue",
       "delta-admin-ui/src/views/order/OrderList.vue",
@@ -1142,6 +1149,7 @@
       "edit/:id",
       "email-notifications",
       "features",
+      "flash-sales",
       "form-fields",
       "identity-account",
       "income-analysis",
@@ -1406,6 +1414,17 @@
         "urls": [
           "/common/file/profile-audio",
           "/common/file/upload"
+        ]
+      },
+      {
+        "module": "flash-sale.js",
+        "exports": [
+          "deleteFlashSale",
+          "getFlashSales",
+          "saveFlashSale"
+        ],
+        "urls": [
+          "/admin/flash-sales"
         ]
       },
       {
@@ -2033,14 +2052,18 @@
       },
       {
         "kind": "baota",
+        "path": "deploy/baota/migrations/20261123-flash-sale.sql"
+      },
+      {
+        "kind": "baota",
         "path": "deploy/baota/migrations/20261123-wechat-operations.sql"
       }
     ],
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 510,
-    "operations": 510,
+    "endpoints": 515,
+    "operations": 515,
     "schemas": 282
   }
 }

@@ -162,6 +162,7 @@ const desktopRoutes = [
       { path: 'coupons', name: 'MarketingCoupons', component: () => import('@/views/marketing/Coupons.vue'), meta: { title: '优惠券管理', roles: ['admin'], permission: 'system.manage' } },
       { path: 'invites', name: 'MarketingInvites', component: () => import('@/views/marketing/Invites.vue'), meta: { title: '邀请奖励', roles: ['admin'], permission: 'system.manage' } },
       { path: 'membership', name: 'MarketingMembership', component: () => import('@/views/marketing/MembershipLevels.vue'), meta: { title: '会员等级', roles: ['admin'], permission: 'system.manage' } }
+      ,{ path: 'flash-sales', name: 'MarketingFlashSales', component: () => import('@/views/marketing/FlashSales.vue'), meta: { title: '秒杀活动', roles: ['admin'], permission: 'system.manage' } }
     ]
   },
   {

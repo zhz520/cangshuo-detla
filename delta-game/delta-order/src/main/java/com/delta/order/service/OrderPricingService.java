@@ -24,6 +24,8 @@ public class OrderPricingService {
     private final SysConfigService configs;
     private final JdbcTemplate jdbc;
     private final CouponRedemptionService couponRedemption;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private FlashSaleService flashSale;
 
     public OrderQuote quote(Long productId,Long playerId,Integer levelId) {
         return quote(productId,playerId,levelId,null);
@@ -40,6 +42,23 @@ public class OrderPricingService {
         Product product=products.getById(productId);
         if(product==null) throw new BusinessException(404,"商品不存在");
         if(!Integer.valueOf(1).equals(product.getStatus())) throw new BusinessException(400,"商品已下架");
+        BigDecimal flashPrice = flashSale == null ? null : flashSale.activePrice(productId, userId);
+        if (flashPrice != null) {
+            if (playerId != null || levelId != null || couponId != null)
+                throw new BusinessException(400, "秒杀商品不支持指定打手、等级或优惠券叠加");
+            OrderQuote quote = new OrderQuote();
+            quote.setProductId(productId);
+            quote.setProductName(product.getName());
+            quote.setBaseAmount(flashPrice);
+            quote.setPriceIncreaseRate(BigDecimal.ZERO);
+            quote.setPriceIncreaseAmount(BigDecimal.ZERO);
+            quote.setMemberTier(null);
+            quote.setMemberDiscountRate(BigDecimal.ONE);
+            quote.setMemberDiscountAmount(BigDecimal.ZERO);
+            quote.setCouponDiscountAmount(BigDecimal.ZERO);
+            quote.setAmount(flashPrice);
+            return quote;
+        }
         BigDecimal base=Money.positive(product.getPrice()).setScale(2,RoundingMode.UNNECESSARY);
         PlayerPriceConfig config=null;
         if(playerId!=null) {

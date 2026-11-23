@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/file/**").permitAll()
                 .requestMatchers("/common/file/**").hasAnyRole("ADMIN", "CS", "USER", "GUEST", "PLAYER")
                 .requestMatchers(HttpMethod.GET, "/product/list", "/product/recommend", "/product/recommend/categories", "/product/{id}", "/product/category/list", "/product/category/all", "/product/category/tree", "/product/category/*/form-fields").permitAll()
+                .requestMatchers(HttpMethod.GET, "/product/flash-sale/**").permitAll()
                 // 以上 product 接口供匿名访问（含首页热门推荐、热门分类 Tab）
                 .requestMatchers(HttpMethod.GET, "/app/product/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/app/display/**").permitAll()

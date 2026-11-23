@@ -162,6 +162,30 @@
     "path": "/admin/email-notifications/test"
   },
   {
+    "controller": "FlashSaleController",
+    "handler": "list",
+    "method": "GET",
+    "path": "/admin/flash-sales"
+  },
+  {
+    "controller": "FlashSaleController",
+    "handler": "create",
+    "method": "POST",
+    "path": "/admin/flash-sales"
+  },
+  {
+    "controller": "FlashSaleController",
+    "handler": "delete",
+    "method": "DELETE",
+    "path": "/admin/flash-sales/{id}"
+  },
+  {
+    "controller": "FlashSaleController",
+    "handler": "update",
+    "method": "PUT",
+    "path": "/admin/flash-sales/{id}"
+  },
+  {
     "controller": "AdminHomeController",
     "handler": "dashboard",
     "method": "GET",
@@ -2374,6 +2398,12 @@
     "handler": "delete",
     "method": "DELETE",
     "path": "/product/category/{id}"
+  },
+  {
+    "controller": "FlashSaleController",
+    "handler": "active",
+    "method": "GET",
+    "path": "/product/flash-sale/active"
   },
   {
     "controller": "ProductController",

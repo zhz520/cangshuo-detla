@@ -51,6 +51,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final com.delta.common.security.service.VerificationService verification;
     private final com.delta.order.service.OrderPricingService orderPricing;
     private final com.delta.order.service.CouponRedemptionService couponRedemption;
+    @Autowired(required = false) private com.delta.order.service.FlashSaleService flashSale;
     @Autowired(required = false)
     private CsRoutingService csRouting;
 
@@ -99,6 +100,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (req.getAmount()==null || serverPrice.compareTo(req.getAmount()) != 0) {
             throw new BusinessException("价格已变化，请核对最新金额后重新提交");
         }
+        var flashReservation = flashSale == null ? null : flashSale.reserveIfActive(userId, req.getProductId());
 
         // 3. 构建订单
         Order order = new Order();
@@ -148,6 +150,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         save(order);
+        if (flashSale != null) flashSale.attachOrder(flashReservation, order.getId());
         if (assignedCsId != null) {
             try {
                 jdbc.update("UPDATE `order` SET cs_id=? WHERE id=?", assignedCsId, order.getId());
