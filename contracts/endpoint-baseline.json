@@ -846,6 +846,30 @@
     "path": "/admin/wechat/accounts/{id}"
   },
   {
+    "controller": "WechatContentController",
+    "handler": "articles",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/articles"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "saveArticle",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/articles"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "deleteArticle",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}/articles/{articleId}"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "updateArticle",
+    "method": "PUT",
+    "path": "/admin/wechat/accounts/{id}/articles/{articleId}"
+  },
+  {
     "controller": "WechatOperationsToolsController",
     "handler": "autoReplies",
     "method": "GET",
@@ -880,6 +904,36 @@
     "handler": "syncFans",
     "method": "POST",
     "path": "/admin/wechat/accounts/{id}/fans/sync"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "tasks",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/mass-sends"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "createTask",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/mass-sends"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "updateTask",
+    "method": "PUT",
+    "path": "/admin/wechat/accounts/{id}/mass-sends/{taskId}"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "send",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/mass-sends/{taskId}/send"
+  },
+  {
+    "controller": "WechatContentController",
+    "handler": "transition",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/mass-sends/{taskId}/{action}"
   },
   {
     "controller": "WechatOperationsToolsController",

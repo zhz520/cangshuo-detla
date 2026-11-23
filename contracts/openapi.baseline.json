@@ -1814,6 +1814,51 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/mass-sends/{taskId}" : {
+      "put" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "updateTask",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "taskId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/autoreplies/{ruleId}" : {
       "put" : {
         "tags" : [ "wechat-operations-tools-controller" ],
@@ -1870,6 +1915,83 @@
           }
         }, {
           "name" : "ruleId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/articles/{articleId}" : {
+      "put" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "updateArticle",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "articleId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "deleteArticle",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "articleId",
           "in" : "path",
           "required" : true,
           "schema" : {
@@ -7316,6 +7438,152 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/mass-sends" : {
+      "get" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "tasks",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "createTask",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/mass-sends/{taskId}/{action}" : {
+      "post" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "transition",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "taskId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "action",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/mass-sends/{taskId}/send" : {
+      "post" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "send_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "taskId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/fans/sync" : {
       "post" : {
         "tags" : [ "wechat-operations-tools-controller" ],
@@ -7370,6 +7638,67 @@
       "post" : {
         "tags" : [ "wechat-operations-tools-controller" ],
         "operationId" : "createAutoReply",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/articles" : {
+      "get" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "articles",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "wechat-content-controller" ],
+        "operationId" : "saveArticle",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -8547,7 +8876,7 @@
     "/workbench/tasks" : {
       "get" : {
         "tags" : [ "workbench-controller" ],
-        "operationId" : "tasks",
+        "operationId" : "tasks_1",
         "parameters" : [ {
           "name" : "kind",
           "in" : "query",

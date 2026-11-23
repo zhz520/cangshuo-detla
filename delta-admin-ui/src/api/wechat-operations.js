@@ -79,3 +79,31 @@ export function getWechatFans(id) {
 export function syncWechatFans(id) {
   return request({ url: `/admin/wechat/accounts/${id}/fans/sync`, method: 'post', data: {} })
 }
+
+export function getWechatArticles(id) {
+  return request({ url: `/admin/wechat/accounts/${id}/articles`, method: 'get' })
+}
+
+export function saveWechatArticle(id, articleId, data) {
+  return request({ url: articleId ? `/admin/wechat/accounts/${id}/articles/${articleId}` : `/admin/wechat/accounts/${id}/articles`, method: articleId ? 'put' : 'post', data })
+}
+
+export function deleteWechatArticle(id, articleId) {
+  return request({ url: `/admin/wechat/accounts/${id}/articles/${articleId}`, method: 'delete', data: {} })
+}
+
+export function getWechatMassSends(id) {
+  return request({ url: `/admin/wechat/accounts/${id}/mass-sends`, method: 'get' })
+}
+
+export function saveWechatMassSend(id, taskId, data) {
+  return request({ url: taskId ? `/admin/wechat/accounts/${id}/mass-sends/${taskId}` : `/admin/wechat/accounts/${id}/mass-sends`, method: taskId ? 'put' : 'post', data })
+}
+
+export function transitionWechatMassSend(id, taskId, action) {
+  return request({ url: `/admin/wechat/accounts/${id}/mass-sends/${taskId}/${action}`, method: 'post', data: {} })
+}
+
+export function sendWechatMassSend(id, taskId) {
+  return request({ url: `/admin/wechat/accounts/${id}/mass-sends/${taskId}/send`, method: 'post', data: { confirm: true } })
+}

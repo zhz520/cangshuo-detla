@@ -331,6 +331,12 @@ const desktopRoutes = [
         name: 'WechatTools',
         component: () => import('@/views/wechat/Tools.vue'),
         meta: { title: '运营工具', roles: ['admin'], permission: 'system.manage', feature: 'official_wechat_notifications' }
+      },
+      {
+        path: 'content',
+        name: 'WechatContent',
+        component: () => import('@/views/wechat/Content.vue'),
+        meta: { title: '图文与群发', roles: ['admin'], permission: 'system.manage', feature: 'official_wechat_notifications' }
       }
     ]
   },
