@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -238,6 +242,118 @@ public class WechatOperationsService {
                     JSON.toJSONString(entry.getValue().get("tags")));
         }
         return Map.of("synced", found.size(), "total", found.size());
+    }
+
+    public List<Map<String, Object>> tags(String accountId) {
+        accounts.accountSummary(accountId);
+        return jdbc.query("SELECT tag_id,name,fan_count,synced_at FROM wechat_tag WHERE account_id=? ORDER BY name",
+                (rs, n) -> Map.of("tagId", rs.getLong("tag_id"), "name", rs.getString("name"),
+                        "fanCount", rs.getInt("fan_count"), "syncedAt", rs.getTimestamp("synced_at")), accountId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public List<Map<String, Object>> syncTags(String accountId) throws Exception {
+        accounts.accountSummary(accountId);
+        JSONObject response = accounts.apiGet(accountId, "/cgi-bin/tags/get");
+        requireSuccess(response, "同步公众号标签失败");
+        JSONArray items = response.getJSONArray("tags");
+        jdbc.update("DELETE FROM wechat_tag WHERE account_id=?", accountId);
+        if (items != null) for (Object raw : items) {
+            JSONObject item = raw instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(raw));
+            String name = text(item.getString("name"));
+            if (name.isBlank()) continue;
+            jdbc.update("INSERT INTO wechat_tag(account_id,tag_id,name,fan_count) VALUES(?,?,?,?) " +
+                            "ON DUPLICATE KEY UPDATE name=VALUES(name),fan_count=VALUES(fan_count),synced_at=CURRENT_TIMESTAMP",
+                    accountId, item.getLongValue("id"), truncate(name, 80), item.getIntValue("count"));
+        }
+        return tags(accountId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> saveTag(String accountId, Long tagId, String name) throws Exception {
+        accounts.accountSummary(accountId);
+        name = text(name);
+        if (name.isBlank() || name.length() > 30) throw new BusinessException(400, "标签名称需要 1 至 30 个字符");
+        JSONObject tag = new JSONObject(); tag.put("name", name);
+        if (tagId != null) tag.put("id", tagId);
+        JSONObject response = accounts.apiPost(accountId, tagId == null ? "/cgi-bin/tags/create" : "/cgi-bin/tags/update", Map.of("tag", tag));
+        requireSuccess(response, tagId == null ? "创建公众号标签失败" : "更新公众号标签失败");
+        if (tagId == null) tagId = response.getJSONObject("tag").getLong("id");
+        jdbc.update("INSERT INTO wechat_tag(account_id,tag_id,name,fan_count) VALUES(?,?,?,0) " +
+                        "ON DUPLICATE KEY UPDATE name=VALUES(name),synced_at=CURRENT_TIMESTAMP",
+                accountId, tagId, name);
+        Long savedTagId = tagId;
+        return tags(accountId).stream().filter(row -> Objects.equals(savedTagId, row.get("tagId"))).findFirst().orElseThrow();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteTag(String accountId, long tagId) throws Exception {
+        JSONObject response = accounts.apiPost(accountId, "/cgi-bin/tags/delete", Map.of("tag", Map.of("id", tagId)));
+        requireSuccess(response, "删除公众号标签失败");
+        jdbc.update("DELETE FROM wechat_tag WHERE account_id=? AND tag_id=?", accountId, tagId);
+    }
+
+    public void batchTagFans(String accountId, long tagId, List<String> openids) throws Exception {
+        if (openids == null || openids.isEmpty() || openids.size() > 1000) throw new BusinessException(400, "请选择 1 至 1000 个粉丝");
+        for (String openid : openids) if (openid == null || !openid.matches("[A-Za-z0-9_-]{10,128}")) throw new BusinessException(400, "粉丝 OpenID 格式不正确");
+        JSONObject response = accounts.apiPost(accountId, "/cgi-bin/tags/members/batchtagging",
+                Map.of("openid_list", openids, "tagid", tagId));
+        requireSuccess(response, "批量打标签失败");
+    }
+
+    public List<Map<String, Object>> materials(String accountId, String type) {
+        accounts.accountSummary(accountId);
+        String normalized = Set.of("image", "voice", "video", "news").contains(text(type).toLowerCase(Locale.ROOT)) ? text(type).toLowerCase(Locale.ROOT) : null;
+        return jdbc.query("SELECT media_id,material_type,name,url,update_time FROM wechat_material WHERE account_id=?" +
+                        (normalized == null ? "" : " AND material_type=?") + " ORDER BY update_time DESC LIMIT 500",
+                (rs, n) -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("mediaId", rs.getString("media_id")); row.put("type", rs.getString("material_type"));
+                    row.put("name", rs.getString("name")); row.put("url", rs.getString("url")); row.put("updateTime", rs.getTimestamp("update_time"));
+                    return row;
+                }, normalized == null ? new Object[]{accountId} : new Object[]{accountId, normalized});
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> syncMaterials(String accountId, String type) throws Exception {
+        String normalized = Set.of("image", "voice", "video", "news").contains(text(type).toLowerCase(Locale.ROOT)) ? text(type).toLowerCase(Locale.ROOT) : "image";
+        int offset = 0, synced = 0;
+        for (int page = 0; page < 10; page++) {
+            JSONObject response = accounts.apiPost(accountId, "/cgi-bin/material/batchget_material",
+                    Map.of("type", normalized, "offset", offset, "count", 20));
+            requireSuccess(response, "同步公众号素材失败");
+            JSONArray items = response.getJSONArray("item");
+            if (items == null || items.isEmpty()) break;
+            for (Object raw : items) {
+                JSONObject item = raw instanceof JSONObject object ? object : JSON.parseObject(JSON.toJSONString(raw));
+                String mediaId = item.getString("media_id");
+                if (mediaId == null || mediaId.isBlank()) continue;
+                String url = item.getString("url");
+                if (url == null && item.getJSONArray("news_item") != null && !item.getJSONArray("news_item").isEmpty())
+                    url = item.getJSONArray("news_item").getJSONObject(0).getString("thumb_url");
+                long epoch = item.getLongValue("update_time");
+                LocalDateTime updated = epoch > 0 ? LocalDateTime.ofInstant(Instant.ofEpochSecond(epoch), ZoneId.systemDefault()) : null;
+                jdbc.update("INSERT INTO wechat_material(account_id,media_id,material_type,name,url,update_time) VALUES(?,?,?,?,?,?) " +
+                                "ON DUPLICATE KEY UPDATE name=VALUES(name),url=VALUES(url),update_time=VALUES(update_time)",
+                        accountId, mediaId, normalized, truncate(item.getString("name"), 200), truncate(url, 1024), updated);
+                synced++;
+            }
+            offset += items.size();
+            if (offset >= response.getIntValue("total_count")) break;
+        }
+        return Map.of("synced", synced, "type", normalized);
+    }
+
+    public Map<String, Object> stats(String accountId) {
+        accounts.accountSummary(accountId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fans", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_fan WHERE account_id=?", Long.class, accountId));
+        result.put("subscribed", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_fan WHERE account_id=? AND subscribed=1", Long.class, accountId));
+        result.put("messages", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_message WHERE account_id=?", Long.class, accountId));
+        result.put("qrScans", jdbc.queryForObject("SELECT COALESCE(SUM(scans),0) FROM wechat_channel_qr WHERE account_id=?", Long.class, accountId));
+        result.put("materials", jdbc.queryForObject("SELECT COUNT(*) FROM wechat_material WHERE account_id=?", Long.class, accountId));
+        result.put("lastMessageAt", jdbc.queryForObject("SELECT MAX(created_at) FROM wechat_message WHERE account_id=?", Timestamp.class, accountId));
+        return result;
     }
 
     private static JSONObject menuButtons(Object raw) {

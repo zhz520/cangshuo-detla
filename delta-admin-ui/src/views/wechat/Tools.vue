@@ -59,6 +59,18 @@
           <el-table-column prop="lastSyncAt" label="最近同步" min-width="170" />
         </DataTable>
       </el-tab-pane>
+      <el-tab-pane label="标签" name="tags">
+        <div class="panel-head"><div><strong>粉丝标签</strong><span>标签创建、编辑和删除会同步到微信公众号。</span></div><div class="panel-actions"><el-button @click="syncTags">同步标签</el-button><el-button type="primary" @click="openTag()">新增标签</el-button></div></div>
+        <DataTable :loading="busy" :data="tags" row-key="tagId" empty-text="还没有标签"><el-table-column prop="name" label="标签名称" min-width="220"/><el-table-column prop="fanCount" label="粉丝数" width="110"/><el-table-column label="操作" width="140" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openTag(row)">编辑</el-button><el-button link type="danger" @click="removeTag(row)">删除</el-button></template></el-table-column></DataTable>
+      </el-tab-pane>
+      <el-tab-pane label="素材" name="materials">
+        <div class="panel-head"><div><strong>公众号素材</strong><span>同步微信已有素材；上传能力仍在后续范围内。</span></div><div class="panel-actions"><el-select v-model="materialType" style="width:130px"><el-option label="图片" value="image"/><el-option label="语音" value="voice"/><el-option label="视频" value="video"/><el-option label="图文" value="news"/></el-select><el-button type="primary" @click="syncMaterials">同步素材</el-button></div></div>
+        <DataTable :loading="busy" :data="materials" row-key="mediaId" empty-text="还没有同步素材"><el-table-column prop="name" label="名称" min-width="220"/><el-table-column prop="type" label="类型" width="100"/><el-table-column prop="mediaId" label="Media ID" min-width="240" show-overflow-tooltip/><el-table-column prop="updateTime" label="更新时间" min-width="170"/><el-table-column label="链接" width="80"><template #default="{ row }"><a v-if="row.url" :href="row.url" target="_blank" rel="noopener noreferrer">查看</a><span v-else>-</span></template></el-table-column></DataTable>
+      </el-tab-pane>
+      <el-tab-pane label="统计" name="stats">
+        <div class="panel-head"><div><strong>公众号运营统计</strong><span>粉丝、消息、二维码和素材的本地同步口径。</span></div><el-button @click="loadStats">刷新</el-button></div>
+        <div class="stats-grid"><article v-for="item in statCards" :key="item.label"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></article></div>
+      </el-tab-pane>
     </el-tabs>
 
     <el-dialog v-model="ruleDialog" :title="ruleForm.id?'编辑自动回复':'新增自动回复'" width="min(620px,94vw)" destroy-on-close>
@@ -90,19 +102,25 @@
       </el-form>
       <template #footer><el-button @click="qrDialog=false">取消</el-button><el-button type="primary" :loading="busy" @click="saveQr">创建</el-button></template>
     </el-dialog>
+    <el-dialog v-model="tagDialog" :title="tagForm.tagId?'编辑标签':'新增标签'" width="min(420px,94vw)" destroy-on-close>
+      <el-form label-position="top"><el-form-item label="标签名称"><el-input v-model="tagForm.name" maxlength="30"/></el-form-item></el-form>
+      <template #footer><el-button @click="tagDialog=false">取消</el-button><el-button type="primary" :loading="busy" @click="saveTag">保存</el-button></template>
+    </el-dialog>
   </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
-import { getWechatAccounts, getWechatMenu, saveWechatMenu, publishWechatMenu, importWechatMenu, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans } from '@/api/wechat-operations'
+import { getWechatAccounts, getWechatMenu, saveWechatMenu, publishWechatMenu, importWechatMenu, getWechatAutoReplies, saveWechatAutoReply, deleteWechatAutoReply, getWechatQrCodes, createWechatQrCode, deleteWechatQrCode, getWechatFans, syncWechatFans, getWechatTags, syncWechatTags, saveWechatTag, deleteWechatTag, getWechatMaterials, syncWechatMaterials, getWechatStats } from '@/api/wechat-operations'
 
 const accounts = ref([]), selectedId = ref(''), active = ref('menu'), busy = ref(false)
 const menuJson = ref('{\n  "button": []\n}')
-const rules = ref([]), qrs = ref([]), fans = ref([])
+const rules = ref([]), qrs = ref([]), fans = ref([]), tags = ref([]), materials = ref([]), stats = ref({}), materialType = ref('image'), tagDialog = ref(false)
+const tagForm = reactive({ tagId: null, name: '' })
+const statCards = computed(() => [{label:'粉丝总数',value:stats.value.fans||0},{label:'已关注',value:stats.value.subscribed||0},{label:'消息数',value:stats.value.messages||0},{label:'二维码扫码',value:stats.value.qrScans||0},{label:'素材数',value:stats.value.materials||0}])
 const ruleDialog = ref(false), qrDialog = ref(false)
 const ruleTypes = { KEYWORD: '关键词', SUBSCRIBE: '关注后', DEFAULT: '默认回复' }
 const replyTypes = { TEXT: '文字', IMAGE: '图片', VOICE: '语音', VIDEO: '视频' }
@@ -122,6 +140,9 @@ async function loadTab() {
   if (active.value === 'replies') return loadRules()
   if (active.value === 'qrcodes') return loadQrs()
   if (active.value === 'fans') return loadFans()
+  if (active.value === 'tags') return loadTags()
+  if (active.value === 'materials') return loadMaterials()
+  if (active.value === 'stats') return loadStats()
 }
 async function loadMenu() { busy.value = true; try { const { data } = await getWechatMenu(selectedId.value); menuJson.value = JSON.stringify(data?.buttons || { button: [] }, null, 2) } catch (error) { ElMessage.error(error?.message || '菜单读取失败') } finally { busy.value = false } }
 async function saveMenu() { let buttons; try { buttons = JSON.parse(menuJson.value) } catch { return ElMessage.warning('菜单 JSON 格式不正确') } busy.value = true; try { await saveWechatMenu(selectedId.value, { buttons }); ElMessage.success('菜单草稿已保存') } catch (error) { ElMessage.error(error?.message || '菜单保存失败') } finally { busy.value = false } }
@@ -137,9 +158,17 @@ async function saveQr() { busy.value = true; try { await createWechatQrCode(sele
 async function removeQr(row) { try { await ElMessageBox.confirm(`确认删除“${row.name}”二维码记录？`, '删除二维码', { type: 'warning' }) } catch { return } try { await deleteWechatQrCode(selectedId.value, row.id); ElMessage.success('二维码记录已删除'); await loadQrs() } catch (error) { ElMessage.error(error?.message || '删除失败') } }
 async function loadFans() { busy.value = true; try { const { data } = await getWechatFans(selectedId.value); fans.value = Array.isArray(data) ? data : [] } catch (error) { ElMessage.error(error?.message || '粉丝读取失败') } finally { busy.value = false } }
 async function syncFans() { busy.value = true; try { const { data } = await syncWechatFans(selectedId.value); ElMessage.success(`已同步 ${data?.synced || 0} 个粉丝`); await loadFans() } catch (error) { ElMessage.error(error?.message || '粉丝同步失败，请检查公众号用户管理权限') } finally { busy.value = false } }
+async function loadTags(){busy.value=true;try{tags.value=(await getWechatTags(selectedId.value)).data||[]}catch(e){ElMessage.error(e?.message||'标签读取失败')}finally{busy.value=false}}
+async function syncTags(){busy.value=true;try{tags.value=(await syncWechatTags(selectedId.value)).data||[];ElMessage.success('标签已同步')}catch(e){ElMessage.error(e?.message||'标签同步失败')}finally{busy.value=false}}
+function openTag(row=null){Object.assign(tagForm,{tagId:row?.tagId||null,name:row?.name||''});tagDialog.value=true}
+async function saveTag(){busy.value=true;try{await saveWechatTag(selectedId.value,tagForm.tagId,{name:tagForm.name});tagDialog.value=false;ElMessage.success('标签已保存');await loadTags()}catch(e){ElMessage.error(e?.message||'标签保存失败')}finally{busy.value=false}}
+async function removeTag(row){try{await ElMessageBox.confirm(`确认删除标签“${row.name}”？`,'删除标签',{type:'warning'})}catch{return}try{await deleteWechatTag(selectedId.value,row.tagId);ElMessage.success('标签已删除');await loadTags()}catch(e){ElMessage.error(e?.message||'标签删除失败')}}
+async function loadMaterials(){busy.value=true;try{materials.value=(await getWechatMaterials(selectedId.value,materialType.value)).data||[]}catch(e){ElMessage.error(e?.message||'素材读取失败')}finally{busy.value=false}}
+async function syncMaterials(){busy.value=true;try{const {data}=await syncWechatMaterials(selectedId.value,materialType.value);ElMessage.success(`已同步 ${data?.synced||0} 个素材`);await loadMaterials()}catch(e){ElMessage.error(e?.message||'素材同步失败')}finally{busy.value=false}}
+async function loadStats(){try{stats.value=(await getWechatStats(selectedId.value)).data||{}}catch(e){ElMessage.error(e?.message||'统计读取失败')}}
 onMounted(loadAccounts)
 </script>
 
 <style scoped>
-.wechat-tools { display:grid; gap:16px; }.account-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }.account-toolbar strong,.account-toolbar span{display:block}.account-toolbar strong{font-size:14px}.account-toolbar span{margin-top:4px;color:var(--el-text-color-secondary);font-size:12px}.tool-tabs{background:var(--el-bg-color);border:1px solid var(--el-border-color-light);border-radius:14px;padding:0 18px 18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:8px 0 14px}.panel-head strong,.panel-head span{display:block}.panel-head strong{font-size:14px}.panel-head span{margin-top:4px;color:var(--el-text-color-secondary);font-size:12px}.panel-actions{display:flex;gap:8px}.code-editor :deep(textarea){font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.65}.form-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px}.muted{color:var(--el-text-color-secondary);font-size:12px}.content-preview{margin-left:8px;color:var(--el-text-color-secondary);font-size:12px}.tag-gap{margin-right:4px}.dialog-form{display:grid;gap:2px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:768px){.account-toolbar,.panel-head{align-items:stretch;flex-direction:column}.account-toolbar :deep(.el-select){width:100%!important}.panel-actions{width:100%}.panel-actions :deep(.el-button){flex:1}.form-grid,.form-grid.three{grid-template-columns:1fr}}
+.wechat-tools { display:grid; gap:16px; }.account-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }.account-toolbar strong,.account-toolbar span{display:block}.account-toolbar strong{font-size:14px}.account-toolbar span{margin-top:4px;color:var(--el-text-color-secondary);font-size:12px}.tool-tabs{background:var(--el-bg-color);border:1px solid var(--el-border-color-light);border-radius:14px;padding:0 18px 18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:8px 0 14px}.panel-head strong,.panel-head span{display:block}.panel-head strong{font-size:14px}.panel-head span{margin-top:4px;color:var(--el-text-color-secondary);font-size:12px}.panel-actions{display:flex;gap:8px}.code-editor :deep(textarea){font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.65}.form-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px}.muted{color:var(--el-text-color-secondary);font-size:12px}.content-preview{margin-left:8px;color:var(--el-text-color-secondary);font-size:12px}.tag-gap{margin-right:4px}.stats-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.stats-grid article{padding:18px;border:1px solid var(--el-border-color-lighter);border-radius:12px;background:var(--el-fill-color-lighter)}.stats-grid span,.stats-grid strong{display:block}.stats-grid span{color:var(--el-text-color-secondary);font-size:12px}.stats-grid strong{margin-top:8px;font-size:26px}.dialog-form{display:grid;gap:2px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:768px){.account-toolbar,.panel-head{align-items:stretch;flex-direction:column}.account-toolbar :deep(.el-select){width:100%!important}.panel-actions{width:100%}.panel-actions :deep(.el-button){flex:1}.form-grid,.form-grid.three{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}}
 </style>

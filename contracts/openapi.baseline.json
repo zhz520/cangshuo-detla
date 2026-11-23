@@ -1814,6 +1814,83 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/tags/{tagId}" : {
+      "put" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "updateTag",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "tagId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "deleteTag",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "tagId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/mass-sends/{taskId}" : {
       "put" : {
         "tags" : [ "wechat-content-controller" ],
@@ -7264,6 +7341,138 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/tags" : {
+      "get" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "tags",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "createTag",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/tags/{tagId}/batch" : {
+      "post" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "batchTag",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "tagId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : { }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/tags/sync" : {
+      "post" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "syncTags",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/qrcodes" : {
       "get" : {
         "tags" : [ "wechat-operations-tools-controller" ],
@@ -7420,6 +7629,39 @@
           "name" : "id",
           "in" : "path",
           "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/materials/sync" : {
+      "post" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "syncMaterials",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "type",
+          "in" : "query",
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -13094,6 +13336,32 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/stats" : {
+      "get" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "stats",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/wechat/accounts/{id}/readiness" : {
       "get" : {
         "tags" : [ "wechat-operations-controller" ],
@@ -13113,6 +13381,39 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/RMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/wechat/accounts/{id}/materials" : {
+      "get" : {
+        "tags" : [ "wechat-operations-tools-controller" ],
+        "operationId" : "materials",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "type",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RListMapStringObject"
                 }
               }
             }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.18.5",
-  "inputDigest": "sha256:a4ae3dbd855554ad6747481526af2ef5096e450b79a748dffd5df4d6e7cd6df2",
+  "inputDigest": "sha256:2ef6c471d81e2ff487c3f0fe1a4f8643333078ce0ea8f9c229cdba904fc6aef2",
   "counts": {
     "modules": 19,
     "controllers": 116,
@@ -585,7 +585,7 @@
         {
           "name": "WechatOperationsToolsController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsToolsController.java",
-          "endpoints": 13
+          "endpoints": 22
         },
         {
           "name": "WechatWebLoginController",
@@ -1692,15 +1692,19 @@
           "deleteWechatArticle",
           "deleteWechatAutoReply",
           "deleteWechatQrCode",
+          "deleteWechatTag",
           "deleteWechatTemplate",
           "getWechatAccounts",
           "getWechatArticles",
           "getWechatAutoReplies",
           "getWechatFans",
           "getWechatMassSends",
+          "getWechatMaterials",
           "getWechatMenu",
           "getWechatQrCodes",
           "getWechatReadiness",
+          "getWechatStats",
+          "getWechatTags",
           "getWechatTemplateCatalog",
           "importWechatMenu",
           "publishWechatMenu",
@@ -1709,9 +1713,12 @@
           "saveWechatAutoReply",
           "saveWechatMassSend",
           "saveWechatMenu",
+          "saveWechatTag",
           "saveWechatTemplate",
           "sendWechatMassSend",
           "syncWechatFans",
+          "syncWechatMaterials",
+          "syncWechatTags",
           "syncWechatTemplates",
           "transitionWechatMassSend"
         ],
@@ -2080,8 +2087,8 @@
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 524,
-    "operations": 524,
+    "endpoints": 533,
+    "operations": 533,
     "schemas": 282
   }
 }

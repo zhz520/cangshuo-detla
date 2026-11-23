@@ -107,3 +107,11 @@ export function transitionWechatMassSend(id, taskId, action) {
 export function sendWechatMassSend(id, taskId) {
   return request({ url: `/admin/wechat/accounts/${id}/mass-sends/${taskId}/send`, method: 'post', data: { confirm: true } })
 }
+
+export function getWechatTags(id) { return request({ url: `/admin/wechat/accounts/${id}/tags`, method: 'get' }) }
+export function syncWechatTags(id) { return request({ url: `/admin/wechat/accounts/${id}/tags/sync`, method: 'post', data: {} }) }
+export function saveWechatTag(id, tagId, data) { return request({ url: tagId ? `/admin/wechat/accounts/${id}/tags/${tagId}` : `/admin/wechat/accounts/${id}/tags`, method: tagId ? 'put' : 'post', data }) }
+export function deleteWechatTag(id, tagId) { return request({ url: `/admin/wechat/accounts/${id}/tags/${tagId}`, method: 'delete', data: {} }) }
+export function getWechatMaterials(id, type) { return request({ url: `/admin/wechat/accounts/${id}/materials`, method: 'get', params: { type } }) }
+export function syncWechatMaterials(id, type) { return request({ url: `/admin/wechat/accounts/${id}/materials/sync`, method: 'post', params: { type }, data: {} }) }
+export function getWechatStats(id) { return request({ url: `/admin/wechat/accounts/${id}/stats`, method: 'get' }) }

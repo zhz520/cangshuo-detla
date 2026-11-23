@@ -937,6 +937,18 @@
   },
   {
     "controller": "WechatOperationsToolsController",
+    "handler": "materials",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/materials"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "syncMaterials",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/materials/sync"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
     "handler": "menu",
     "method": "GET",
     "path": "/admin/wechat/accounts/{id}/menu"
@@ -982,6 +994,48 @@
     "handler": "readiness",
     "method": "GET",
     "path": "/admin/wechat/accounts/{id}/readiness"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "stats",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/stats"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "tags",
+    "method": "GET",
+    "path": "/admin/wechat/accounts/{id}/tags"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "createTag",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/tags"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "syncTags",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/tags/sync"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "deleteTag",
+    "method": "DELETE",
+    "path": "/admin/wechat/accounts/{id}/tags/{tagId}"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "updateTag",
+    "method": "PUT",
+    "path": "/admin/wechat/accounts/{id}/tags/{tagId}"
+  },
+  {
+    "controller": "WechatOperationsToolsController",
+    "handler": "batchTag",
+    "method": "POST",
+    "path": "/admin/wechat/accounts/{id}/tags/{tagId}/batch"
   },
   {
     "controller": "WechatOperationsController",

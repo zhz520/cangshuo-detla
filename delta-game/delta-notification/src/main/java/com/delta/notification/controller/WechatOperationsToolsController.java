@@ -123,6 +123,70 @@ public class WechatOperationsToolsController {
         return R.ok(service.syncFans(id));
     }
 
+    @GetMapping("/admin/wechat/accounts/{id}/tags")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<List<Map<String, Object>>> tags(@PathVariable String id, HttpServletRequest request) {
+        requireFeature(request); return R.ok(service.tags(id));
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/tags/sync")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "同步公众号标签")
+    public R<List<Map<String, Object>>> syncTags(@PathVariable String id, HttpServletRequest request) throws Exception {
+        requireFeature(request); return R.ok(service.syncTags(id));
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/tags")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "新增公众号标签")
+    public R<Map<String, Object>> createTag(@PathVariable String id, @RequestBody Map<String, Object> body, HttpServletRequest request) throws Exception {
+        requireFeature(request); return R.ok(service.saveTag(id, null, String.valueOf(body.get("name"))));
+    }
+
+    @PutMapping("/admin/wechat/accounts/{id}/tags/{tagId}")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "编辑公众号标签")
+    public R<Map<String, Object>> updateTag(@PathVariable String id, @PathVariable long tagId,
+                                            @RequestBody Map<String, Object> body, HttpServletRequest request) throws Exception {
+        requireFeature(request); return R.ok(service.saveTag(id, tagId, String.valueOf(body.get("name"))));
+    }
+
+    @DeleteMapping("/admin/wechat/accounts/{id}/tags/{tagId}")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "删除公众号标签")
+    public R<Void> deleteTag(@PathVariable String id, @PathVariable long tagId, HttpServletRequest request) throws Exception {
+        requireFeature(request); service.deleteTag(id, tagId); return R.ok();
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/tags/{tagId}/batch")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "批量标记公众号粉丝")
+    public R<Void> batchTag(@PathVariable String id, @PathVariable long tagId, @RequestBody Map<String, Object> body, HttpServletRequest request) throws Exception {
+        requireFeature(request);
+        Object raw = body.get("openids");
+        List<String> openids = raw instanceof List<?> list ? list.stream().map(String::valueOf).toList() : List.of();
+        service.batchTagFans(id, tagId, openids); return R.ok();
+    }
+
+    @GetMapping("/admin/wechat/accounts/{id}/materials")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<List<Map<String, Object>>> materials(@PathVariable String id, @RequestParam(required = false) String type, HttpServletRequest request) {
+        requireFeature(request); return R.ok(service.materials(id, type));
+    }
+
+    @PostMapping("/admin/wechat/accounts/{id}/materials/sync")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module = "wechat", operation = "同步公众号素材")
+    public R<Map<String, Object>> syncMaterials(@PathVariable String id, @RequestParam(required = false) String type, HttpServletRequest request) throws Exception {
+        requireFeature(request); return R.ok(service.syncMaterials(id, type));
+    }
+
+    @GetMapping("/admin/wechat/accounts/{id}/stats")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    public R<Map<String, Object>> stats(@PathVariable String id, HttpServletRequest request) {
+        requireFeature(request); return R.ok(service.stats(id));
+    }
+
     private void requireFeature(HttpServletRequest request) {
         platform.requireFeature(OfficialWechatService.FEATURE_ID, request.getServerName());
     }

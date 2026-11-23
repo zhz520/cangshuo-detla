@@ -159,6 +159,16 @@ CREATE TABLE IF NOT EXISTS wechat_message (
   content TEXT NULL, event_key VARCHAR(128) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_wechat_message_msgid(account_id,msg_id), KEY idx_wechat_message_time(account_id,created_at)
 );
+CREATE TABLE IF NOT EXISTS wechat_tag (
+  account_id VARCHAR(36) NOT NULL, tag_id BIGINT NOT NULL, name VARCHAR(80) NOT NULL,
+  fan_count INT NOT NULL DEFAULT 0, synced_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(account_id,tag_id)
+);
+CREATE TABLE IF NOT EXISTS wechat_material (
+  account_id VARCHAR(36) NOT NULL, media_id VARCHAR(128) NOT NULL, material_type VARCHAR(16) NOT NULL,
+  name VARCHAR(200) NULL, url VARCHAR(1024) NULL, update_time TIMESTAMP NULL,
+  PRIMARY KEY(account_id,media_id), KEY idx_wechat_material_type(account_id,material_type,update_time)
+);
 CREATE TABLE IF NOT EXISTS sms_notice_queue (
  id VARCHAR(36) PRIMARY KEY, dedupe_key CHAR(64) NOT NULL, delivery_key VARCHAR(64) NULL, event_type VARCHAR(64) NOT NULL,
  event_group VARCHAR(32) NOT NULL, user_type VARCHAR(16) NOT NULL, user_id BIGINT NOT NULL,
