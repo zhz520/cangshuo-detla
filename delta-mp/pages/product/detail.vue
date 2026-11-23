@@ -356,7 +356,7 @@ function goBuy() {
 .head-copy { flex: 1; min-width: 0; }
 .product-name { display: block; color: var(--store-text); font-size: 40rpx; font-weight: 850; line-height: 1.28; letter-spacing: -0.02em; }
 .product-subtitle { display: block; margin-top: 8rpx; color: var(--store-regular); font-size: 24rpx; line-height: 1.45; }
-.flash-badge { display: inline-flex; margin-top: 12rpx; padding: 6rpx 14rpx; border-radius: 999rpx; background: #fff0e8; color: #c4471b; font-size: 22rpx; font-weight: 700; }
+.flash-badge { display: inline-flex; margin-top: 12rpx; padding: 6rpx 14rpx; border-radius: 999rpx; background: var(--store-soft); color: var(--store-primary); font-size: 22rpx; font-weight: 700; }
 .rating-row { display: flex; align-items: center; gap: 8rpx; margin-top: 16rpx; color: var(--store-regular); font-size: 22rpx; }
 .rating-star { color: var(--store-text); font-size: 24rpx; }
 .rating-value { color: var(--store-text); font-weight: 800; }
