@@ -5,6 +5,74 @@ export function routeMotion(to, from, position, previous) {
   return to.meta.isTabBar || to.meta.isQuit ? 'tab' : 'enter'
 }
 
+const TAB_PAGES = [
+  '/pages/index/index',
+  '/pages/category/index',
+  '/pages/players/index',
+  '/pages/chat/list',
+  '/pages/mine/index'
+]
+let transitionGeneration = 0
+
+function nextPaint(win) {
+  // Rendering is paused while a View Transition update callback runs. rAF would
+  // deadlock here; a timer lets Vue commit the new page before the snapshot.
+  return new Promise(resolve => win.setTimeout(resolve, 0))
+}
+
+/**
+ * Keep the old screen on screen until the destination has mounted. Chromium's
+ * View Transition snapshot prevents the white gap created when UniApp replaces
+ * a tab page. The page-motion fallback stays in place for older WebViews.
+ */
+export function navigateTabWithTransition(navigate, doc = document, win = window) {
+  const start = doc.startViewTransition?.bind(doc)
+  let startedNavigation = false, navigation
+  const run = () => {
+    if (!startedNavigation) {
+      startedNavigation = true
+      navigation = Promise.resolve(navigate())
+    }
+    return navigation
+  }
+  if (!start || doc.visibilityState === 'hidden' || win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return { started: false, settled: run() }
+  }
+  const generation = ++transitionGeneration
+  const root = doc.documentElement
+  root.dataset.deltaView = 'tab'
+  let transition
+  try {
+    transition = start(() => {
+      // A broken completion callback must not freeze the old frame forever.
+      return Promise.race([run(), new Promise(resolve => win.setTimeout(resolve, 1500))])
+        .then(() => nextPaint(win), () => nextPaint(win))
+    })
+  } catch (_) {
+    delete root.dataset.deltaView
+    return { started: false, settled: run() }
+  }
+  const clear = () => { if (generation === transitionGeneration) delete root.dataset.deltaView }
+  transition.finished.then(clear, clear)
+  return { started: true, settled: transition.updateCallbackDone }
+}
+
+/** Only fetch route chunks; do not create page instances or call page APIs. */
+export function preloadTabPages(win = window) {
+  if (typeof uni === 'undefined' || typeof uni.preloadPage !== 'function') return () => {}
+  let timer
+  const run = () => {
+    for (const url of TAB_PAGES) {
+      try { uni.preloadPage({ url, fail: () => {} }) } catch (_) {}
+    }
+  }
+  timer = win.requestIdleCallback ? win.requestIdleCallback(run, { timeout: 2500 }) : win.setTimeout(run, 900)
+  return () => {
+    if (win.cancelIdleCallback) win.cancelIdleCallback(timer)
+    else win.clearTimeout(timer)
+  }
+}
+
 export function installPageMotion(router, doc = document, win = window) {
   let target, observer, frame, timeout, previous, last
   const layers = []
@@ -28,6 +96,11 @@ export function installPageMotion(router, doc = document, win = window) {
     if (last === key || (last && to.path === from?.path && position === previous && to.path)) return
     last = key
     clear()
+    // The View Transition owns the whole visual state for this navigation.
+    if (doc.documentElement.dataset.deltaView) {
+      previous = position
+      return
+    }
     const kind = routeMotion(to, from, position, previous)
     previous = position
     if (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -63,5 +136,6 @@ export function installPageMotion(router, doc = document, win = window) {
   }
   const stop = router.afterEach(committed)
   committed(router.currentRoute.value)
+  preloadTabPages(win)
   return () => { stop(); clear() }
 }

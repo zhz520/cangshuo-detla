@@ -5,7 +5,7 @@ import { useHomeRecommendations } from '../composables/useHomeRecommendations.js
 import { useHomeNotices } from '../composables/useHomeNotices.js'
 import { usePagedList } from '../composables/usePagedList.js'
 import { enableChromiumKeyboardResize, viewportMetrics } from '../utils/viewport.js'
-import { routeMotion, installPageMotion } from '../utils/page-motion.mjs'
+import { routeMotion, installPageMotion, navigateTabWithTransition } from '../utils/page-motion.mjs'
 
 test('only identified Chromium 108+ receives keyboard extension, once', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
@@ -84,7 +84,7 @@ test('cached H5 navigation ignores hidden content, superseded routes and filter 
   const router={currentRoute:{value:null},afterEach:cb=>{next=cb;return ()=>{stopped=true}}}
   const win={history:{state:{position:1}},requestAnimationFrame:cb=>{frame=cb;return ++count},cancelAnimationFrame:()=>{frame=null},
     clearTimeout(){},matchMedia:()=>({matches:false})}
-  const stop=installPageMotion(router,{querySelectorAll:()=>[page]},win)
+  const stop=installPageMotion(router,{documentElement:{dataset:{}},querySelectorAll:()=>[page]},win)
   const route=(path,fullPath=path)=>({path,fullPath,meta:{route:path},matched:[{}]})
   next(route('skip'),route('home'))
   next(route('orders'),route('skip'))
@@ -97,4 +97,51 @@ test('cached H5 navigation ignores hidden content, superseded routes and filter 
   next(route('orders'),route('detail'));frame()
   assert.equal(attrs.get('data-delta-enter'),'back')
   stop();assert.equal(stopped,true);assert.equal(attrs.size,0)
+})
+
+test('tab navigation holds the outgoing frame until the new page has painted', async () => {
+  const root={dataset:{}}
+  const doc={documentElement:root,startViewTransition(update){
+    const done=Promise.resolve(update())
+    return {finished:done,updateCallbackDone:done}
+  }}
+  const win={matchMedia:()=>({matches:false}),setTimeout:(cb)=>{setTimeout(cb,0);return 1}}
+  let calls=0
+  const result=navigateTabWithTransition(()=>{calls++;return Promise.resolve('mounted')},doc,win)
+  assert.equal(result.started,true)
+  assert.equal(root.dataset.deltaView,'tab')
+  await Promise.resolve()
+  assert.equal(calls,1)
+  await result.settled
+  await Promise.resolve()
+  assert.equal(root.dataset.deltaView,undefined)
+})
+
+test('tab navigation falls back without a View Transition or with reduced motion', () => {
+  let calls=0
+  const navigate=()=>{calls++;return Promise.resolve()}
+  const reduced=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:true})})
+  assert.equal(reduced.started,false)
+  assert.equal(calls,1)
+  assert.equal(reduced.settled instanceof Promise,true)
+  const legacy=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:false})})
+  assert.equal(legacy.started,false)
+  assert.equal(calls,2)
+})
+
+test('a superseded tab transition cannot clear the newer transition marker', async () => {
+  const root={dataset:{}}, finish=[]
+  const doc={documentElement:root,startViewTransition(update){
+    update()
+    return {finished:new Promise(resolve=>finish.push(resolve)),updateCallbackDone:Promise.resolve()}
+  }}
+  const win={matchMedia:()=>({matches:false}),setTimeout:cb=>{cb();return 1}}
+  navigateTabWithTransition(()=>Promise.resolve(),doc,win)
+  navigateTabWithTransition(()=>Promise.resolve(),doc,win)
+  finish[0]()
+  await Promise.resolve()
+  assert.equal(root.dataset.deltaView,'tab')
+  finish[1]()
+  await Promise.resolve()
+  assert.equal(root.dataset.deltaView,undefined)
 })

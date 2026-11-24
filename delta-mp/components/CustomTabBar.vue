@@ -27,6 +27,9 @@ import { useAppStore } from '@/store/app'
 import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 import { ROLE_TABS } from '@/utils/role'
+// #ifdef H5
+import { navigateTabWithTransition } from '@/utils/page-motion.mjs'
+// #endif
 
 const props = defineProps({
   current: { type: Number, default: 0 }
@@ -123,7 +126,21 @@ function switchTab(tab, index) {
   navigating = true
   const complete = () => { navigating = false }
   if (TAB_BAR_PAGES.includes(tab.pagePath)) {
+    // #ifdef H5
+    const transition = navigateTabWithTransition(() => new Promise(resolve => {
+      uni.switchTab({
+        url: tab.pagePath,
+        complete: () => {
+          complete()
+          resolve()
+        }
+      })
+    }))
+    transition.settled.catch(() => {}).finally(complete)
+    // #endif
+    // #ifndef H5
     uni.switchTab({ url: tab.pagePath, complete })
+    // #endif
   } else {
     uni.redirectTo({ url: tab.pagePath, complete })
   }
