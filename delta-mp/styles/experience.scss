@@ -35,10 +35,36 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
     html[data-delta-view="tab"] uni-page-wrapper { view-transition-name: delta-page; }
     /* The tab bar is one stable surface; only the page behind it changes. */
     .custom-tabbar { view-transition-name: delta-tabbar; }
+    /* The moving parts get their own snapshots. A static tabbar snapshot would
+       hide the liquid pill and the icon/label spring for the whole transition. */
+    html[data-delta-view="tab"] .custom-tabbar .tabbar-pill { view-transition-name: delta-pill; }
+    html[data-delta-view="tab"] .custom-tabbar .tabbar-item.active .tabbar-icon { view-transition-name: delta-tab-icon; }
+    html[data-delta-view="tab"] .custom-tabbar .tabbar-item.active .tabbar-text { view-transition-name: delta-tab-label; }
     ::view-transition-group(delta-page) { animation: none; z-index: 2; }
     ::view-transition-group(delta-tabbar) { animation: none; z-index: 3; }
     ::view-transition-old(delta-tabbar) { animation: none; opacity: 0; }
     ::view-transition-new(delta-tabbar) { animation: none; opacity: 1; }
+    ::view-transition-group(delta-pill) {
+      animation-duration: 420ms;
+      animation-timing-function: cubic-bezier(.18,.82,.24,1.04);
+      z-index: 4;
+    }
+    ::view-transition-old(delta-pill) { animation: delta-pill-old 420ms cubic-bezier(.2,.8,.2,1) both; }
+    ::view-transition-new(delta-pill) { animation: delta-pill-new 420ms cubic-bezier(.2,.8,.2,1) both; }
+    ::view-transition-group(delta-tab-icon) {
+      animation-duration: 380ms;
+      animation-timing-function: cubic-bezier(.2,.8,.2,1);
+      z-index: 5;
+    }
+    ::view-transition-old(delta-tab-icon) { animation: delta-tab-icon-old 160ms ease both; }
+    ::view-transition-new(delta-tab-icon) { animation: delta-tab-icon-new 420ms cubic-bezier(.2,.8,.2,1) both; }
+    ::view-transition-group(delta-tab-label) {
+      animation-duration: 320ms;
+      animation-timing-function: cubic-bezier(.2,.7,.2,1);
+      z-index: 5;
+    }
+    ::view-transition-old(delta-tab-label) { animation: delta-tab-label-old 180ms ease both; }
+    ::view-transition-new(delta-tab-label) { animation: delta-tab-label-new 320ms ease both; }
     ::view-transition-old(delta-page) {
       animation: delta-vt-tab-out 70ms cubic-bezier(.4,0,1,1) both;
       z-index: 1;
@@ -52,6 +78,29 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
 @keyframes delta-vt-tab-out {
   to { opacity: 0; transform: scale(.997); }
 }
+@keyframes delta-pill-old {
+  0% { opacity: 1; transform: scaleX(1) scaleY(1); }
+  55% { opacity: .55; transform: scaleX(1.18) scaleY(.84); }
+  100% { opacity: 0; transform: scaleX(1.06) scaleY(.94); }
+}
+@keyframes delta-pill-new {
+  0% { opacity: 0; transform: scaleX(.84) scaleY(1.1); }
+  45% { opacity: .95; transform: scaleX(1.14) scaleY(.86); }
+  72% { opacity: 1; transform: scaleX(.96) scaleY(1.05); }
+  88% { transform: scaleX(1.02) scaleY(.98); }
+  100% { opacity: 1; transform: scaleX(1) scaleY(1); }
+}
+@keyframes delta-tab-icon-old {
+  to { opacity: 0; transform: scale(.8); }
+}
+@keyframes delta-tab-icon-new {
+  0% { opacity: 0; transform: scale(.66); }
+  55% { opacity: 1; transform: scale(1.16); }
+  82% { transform: scale(.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes delta-tab-label-old { to { opacity: 0; } }
+@keyframes delta-tab-label-new { 0% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes delta-vt-tab-in {
   from { opacity: .35; transform: translate3d(0,24px,0) scale(.996); }
   to { opacity: 1; transform: none; }
