@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "1.21.0",
-  "inputDigest": "sha256:a13515e8be7c1f43a5030e31e85fc279a8d4ee7125454d1aad6d98ff52b1fc19",
+  "catalogVersion": "1.22.0",
+  "inputDigest": "sha256:c77f69bff7777663d02777a672063945a7891c0050184c051b37da63db2437a8",
   "counts": {
     "modules": 19,
     "controllers": 117,
-    "adminViews": 63,
+    "adminViews": 65,
     "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
     "migrations": 41,
     "backendTests": 136,
-    "adminTests": 43,
-    "h5Tests": 24
+    "adminTests": 48,
+    "h5Tests": 27
   },
   "modules": [
     {
@@ -1063,6 +1063,7 @@
       "delta-admin-ui/src/views/chat/ChatRecordDetail.vue",
       "delta-admin-ui/src/views/chat/ChatRecordList.vue",
       "delta-admin-ui/src/views/chat/ChatService.vue",
+      "delta-admin-ui/src/views/chat/ChatSessionPanel.vue",
       "delta-admin-ui/src/views/chat/CsRouting.vue",
       "delta-admin-ui/src/views/complaint/ComplaintList.vue",
       "delta-admin-ui/src/views/dashboard/AnalyticsPanel.vue",
@@ -1086,6 +1087,7 @@
       "delta-admin-ui/src/views/player/PlayerDeposits.vue",
       "delta-admin-ui/src/views/player/PlayerLevels.vue",
       "delta-admin-ui/src/views/player/PlayerList.vue",
+      "delta-admin-ui/src/views/player/PlayerOrdersDialog.vue",
       "delta-admin-ui/src/views/player/RewardList.vue",
       "delta-admin-ui/src/views/product/CategoryFieldList.vue",
       "delta-admin-ui/src/views/product/CategoryList.vue",
@@ -1751,6 +1753,9 @@
       }
     ],
     "tests": [
+      "delta-admin-ui/test/admin-routes-browser-fixture.mjs",
+      "delta-admin-ui/test/admin-routes-browser-journeys.mjs",
+      "delta-admin-ui/test/admin-routes-browser.mjs",
       "delta-admin-ui/test/api-boundary.test.mjs",
       "delta-admin-ui/test/batch-actions-browser.mjs",
       "delta-admin-ui/test/complaint-attachment.test.mjs",
@@ -1777,6 +1782,7 @@
       "delta-admin-ui/test/nginx-static.test.mjs",
       "delta-admin-ui/test/notification-examples.test.mjs",
       "delta-admin-ui/test/order-assignment-candidates.test.mjs",
+      "delta-admin-ui/test/page-viewport.test.mjs",
       "delta-admin-ui/test/platform-shell.test.mjs",
       "delta-admin-ui/test/player-admin-delete.test.mjs",
       "delta-admin-ui/test/player-application-review.test.mjs",
@@ -1785,6 +1791,7 @@
       "delta-admin-ui/test/sensitive-word-admin.test.mjs",
       "delta-admin-ui/test/sms-account.test.mjs",
       "delta-admin-ui/test/soft-theme.test.mjs",
+      "delta-admin-ui/test/staff-local-reads.test.mjs",
       "delta-admin-ui/test/system-config.test.mjs",
       "delta-admin-ui/test/update-selection.test.mjs",
       "delta-admin-ui/test/wechat-auto-template-browser.mjs",
@@ -1873,6 +1880,7 @@
     ],
     "tests": [
       "delta-mp/test/agreement-content.test.mjs",
+      "delta-mp/test/client-motion.test.mjs",
       "delta-mp/test/complaint-private-attachment.test.mjs",
       "delta-mp/test/connection-url.test.mjs",
       "delta-mp/test/contact-purchase-entrypoints.test.mjs",
@@ -1888,11 +1896,13 @@
       "delta-mp/test/player-layout.test.mjs",
       "delta-mp/test/player-lists.test.mjs",
       "delta-mp/test/player-order-actions.test.mjs",
+      "delta-mp/test/profile-product-feedback.test.mjs",
       "delta-mp/test/request.test.mjs",
       "delta-mp/test/soft-theme.test.mjs",
       "delta-mp/test/staff-binding-entry.test.mjs",
       "delta-mp/test/staff-entry.test.mjs",
       "delta-mp/test/ui-remediation.test.mjs",
+      "delta-mp/test/uni-header-shadows.test.mjs",
       "delta-mp/test/usePagedList.test.mjs",
       "delta-mp/test/websocket.test.mjs",
       "delta-mp/test/wechat-official-payment.test.mjs"
