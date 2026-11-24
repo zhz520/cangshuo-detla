@@ -46,3 +46,17 @@ export function suggestWechatTemplate(catalog, scheme) {
   if (fields.length === 0 || fields.length !== allKeys.size || fields.some(row => !row.source)) return null
   return { templateId: template.templateId, fields }
 }
+
+// Only the keyword, declared WeChat type and placeholder are portable; no account ID, template ID or body.
+export function exportKeywordStructure(content) {
+  const rows = [], keys = new Set(), labels = new Set()
+  for (const line of String(content || '').split(/\r?\n/)) {
+    if (!line.includes('{{') && !line.includes('}}')) continue
+    const m = line.trim().match(/^([^{}:：\r\n]{1,64})\s*[:：]\s*\{\{((thing|character_string|time|amount|phone_number|car_number|const)\d*)\.DATA\}\}$/)
+    if (!m) return null
+    const label = m[1].trim(), normalized = label.normalize('NFKC').replace(/\s+/g,'').toLowerCase()
+    if (!normalized || labels.has(normalized) || keys.has(m[2])) return null
+    labels.add(normalized); keys.add(m[2]); rows.push({key:m[2],label,type:m[3]})
+  }
+  return rows.length && rows.length<=20 ? {schema:'wechat-template-labels-v1',fields:rows} : null
+}

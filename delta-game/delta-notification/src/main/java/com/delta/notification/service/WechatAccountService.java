@@ -347,6 +347,10 @@ public class WechatAccountService {
                 if (suggestions.isArray() && suggestions.size() <= 20) row.put("fieldSuggestions", suggestions);
                 row.put("fields", fields);
                 row.put("url", truncate(scheme.path("url").asText(""), 2000));
+                if ("SEMANTIC".equals(scheme.path("mappingMode").asText())) {
+                    row.put("mappingMode","SEMANTIC");
+                    row.put("revision",scheme.path("id").asText()+":"+scheme.path("version").asInt());
+                }
                 row.put("version", scheme.path("version").asInt(1));
                 result.add(row);
             }

@@ -1,5 +1,10 @@
 # 版本与发布记录
 
+## 1.22.1 · Per-account WeChat semantic field mapping
+
+Resolve signed keyword names and types against each authorized account's own template. Recheck affected semantic scenarios when a new signed revision arrives. Preserve manual mappings; export only keyword structure for operator-reviewed conversions.
+
+
 ## Delta 1.22.0 · 页面切换与加载反馈（候选）
 
 统一管理端和 H5 页面切换、减少动态与错误重试；修复商品读取失败及押金退款页空态图片。保留既有通知、支付和租户配置行为。

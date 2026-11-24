@@ -18,7 +18,7 @@ class WechatProvisioningCatalog {
     private final WechatAccountService accounts;
     private final JdbcTemplate jdbc;
     record Entry(String id, String title, String content, String primary, String deputy) {}
-    record Existing(String id, boolean enabled, String fields) {}
+    record Existing(String id, boolean enabled, String fields, String source, String url) {}
 
     void checkAccount(String accountId) {
         if (accountId == null || accountId.isBlank()) throw new BusinessException(400, "请选择公众号");
@@ -53,24 +53,29 @@ class WechatProvisioningCatalog {
     }
 
     Existing existing(String account, WechatProvisioningScheme scheme) {
-        var matches = jdbc.query("SELECT template_id,enabled,fields_json FROM wechat_mp_template WHERE account_id=? AND role=? AND scenario=?",
-                (rs, i) -> new Existing(rs.getString(1), rs.getBoolean(2), rs.getString(3)), account, scheme.role(), scheme.scenario());
+        var matches = jdbc.query("SELECT template_id,enabled,fields_json,source,url FROM wechat_mp_template WHERE account_id=? AND role=? AND scenario=?",
+                (rs, i) -> new Existing(rs.getString(1), rs.getBoolean(2), rs.getString(3),rs.getString(4),rs.getString(5)), account, scheme.role(), scheme.scenario());
         return matches.isEmpty() ? null : matches.get(0);
     }
 
+    void suspendOwned(String account, WechatProvisioningScheme scheme) {
+        jdbc.update("UPDATE wechat_mp_template SET enabled=0 WHERE account_id=? AND role=? AND scenario=? AND source='AUTO_SEMANTIC' AND enabled=1",account,scheme.role(),scheme.scenario());
+    }
     @Transactional
-    public boolean insert(String account, WechatProvisioningScheme scheme, Entry verified, Map<String,String> fields) {
+    public boolean store(String account, WechatProvisioningScheme scheme, Entry verified, Map<String,String> fields, boolean replaceOwned, boolean verifiedReceipt) {
         // Recheck exact snapshot (Java string equality, not a case-insensitive SQL collation).
         var titles = scheme.titles();
         var current = jdbc.query("SELECT c.template_id,c.title,c.content FROM wechat_mp_account a JOIN wechat_mp_template_catalog c ON c.account_id=a.id " +
                         "WHERE a.id=? AND a.enabled=1 AND a.account_mode='OPEN_PLATFORM' FOR UPDATE",
                 (rs, i) -> new Entry(rs.getString(1), rs.getString(2), rs.getString(3), null, null), account)
-                .stream().filter(e -> titles.contains(WechatProvisioningScheme.normalize(e.title()))).toList();
+                .stream().filter(e -> verifiedReceipt ? verified.id().equals(e.id()) : titles.contains(WechatProvisioningScheme.normalize(e.title()))).toList();
         if (current.size() != 1 || !current.get(0).id().equals(verified.id())
                 || !current.get(0).title().equals(verified.title()) || !Objects.equals(current.get(0).content(), verified.content())) return false;
+        if (replaceOwned) return jdbc.update("UPDATE wechat_mp_template SET template_id=?,fields_json=?,url=?,enabled=1 WHERE account_id=? AND role=? AND scenario=? AND source='AUTO_SEMANTIC'",
+                verified.id(),JSON.toJSONString(fields),scheme.url().isEmpty()?null:scheme.url(),account,scheme.role(),scheme.scenario())==1;
         // Never upsert: the unique key protects a manual save racing this insert.
-        jdbc.update("INSERT INTO wechat_mp_template(account_id,role,scenario,template_id,fields_json,url,source,enabled) VALUES(?,?,?,?,?,?,'AUTHORITY',1)",
-                account, scheme.role(), scheme.scenario(), verified.id(), JSON.toJSONString(fields), scheme.url().isEmpty() ? null : scheme.url());
+        jdbc.update("INSERT INTO wechat_mp_template(account_id,role,scenario,template_id,fields_json,url,source,enabled) VALUES(?,?,?,?,?,?,?,1)",
+                account, scheme.role(), scheme.scenario(), verified.id(), JSON.toJSONString(fields), scheme.url().isEmpty() ? null : scheme.url(),scheme.semantic()?"AUTO_SEMANTIC":"AUTHORITY");
         return true;
     }
 }

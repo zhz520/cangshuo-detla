@@ -42,6 +42,16 @@ class WechatTemplateSetupJobsTest {
         verify(provisioner).provision(id);verify(client,times(2)).verifyAttemptOwner(state);
         assertThat(jdbc.queryForObject("SELECT state_cipher FROM wechat_template_setup_job WHERE kind='SCAN'",String.class)).isNull();
     }
+    @Test void delayedSnapshotRequeuesChangedScopeOnceAndDoesNotResetLiveLeases() throws Exception {
+        var account=Map.<String,Object>of("id",id,"mode","OPEN_PLATFORM","enabled",true);when(accounts.accounts()).thenReturn(List.of(account));
+        jobs.retry(id,domain); jdbc.update("UPDATE wechat_template_setup_job SET status='ATTENTION',report_json='{}'");
+        var node=new com.fasterxml.jackson.databind.ObjectMapper().readTree("[{\"mappingMode\":\"SEMANTIC\",\"role\":\"ADMIN\",\"scenario\":\"new_order\",\"id\":\"plan\",\"version\":2}]");
+        when(accounts.provisioningSchemes()).thenReturn(node);
+        when(provisioner.provision(id,node,Set.of("ADMIN:new_order"))).thenReturn(Map.of("issues",List.of()));
+        jobs.queueChanges();jobs.queueChanges();due();jobs.drain("SETUP");jobs.queueChanges();
+        assertThat(jobs.report(id)).containsEntry("status","DONE");
+        verify(provisioner,times(1)).provision(id,node,Set.of("ADMIN:new_order"));
+    }
     @Test void overlappingRetriesAreCoalescedAndFeatureOrModeFailuresNeverProvision() throws Exception {
         when(accounts.accounts()).thenReturn(List.of(Map.of("id",id,"mode","DIRECT","enabled",true)));
         assertThatThrownBy(()->jobs.retry(id,domain)).isInstanceOf(BusinessException.class);

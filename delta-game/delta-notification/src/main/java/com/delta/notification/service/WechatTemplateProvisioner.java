@@ -23,9 +23,12 @@ public class WechatTemplateProvisioner {
     private static final String PENDING = "!pending";
 
     public Map<String,Object> provision(String accountId) {
+        return provision(accountId, accounts.provisioningSchemes(), null);
+    }
+    Map<String,Object> provision(String accountId, JsonNode specs, Set<String> only) {
         catalog.checkAccount(accountId); // tenant-routed JDBC; never resolve a default account
         var report = new Report();
-        JsonNode specs = accounts.provisioningSchemes();
+
         if (specs == null || !specs.isArray() || specs.isEmpty() || specs.size() > 40) {
             report.issue("", "", "SCHEME_UNAVAILABLE");
             return report.summary();
@@ -37,6 +40,7 @@ public class WechatTemplateProvisioner {
                 report.issue("", "", "INVALID_SCHEME");
                 continue;
             }
+            if (only != null && !only.contains(s.scope())) continue;
             groups.computeIfAbsent(List.of(s.role(), s.scenario()), ignored -> new ArrayList<>()).add(s);
         }
         var run = new Run(accountId, report);
@@ -53,7 +57,13 @@ public class WechatTemplateProvisioner {
                 // HTTP exceptions may contain a token-bearing URI. Do not return/log provider text.
                 reason = "PROVISION_UNAVAILABLE";
             }
-            if (reason != null) report.issue(s.role(), s.scenario(), reason);
+            if (reason != null) {
+                if (s.semantic() && Set.of("FIELD_CONFLICT","DUPLICATE_TITLE","INVALID_SCHEME","DUPLICATE_SCHEME").contains(reason))
+                    catalog.suspendOwned(accountId,s);
+                report.issue(s.role(), s.scenario(), reason);
+                if (run.detail!=null && reason.equals("FIELD_CONFLICT")) report.issues.set(report.issues.size()-1,Map.of("role",s.role(),"scenario",s.scenario(),"code",reason,"reason",run.detail));
+                run.detail=null;
+            }
         }
         return report.summary();
     }
@@ -62,7 +72,7 @@ public class WechatTemplateProvisioner {
         final String account;
         final Report report;
         List<WechatProvisioningCatalog.Entry> entries;
-        boolean refreshFailed;
+        boolean refreshFailed; String detail;
 
         Run(String account, Report report) { this.account = account; this.report = report; }
 
@@ -75,19 +85,19 @@ public class WechatTemplateProvisioner {
 
         String configure(WechatProvisioningScheme s, boolean duplicate) throws Exception {
             var existing = catalog.existing(account, s);
-            if (existing != null) report.preserved++;
+            boolean managed = existing != null && "AUTO_SEMANTIC".equals(existing.source()) && s.semantic();
+            if (existing != null && !managed) report.preserved++;
             if (duplicate) return "DUPLICATE_SCHEME";
-            if (existing != null && !existing.enabled()) return "MAPPING_DISABLED";
+            if (existing != null && !managed && !existing.enabled()) return "MAPPING_DISABLED";
             if (s.spec().has("enabled") && !s.spec().path("enabled").asBoolean(false)) return "SCHEME_DISABLED";
             if (s.titles().isEmpty() || !s.validUrl()) return "INVALID_SCHEME";
             if (refreshFailed) return "CATALOG_UNAVAILABLE";
             if (entries == null) refresh();
-            if (existing != null) return existingIssue(existing);
+            if (existing != null && !managed) return existingIssue(existing);
 
             if (!s.hasFieldPlan()) return "FIELD_CONFLICT";
             var titles = s.titles();
             var matches = matches(titles);
-            if (matches.size() > 1) return "DUPLICATE_TITLE";
             var keywords = s.orderedKeywords();
             if (keywords == null) return "INVALID_SCHEME";
             var body = s.addBody(keywords);
@@ -97,6 +107,7 @@ public class WechatTemplateProvisioner {
                 // account and library selection, NOT by job/role. No TTL: a timeout is not a rejection.
                 key = receiptKey(account, s.shortId(), keywords);
                 receipt = redis.opsForValue().get(key);
+                if(s.semantic() && receipt!=null && !PENDING.equals(receipt)) matches=byId(receipt);
             }
             if (matches.isEmpty()) {
                 if (body == null) return "LIBRARY_PARAMETERS_MISSING";
@@ -120,7 +131,7 @@ public class WechatTemplateProvisioner {
                 redis.opsForValue().set(key, id);
                 receipt = id;
                 refresh();
-                matches = matches(titles);
+                matches = s.semantic()?byId(id):matches(titles);
             }
             if (matches.size() > 1) return "DUPLICATE_TITLE";
             if (matches.isEmpty()) return "ADDED_TEMPLATE_NOT_VERIFIED";
@@ -128,9 +139,11 @@ public class WechatTemplateProvisioner {
             if (PENDING.equals(receipt)) return "ADD_OUTCOME_UNKNOWN";
             if (receipt != null && !receipt.equals(selected.id())) return "ADDED_TEMPLATE_NOT_VERIFIED";
             var fields = s.fields(selected.content(), keywords);
-            if (fields.isEmpty()) return "FIELD_CONFLICT";
+            if (fields.isEmpty()) { if(s.semantic()) detail=s.mismatch(selected.content()); return "FIELD_CONFLICT"; }
             try {
-                if (!catalog.insert(account, s, selected, fields)) return "CATALOG_CHANGED";
+                if (managed && existing.enabled() && existing.id().equals(selected.id()) && fields.equals(JSON.parseObject(existing.fields()))
+                        && Objects.equals(existing.url(),s.url().isEmpty()?null:s.url())) {report.preserved++; return null;}
+                if (!catalog.store(account, s, selected, fields, managed, s.semantic() && selected.id().equals(receipt))) return "CATALOG_CHANGED";
                 report.configured++;
                 return null;
             } catch (DuplicateKeyException concurrentSave) {
@@ -149,6 +162,9 @@ public class WechatTemplateProvisioner {
             return "MAPPED_TEMPLATE_MISSING";
         }
 
+        List<WechatProvisioningCatalog.Entry> byId(String verifiedId) {
+            return entries.stream().filter(e->e.id().equals(verifiedId)).toList();
+        }
         List<WechatProvisioningCatalog.Entry> matches(Set<String> titles) {
             return entries.stream().filter(e -> titles.contains(WechatProvisioningScheme.normalize(e.title()))).toList();
         }

@@ -96,6 +96,26 @@ class WechatTemplateProvisionerTest {
         doReturn(reply).when(accounts).apiPost(ACCOUNT,ADD, Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称")));
     }
 
+    @Test void semanticKeywordsUseActualKeysPerAccountAndNeverRewriteManualFields() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
+        var body=snapshot("owned-template"); body.getJSONArray("template_list").getJSONObject(0).put("content","商品名称：{{thing7.DATA}}");
+        listed(body);assertThat(run()).containsEntry("configured",1);
+        jdbc.update("INSERT INTO wechat_mp_account(id,name,app_id,account_mode,enabled) VALUES('testb','test','test-b','OPEN_PLATFORM',1)");
+        doReturn(snapshot("second-template")).when(accounts).apiGet("testb",GET);
+        assertThat(service.provision("testb")).containsEntry("configured",1);
+        assertThat(jdbc.queryForList("SELECT fields_json FROM wechat_mp_template ORDER BY account_id",String.class))
+                .containsExactly("{\"thing7\":\"productName\"}","{\"thing8\":\"productName\"}");
+        jdbc.update("UPDATE wechat_mp_template SET source='LOCAL',fields_json=? WHERE account_id=?","{\"thing7\":\"message\"}",ACCOUNT);
+        assertThat(run()).containsEntry("preserved",1);
+        assertThat(jdbc.queryForObject("SELECT fields_json FROM wechat_mp_template WHERE account_id=?",String.class,ACCOUNT)).contains("message");
+        verify(accounts,never()).apiPost(anyString(),anyString(),any());
+    }
+    @Test void verifiedAddReceiptBeatsDisplayTitleButStillRequiresActualBody() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
+        var body=snapshot("new-owned-id");body.getJSONArray("template_list").getJSONObject(0).put("title","不同的微信官方标题");
+        listed(snapshot(),body);addReply(JSONObject.of("errcode",0,"template_id","new-owned-id"));
+        assertThat(run()).containsEntry("configured",1).containsEntry("issues",List.of());
+    }
     @Test void exactTitleAndActualFieldsNotSchemeOrLibraryIds() throws Exception {
         listed(snapshot("owned-template"));
         assertThat(run()).containsEntry("configured",1).containsEntry("issues",List.of());

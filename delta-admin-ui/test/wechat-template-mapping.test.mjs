@@ -30,3 +30,10 @@ test('only preselects a unique exact title with all fields matched in the curren
   assert.equal(suggestWechatTemplate([match, { ...match, templateId: 'duplicate-title' }], scheme), null)
   assert.equal(suggestWechatTemplate([{ ...match, content: match.content + '\n备注：{{thing1.DATA}}' }], scheme), null)
 })
+
+test('portable structure reads literal placeholder keys and rejects ambiguous bodies', async () => {
+ const {exportKeywordStructure:read}=await import('../src/views/wechat/template-mapping.js')
+ assert.deepEqual(read('商品名称：{{thing7.DATA}}\n订单金额：{{amount3.DATA}}').fields,[{label:'商品名称',key:'thing7',type:'thing'},{label:'订单金额',key:'amount3',type:'amount'}])
+ assert.equal(read('商品名称：{{thing7.DATA}}\n商品名称：{{thing3.DATA}}'),null)
+ assert.equal(read('金额：{{unknown7.DATA}}'),null)
+})

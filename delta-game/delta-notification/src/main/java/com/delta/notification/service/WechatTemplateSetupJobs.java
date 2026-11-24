@@ -94,6 +94,48 @@ public class WechatTemplateSetupJobs {
             executor.execute(()->{try{TenantScheduler.run(tenants,()->drain(kind));} finally{running.set(false);}});
         } catch (RejectedExecutionException shutdown) { running.set(false); }
     }
+    private final AtomicBoolean comparing = new AtomicBoolean();
+    @Scheduled(fixedDelay=60000,initialDelay=25000)
+    public void checkSchemeUpdates() {
+        if (!comparing.compareAndSet(false,true)) return;
+        try { setupWorker.execute(()->{try{TenantScheduler.run(tenants,this::queueChanges);}finally{comparing.set(false);}}); }
+        catch(RejectedExecutionException ignored){comparing.set(false);}
+    }
+    static Map<String,String> revisions(com.fasterxml.jackson.databind.JsonNode specs) {
+        var out=new TreeMap<String,String>();
+        if(specs!=null && specs.isArray() && specs.size()<=40) for(var node:specs) {
+            var scheme=new WechatProvisioningScheme(node);
+            if(scheme.semantic() && WechatAccountService.ROLES.contains(scheme.role()) && WechatAccountService.SCENARIOS.contains(scheme.scenario()))
+                out.put(scheme.scope(),node.path("id").asText()+":"+node.path("version").asInt());
+        }
+        return out;
+    }
+    void queueChanges() {
+        var snapshot=platform.projectSnapshot();
+        var specs=accounts.provisioningSchemes();
+        if(specs==null || !specs.isArray() || specs.size()>40) return;
+        var current=revisions(specs);
+        var domains=snapshot==null?null:snapshot.path("allowedDomains");
+        if(!current.isEmpty() && domains!=null && domains.isArray() && domains.size()>0){
+            String domain=domains.get(0).asText("");
+            if(!domain.isBlank()) for(String account:jdbc.queryForList("SELECT a.id FROM wechat_mp_account a LEFT JOIN "+TABLE+" j ON j.id=CONCAT('a:',a.id) WHERE a.enabled=1 AND a.account_mode='OPEN_PLATFORM' AND j.id IS NULL LIMIT 8",String.class)) {
+                String report=JSON.toJSONString(Map.of("changedScopes",current.keySet()));
+                jdbc.update("INSERT INTO "+TABLE+"(id,kind,status,account_id,domain_name,next_run,report_json) VALUES(?,'SETUP','PENDING',?,?,?,?) ON DUPLICATE KEY UPDATE id=id","a:"+account,account,domain,now(0),report);
+            }
+        }
+        for(var row:jdbc.queryForList("SELECT id,status,report_json FROM "+TABLE+" WHERE kind='SETUP' AND status IN ('DONE','ATTENTION')")) {
+            var raw=(String)row.get("report_json");
+            var last=raw==null?new com.alibaba.fastjson2.JSONObject():JSON.parseObject(raw);
+            var seen=last.getJSONObject("revisions");
+            var changed=new TreeSet<String>();
+            if(seen!=null) for(String k:seen.keySet()) if(!current.containsKey(k)) changed.add(k);
+            current.forEach((k,v)->{if(seen==null||!v.equals(seen.getString(k))) changed.add(k);});
+            if(changed.isEmpty()) continue;
+            last.put("changedScopes",changed);
+            jdbc.update("UPDATE "+TABLE+" SET status='PENDING',next_run=?,report_json=? WHERE id=? AND status=? AND (report_json=? OR (report_json IS NULL AND ? IS NULL))",
+                    now(0),last.toJSONString(),row.get("id"),row.get("status"),raw,raw);
+        }
+    }
     @PreDestroy public void stop(){scanWorker.shutdownNow();setupWorker.shutdownNow();}
     void drain(String kind) {
         // Reclaim abandoned leases; finished scan tickets are not business history.
@@ -105,8 +147,10 @@ public class WechatTemplateSetupJobs {
         String lease=UUID.randomUUID().toString();
         if(jdbc.update("UPDATE "+TABLE+" SET lease_id=?,next_run=?,status=CASE WHEN kind='SETUP' THEN 'PROCESSING' ELSE status END WHERE id=? AND status IN ('PENDING','PROCESSING') AND next_run<=?",
                 lease,now(id.startsWith("q:")?45:1200),id,now(0))!=1) return;
-        var job=jdbc.queryForMap("SELECT kind,domain_name,state_cipher,account_id,expires_at FROM "+TABLE+" WHERE id=?",id);
+        var job=jdbc.queryForMap("SELECT kind,domain_name,state_cipher,account_id,expires_at,report_json FROM "+TABLE+" WHERE id=?",id);
         boolean scan="SCAN".equals(job.get("kind"));
+        var specs=scan?null:accounts.provisioningSchemes();
+        var revisions=revisions(specs);
         try {
             String domain=(String)job.get("domain_name");
             if(scan && jdbc.queryForObject("SELECT COUNT(*) FROM "+TABLE+" WHERE id=? AND expires_at<=?",Integer.class,id,now(0))==1){
@@ -124,14 +168,33 @@ public class WechatTemplateSetupJobs {
                 } else if(Set.of("FAILED","EXPIRED").contains(p.status())) terminal(id,lease,p.status(),null);
                 else jdbc.update("UPDATE "+TABLE+" SET status=?,opened=?,lease_id=NULL,next_run=? WHERE id=? AND lease_id=?",p.status(),p.opened()?1:0,now(4),id,lease);
             } else {
-                var report=provisioner.provision((String)job.get("account_id"));
+                var last=job.get("report_json")==null?new com.alibaba.fastjson2.JSONObject():JSON.parseObject((String)job.get("report_json"));
+                var scopeList=last.getList("changedScopes",String.class);
+                Set<String> only=scopeList==null?null:new HashSet<>(scopeList);
+                if(only!=null){
+                    var seen=last.getJSONObject("revisions");
+                    revisions.forEach((k,v)->{if(seen==null||!v.equals(seen.getString(k))) only.add(k);});
+                    if(specs!=null && specs.isArray() && seen!=null) for(String k:seen.keySet()) if(!revisions.containsKey(k)) {
+                        String[] parts=k.split(":",2);
+                        if(parts.length==2 && WechatAccountService.ROLES.contains(parts[0]) && WechatAccountService.SCENARIOS.contains(parts[1]))
+                            jdbc.update("UPDATE wechat_mp_template SET enabled=0 WHERE account_id=? AND role=? AND scenario=? AND source='AUTO_SEMANTIC'",job.get("account_id"),parts[0],parts[1]);
+                    }
+                    only.retainAll(revisions.keySet());
+                }
+                var report=new LinkedHashMap<String,Object>(specs==null?provisioner.provision((String)job.get("account_id")):provisioner.provision((String)job.get("account_id"),specs,only));
+                if(only!=null && last.getJSONArray("issues")!=null) {
+                    var merged=new ArrayList<Object>((List<?>)report.getOrDefault("issues",List.of()));
+                    for(var item:last.getJSONArray("issues")) if(item instanceof Map<?,?> m && !only.contains(m.get("role")+":"+m.get("scenario"))) merged.add(item);
+                    report.put("issues",merged);
+                }
+                report.put("revisions",revisions);
                 boolean ready=report.get("issues") instanceof List<?> list && list.isEmpty();
                 terminal(id,lease,ready?"DONE":"ATTENTION",report);
             }
         } catch(Exception e) {
             if(scan && (!(e instanceof BusinessException b) || b.getCode()>=500)){
                 jdbc.update("UPDATE "+TABLE+" SET lease_id=NULL,next_run=? WHERE id=? AND lease_id=?",now(8),id,lease);
-            } else terminal(id,lease,scan?"FAILED":"ATTENTION",Map.of("message",
+            } else terminal(id,lease,scan?"FAILED":"ATTENTION",Map.of("revisions",revisions,"message",
                 e instanceof BusinessException b && b.getCode()==403?"请检查功能商城权益及公众号授权权限":"请检查该号模板消息权限和授权中心连接，然后重试"));
         }
     }

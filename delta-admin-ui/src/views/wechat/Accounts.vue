@@ -94,6 +94,9 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="中心方案" min-width="155">
+              <template #default="{ row }">{{ schemeProgress(row) }}</template>
+            </el-table-column>
             <el-table-column prop="templateId" label="模板 ID" min-width="220" show-overflow-tooltip />
             <el-table-column label="操作" width="140" fixed="right">
               <template #default="{ row }">
@@ -110,6 +113,9 @@
             <el-table-column prop="templateId" label="模板 ID" min-width="230" show-overflow-tooltip />
             <el-table-column prop="primaryIndustry" label="主行业" min-width="150" />
             <el-table-column prop="syncedAt" label="同步时间" min-width="170" />
+            <el-table-column label="字段清单" width="135">
+              <template #default="{ row }"><el-button link type="primary" @click="copyStructure(row)">复制字段清单</el-button></template>
+            </el-table-column>
             <el-table-column label="内容预览" min-width="250">
               <template #default="{ row }"><span class="template-content">{{ row.content || '-' }}</span></template>
             </el-table-column>
@@ -194,13 +200,27 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
 import { notificationConfigGuide } from '@/utils/notification-examples'
-import { existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
+import { exportKeywordStructure, existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
   getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates, provisionWechatTemplates, getNoticeSender, changeNoticeSender,
   getWechatOpenStatus, startWechatOpenAuthorization, completeWechatOpenAuthorization
 } from '@/api/wechat-operations'
 
+async function copyStructure(row) {
+  const structure=exportKeywordStructure(row.content)
+  if (!structure) return ElMessage.warning('关键词缺失、重名或格式不支持，无法生成清单')
+  try { await navigator.clipboard.writeText(JSON.stringify(structure)); ElMessage.success('已复制，可粘贴到授权中心的转换预览') }
+  catch { ElMessage.error('复制失败，请允许浏览器访问剪贴板后重试') }
+}
+function schemeProgress(row) {
+  const s=authoritySchemes.value.find(x=>x.role===row.role && x.scenario===row.scenario && x.mappingMode==='SEMANTIC')
+  if(!s) return '—'
+  const key=row.role+':'+row.scenario
+  if(templateSetup.value.revisions?.[key]!==s.revision) return '已收到 v'+s.version+' · 待检查'
+  const issue=templateSetup.value.issues?.find(x=>x.role===row.role && x.scenario===row.scenario)
+  return 'v'+s.version+' · '+(issue?.reason || templateSetup.value.message || (row.status==='READY'?'映射就绪':'待处理'))
+}
 const accounts = ref([])
 const selectedId = ref('')
 const readinessRows = ref([])
@@ -364,7 +384,7 @@ async function loadAccountData(quiet = false) {
     catalog.value = Array.isArray(templates.data) ? templates.data : []
     loadedAccountId.value = accountId
     templateSetup.value = state.data?.templateSetup || {status:'NOT_STARTED'}
-    if (setupPending.value && !disposed) setupTimer = setTimeout(() => loadAccountData(true),3000)
+    if ((setupPending.value || readinessRows.value.some(x=>schemeProgress(x).endsWith('待检查'))) && !disposed) setupTimer = setTimeout(() => loadAccountData(true),3000)
   } catch (error) {
     if (epoch === accountDataEpoch) ElMessage.error(error?.message || '公众号模板状态读取失败')
   } finally {

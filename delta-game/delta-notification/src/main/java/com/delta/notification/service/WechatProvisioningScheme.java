@@ -16,6 +16,8 @@ record WechatProvisioningScheme(JsonNode spec) {
 
     String role() { return spec.path("role").asText("").toUpperCase(Locale.ROOT); }
     String scenario() { return spec.path("scenario").asText("").toLowerCase(Locale.ROOT); }
+    boolean semantic() { return "SEMANTIC".equals(spec.path("mappingMode").asText()); }
+    String scope() { return role()+":"+scenario(); }
     String url() { return spec.path("url").asText(""); }
     String shortId() { return spec.path("templateIdShort").asText(""); }
 
@@ -67,6 +69,7 @@ record WechatProvisioningScheme(JsonNode spec) {
         if ((!fields.isMissingNode() && !fields.isObject()) || fields.size() > 20 ||
                 (!suggestions.isMissingNode() && !suggestions.isArray()) || suggestions.size() > 20 ||
                 (fields.isEmpty() && suggestions.isEmpty())) return false;
+        if (semantic() && (!fields.isEmpty() || suggestions.isEmpty())) return false;
         var it = fields.fields();
         while (it.hasNext()) {
             var field = it.next();
@@ -94,6 +97,21 @@ record WechatProvisioningScheme(JsonNode spec) {
         } catch (RuntimeException invalid) { return false; }
     }
 
+    // Expose only operator-configured labels, never the raw WeChat message body.
+    String mismatch(String content) {
+        var wanted=new TreeMap<String,String>();
+        for(var field:spec.path("fieldSuggestions")) wanted.put(normalize(field.path("label").asText()),field.path("type").asText());
+        var seen=new HashSet<String>(); var keys=new HashSet<String>();
+        var m=VARIABLE.matcher(content); int offset=0;
+        while(m.find()){
+            String prefix=content.substring(offset,m.start()); offset=m.end();
+            String label=normalize(prefix.substring(prefix.lastIndexOf('\n')+1).strip().replaceFirst("[:：]$",""));
+            if(!seen.add(label)||!keys.add(m.group(1))) return "公众号模板的关键词或变量名重复，请人工核对";
+            if(wanted.containsKey(label)&&!wanted.get(label).equals(m.group(2))) return "关键词「"+label+"」的微信字段类型与方案不一致";
+        }
+        for(var key:wanted.keySet()) if(!seen.contains(key)) return "公众号模板缺少关键词「"+key+"」";
+        return "公众号模板包含未映射字段或无法识别的变量，请核对字段清单";
+    }
     Map<String, String> fields(String content, List<String> orderedKeywords) {
         JsonNode explicit = spec.path("fields"), suggestions = spec.path("fieldSuggestions");
         Map<String, String> result = new LinkedHashMap<>();
@@ -127,7 +145,12 @@ record WechatProvisioningScheme(JsonNode spec) {
             end = matcher.end();
         }
         if (suggestions.isEmpty() && result.size() != explicit.size()) return Map.of();
-        if (!orderedKeywords.isEmpty() && !orderedKeywords.equals(labels)) return Map.of();
+        if (semantic()) {
+            var expected = new HashSet<String>();
+            for (var item : suggestions) if (!expected.add(normalize(item.path("label").asText()))) return Map.of();
+            var actual = labels.stream().map(WechatProvisioningScheme::normalize).toList();
+            if (expected.isEmpty() || actual.size()!=expected.size() || !expected.equals(new HashSet<>(actual)) || result.size()!=actual.size()) return Map.of();
+        } else if (!orderedKeywords.isEmpty() && !orderedKeywords.equals(labels)) return Map.of();
         return result;
     }
 }
