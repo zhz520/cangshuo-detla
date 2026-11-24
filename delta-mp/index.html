@@ -9,7 +9,7 @@
     <title>三角洲游戏平台</title>
     <style>
       #boot-tabbar {
-        position: fixed; right: 0; bottom: 0; left: 0; z-index: 9998;
+        position: fixed; right: 0; bottom: 0; left: 0; z-index: 998; pointer-events: none;
         display: flex; align-items: center; justify-content: space-around;
         height: calc(57px + env(safe-area-inset-bottom, 0px));
         padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -29,7 +29,7 @@
   <body>
     <div id="app"><!--app-html--></div>
     <div id="boot-tabbar" aria-hidden="true"></div>
-    <script src="/boot-tabbar.js"></script>
+    <script src="/assets/boot-tabbar.js"></script>
     <script type="module" src="/main.js"></script>
   </body>
 </html>

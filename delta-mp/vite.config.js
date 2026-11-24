@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [uni(),{name:'instance-runtime-placeholder',apply:'build',generateBundle(){
     if(process.env.UNI_PLATFORM==='h5'){
       this.emitFile({type:'asset',fileName:'instance-config.js',source:readFileSync(new URL('./public/instance-config.js',import.meta.url),'utf8')})
-      this.emitFile({type:'asset',fileName:'boot-tabbar.js',source:readFileSync(new URL('./public/boot-tabbar.js',import.meta.url),'utf8')})
+      this.emitFile({type:'asset',fileName:'assets/boot-tabbar.js',source:readFileSync(new URL('./public/boot-tabbar.js',import.meta.url),'utf8')})
     }
   }}],
   server: {

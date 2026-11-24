@@ -71,6 +71,13 @@ try {
   const home=body('pages/index/index'), search=body('pages/product/list')
   await home.locator('.search-bar').waitFor()
   await page.locator('#boot-tabbar').waitFor({state:'detached'})
+  const sampleImage=home.locator('.app-image:not(.icon-image)').first()
+  await sampleImage.waitFor()
+  const imageDuration=await sampleImage.evaluate(el=>parseFloat(getComputedStyle(el).transitionDuration))
+  if (reducedMotion==='no-preference') assert.equal(imageDuration,0.22)
+  else assert.ok(imageDuration<0.001)
+  await page.waitForTimeout(600)
+  assert.equal(await sampleImage.evaluate(el=>el.classList.contains('image-ready')),true)
   if(reducedMotion==='no-preference') {
     const shadows=await page.evaluate(()=>{
       const root=document.documentElement, original=root.getAttribute('data-theme'), sample=document.createElement('div')
