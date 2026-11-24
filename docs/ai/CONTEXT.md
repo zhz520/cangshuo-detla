@@ -79,6 +79,7 @@
 
 - 管理后台 PC 固定 `/`，工作人员 H5 固定 `/h5`；不按窗口宽度自动跳转。
 - 客户 H5 / 打手 H5 在 `delta-mp`；页面必须注册到 `pages.json`，看到 Vue 文件不代表可访问。
+- H5 页签使用 View Transition 时，命名的祖先快照会冻结后代：需要运动的色块、活动图标和文字必须各自设置 `view-transition-name`，否则动画只在被遮挡的实时 DOM 中运行。View Transition 更新回调不能用 `requestAnimationFrame` 等待，否则会死锁。
 - 页面请求统一走 `src/api/*` 或 `delta-mp/api/*`，不散落 URL。
 - 管理端权限三层：`meta.roles`、`meta.permission`、`meta.feature`；后端仍二次校验。
 - 主题必须覆盖默认、暗黑、拟态；不能只改一个页面。
