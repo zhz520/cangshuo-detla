@@ -1,5 +1,5 @@
 <template>
-  <view class="product-card" :class="{ dense }" @click="goDetail">
+  <view ref="cardRef" class="product-card" :class="{ dense }" @click="goDetail">
     <AppImage
       class="cover"
       :src="product.coverImage"
@@ -24,7 +24,8 @@
 
 <script setup>
 import AppImage from '@/components/AppImage.vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { navigateWithSharedMedia } from '@/utils/shared-transition.mjs'
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -33,6 +34,7 @@ const props = defineProps({
   dense: { type: Boolean, default: false },
   designatedPlayerId: { type: [String,Number], default: '' }
 })
+const cardRef = ref(null)
 
 const displayPrice = computed(() => {
   return Number(props.product.price || 0).toFixed(2)
@@ -40,7 +42,13 @@ const displayPrice = computed(() => {
 
 function goDetail() {
   const suffix = props.designatedPlayerId ? '&playerId=' + props.designatedPlayerId : ''
-  uni.navigateTo({ url: '/pages/product/detail?id=' + props.product.id + suffix })
+  const root = cardRef.value?.$el || cardRef.value
+  const source = typeof root?.querySelector === 'function' ? root.querySelector('.cover') : null
+  navigateWithSharedMedia({
+    source,
+    targetSelector: '[data-shared-target="product"]',
+    navigate: () => new Promise(resolve => uni.navigateTo({ url: '/pages/product/detail?id=' + props.product.id + suffix, complete: resolve }))
+  })
 }
 </script>
 

@@ -165,6 +165,10 @@ async function save() {
 
   .input {
     flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     text-align: right;
     font-size: 28rpx;
     color: var(--store-text);

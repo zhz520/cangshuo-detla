@@ -1,5 +1,5 @@
 <template>
-  <view class="player-list-card" :class="{ compact }" @click="open">
+  <view ref="cardRef" class="player-list-card" :class="{ compact }" @click="open">
     <view class="avatar-wrap">
       <AppImage :width="320" :src="player.avatar || '/static/images/delta-default-avatar.png'" class="avatar" mode="aspectFill" />
       <view class="presence-dot" :class="{ online }" />
@@ -31,15 +31,18 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ref } from 'vue'
 import AppImage from '@/components/AppImage.vue'
 import { useSiteStore } from '@/store/site'
 import { openCustomerService } from '@/utils/customer-service'
+import { navigateWithSharedMedia } from '@/utils/shared-transition.mjs'
 const siteStore = useSiteStore()
 
 const props = defineProps({
   player: { type: Object, required: true },
   compact: { type: Boolean, default: false }
 })
+const cardRef = ref(null)
 const online = computed(() => props.player.isOnline === 1)
 const tags = computed(() => {
   const values = [props.player.skillTags, props.player.serviceTypes]
@@ -51,7 +54,13 @@ const tags = computed(() => {
   return [...new Set(values)].slice(0, props.compact ? 2 : 3)
 })
 function open() {
-  uni.navigateTo({ url: '/pages/players/detail?id=' + props.player.id })
+  const root = cardRef.value?.$el || cardRef.value
+  const source = typeof root?.querySelector === 'function' ? root.querySelector('.avatar') : null
+  navigateWithSharedMedia({
+    source,
+    targetSelector: '[data-shared-target="player-avatar"]',
+    navigate: () => new Promise(resolve => uni.navigateTo({ url: '/pages/players/detail?id=' + props.player.id, complete: resolve }))
+  })
 }
 function placeOrder() {
   if (!siteStore.orderPurchaseEnabled) return uni.showToast({ title: '购买功能已暂停', icon: 'none' })

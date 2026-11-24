@@ -120,6 +120,7 @@ try {
   if(preview) await page.waitForTimeout(600)
   await search.locator('.product-card').nth(4).click()
   await body('pages/product/detail').waitFor()
+  await page.waitForFunction(()=>!document.documentElement.hasAttribute('data-delta-view'))
   if(preview) await page.waitForTimeout(650)
   await page.goBack()
   await search.locator('input').waitFor()
@@ -152,7 +153,8 @@ try {
     }else{
       const category=body('pages/category/index')
       await category.locator('[data-delta-enter="tab"]').waitFor()
-      assert.equal(await category.locator('[data-delta-enter="tab"]').first().evaluate(el=>getComputedStyle(el).animationName),'delta-tab-in')
+      const fallbackAnimation=await category.locator('[data-delta-enter="tab"]').first().evaluate(el=>getComputedStyle(el).animationName)
+      assert.ok(['delta-tab-forward','delta-tab-back','delta-tab-in'].includes(fallbackAnimation), fallbackAnimation)
     }
   }
   assert.deepEqual(errors,[]); assert.deepEqual(external,[])

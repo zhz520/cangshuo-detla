@@ -25,7 +25,9 @@ function nextPaint(win) {
  * View Transition snapshot prevents the white gap created when UniApp replaces
  * a tab page. The page-motion fallback stays in place for older WebViews.
  */
-export function navigateTabWithTransition(navigate, doc = document, win = window) {
+export function navigateTabWithTransition(navigate, doc = document, win = window, options = {}) {
+  const direction = options.direction === 'back' ? 'back' : 'forward'
+  const generation = ++transitionGeneration
   const start = doc.startViewTransition?.bind(doc)
   let startedNavigation = false, navigation
   const run = () => {
@@ -36,10 +38,14 @@ export function navigateTabWithTransition(navigate, doc = document, win = window
     return navigation
   }
   if (!start || doc.visibilityState === 'hidden' || win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    doc.documentElement.dataset.deltaDirection = direction
+    win.setTimeout(() => {
+      if (generation === transitionGeneration && !doc.documentElement.hasAttribute('data-delta-view')) delete doc.documentElement.dataset.deltaDirection
+    }, 480)
     return { started: false, settled: run() }
   }
-  const generation = ++transitionGeneration
   const root = doc.documentElement
+  root.dataset.deltaDirection = direction
   root.dataset.deltaView = 'tab'
   let transition
   try {
@@ -50,9 +56,16 @@ export function navigateTabWithTransition(navigate, doc = document, win = window
     })
   } catch (_) {
     delete root.dataset.deltaView
+    win.setTimeout(() => {
+      if (generation === transitionGeneration && !root.hasAttribute('data-delta-view')) delete root.dataset.deltaDirection
+    }, 480)
     return { started: false, settled: run() }
   }
-  const clear = () => { if (generation === transitionGeneration) delete root.dataset.deltaView }
+  const clear = () => {
+    if (generation !== transitionGeneration) return
+    delete root.dataset.deltaView
+    delete root.dataset.deltaDirection
+  }
   transition.finished.then(clear, clear)
   return { started: true, settled: transition.updateCallbackDone }
 }
