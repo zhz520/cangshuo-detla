@@ -124,10 +124,6 @@ CREATE TABLE IF NOT EXISTS wechat_mp_account (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_wechat_mp_app_id(app_id), KEY idx_wechat_mp_default(is_default,enabled)
 );
-CREATE TABLE IF NOT EXISTS wechat_mp_display_preference (
-  account_id VARCHAR(36) NOT NULL, template_id VARCHAR(128) NOT NULL, field_key VARCHAR(64) NOT NULL,
-  PRIMARY KEY(account_id,template_id)
-);
 CREATE TABLE IF NOT EXISTS wechat_mp_template_catalog (
   account_id VARCHAR(36) NOT NULL, template_id VARCHAR(128) NOT NULL, title VARCHAR(160) NOT NULL,
   content TEXT NULL, primary_industry VARCHAR(80) NULL, deputy_industry VARCHAR(80) NULL,
