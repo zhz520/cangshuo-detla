@@ -40,11 +40,11 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
     ::view-transition-old(delta-tabbar) { animation: none; opacity: 0; }
     ::view-transition-new(delta-tabbar) { animation: none; opacity: 1; }
     ::view-transition-old(delta-page) {
-      animation: delta-vt-tab-out 90ms cubic-bezier(.4,0,1,1) both;
+      animation: delta-vt-tab-out 70ms cubic-bezier(.4,0,1,1) both;
       z-index: 1;
     }
     ::view-transition-new(delta-page) {
-      animation: delta-vt-tab-in 190ms cubic-bezier(.2,.7,.2,1) 90ms both;
+      animation: delta-vt-tab-in 280ms cubic-bezier(.22,.61,.36,1) 60ms both;
       z-index: 2;
     }
   }
@@ -53,7 +53,7 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
   to { opacity: 0; transform: scale(.997); }
 }
 @keyframes delta-vt-tab-in {
-  from { opacity: 0; transform: scale(1.004); }
+  from { opacity: .35; transform: translate3d(0,24px,0) scale(.996); }
   to { opacity: 1; transform: none; }
 }
 uni-page-body input, uni-page-body textarea { caret-color: #17191c; }

@@ -1,5 +1,5 @@
 <template>
-  <image ref="imageRef" :src="displaySource" :mode="mode" :lazy-load="!eager" class="app-image" :class="{ 'image-loading': !loaded, 'image-failed': failed, 'icon-image': isVector }" @load="onLoad" @error="onError" />
+  <image ref="imageRef" :src="displaySource" :mode="mode" :lazy-load="!eager" class="app-image" :class="{ 'image-loading': !loaded, 'image-ready': loaded, 'image-failed': failed, 'icon-image': isVector }" @load="onLoad" @error="onError" />
 </template>
 <script setup>
 import { computed, nextTick, ref, watch, onMounted, onBeforeUnmount } from 'vue'
@@ -71,8 +71,15 @@ onMounted(() => {
 onBeforeUnmount(() => observer?.disconnect())
 </script>
 <style scoped>
-.app-image { background-color: #f0f1f3; transition: opacity 160ms ease; }
-.image-loading { background-color: #f0f1f3; }
+.app-image { background-color: #f0f1f3; transition: opacity 220ms cubic-bezier(.2,.7,.2,1); }
+.image-loading { opacity: 0; background: linear-gradient(100deg, #f0f1f3 30%, #f7f8f9 48%, #f0f1f3 66%); background-size: 220% 100%; animation: image-shimmer 1.1s linear infinite; }
+.image-ready { opacity: 1; }
 .image-failed { background-color: #f0f1f3; }
 .app-image.icon-image { background-color: transparent !important; }
+.app-image.icon-image.image-loading { opacity: .35; animation: none; background: transparent; }
+@keyframes image-shimmer { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .app-image { transition: none; }
+  .image-loading, .app-image.icon-image.image-loading { opacity: 1; animation: none; background-color: #f0f1f3; }
+}
 </style>
