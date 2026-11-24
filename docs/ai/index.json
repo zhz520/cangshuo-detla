@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.22.3",
-  "inputDigest": "sha256:c77f69bff7777663d02777a672063945a7891c0050184c051b37da63db2437a8",
+  "inputDigest": "sha256:d6cce51c64b3a428ecd8e2759c2234a3e6462a9c6758552c620b575a532c88c0",
   "counts": {
     "modules": 19,
     "controllers": 117,
@@ -2135,6 +2135,6 @@
   "contracts": {
     "endpoints": 542,
     "operations": 542,
-    "schemas": 292
+    "schemas": 293
   }
 }
