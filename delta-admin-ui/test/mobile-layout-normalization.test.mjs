@@ -6,7 +6,8 @@ const read = path => readFileSync(new URL(`../src/${path}`, import.meta.url), 'u
 
 test('mobile pages share one centered width-constrained frame', () => {
   const layout = read('layout/index.vue')
-  assert.match(layout, /class="layout-page-frame"/)
+  assert.match(layout, /<PageViewport/)
+  assert.match(read('components/PageViewport.vue'), /'layout-page-frame'/)
   assert.match(layout, /\.layout-page-frame \{ width:100%; max-width:100%; margin:0 auto;/)
   assert.match(layout, /\.layout-main \{\s+width: 100%;\s+margin: 0;/)
 })

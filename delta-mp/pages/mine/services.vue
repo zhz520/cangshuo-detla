@@ -1,7 +1,7 @@
 <template>
   <view class="services-page">
     <ScreenHeader title="设置" back center />
-    <scroll-view scroll-y class="page-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="page" scroll-y class="page-scroll" :show-scrollbar="false">
       <view class="page-content">
         <view class="group-card">
           <text class="group-title">账户与资产</text>

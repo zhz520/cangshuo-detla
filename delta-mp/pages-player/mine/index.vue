@@ -1,6 +1,6 @@
 <template>
   <view class="player-mine tab-page">
-    <scroll-view scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="tab" scroll-y class="mine-scroll tab-page-scroll" :show-scrollbar="false">
       <PageState :loading="loading && !loaded" :error="loadError" @retry="loadDashboard" />
       <template v-if="loaded">
       <PlayerOverview :profile="playerStore.playerInfo" :data="homeData" @navigate="go" />

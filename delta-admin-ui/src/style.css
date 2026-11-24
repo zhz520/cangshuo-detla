@@ -71,11 +71,15 @@ select {
 .layout-main:focus { outline: none; }
 html { -webkit-tap-highlight-color: transparent; }
 button, a, [role='button'], .el-menu-item, .el-sub-menu__title { touch-action: manipulation; }
-.page-fade-enter-active, .page-fade-leave-active { transition: opacity 150ms ease, transform 150ms ease; }
-.page-fade-enter-from { opacity: 0; transform: translateY(4px); }
-.page-fade-leave-to { opacity: 0; transform: translateY(-2px); }
+.page-viewport { min-width: 0; max-width: 100%; }
+.page-viewport--shell { height: 100%; }
+.viewport-enter-active { transition: opacity var(--delta-motion-enter) var(--delta-motion-ease), transform var(--delta-motion-enter) var(--delta-motion-ease); }
+.viewport-enter-from { opacity: 0; transform: translateY(var(--delta-motion-distance)); }
+.page-viewport--shell.viewport-enter-from { transform: none; }
 
-.el-loading-mask { background-color: rgba(255,255,255,.72); }
+.el-loading-mask { background-color: color-mix(in srgb, var(--app-surface) 78%, transparent); transition-duration: var(--delta-motion-feedback); }
+.feedback-spin { animation: feedback-spin var(--delta-motion-pulse) linear infinite; }
+@keyframes feedback-spin { to { transform: rotate(1turn); } }
 .el-loading-spinner .circular { width: 30px; height: 30px; }
 .layout-main { overscroll-behavior-y: contain; }
 
@@ -92,7 +96,7 @@ html[data-client='qq'] .h5-bottom-nav { backdrop-filter: none; background-color:
 }
 
 .app-loading { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 4000; overflow: hidden; pointer-events: none; background: var(--app-border); }
-.app-loading__bar { display: block; width: 40%; height: 100%; background: var(--app-primary); animation: app-progress 1.2s ease-in-out infinite; }
+.app-loading__bar { display: block; width: 40%; height: 100%; background: var(--app-primary); animation: app-progress var(--delta-motion-pulse) var(--delta-motion-ease) infinite; }
 @keyframes app-progress { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
 .app-route-error { position: fixed; top: calc(12px + var(--app-safe-top, 0px)); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); z-index: 4001; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; border: 1px solid var(--el-color-danger-light-8); border-radius: 8px; background: var(--app-surface); box-shadow: 0 4px 20px #17191c18; }
 .app-route-error > span { min-width: 0; overflow-wrap: anywhere; }
@@ -101,6 +105,9 @@ html[data-client='qq'] .h5-bottom-nav { backdrop-filter: none; background-color:
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .feedback-spin { animation: none !important; }
+  .viewport-enter-active { transition: none !important; }
+  .viewport-enter-from { opacity: 1; transform: none; }
   .app-loading__bar { width: 100%; animation: none !important; transform: none; }
   .stat-card:hover { transform: none !important; }
 }

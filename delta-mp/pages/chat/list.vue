@@ -9,7 +9,7 @@
         <view v-if="systemUnread > 0" class="screen-dot" />
       </view>
     </ScreenHeader>
-    <scroll-view scroll-y class="session-scroll tab-page-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="tab" scroll-y class="session-scroll tab-page-scroll" :show-scrollbar="false">
       <view class="session-content">
         <view class="message-shortcuts">
           <view class="notice-card" @click="goNotifications()">

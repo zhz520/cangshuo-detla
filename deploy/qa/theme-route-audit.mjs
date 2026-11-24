@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, appendFile, readdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, appendFile, readdir, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
@@ -12,7 +12,7 @@ function options(argv) {
     if (!argv[i].startsWith('--') || !argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error(`Expected --key value: ${argv[i]}`)
     result[argv[i].slice(2)] = argv[i + 1]
   }
-  const accepted = ['admin-url', 'customer-url', 'output', 'profiles', 'themes', 'match', 'limit', 'workers', 'engine', 'guards', 'settle-ms']
+  const accepted = ['admin-url', 'customer-url', 'output', 'profiles', 'themes', 'match', 'limit', 'workers', 'engine', 'guards', 'settle-ms', 'client-motion', 'customer-build']
   for (const key of Object.keys(result)) if (!accepted.includes(key)) throw new Error(`Unknown option: ${key}`)
   return result
 }
@@ -58,7 +58,34 @@ export async function resolvePlaywright() {
   for (const name of ['playwright', 'playwright-core']) { try { return await import(pathToFileURL(require.resolve(name)).href) } catch {} }
   throw new Error('Set PLAYWRIGHT_MODULE to an existing playwright-core/index.mjs; no installation or profile discovery is performed')
 }
-export async function installIsolation(context, { origin, auth, theme, scenario = 'normal' }, evidence) {
+// Snapshot the release once: no listener, no request-controlled filesystem paths,
+// no symlinks or source maps. Every case in this run sees identical bytes.
+export async function customerRelease(input) {
+  const root = path.join(repoRoot, 'delta-mp/dist/build/h5')
+  if (path.resolve(input) !== root || await realpath(root) !== root) throw new Error('Only delta-mp/dist/build/h5 is accepted')
+  const mime = { html: 'text/html; charset=utf-8', js: 'application/javascript', css: 'text/css',
+    png: 'image/png', svg: 'image/svg+xml', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp',
+    ico: 'image/x-icon', wav: 'audio/wav', mp3: 'audio/mpeg', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf' }
+  const files = new Map(), hash = createHash('sha256')
+  async function collect(dir, prefix) {
+    const entries = await readdir(dir, { withFileTypes: true })
+    for (const ent of entries.sort((a,b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
+      const key = prefix + '/' + ent.name, file = path.join(dir, ent.name)
+      if (ent.isSymbolicLink()) throw new Error('Symlink in H5 build: ' + key)
+      if (ent.isDirectory()) { await collect(file, key); continue }
+      const contentType = mime[path.extname(key).slice(1)]
+      if (!ent.isFile() || !contentType || !(key === '/index.html' || /^\/(assets|static|pages-player|pages-cs)\//.test(key))) continue
+      const body = await readFile(file)
+      files.set(key, { contentType, body })
+      hash.update(JSON.stringify([key, createHash('sha256').update(body).digest('hex')]))
+    }
+  }
+  await collect(root, '')
+  const index = files.get('/index.html')?.body
+  if (!index || index.toString().includes('interactive-widget')) throw new Error('Missing or obsolete release index.html')
+  return { files, identity: { root, staticFiles: files.size, sha256: hash.digest('hex'), indexSha256: createHash('sha256').update(index).digest('hex') } }
+}
+export async function installIsolation(context, { origin, auth, theme, scenario = 'normal', release }, evidence) {
   if (typeof context.routeWebSocket !== 'function') throw new Error('A Playwright runtime with routeWebSocket is required for isolation')
   await context.routeWebSocket('**/*', socket => {
     const u = new URL(socket.url())
@@ -101,6 +128,13 @@ export async function installIsolation(context, { origin, auth, theme, scenario 
     if (method !== 'GET' && method !== 'HEAD') {
       evidence.blockedNetwork.push({ origin: url.origin, path: url.pathname, method, resource: request.resourceType() })
       return route.abort('blockedbyclient')
+    }
+    if (release) {
+      let key
+      try { key = decodeURIComponent(url.pathname) } catch { return route.fulfill({status:400, body:''}) }
+      const asset = release.files.get(key === '/' ? '/index.html' : key)
+      if (!asset) return route.fulfill({status:404, body:'Missing release asset'})
+      return route.fulfill({status:200, contentType:asset.contentType, body:method === 'HEAD' ? '' : asset.body})
     }
     return route.continue()
   })
@@ -163,14 +197,37 @@ async function runCase(browser, item, config) {
   const startedAt = new Date().toISOString(), start = Date.now()
   const origin = item.app === 'admin' ? config.adminOrigin : config.customerOrigin
   const evidence = { api: [], fixtureGaps: [], blockedNetwork: [], webSockets: [], pageErrors: [], consoleErrors: [], consoleWarnings: [], requestFailures: [], httpErrors: [] }
-  const context = await browser.newContext({ viewport: item.profile.viewport, deviceScaleFactor: 1, isMobile: Boolean(item.profile.mobile), hasTouch: Boolean(item.profile.mobile),
-    locale: 'zh-CN', timezoneId: 'Asia/Shanghai', colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block' })
+  let context
+  const newContext = () => browser.newContext({ viewport: item.profile.viewport, deviceScaleFactor: 1, isMobile: Boolean(item.profile.mobile), hasTouch: Boolean(item.profile.mobile),
+    locale: 'zh-CN', timezoneId: 'Asia/Shanghai', colorScheme: 'light', reducedMotion: item.app === 'customer' && config.clientMotion === 'normal' ? 'no-preference' : 'reduce', serviceWorkers: 'block' })
   const result = { id: item.id, app: item.app, route: item.path, title: item.title, purpose: item.purpose, profile: item.profile.id, viewport: item.profile.viewport,
     theme: item.theme, fixtureAuth: item.fixtureAuth, fixtureVersion, scenario: item.scenario || 'normal', startedAt, evidence, issues: [] }
   const file = `${String(item.sequence).padStart(4, '0')}-${slug(item.id)}-${item.profile.id}-${item.theme}.png`
   try {
-    await installIsolation(context, { origin, auth: item.fixtureAuth, theme: item.theme, scenario: item.scenario }, evidence)
-    const page = await context.newPage()
+    let page
+    // WebKit can lose a newly-created blank process under Windows memory pressure.
+    // Only retry before goto: do not replay a navigation, API call or payment action.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      context = await newContext()
+      await installIsolation(context, { origin, auth: item.fixtureAuth, theme: item.theme, scenario: item.scenario, release: item.app === 'customer' ? config.release : null }, evidence)
+      if (item.app === 'customer' && config.clientMotion) await context.addInitScript(() => {
+        window.__qaRouteAnimations = []
+        window.__qaOtherAnimations = []
+        document.addEventListener('animationstart', e => {
+          if (!e.animationName.startsWith('delta-page-') && window.__qaOtherAnimations.length < 64)
+            window.__qaOtherAnimations.push({name:e.animationName, atMs:Math.round(performance.now()), tag:e.target.tagName})
+          if (e.animationName.startsWith('delta-page-')) window.__qaRouteAnimations.push({
+            name: e.animationName, atMs: Math.round(performance.now()), owner: e.target.getAttribute('data-delta-enter')
+          })
+        }, true)
+      })
+      try { page = await context.newPage(); break } catch (error) {
+        if (attempt !== 1 || !browser.isConnected() || !/closed|crash/i.test(error.message)) throw error
+        result.blankPageRetry = { phase: 'before-navigation', error: error.message.split('\n')[0] }
+        await context.close()
+        context = null
+      }
+    }
     page.setDefaultTimeout(10000)
     page.on('pageerror', error => evidence.pageErrors.push(error.message))
     page.on('console', message => { if (message.type() === 'error') evidence.consoleErrors.push(message.text()); if (message.type() === 'warning') evidence.consoleWarnings.push(message.text()) })
@@ -178,10 +235,14 @@ async function runCase(browser, item, config) {
     page.on('response', response => { if (response.status() >= 400) evidence.httpErrors.push({ path: new URL(response.url()).pathname, status: response.status() }) })
     await page.goto(origin + item.samplePath, { waitUntil: 'domcontentloaded', timeout: 45000 })
     const expected = item.expected || (item.app === 'admin' ? item.samplePath : item.path)
-    await page.waitForFunction(({ expected, app }) => {
+    // A real empty reviews response renders four Chinese characters. Check that
+    // exact state (and only that route); do not lower the readiness bar globally.
+    const emptyReview = item.path === '/pages-player/review/list' ? '暂无评价' : null
+    await page.waitForFunction(({ expected, app, emptyReview }) => {
       const route = app === 'customer' ? location.hash.slice(1).split('?')[0] : location.pathname
-      return route === expected && document.querySelector(app === 'customer' ? 'uni-page-body' : '#app')?.innerText?.trim().length > 5
-    }, { expected, app: item.app }, { timeout: 25000 }).catch(error => { result.readinessError = error.message.split('\n')[0] })
+      const text = document.querySelector(app === 'customer' ? 'uni-page-body' : '#app')?.innerText?.trim()
+      return route === expected && (text?.length > 5 || (emptyReview && text === emptyReview))
+    }, { expected, app: item.app, emptyReview }, { timeout: 25000 }).catch(error => { result.readinessError = error.message.split('\n')[0] })
     if (item.app === 'admin' && !expected.endsWith('/login')) {
       await page.locator('.layout-page-frame > *').first().waitFor({ state: 'visible', timeout: 15000 }).catch(error => { result.contentWaitError = error.message.split('\n')[0] })
     }
@@ -193,11 +254,54 @@ async function runCase(browser, item, config) {
     result.routeReached = actual === expected
     if (item.redirectQuery) result.redirectPreserved = new URL(page.url()).searchParams.get('redirect') === item.samplePath
     result.layout = await layoutSnapshot(page)
+    if (item.app === 'customer' && item.path === '/pages-player/deposit/refund') {
+      result.refundEmptyStates = await page.locator('uni-page-body .empty-state').evaluateAll(states => states.map(state => {
+        const picture = state.querySelector('.app-image')
+        const img = picture?.querySelector('img')
+        const css = picture?.querySelector('div')
+        const source = img?.currentSrc || img?.getAttribute('src') ||
+          (css && getComputedStyle(css).backgroundImage.match(/url\(["']?([^"')]+)["']?\)/)?.[1])
+        return { text: state.querySelector('.empty-text')?.textContent?.trim(),
+          asset: source ? decodeURIComponent(new URL(source, location.href).pathname) : null,
+          loaded: !!picture && !picture.matches('.image-loading,.image-failed') &&
+            (img?.currentSrc ? img.complete && img.naturalWidth > 0 : !!source) }
+      }))
+      const expected = ['暂无已缴押金', '暂无退款申请']
+      if (result.refundEmptyStates.length !== expected.length || !expected.every(text =>
+        result.refundEmptyStates.some(s => s.text === text && s.asset === '/static/icons/空空如也.svg' && s.loaded)))
+        result.issues.push('refund-empty-asset-not-confirmed')
+    }
+    if (item.app === 'customer' && item.path === '/pages/order/pay') {
+      const pay = page.locator('uni-page-body .pay-page')
+      // trial checks visibility, hit testing and actionability without dispatching a click.
+      const confirm = pay.locator('.btn-pay:not(.disabled)')
+      const unobstructed = await confirm.click({trial:true,timeout:4000}).then(() => true, () => false)
+      result.payment = {
+        unobstructed,
+        countdownVisible: await pay.locator('.countdown:not(.expired)').isVisible(),
+        walletRead: evidence.api.some(r => r.method === 'GET' && r.path.endsWith('/user/wallet') && r.status === 200 && r.known),
+        hasAmount: (await pay.locator('.amount-area').innerText()).includes(item.query.amount),
+        confirmVisible: await pay.getByText('确认支付', { exact: true }).isVisible(),
+        orderRead: evidence.api.some(r => r.method === 'GET' && r.path.endsWith('/order/' + item.query.orderId) && r.known && r.status === 200),
+        readOnly: evidence.api.every(r => r.method === 'GET')
+      }
+      if (!Object.values(result.payment).every(Boolean)) result.issues.push('payment-page-not-confirmed')
+    }
     result.screenshot = `screenshots/${file}`
-    await page.screenshot({ path: path.join(config.output, result.screenshot), fullPage: true, animations: 'disabled', timeout: 20000 })
+    await page.screenshot({ path: path.join(config.output, result.screenshot), fullPage: true, animations: item.app === 'customer' && config.clientMotion ? 'allow' : 'disabled', timeout: 20000 })
+    if (item.app === 'customer' && config.clientMotion) {
+      result.motion = { mode: config.clientMotion, ...await page.evaluate(() => ({
+        events: window.__qaRouteAnimations, otherEvents: window.__qaOtherAnimations, observedUntilMs: Math.round(performance.now()), reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+        targets: [...document.querySelectorAll('[data-delta-enter]')].map(el => ({
+          tag: el.tagName, className: el.className, owner: el.getAttribute('data-delta-enter'), animation: getComputedStyle(el).animationName
+        }))
+      })) }
+      if (result.motion.reduced !== (config.clientMotion === 'reduce')) result.issues.push('motion-preference-mismatch')
+      if (result.motion.events.length !== (config.clientMotion === 'normal' ? 1 : 0)) result.issues.push('unexpected-route-animation-count')
+    }
     const feedback = result.layout.pageFeedback
     if (!result.routeReached) result.issues.push('unexpected-route-or-guard-redirect')
-    if (result.readinessError || result.contentWaitError || result.layout.pageTextLength < 6 || !result.layout.contentChildren) result.issues.push('content-not-confirmed')
+    if (result.readinessError || result.contentWaitError || (result.layout.pageTextLength < 6 && result.layout.textExcerpt !== emptyReview) || !result.layout.contentChildren) result.issues.push('content-not-confirmed')
     if (result.layout.theme !== item.theme) result.issues.push('theme-not-applied')
     if (result.layout.documentWidth > item.profile.viewport.width + 2) result.issues.push('document-horizontal-overflow')
     if (result.layout.brokenImages.length) result.issues.push('broken-visible-image')
@@ -221,14 +325,14 @@ async function runCase(browser, item, config) {
   } catch (error) {
     result.error = error.message
     result.issues.push('harness-or-navigation-error')
-    const page = context.pages()[0]
+    const page = context?.pages()[0]
     if (page) {
       result.finalPath = new URL(page.url()).pathname + new URL(page.url()).hash
       result.screenshot = `screenshots/${file}`
       await page.screenshot({ path: path.join(config.output, result.screenshot), fullPage: true, animations: 'disabled', timeout: 10000 }).catch(() => { result.screenshot = null })
     }
   } finally {
-    await context.close()
+    await context?.close()
     result.durationMs = Date.now() - start
     result.finishedAt = new Date().toISOString()
     result.status = result.issues.length ? 'findings' : 'fixture-render-checks-passed'
@@ -278,6 +382,12 @@ export async function main(argv = process.argv.slice(2)) {
   await mkdir(path.join(output, 'screenshots'), { recursive: true })
   await mkdir(temp, { recursive: true })
   const config = { output, adminOrigin: localOrigin(args['admin-url'] || 'http://127.0.0.1:5317'), customerOrigin: localOrigin(args['customer-url'] || 'http://127.0.0.1:5318'), settleMs: Number(args['settle-ms'] || 350) }
+  if (args['customer-build']) {
+    if (args['customer-url']) throw new Error('customer-build and customer-url are mutually exclusive')
+    config.release = await customerRelease(args['customer-build'])
+  }
+  config.clientMotion = args['client-motion']
+  if (config.clientMotion && !['normal', 'reduce'].includes(config.clientMotion)) throw new Error('client-motion must be normal or reduce')
   const inventory = await buildInventory(), sourceBefore = await sourceTreeHashes()
   const themeList = (args.themes || inventory.themes.join(',')).split(',')
   if (themeList.some(theme => !inventory.themes.includes(theme))) throw new Error('Unsupported theme')
@@ -318,7 +428,7 @@ export async function main(argv = process.argv.slice(2)) {
     const sourceAfter = await sourceTreeHashes()
     const sourceDrift = [...new Set([...Object.keys(sourceBefore), ...Object.keys(sourceAfter)])].filter(file => sourceBefore[file] !== sourceAfter[file])
     const data = { schemaVersion: 1, classification: 'BROWSER EVIDENCE OF SYNTHETIC LOCAL FIXTURES; NOT PRODUCTION OR BUSINESS ACCEPTANCE',
-      startedAt, finishedAt: new Date().toISOString(), origins: { admin: config.adminOrigin, customer: config.customerOrigin }, runtime, gitBefore, gitAfter: gitSnapshot(),
+      startedAt, finishedAt: new Date().toISOString(), customerBuild: config.release?.identity, origins: { admin: config.adminOrigin, customer: config.customerOrigin }, runtime, gitBefore, gitAfter: gitSnapshot(),
       sourceBefore, sourceAfter, sourceDrift, inventory, summary: summarize(results), unattempted, results: results.sort((a,b) => a.id.localeCompare(b.id) || a.profile.localeCompare(b.profile) || a.theme.localeCompare(b.theme)) }
     await report(config, data)
     await writeFile(path.join(outputRoot, 'latest.json'), JSON.stringify({ output, summary: data.summary }, null, 2) + '\n')

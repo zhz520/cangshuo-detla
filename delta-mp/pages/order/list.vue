@@ -9,16 +9,17 @@
         @click="selectTab(tab.key)"
       >{{ tab.label }}</view>
     </view>
-    <scroll-view scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
+    <scroll-view data-delta-content="page" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
       <OrderCard v-for="o in visibleOrders" :key="o.id" :order="o" :owner-actions="canUseOwnerActions(o)" />
-      <view v-if="loading" class="loading-tip">加载中...</view>
+      <LoadFeedback v-if="loading" :phase="!orders.length ? 'initial' : pageNum > 1 ? 'more' : 'refresh'" />
       <view v-if="error && !loading" class="loading-tip error-tip" @click="loadData">{{ error }} · 点击重试</view>
-      <EmptyState v-if="!loading && visibleOrders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
+      <EmptyState v-if="!error && !loading && visibleOrders.length===0" text="暂无订单" image="/static/icons/暂无纪录.svg" />
       <view class="order-list-bottom-space"></view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import OrderCard from '@/components/OrderCard.vue'

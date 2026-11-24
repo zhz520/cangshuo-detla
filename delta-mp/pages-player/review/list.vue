@@ -24,13 +24,14 @@
           <text class="reply-content">{{ r.reply }}</text>
         </view>
       </view>
-      <PageState :loading="loading && !reviews.length" :error="error" :empty="!reviews.length" empty-text="暂无评价" @retry="retry" />
-      <view v-if="reviews.length && loading" class="loading-tip">正在加载…</view>
+      <PageState :phase="phase" :loading="loading && !reviews.length" :error="error" :empty="!reviews.length" empty-text="暂无评价" @retry="retry" />
+      <LoadFeedback v-if="reviews.length && loading" :phase="phase" />
       <view v-else-if="reviews.length && finished && !error" class="loading-tip">已显示全部评价</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import AppImage from '@/components/AppImage.vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import PageState from '@/components/PageState.vue'
@@ -40,7 +41,7 @@ import { getPlayerProfile } from '@/api/player'
 import { usePagedList } from '@/composables/usePagedList'
 
 let playerId
-const { items: reviews, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
+const { items: reviews, loading, phase, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
   pageSize: 20,
   async fetchPage({ pageNum, pageSize, isCurrent }) {
     if (playerId == null) {

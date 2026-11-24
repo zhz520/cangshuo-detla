@@ -70,4 +70,4 @@ export const getComplaintDetail = (id) => get(`/order/complaint/${id}`)
 export const appealComplaint = (id, data) => post(`/order/complaint/${id}/appeal`, data)
 
 /** 我的投诉列表 */
-export const getMyComplaints = (params) => get('/order/complaint/my', params)
+export const getMyComplaints = (params) => get('/order/complaint/my', params, { loading: false })

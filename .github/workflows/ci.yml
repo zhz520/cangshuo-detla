@@ -125,6 +125,17 @@ jobs:
           echo '::endgroup::'
           echo "Admin exit: $admin_status; H5/mini program exit: $h5_status"
           (( admin_status == 0 && h5_status == 0 ))
+      - name: Check every registered UI route and generated motion tokens
+        run: node scripts/check_ui_motion.mjs
+      - name: Exercise admin routes, redirects and navigation in Chromium
+        shell: bash
+        run: |
+          npm ci --prefix deploy/qa --ignore-scripts --no-audit --no-fund
+          export QA_PLAYWRIGHT_MODULE="$GITHUB_WORKSPACE/deploy/qa/node_modules/playwright-core/index.mjs"
+          export PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v google-chrome)"
+          test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE"
+          ROUTE_THEME=default node delta-admin-ui/test/admin-routes-browser.mjs
+          PLAYWRIGHT_MODULE="$QA_PLAYWRIGHT_MODULE" node delta-mp/scripts/verify-motion-build.mjs
       - name: Validate static asset references
         run: |
           python -m unittest discover -s deploy/qa -p 'test_*.py'

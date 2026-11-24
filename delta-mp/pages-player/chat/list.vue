@@ -1,6 +1,6 @@
 <template>
   <view class="chat-list tab-page">
-    <scroll-view scroll-y class="session-scroll tab-page-scroll" :show-scrollbar="false">
+    <scroll-view data-delta-content="tab" scroll-y class="session-scroll tab-page-scroll" :show-scrollbar="false">
       <view v-for="s in sessions" :key="s.id" class="session-item" @click="goRoom(s)">
         <AppImage :width="160" v-if="s.avatar" class="avatar" :src="s.avatar" mode="aspectFill" />
         <view v-else class="avatar avatar-placeholder">{{ firstChar(s.targetName || s.nickname || '') }}</view>

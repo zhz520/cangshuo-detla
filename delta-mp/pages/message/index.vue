@@ -3,8 +3,9 @@
     <ScreenHeader :title="announcements ? '平台公告' : '系统通知'" back center>
       <view v-if="!announcements" class="read-all" @click="markAllReadClick">全部已读</view>
     </ScreenHeader>
-    <scroll-view v-if="announcements" scroll-y class="list">
-      <PageState v-if="loading || noticeError" :loading="loading" :error="noticeError" @retry="loadNotices" />
+    <scroll-view data-delta-content="page" v-if="announcements" scroll-y class="list">
+      <LoadFeedback v-if="loading && notices.length" phase="refresh" />
+      <PageState v-if="(loading && !notices.length) || noticeError" :loading="loading" :error="noticeError" @retry="loadNotices" />
       <view v-else-if="!notices.length" class="empty-page">
         <image class="empty-page-icon" src="/static/icons/header-megaphone.svg" mode="aspectFit" />
         <text class="empty-page-title">暂无平台公告</text>
@@ -21,7 +22,7 @@
         </view>
       </view>
     </scroll-view>
-    <scroll-view v-else scroll-y class="list" @scrolltolower="loadMore">
+    <scroll-view data-delta-content="page" v-else scroll-y class="list" @scrolltolower="loadMore">
       <view v-for="m in messages" :key="m.id" class="msg-item" @click="onTap(m)">
         <view class="msg-header">
           <text class="msg-title text-ellipsis">{{ m.title }}</text>
@@ -30,7 +31,7 @@
         <text class="msg-content text-ellipsis-2">{{ m.content }}</text>
         <text class="msg-time">{{ m.createdAt }}</text>
       </view>
-      <view v-if="loading" class="loading-tip">加载中…</view>
+      <LoadFeedback v-if="loading" :phase="!messages.length ? 'initial' : pageNum > 1 ? 'more' : 'refresh'" />
       <view v-if="!loading && messages.length===0" class="empty-page">
         <image class="empty-page-icon" src="/static/icons/header-bell.svg" mode="aspectFit" />
         <text class="empty-page-title">暂无通知</text>
@@ -40,6 +41,7 @@
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { clientStorage } from '@/utils/client-storage'
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'

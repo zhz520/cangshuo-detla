@@ -18,13 +18,11 @@
       <LoadFeedback :error="platformFeatureError" label="功能菜单" @retry="loadPlatformFeatureVisibility(true)" />
       <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
       <router-view v-slot="{ Component, route: pageRoute }">
-        <transition name="page-fade" mode="out-in">
-          <div :key="`${pageRoute.path}:${pageVersion}`" class="layout-page-frame h5-page-frame">
-            <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :is="Component" read-only />
-            <DemoReadOnlyPage v-else-if="demoMode" />
-            <component v-else :is="Component" />
-          </div>
-        </transition>
+        <PageViewport v-if="Component" :path="pageRoute.path" class="h5-page-frame">
+          <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :key="`config:${pageVersion}`" :is="Component" read-only />
+          <DemoReadOnlyPage :key="`demo:${pageVersion}`" v-else-if="demoMode" />
+          <component v-else :key="pageVersion" :is="Component" />
+        </PageViewport>
       </router-view>
     </main>
 
@@ -79,6 +77,7 @@ import { useUserStore } from '@/stores/user'
 import { useChatStore } from '@/stores/chat'
 import { useWorkbenchStore } from '@/stores/workbench'
 import { useSiteStore } from '@/stores/site'
+import PageViewport from '@/components/PageViewport.vue'
 import LoadFeedback from '@/components/LoadFeedback.vue'
 import ProfileEditDialog from '@/components/ProfileEditDialog.vue'
 import PasswordChangeDialog from '@/components/PasswordChangeDialog.vue'

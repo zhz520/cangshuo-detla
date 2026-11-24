@@ -19,7 +19,7 @@
           <text v-if="item.blockReason" class="payment-block">{{ item.blockReason }}</text>
           <button v-else-if="item.eligible" class="refund-button" :disabled="busy" @click="openReason(item)">申请退款</button>
         </view>
-        <EmptyState v-if="!context.payments.length" text="暂无已缴押金" image="/pages-player/static/icons/暂无记录.svg" />
+        <EmptyState v-if="!context.payments.length" text="暂无已缴押金" />
       </view>
 
       <view class="section">
@@ -34,7 +34,7 @@
           <text class="history-time">{{ item.createdAt }}</text>
           <button v-if="item.status === 'PENDING'" class="cancel-button" :disabled="busy" @click="cancel(item.id)">取消申请</button>
         </view>
-        <EmptyState v-if="!context.history.length" text="暂无退款申请" image="/pages-player/static/icons/暂无记录.svg" />
+        <EmptyState v-if="!context.history.length" text="暂无退款申请" />
       </view>
     </template>
 

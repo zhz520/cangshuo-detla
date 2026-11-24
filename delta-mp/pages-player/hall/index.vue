@@ -5,8 +5,8 @@
       <view class="filter-item" :class="{active: !categoryId}" @click="filterCategory('')">全部</view>
       <view v-for="c in categories" :key="c.id" class="filter-item" :class="{active: categoryId===c.id}" @click="filterCategory(c.id)">{{ c.name }}</view>
     </scroll-view>
-    <scroll-view :key="categoryId" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
-      <PageState v-if="!orders.length" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无可接订单" @retry="retry" />
+    <scroll-view data-delta-content="tab" :key="categoryId" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
+      <PageState v-if="!orders.length" :phase="phase" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无可接订单" @retry="retry" />
       <view v-for="o in orders" :key="o.id" class="order-card-wrap">
         <OrderCard :order="o" detail-path="/pages-player/order/detail" embed />
         <view class="accept-bar">
@@ -19,7 +19,7 @@
       </view>
       <template v-if="orders.length">
         <PageState v-if="error" :error="error" @retry="retry" />
-        <view v-else-if="loading" class="loading-tip">加载中...</view>
+        <LoadFeedback v-else-if="loading" :phase="phase" />
         <view v-else-if="finished" class="loading-tip">已全部加载</view>
         <view v-else class="loading-tip" @click="loadMore">加载更多</view>
       </template>
@@ -29,6 +29,7 @@
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref } from 'vue'
 import { onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -50,7 +51,7 @@ let categoriesLoaded = false
 let categoryRequest = null
 let disposed = false
 const {
-  query: categoryId, items: orders, loading, error, finished,
+  query: categoryId, items: orders, loading, phase, error, finished,
   refresh, loadMore, retry, setQuery: filterCategory, cancel, dispose
 } = usePagedList({
   async fetchPage({ pageNum, pageSize, query, isCurrent }) {

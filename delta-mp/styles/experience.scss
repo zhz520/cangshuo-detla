@@ -1,5 +1,5 @@
 /* Shared interaction rhythm. Only opacity/transform animate; content never waits for animation. */
-page { --ui-radius: 24rpx; --ui-duration: 160ms; }
+page { --ui-radius: 24rpx; --ui-duration: var(--delta-motion-feedback); }
 button, .menu-item, .action, .action-row, .tabbar-item, .filter-item, .tab, .btn-accept, .switch-btn, .submit-btn {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -16,8 +16,14 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
 .hall-page .order-card-wrap { background: #fff; border-color: #e8eaee; border-radius: 24rpx; box-shadow: 0 6rpx 22rpx rgba(23,25,28,.025); }
 .hall-page .accept-bar { background: #fafbfc; }
 /* #ifdef H5 */
-uni-page-body > view { animation: page-reveal 180ms ease-out; }
-@keyframes page-reveal { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-delta-enter] { animation: delta-page-fade var(--delta-motion-enter) var(--delta-motion-ease); }
+  [data-delta-content][data-delta-enter="enter"] { animation-name: delta-page-in; }
+  [data-delta-content][data-delta-enter="back"] { animation-name: delta-page-back; }
+}
+@keyframes delta-page-fade { from { opacity: .72; } }
+@keyframes delta-page-in { from { opacity: .72; transform: translateY(var(--delta-motion-distance)); } }
+@keyframes delta-page-back { from { opacity: .82; transform: translateY(calc(0px - var(--delta-motion-distance))); } }
 uni-page-body input, uni-page-body textarea { caret-color: #17191c; }
 /* #endif */
 @media (prefers-reduced-motion: reduce) {

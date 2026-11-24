@@ -11,13 +11,14 @@
           <text class="time">{{ item.createdAt }}</text>
         </view>
       </view>
-      <PageState :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无提现记录" @retry="retry" />
-      <view v-if="records.length && loading" class="loading-tip">正在加载…</view>
+      <PageState :phase="phase" :loading="loading && !records.length" :error="error" :empty="!records.length" empty-text="暂无提现记录" @retry="retry" />
+      <LoadFeedback v-if="records.length && loading" :phase="phase" />
       <view v-else-if="records.length && finished && !error" class="loading-tip">已显示全部提现记录</view>
     </scroll-view>
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import PageState from '@/components/PageState.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -26,7 +27,7 @@ import { usePagedList } from '@/composables/usePagedList'
 
 const WITHDRAW_STATUS_TEXT = { PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', COMPLETED: '已到账', CANCELLED: '已取消' }
 const WITHDRAW_STATUS_COLOR = { PENDING: '#996b30', APPROVED: '#347a5b', REJECTED: '#b84b55', COMPLETED: '#347a5b', CANCELLED: '#777777' }
-const { items: records, loading, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
+const { items: records, loading, phase, error, finished, refresh, loadMore, retry, cancel, dispose } = usePagedList({
   pageSize: 20,
   async fetchPage({ pageNum, pageSize }) {
     const { data } = await getWithdrawList({ pageNum, pageSize }, { loading: false, silent: true })

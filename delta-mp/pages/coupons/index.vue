@@ -4,9 +4,9 @@
       <view class="tab" :class="{ active: tab === 'available' }" @click="tab = 'available'">可领取</view>
       <view class="tab" :class="{ active: tab === 'mine' }" @click="tab = 'mine'">我的优惠券</view>
     </view>
-    <view v-if="loading" class="empty">加载中…</view>
-    <view v-else-if="!items.length" class="empty">{{ tab === 'available' ? '暂无可领取优惠券' : '暂无优惠券' }}</view>
-    <view v-else class="list">
+    <PageState v-if="loading || error" :loading="loading" :phase="loaded ? 'refresh' : 'initial'" :error="error" @retry="load" />
+    <view v-if="loaded && !items.length" class="empty">{{ tab === 'available' ? '暂无可领取优惠券' : '暂无优惠券' }}</view>
+    <view v-else-if="loaded" class="list">
       <view v-for="item in items" :key="item.id" class="coupon-card">
         <view class="value">
           <text v-if="item.type === 'DISCOUNT'">{{ (Number(item.coupon_value || item.value) * 10).toFixed(1).replace('.0','') }}折</text>
@@ -24,13 +24,16 @@
 </template>
 
 <script setup>
+import PageState from '@/components/PageState.vue'
 import { computed, onMounted, ref } from 'vue'
 import { claimCoupon, getAvailableCoupons, getMyCoupons } from '@/api/coupon'
 
 const tab = ref('available')
 const available = ref([])
 const mine = ref([])
-const loading = ref(false)
+const loading = ref(true)
+const loaded = ref(false)
+const error = ref('')
 const claiming = ref('')
 const items = computed(() => tab.value === 'available' ? available.value : mine.value)
 
@@ -40,13 +43,14 @@ function statusText(status) {
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
     const [a, m] = await Promise.all([getAvailableCoupons(), getMyCoupons()])
     available.value = Array.isArray(a.data) ? a.data : []
     mine.value = Array.isArray(m.data) ? m.data : []
-  } catch (_) {
-    available.value = []
-    mine.value = []
+    loaded.value = true
+  } catch (e) {
+    error.value = e?.msg || e?.message || '暂时无法加载，请重试'
   } finally {
     loading.value = false
   }

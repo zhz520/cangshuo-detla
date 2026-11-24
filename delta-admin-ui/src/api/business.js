@@ -29,8 +29,8 @@ export function csUserUpdateStatus(id, status) {
 }
 
 // ==================== 打手管理 ====================
-export function adminPlayerList(params) {
-  return request({ url: '/admin/player/list', method: 'get', params })
+export function adminPlayerList(params, config = {}) {
+  return request({ ...config, url: '/admin/player/list', method: 'get', params })
 }
 export function adminPlayerDetail(id) {
   return request({ url: `/admin/player/${id}`, method: 'get' })
@@ -78,8 +78,8 @@ export function adminReviewList(params) {
 export function adminReviewDelete(id) {
   return request({ url: `/admin/review/${id}`, method: 'delete' })
 }
-export function csPlayerList(params) {
-  return request({ url: '/cs/player/list', method: 'get', params })
+export function csPlayerList(params, config = {}) {
+  return request({ ...config, url: '/cs/player/list', method: 'get', params })
 }
 export function csPlayerDetail(id) {
   return request({ url: `/cs/player/${id}`, method: 'get' })
@@ -252,8 +252,8 @@ export function getActiveQuickReplies(category) {
 }
 
 // ==================== 客服实时聊天 ====================
-export function csChatSessionList(params) {
-  return request({ url: '/cs/chat/sessions', method: 'get', params })
+export function csChatSessionList(params, config = {}) {
+  return request({ ...config, url: '/cs/chat/sessions', method: 'get', params })
 }
 export function chatMessageList(params) {
   return request({ url: '/common/chat/message/list', method: 'get', params })

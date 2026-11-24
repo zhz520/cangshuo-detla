@@ -1,7 +1,7 @@
 import { get } from './request'
 
 /** 商品列表（公开接口，无需登录） */
-export const getProductList = (params) => get('/product/list', params, { auth: false })
+export const getProductList = (params, opts = {}) => get('/product/list', params, { auth: false, loading: false, ...opts })
 
 /** 商品详情 - 基础（公开接口） */
 export const getProductDetail = (id) => get(`/product/${id}`, {}, { auth: false })

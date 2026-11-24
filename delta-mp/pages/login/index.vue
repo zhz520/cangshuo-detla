@@ -5,7 +5,8 @@
         <text class="auth-heading" role="heading" aria-level="1">{{ ready ? title : '登录 / 注册' }}</text>
         <text v-if="ready && description" class="login-description">{{ description }}</text>
       </view>
-      <text v-if="loadingPolicy || exchanging" class="auth-caption" aria-live="polite">{{ exchanging ? '正在验证微信授权…' : '正在加载登录方式…' }}</text>
+      <LoadFeedback v-if="loadingPolicy && !exchanging" />
+      <text v-else-if="exchanging" class="auth-caption" aria-live="polite">正在验证微信授权…</text>
       <template v-else-if="policyError">
         <text class="auth-error" role="alert">登录方式加载失败</text>
         <button class="auth-primary" @click="loadPolicy">重试</button>
@@ -80,6 +81,7 @@
 </template>
 
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import PhoneVerificationFields from '@/components/auth/PhoneVerificationFields.vue'

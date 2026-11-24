@@ -3,21 +3,22 @@
     <!-- 头像区域 -->
     <view class="avatar-section">
       <!-- #ifdef MP-WEIXIN -->
-      <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
+      <button :disabled="uploading || saving" class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseWxAvatar">
         <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
-          <text class="hint-text">点击更换头像</text>
+          <text class="hint-text">{{ uploading ? '正在上传…' : '点击更换头像' }}</text>
         </view>
       </button>
       <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
-      <view class="avatar-btn" @click="chooseAvatarImage">
+      <button :disabled="uploading || saving" class="avatar-btn" @click="chooseAvatarImage">
         <AppImage :width="160" class="avatar-img" :src="avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
         <view class="avatar-edit-hint">
-          <text class="hint-text">点击更换头像</text>
+          <text class="hint-text">{{ uploading ? '正在上传…' : '点击更换头像' }}</text>
         </view>
-      </view>
+      </button>
       <!-- #endif -->
+      <text v-if="uploadError" role="alert" class="avatar-ratio-tip">{{ uploadError }}</text>
       <text class="avatar-ratio-tip">建议上传 1:1 正方形头像，人物居中，最小 300×300；未上传时显示 DELTA 默认头像。</text>
     </view>
 
@@ -37,11 +38,12 @@
       </view>
     </view>
 
-    <view class="btn-save" @click="save">保存</view>
+    <button :disabled="uploading || saving" class="btn-save" @click="save">保存</button>
   </view>
 </template>
 
 <script setup>
+import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import AppImage from '@/components/AppImage.vue'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
@@ -52,6 +54,8 @@ import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
 const nickname = ref('')
 const avatar = ref('')
+const saving = ref(false)
+const { uploading, uploadError, changeAvatar } = useAvatarUpload(avatar, saving)
 const phone = ref('')
 const userId = ref('')
 
@@ -69,44 +73,26 @@ onLoad(async () => {
 async function onChooseWxAvatar(e) {
   const tempUrl = e.detail.avatarUrl
   if (!tempUrl) return
-  await uploadAvatar(tempUrl)
+  await changeAvatar(() => upload(tempUrl, undefined, { silent: true }))
 }
 
-async function chooseAvatarImage() {
-  try {
-    uni.showLoading({ title: '上传中...' })
-    const urls = await chooseAndUpload(1)
-    avatar.value = urls[0] || avatar.value
-    uni.hideLoading()
-  } catch (err) {
-    uni.hideLoading()
-    if (err?.errMsg && err.errMsg.includes('cancel')) return
-    uni.showToast({ title: '上传失败', icon: 'none' })
-  }
-}
-
-async function uploadAvatar(tempUrl) {
-  try {
-    uni.showLoading({ title: '上传中...' })
-    const url = await upload(tempUrl)
-    avatar.value = url
-    uni.hideLoading()
-  } catch (err) {
-    uni.hideLoading()
-    uni.showToast({ title: '上传失败', icon: 'none' })
-  }
+function chooseAvatarImage() {
+  return changeAvatar(async () => (await chooseAndUpload(1, { silent: true }))[0])
 }
 
 async function save() {
+  if (uploading.value || saving.value) return
   if (!nickname.value.trim()) {
     return uni.showToast({ title: '请输入昵称', icon: 'none' })
   }
+  saving.value = true
   try {
     await updateUserProfile({ nickname: nickname.value, avatar: avatar.value })
     await userStore.fetchProfile(true)
     uni.showToast({ title: '已保存' })
-    setTimeout(() => uni.navigateBack(), 1500)
+    setTimeout(() => uni.navigateBack({ complete: () => { saving.value = false } }), 1500)
   } catch (e) {
+    saving.value = false
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
 }

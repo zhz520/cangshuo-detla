@@ -1,3 +1,3 @@
 import { get } from './request'
 
-export const getMembership = () => get('/user/membership', {}, { role: 'user', loading: false })
+export const getMembership = () => get('/user/membership', {}, { role: 'user', loading: false, silent: true })

@@ -5,12 +5,12 @@
         <view v-for="tab in tabs" :key="tab.value" class="tab" :class="{active:currentTab===tab.value}" @click="switchTab(tab.value)">{{tab.label}}</view>
       </view>
     </scroll-view>
-    <scroll-view :key="currentTab" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
-      <PageState v-if="!orders.length" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无订单" @retry="retry" />
+    <scroll-view data-delta-content="tab" :key="currentTab" scroll-y class="list" :show-scrollbar="false" @scrolltolower="loadMore">
+      <PageState v-if="!orders.length" :phase="phase" :loading="loading" :error="error" :empty="!loading && !error" empty-text="暂无订单" @retry="retry" />
       <OrderCard v-for="o in orders" :key="o.id" :order="o" detail-path="/pages-player/order/detail" />
       <template v-if="orders.length">
         <PageState v-if="error" :error="error" @retry="retry" />
-        <view v-else-if="loading" class="loading-tip">加载中...</view>
+        <LoadFeedback v-else-if="loading" :phase="phase" />
         <view v-else-if="finished" class="loading-tip">已全部加载</view>
         <view v-else class="loading-tip" @click="loadMore">加载更多</view>
       </template>
@@ -19,6 +19,7 @@
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import OrderCard from '@/components/OrderCard.vue'
@@ -28,7 +29,7 @@ import { getMyWork } from '@/api/player'
 import { PLAYER_ORDER_TABS } from '@/utils/constants'
 const tabs = PLAYER_ORDER_TABS
 const {
-  query: currentTab, items: orders, loading, error, finished,
+  query: currentTab, items: orders, loading, phase, error, finished,
   refresh, loadMore, retry, setQuery: switchTab, cancel, dispose
 } = usePagedList({
   async fetchPage({ pageNum, pageSize, query }) {

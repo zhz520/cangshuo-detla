@@ -1,7 +1,8 @@
 <template>
   <view class="homepage">
     <scroll-view scroll-y class="player-detail" @scrolltolower="activeTab==='reviews' && loadReviews()">
-      <view v-if="loading" class="hint">加载中...</view>
+      <LoadFeedback v-if="loading && player" phase="refresh" />
+      <LoadFeedback v-if="loading && !player" />
       <view v-else-if="!player" class="hint" @click="loadPlayer">{{ errorMessage || '打手暂未开放展示' }}，点击重试</view>
       <template v-else>
         <view class="cover"><AppImage class="cover-main" :width="1080" eager :src="player.coverImage || player.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill"/><view class="cover-shade"/><text class="cover-label">{{ player.levelName || `Lv.${player.level||1}` }} · 打手主页</text></view>
@@ -31,7 +32,7 @@
           <view v-if="review.images" class="review-images"><AppImage v-for="(image, index) in review.images.split(',')" :key="index" :src="image" mode="aspectFill" @click="previewImages(review.images, index)" /></view>
           <text v-if="review.productName" class="product-name">{{ review.productName }}</text>
         </view>
-        <view v-if="reviewLoading" class="hint">加载评价中...</view>
+        <LoadFeedback v-if="reviewLoading" :phase="reviews.length ? 'more' : 'initial'" />
         <view v-else-if="reviewError" class="hint" @click="loadReviews">评价加载失败，点击重试</view>
         <view v-else-if="!reviews.length" class="hint">暂无评价</view>
         <view v-else-if="reviewFinished" class="hint">没有更多评价了</view>
@@ -43,6 +44,7 @@
   </view>
 </template>
 <script setup>
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import AppImage from '@/components/AppImage.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'

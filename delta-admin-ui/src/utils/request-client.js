@@ -13,12 +13,14 @@ export function createRequestClient(send, readKey, { start = () => {}, finish = 
     const key = share ? `${generation}:${readKey(config)}` : null
     if (key && pending.has(key)) return pending.get(key)
 
-    start()
+    // Quiet GETs report locally (or are background polls); never hide a write.
+    const reportProgress = !(method === 'get' && config.silent)
+    if (reportProgress) start()
     let result
     try { result = send(config) } catch (error) { result = Promise.reject(error) }
     const promise = Promise.resolve(result).finally(() => {
       if (key) pending.delete(key)
-      finish()
+      if (reportProgress) finish()
     })
     if (key) pending.set(key, promise)
     return promise

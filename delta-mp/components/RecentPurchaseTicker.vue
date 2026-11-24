@@ -6,8 +6,8 @@
       :autoplay="items.length > 1 && !reducedMotion"
       :circular="items.length > 1 && !reducedMotion"
       :interval="3200"
-      :duration="160"
-      :disable-touch="true"
+      :duration="reducedMotion ? 0 : 160"
+      :disable-touch="!reducedMotion"
     >
       <swiper-item v-for="(item, index) in items" :key="`${item.nickname}-${item.product_name}-${index}`">
         <view class="ticker-line" @click="$emit('more')">
@@ -26,6 +26,7 @@
 </template>
 
 <script setup>
+import { useReducedMotion } from '@/composables/useReducedMotion'
 import { ref } from 'vue'
 import AppImage from '@/components/AppImage.vue'
 
@@ -35,10 +36,7 @@ defineProps({
 defineEmits(['more'])
 
 const hidden = ref(false)
-const reducedMotion = ref(false)
-// #ifdef H5
-reducedMotion.value = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-// #endif
+const reducedMotion = useReducedMotion()
 </script>
 
 <style scoped>

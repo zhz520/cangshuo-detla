@@ -1,7 +1,7 @@
 import { get, post } from './request'
 
 /** 系统通知列表 */
-export const getMessageList = (params) => get('/message/list', params)
+export const getMessageList = (params) => get('/message/list', params, { loading: false })
 
 /** 系统通知未读数量 */
 export const getUnreadCount = (type, options = {}) => get('/message/unread-count', { type }, options)

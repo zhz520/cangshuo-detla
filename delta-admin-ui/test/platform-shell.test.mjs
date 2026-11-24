@@ -30,7 +30,7 @@ test('client platform detection and shared loading/motion styles are installed',
   assert.match(platform, /mqqbrowser/)
   assert.match(platform, /dataset\.os/)
   assert.match(main, /installClientPlatform\(\)/)
-  assert.match(style, /page-fade-enter-active[^{]*\{[^}]*150ms/)
+  assert.match(style, /viewport-enter-active[^{]*\{[^}]*var\(--delta-motion-enter\)/)
   assert.match(style, /html\[data-client='wechat'\]/)
   assert.match(style, /\.el-loading-mask \{ background-color:/)
 })

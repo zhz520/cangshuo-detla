@@ -7,6 +7,16 @@ import check_static_assets as checker
 
 
 class StaticAssetTests(unittest.TestCase):
+    def test_registered_subpackage_asset_is_not_mistaken_for_root_static(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            asset = 'pages-player/static/icons/暂无记录.svg'
+            (root / 'index.html').write_text(f'<img src="/{asset}">', encoding='utf-8')
+            self.assertEqual(checker.check(root)['missingReferences'], [asset])
+            (root / asset).parent.mkdir(parents=True)
+            (root / asset).touch()
+            self.assertEqual(checker.check(root)['missingReferences'], [])
+
     def test_missing_reference_is_reported_and_present_file_passes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

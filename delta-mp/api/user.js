@@ -44,10 +44,10 @@ export const autoVerifyIdentity = data => post('/user/identity/auto-verify', dat
 export const getFavoriteStatus = productId => get(`/user/favorites/${productId}/status`, {}, { role: 'user', loading: false })
 export const addFavorite = productId => post(`/user/favorites/${productId}`, {}, { role: 'user' })
 export const removeFavorite = productId => del(`/user/favorites/${productId}`, {}, { role: 'user' })
-export const getFavorites = params => get('/user/favorites', params, { role: 'user' })
+export const getFavorites = params => get('/user/favorites', params, { role: 'user', loading: false })
 
 /** 打手关注 */
 export const getFollowStatus = playerId => get(`/user/follows/${playerId}/status`, {}, { role: 'user', loading: false })
 export const followPlayer = playerId => post(`/user/follows/${playerId}`, {}, { role: 'user' })
 export const unfollowPlayer = playerId => del(`/user/follows/${playerId}`, {}, { role: 'user' })
-export const getFollows = params => get('/user/follows', params, { role: 'user' })
+export const getFollows = params => get('/user/follows', params, { role: 'user', loading: false })

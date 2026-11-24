@@ -1,0 +1,8 @@
+/* Generated from contracts/ui-motion.json */
+page, :root {
+  --delta-motion-enter: 180ms;
+  --delta-motion-feedback: 160ms;
+  --delta-motion-distance: 4px;
+  --delta-motion-ease: cubic-bezier(.2,.7,.2,1);
+  --delta-motion-pulse: 1400ms;
+}

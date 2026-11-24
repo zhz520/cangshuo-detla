@@ -15,6 +15,7 @@ import './styles/default-2026.css'
 import './styles/responsive.css'
 import './styles/neumorphism.css'
 import './styles/dark.css'
+import './styles/motion-tokens.css'
 import { installViewport } from './utils/responsive'
 import { installClientPlatform } from './utils/client-platform'
 
