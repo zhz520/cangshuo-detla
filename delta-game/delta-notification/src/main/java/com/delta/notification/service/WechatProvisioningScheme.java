@@ -34,9 +34,21 @@ record WechatProvisioningScheme(JsonNode spec) {
         return Normalizer.normalize(s, Normalizer.Form.NFKC).replaceAll("(?U)\\s+", "").toLowerCase(Locale.ROOT);
     }
 
-    boolean recoveryCandidate(WechatProvisioningCatalog.Entry entry, Set<String> relatedIds, List<String> keywords) {
-        return semantic() && (relatedIds.contains(entry.id()) || titles().contains(normalize(entry.title())))
-                && !fields(entry.content(), keywords).isEmpty();
+    // WeChat's private catalogue need not return the short ID. A live receipt for the same
+    // library selection family can establish the provider's actual title and industry pair.
+    private record Family(String title, String primary, String deputy) {
+        static Family of(WechatProvisioningCatalog.Entry e) {
+            return new Family(normalize(e.title()),Objects.toString(e.primary(),""),Objects.toString(e.deputy(),""));
+        }
+    }
+    List<WechatProvisioningCatalog.Entry> recoveryCandidates(List<WechatProvisioningCatalog.Entry> catalog,
+                                                             Set<String> relatedIds, List<String> keywords) {
+        if (!semantic()) return List.of();
+        var families = new HashSet<Family>();
+        for (var e : catalog) if (relatedIds.contains(e.id())) families.add(Family.of(e));
+        var names = titles();
+        return catalog.stream().filter(e -> (relatedIds.contains(e.id()) || names.contains(normalize(e.title()))
+                || families.contains(Family.of(e))) && !fields(e.content(),keywords).isEmpty()).toList();
     }
 
     boolean validUrl() {

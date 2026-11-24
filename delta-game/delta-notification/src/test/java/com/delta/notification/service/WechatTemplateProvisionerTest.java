@@ -96,6 +96,28 @@ class WechatTemplateProvisionerTest {
         doReturn(reply).when(accounts).apiPost(ACCOUNT,ADD, Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称")));
     }
 
+    @Test void liveSiblingReceiptProvesOfficialTitleAndIndustryButNotArbitraryTemplates() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");
+        var other=spec.deepCopy().put("role","PLAYER"); other.putArray("keywordNames").add("完成时间");
+        other.putArray("fieldSuggestions").addObject().put("label","完成时间").put("type","time").put("source","time");
+        schemes(spec,other);
+        var live=snapshot("player-id","new-admin-id");
+        for(var obj:live.getJSONArray("template_list")){
+            var row=(JSONObject)obj;row.put("title","微信实际业务标题");row.put("primary_industry","主行业");
+        }
+        live.getJSONArray("template_list").getJSONObject(0).put("content","完成时间：{{time1.DATA}}");
+        doReturn(JSONObject.of("errcode",0,"template_id","retired-id")).when(accounts).apiPost(ACCOUNT,ADD,Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称")));
+        doReturn(JSONObject.of("errcode",0,"template_id","player-id")).when(accounts).apiPost(ACCOUNT,ADD,Map.of("template_id_short","47123","keyword_name_list",List.of("完成时间")));
+        listed(snapshot(),snapshot(),live);run();
+        var diffIndustry=JSON.parseObject(live.toJSONString());diffIndustry.getJSONArray("template_list").getJSONObject(1).put("primary_industry","无关行业");
+        listed(diffIndustry);
+        assertThat(service.provision(ACCOUNT,accounts.provisioningSchemes(),Set.of("ADMIN:new_order")).get("issues").toString()).contains("RECEIPT_NOT_IN_CATALOG");
+        listed(live);
+        assertThat(service.provision(ACCOUNT,accounts.provisioningSchemes(),Set.of("ADMIN:new_order"))).containsEntry("configured",1).containsEntry("issues",List.of());
+        assertThat(mappings()).anySatisfy(r->assertThat(r).containsEntry("ROLE","ADMIN").containsEntry("TEMPLATE_ID","new-admin-id"));
+        verify(accounts,times(2)).apiPost(eq(ACCOUNT),eq(ADD),any());
+    }
+
     @Test void staleReceiptCanRecoverOnlyOneVerifiedReplacementWithoutAddingAgain() throws Exception {
         spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
         listed(snapshot(), snapshot("original-id"));addReply(JSONObject.of("errcode",0,"template_id","original-id"));

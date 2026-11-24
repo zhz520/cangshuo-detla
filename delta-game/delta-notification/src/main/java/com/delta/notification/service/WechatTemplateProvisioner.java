@@ -130,7 +130,7 @@ public class WechatTemplateProvisioner {
                     if (!direct.isEmpty()) matches = direct;
                     else if (receipt != null || matches.isEmpty()) {
                         var ids = relatedIds(s);
-                        var alternatives = entries.stream().filter(e -> s.recoveryCandidate(e, ids, keywords)).toList();
+                        var alternatives = s.recoveryCandidates(entries, ids, keywords);
                         if (alternatives.size() > 1) return "RECOVERY_AMBIGUOUS";
                         if (!alternatives.isEmpty()) {
                             matches = alternatives;

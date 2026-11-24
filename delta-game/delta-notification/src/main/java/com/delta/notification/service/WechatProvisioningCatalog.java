@@ -65,10 +65,10 @@ class WechatProvisioningCatalog {
     public boolean store(String account, WechatProvisioningScheme scheme, Entry verified, Map<String,String> fields, boolean replaceOwned, boolean verifiedReceipt, Set<String> recoveryIds) {
         // Recheck exact snapshot (Java string equality, not a case-insensitive SQL collation).
         var titles = scheme.titles();
-        var current = jdbc.query("SELECT c.template_id,c.title,c.content FROM wechat_mp_account a JOIN wechat_mp_template_catalog c ON c.account_id=a.id " +
+        var current = jdbc.query("SELECT c.template_id,c.title,c.content,c.primary_industry,c.deputy_industry FROM wechat_mp_account a JOIN wechat_mp_template_catalog c ON c.account_id=a.id " +
                         "WHERE a.id=? AND a.enabled=1 AND a.account_mode='OPEN_PLATFORM' FOR UPDATE",
-                (rs, i) -> new Entry(rs.getString(1), rs.getString(2), rs.getString(3), null, null), account)
-                .stream().filter(e -> recoveryIds != null ? scheme.recoveryCandidate(e, recoveryIds, scheme.orderedKeywords()) : verifiedReceipt ? verified.id().equals(e.id()) : titles.contains(WechatProvisioningScheme.normalize(e.title()))).toList();
+                (rs, i) -> new Entry(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5)), account);
+        current = recoveryIds != null ? scheme.recoveryCandidates(current, recoveryIds, scheme.orderedKeywords()) : current.stream().filter(e -> verifiedReceipt ? verified.id().equals(e.id()) : titles.contains(WechatProvisioningScheme.normalize(e.title()))).toList();
         if (current.size() != 1 || !current.get(0).id().equals(verified.id())
                 || !current.get(0).title().equals(verified.title()) || !Objects.equals(current.get(0).content(), verified.content())) return false;
         if (replaceOwned) return jdbc.update("UPDATE wechat_mp_template SET template_id=?,fields_json=?,url=?,enabled=1 WHERE account_id=? AND role=? AND scenario=? AND source='AUTO_SEMANTIC'",
