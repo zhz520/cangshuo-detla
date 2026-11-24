@@ -1,19 +1,19 @@
-# 当前状态（2026-11-23）
+# 当前状态（2026-11-24）
 
-本文件只记录“现在是什么”，不承载历史过程。当前版本、生产状态和最近发布证据以本文件为准；历史变化见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本与生产状态如下。历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 1. 源码与版本
 
 | 项目 | 当前值 |
 | --- | --- |
 | 源码工作区 | `D:\codeStudy\code\cangshuo-detla`（源码主仓；线上制品看正式标签） |
-| 本次正式版本 | `1.21.0`（扫码后自动配置公众号模板；未推广至共享组） |
-| 正式标签与提交 | `v1.21.0` → `3c769f673e9b552b861f1230a80e788f60d724f3` |
-| GitHub Release | `https://github.com/zhz520/cangshuo-detla/releases/tag/v1.21.0`；Latest 仍为 `v1.19.0` |
-| 授权中心 | `0.9.0`，提交 `370a0b4`；公网 Chrome 验收、SQLite 完整性检查通过 |
-| 520 演示线 | 后端/后台/H5 均为 `1.21.0`，三端 buildId 匹配正式制品；不是共享组成员 |
+| 当前公开正式版本 | `1.22.0`（页面切换与加载反馈）；本开发树的目录版本仍为 `1.21.0`，不能据此判断生产 |
+| 正式标签与提交 | `v1.22.0` → `cbc8cd482df9d7087111de67c607f8ff6580ae4d` |
+| GitHub Release | [v1.22.0](https://github.com/zhz520/cangshuo-detla/releases/tag/v1.22.0) 四份制品摘要已核对；Latest 仍为 `v1.19.0` |
+| 授权中心 | `0.9.1`（`5a6f73f`）；公网登录页与客服入口摘要已核对，SQLite 完整性通过 |
+| 520 演示线 | 三端均为 `1.22.0`（`cbc8cd4`），公网 buildId 与实装匹配；共享组未更新 |
 
-520 公网后台及 H5 已验收，资金对账 12/12；未发真实微信消息。19 套默认方案未填标准库短编号，不能据此为新号添加缺失模板。
+520 切换前后资金核对各 12/12；公网两端 42 个资源匹配。微信真机由用户另测。19 套默认方案未填标准库短编号，不能据此为新号添加缺失模板。
 
 ### 2026-11-23 · 520 公众号运营验收
 
@@ -129,5 +129,5 @@
 
 DELTA-15 至 DELTA-23 的详细方案、边界、能力映射和实施顺序见 `D:\CodexData\outputs\delta-wxapi-integration\公众号能力整合任务.md`。
 
-DELTA-24 详情见 `D:\CodexData\outputs\project-optimization-plan-20261121\P1数据库与调度任务.md`。DELTA-25 动效任务与验收见 [ARCHITECTURE](ARCHITECTURE.md)；未发布。
+DELTA-24 详情见 `D:\CodexData\outputs\project-optimization-plan-20261121\P1数据库与调度任务.md`。DELTA-25 动效任务与验收见 [ARCHITECTURE](ARCHITECTURE.md)；520 已上线。
 
