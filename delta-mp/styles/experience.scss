@@ -27,7 +27,35 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
 @keyframes delta-page-fade { from { opacity: .64; } to { opacity: 1; } }
 @keyframes delta-page-in { from { opacity: .76; transform: translate3d(var(--delta-motion-distance),0,0); } to { opacity: 1; transform: none; } }
 @keyframes delta-page-back { from { opacity: .86; transform: translate3d(calc(0px - var(--delta-motion-distance) * .65),0,0); } to { opacity: 1; transform: none; } }
-@keyframes delta-tab-in { from { opacity: .75; transform: translate3d(0,4px,0); } to { opacity: 1; transform: none; } }
+@keyframes delta-tab-in { from { opacity: .65; transform: translate3d(0,12px,0); } to { opacity: 1; transform: none; } }
+@supports (view-transition-name: none) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Keep the root out of the snapshot: otherwise fixed tab bars appear twice. */
+    html[data-delta-view="tab"] { view-transition-name: none; }
+    html[data-delta-view="tab"] uni-page-wrapper { view-transition-name: delta-page; }
+    /* The tab bar is one stable surface; only the page behind it changes. */
+    .custom-tabbar { view-transition-name: delta-tabbar; }
+    ::view-transition-group(delta-page) { animation: none; z-index: 2; }
+    ::view-transition-group(delta-tabbar) { animation: none; z-index: 3; }
+    ::view-transition-old(delta-tabbar) { animation: none; opacity: 0; }
+    ::view-transition-new(delta-tabbar) { animation: none; opacity: 1; }
+    ::view-transition-old(delta-page) {
+      animation: delta-vt-tab-out 90ms cubic-bezier(.4,0,1,1) both;
+      z-index: 1;
+    }
+    ::view-transition-new(delta-page) {
+      animation: delta-vt-tab-in 190ms cubic-bezier(.2,.7,.2,1) 90ms both;
+      z-index: 2;
+    }
+  }
+}
+@keyframes delta-vt-tab-out {
+  to { opacity: 0; transform: scale(.997); }
+}
+@keyframes delta-vt-tab-in {
+  from { opacity: 0; transform: scale(1.004); }
+  to { opacity: 1; transform: none; }
+}
 uni-page-body input, uni-page-body textarea { caret-color: #17191c; }
 /* #endif */
 @media (prefers-reduced-motion: reduce) {

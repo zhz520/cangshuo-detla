@@ -41,6 +41,9 @@ try {
   const size={width:390,height:844}
   const ctx=await browser.newContext({viewport:size,reducedMotion,serviceWorkers:'block',
     ...(preview ? { recordVideo:{dir:preview,size} } : {})})
+  if(process.env.MOTION_FORCE_FALLBACK==='1') await ctx.addInitScript(()=>{
+    Object.defineProperty(document,'startViewTransition',{value:undefined,configurable:true})
+  })
   const errors=[], external=[]
   await ctx.routeWebSocket('**/*',w=>w.close())
   await ctx.route('**/*',async r=>{
@@ -119,8 +122,31 @@ try {
   await home.locator('.search-bar').waitFor()
   if(reducedMotion==='no-preference') await home.locator(marker).waitFor()
   assert.equal(await homeScroll.evaluate(el=>el===document.querySelector('uni-page[data-page="pages/index/index"] .home-scroll')),true)
+  const viewTransition = await page.evaluate(()=>typeof document.startViewTransition==='function')
+  const tabSentinel = await page.evaluate(()=>{window.__tabSentinel=String(Date.now())+Math.random();return window.__tabSentinel})
+  await page.evaluate(()=>{
+    window.__tabMotion=[]
+    new MutationObserver(()=>window.__tabMotion.push(document.documentElement.getAttribute('data-delta-view')))
+      .observe(document.documentElement,{attributes:true,attributeFilter:['data-delta-view']})
+  })
+  await page.locator('.custom-tabbar .tabbar-item').nth(1).click()
+  await body('pages/category/index').waitFor()
+  await body('pages/category/index').locator('.category-page').waitFor()
+  assert.equal(await page.evaluate(()=>window.__tabSentinel),tabSentinel,'tab switch reloaded the document')
+  assert.equal(await page.evaluate(()=>performance.getEntriesByType('navigation').length),1,'tab switch added a document navigation')
+  await page.locator('.custom-tabbar .tabbar-item.active').filter({hasText:'分类'}).waitFor()
+  if(reducedMotion==='no-preference'){
+    if(viewTransition){
+      await page.waitForFunction(()=>window.__tabMotion.includes('tab'))
+      await page.waitForFunction(()=>!document.documentElement.hasAttribute('data-delta-view'))
+    }else{
+      const category=body('pages/category/index')
+      await category.locator('[data-delta-enter="tab"]').waitFor()
+      assert.equal(await category.locator('[data-delta-enter="tab"]').first().evaluate(el=>getComputedStyle(el).animationName),'delta-tab-in')
+    }
+  }
   assert.deepEqual(errors,[]); assert.deepEqual(external,[])
-  console.log('Offline '+engine+': home → search → history back, cached scroll container, viewport, '+reducedMotion+' OK')
+  console.log('Offline '+engine+': home → search → history back, cached scroll container, tab '+(viewTransition?'view transition':'fallback')+', viewport, '+reducedMotion+' OK')
   await ctx.close()
   if(preview) console.log('H5 fixture recording:', await page.video().path())
  }
