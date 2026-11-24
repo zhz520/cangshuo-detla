@@ -1,5 +1,9 @@
 # 版本与发布记录
 
+## 1.22.2 · 通知模板修复（候选）
+
+本补丁沿用 1.22.1 的按公众号映射机制。具体修复与测试范围以最终 Java 提交为准；本条不代表已构建、已部署或已验证真实消息送达。
+
 ## 1.22.1 · Per-account WeChat semantic field mapping
 
 Resolve signed keyword names and types against each authorized account's own template. Recheck affected semantic scenarios when a new signed revision arrives. Preserve manual mappings; export only keyword structure for operator-reviewed conversions.
