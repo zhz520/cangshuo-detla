@@ -1,3 +1,8 @@
 deploy/updater/shared-worker.service.template text eol=lf
 deploy/qa/cangshuo-shared-metrics.service text eol=lf
 deploy/qa/cangshuo-shared-metrics.timer text eol=lf
+
+# scripts/migration_registry.py records exact bytes; keep SQL identical on every builder.
+/delta_game*.sql text eol=lf
+/deploy/baota/migrations/*.sql text eol=lf
+/delta-game/delta-admin/src/main/resources/db/*.sql text eol=lf
