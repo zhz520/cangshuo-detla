@@ -7397,6 +7397,15 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TemplateRepair"
+              }
+            }
+          }
+        },
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -19704,6 +19713,15 @@
           "data" : {
             "$ref" : "#/components/schemas/Authorization"
           }
+        }
+      },
+      "TemplateRepair" : {
+        "type" : "object",
+        "properties" : {
+          "action" : { "type" : "string", "enum" : [ "REBUILD_MISSING" ] },
+          "role" : { "type" : "string" },
+          "scenario" : { "type" : "string" },
+          "revision" : { "type" : "string" }
         }
       },
       "OpenPlatformCompletion" : {

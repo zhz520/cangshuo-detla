@@ -98,9 +98,10 @@
               <template #default="{ row }">{{ schemeProgress(row) }}</template>
             </el-table-column>
             <el-table-column prop="templateId" label="模板 ID" min-width="220" show-overflow-tooltip />
-            <el-table-column label="操作" width="140" fixed="right">
+            <el-table-column label="操作" min-width="190" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" :disabled="loadedAccountId !== selectedId || loadingCatalog" @click="openTemplate(row)">{{ row.configured ? '编辑' : '配置' }}</el-button>
+                <el-button v-if="repairRevision(row)" link type="primary" :disabled="syncing || loadingCatalog || loadedAccountId !== selectedId" @click="confirmRepair(row)">补建模板</el-button>
                 <el-button v-if="row.configured" link type="danger" @click="removeTemplate(row)">删除</el-button>
               </template>
             </el-table-column>
@@ -452,6 +453,24 @@ async function syncTemplates() {
   } catch (error) {
     if (selectedId.value === accountId) ElMessage.error(error?.message || '模板同步失败')
   } finally { syncing.value = false }
+}
+function repairRevision(row) {
+  const s=authoritySchemes.value.find(x=>x.role===row.role && x.scenario===row.scenario && x.mappingMode==='SEMANTIC')
+  if(!s?.revision || templateSetup.value.status!=='ATTENTION' || templateSetup.value.revisions?.[row.role+':'+row.scenario]!==s.revision) return ''
+  return templateSetup.value.issues?.some(i=>i.role===row.role && i.scenario===row.scenario && i.code==='RECEIPT_NOT_IN_CATALOG') ? s.revision : ''
+}
+async function confirmRepair(row) {
+  const id=selectedId.value, revision=repairRevision(row)
+  if(!id || !revision || loadedAccountId.value!==id || syncing.value) return
+  try { await ElMessageBox.confirm('将向当前公众号添加此方案指定的关键词组合。微信可能替换同编号的旧模板；系统会复核新旧模板后再绑定。不会发送消息。','补建缺失模板',{type:'warning',confirmButtonText:'确认补建',cancelButtonText:'取消'}) }
+  catch { return }
+  if(selectedId.value!==id || loadedAccountId.value!==id || repairRevision(row)!==revision || syncing.value) return
+  syncing.value=true
+  try {
+    await provisionWechatTemplates(id,{action:'REBUILD_MISSING',role:row.role,scenario:row.scenario,revision})
+    if(selectedId.value===id) await loadAccountData()
+  } catch(error) { if(selectedId.value===id) ElMessage.error(apiError(error,'无法启动模板补建')) }
+  finally { syncing.value=false }
 }
 async function retrySetup() {
   const id = selectedId.value

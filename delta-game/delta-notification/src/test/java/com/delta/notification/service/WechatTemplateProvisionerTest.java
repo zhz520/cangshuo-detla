@@ -96,6 +96,46 @@ class WechatTemplateProvisionerTest {
         doReturn(reply).when(accounts).apiPost(ACCOUNT,ADD, Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称")));
     }
 
+    private JSONObject missingReceiptFixture() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
+        listed(snapshot(),snapshot("retired-id"));addReply(JSONObject.of("errcode",0,"template_id","retired-id"));
+        assertThat(run()).containsEntry("configured",1);
+        var older=snapshot("protected-id");
+        older.getJSONArray("template_list").getJSONObject(0).put("content","其他字段：{{time2.DATA}}");
+        listed(older);
+        assertThat(run().get("issues").toString()).contains("RECEIPT_NOT_IN_CATALOG");
+        return older;
+    }
+    private Map<String,Object> repair() {
+        return service.provision(ACCOUNT,accounts.provisioningSchemes(),Set.of("ADMIN:new_order"),"ADMIN:new_order");
+    }
+    @Test void explicitRepairSharesVerifiedSelectionWithSiblingWithoutPostingTwice() throws Exception {
+        var older=missingReceiptFixture();
+        var fresh=JSON.parseObject(older.toJSONString());
+        fresh.getJSONArray("template_list").add(snapshot("replaced-id").getJSONArray("template_list").get(0));
+        listed(older,fresh);addReply(JSONObject.of("errcode",0,"template_id","replaced-id"));
+        assertThat(repair()).containsEntry("configured",1).containsEntry("issues",List.of());
+        schemes(spec,spec.deepCopy().put("role","CS"));
+        assertThat(run()).containsEntry("configured",1).containsEntry("issues",List.of());
+        assertThat(repair()).containsEntry("issues",List.of());
+        verify(accounts,times(2)).apiPost(eq(ACCOUNT),eq(ADD),any()); // initial + one repair
+    }
+    @Test void replacementCannotPromoteWhenOldVariantDisappearsEvenOnRetry() throws Exception {
+        var older=missingReceiptFixture();listed(older,snapshot("replaced-id"));
+        addReply(JSONObject.of("errcode",0,"template_id","replaced-id"));
+        assertThat(repair().get("issues").toString()).contains("REPAIR_CHANGED");
+        assertThat(run().get("issues").toString()).contains("REPAIR_CHANGED");
+        assertThat(mappings().get(0)).containsEntry("TEMPLATE_ID","retired-id");
+        verify(accounts,times(2)).apiPost(eq(ACCOUNT),eq(ADD),any());
+    }
+    @Test void uncertainRepairCannotResubmitEvenOnSecondExplicitRequest() throws Exception {
+        missingReceiptFixture();
+        doThrow(new java.io.IOException("timeout")).when(accounts).apiPost(eq(ACCOUNT),eq(ADD),any());
+        assertThat(repair().get("issues").toString()).contains("REPAIR_PENDING");
+        assertThat(repair().get("issues").toString()).contains("REPAIR_PENDING");
+        assertThat(run().get("issues").toString()).contains("REPAIR_PENDING");
+        verify(accounts,times(2)).apiPost(eq(ACCOUNT),eq(ADD),any());
+    }
     @Test void liveSiblingReceiptProvesOfficialTitleAndIndustryButNotArbitraryTemplates() throws Exception {
         spec.put("mappingMode","SEMANTIC").putObject("fields");
         var other=spec.deepCopy().put("role","PLAYER"); other.putArray("keywordNames").add("完成时间");

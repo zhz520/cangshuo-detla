@@ -26,6 +26,9 @@ public class WechatTemplateProvisioner {
         return provision(accountId, accounts.provisioningSchemes(), null);
     }
     Map<String,Object> provision(String accountId, JsonNode specs, Set<String> only) {
+        return provision(accountId,specs,only,null);
+    }
+    Map<String,Object> provision(String accountId, JsonNode specs, Set<String> only, String repairScope) {
         catalog.checkAccount(accountId); // tenant-routed JDBC; never resolve a default account
         var report = new Report();
 
@@ -44,11 +47,13 @@ public class WechatTemplateProvisioner {
             groups.computeIfAbsent(List.of(s.role(), s.scenario()), ignored -> new ArrayList<>()).add(s);
         }
         var run = new Run(accountId, report, specs);
-        for (var group : groups.values()) {
+        var ordered = new ArrayList<>(groups.values());
+        ordered.sort(Comparator.comparing(g -> !g.get(0).scope().equals(repairScope)));
+        for (var group : ordered) {
             var s = group.get(0);
             String reason;
             try {
-                reason = run.configure(s, group.size() > 1);
+                reason = run.configure(s, group.size() > 1, s.scope().equals(repairScope));
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
                 report.issue(s.role(), s.scenario(), "INTERRUPTED");
@@ -100,7 +105,7 @@ public class WechatTemplateProvisioner {
             refreshFailed = false;
         }
 
-        String configure(WechatProvisioningScheme s, boolean duplicate) throws Exception {
+        String configure(WechatProvisioningScheme s, boolean duplicate, boolean allowRepair) throws Exception {
             var existing = catalog.existing(account, s);
             boolean managed = existing != null && "AUTO_SEMANTIC".equals(existing.source()) && s.semantic();
             if (existing != null && !managed) report.preserved++;
@@ -125,6 +130,14 @@ public class WechatTemplateProvisioner {
                 // account and library selection, NOT by job/role. No TTL: a timeout is not a rejection.
                 key = receiptKey(account, s.shortId(), keywords);
                 receipt = redis.opsForValue().get(key);
+                if (s.semantic()) {
+                    String evidence=redis.opsForValue().get(key+":repair");
+                    if(evidence!=null) {
+                        String issue=verifyRepair(key,evidence,s,keywords);
+                        if(issue!=null) return issue;
+                        receipt=redis.opsForValue().get(key);
+                    }
+                }
                 if (s.semantic() && !PENDING.equals(receipt)) {
                     var direct = receipt == null ? List.<WechatProvisioningCatalog.Entry>of() : byId(receipt);
                     if (!direct.isEmpty()) matches = direct;
@@ -137,13 +150,19 @@ public class WechatTemplateProvisioner {
                             recoveryIds = ids;
                         } else if (receipt != null) {
                             // Do not clear a receipt or submit another add on the strength of a missing catalogue entry.
-                            return "RECEIPT_NOT_IN_CATALOG";
+                            if(redis.opsForValue().get(key+":repair")!=null) return "REPAIR_UNVERIFIED";
+                            if (!allowRepair) return "RECEIPT_NOT_IN_CATALOG";
+                            String issue=repair(key,body,s,keywords);
+                            if(issue!=null) return issue;
+                            receipt=redis.opsForValue().get(key);
+                            matches=byId(receipt);
                         }
                     }
                 }
             }
             if (matches.isEmpty()) {
                 if (body == null) return "LIBRARY_PARAMETERS_MISSING";
+                if (allowRepair && receipt==null) return "CATALOG_CHANGED";
                 if (receipt != null) return PENDING.equals(receipt) ? "ADD_OUTCOME_UNKNOWN" : "ADDED_TEMPLATE_NOT_VERIFIED";
                 if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(key, PENDING))) return "ADD_PENDING";
                 com.alibaba.fastjson2.JSONObject reply;
@@ -187,6 +206,46 @@ public class WechatTemplateProvisioner {
             }
         }
 
+        // Durable per-selection claim, shared by every role. Ordinary sync only reconciles it.
+        Set<String> fingerprints() {
+            var result=new HashSet<String>();
+            for(var e:entries) result.add(UUID.nameUUIDFromBytes(JSON.toJSONBytes(Arrays.asList(e.id(),e.title(),e.content(),e.primary(),e.deputy()))).toString());
+            return result;
+        }
+        String repair(String key,Object body,WechatProvisioningScheme s,List<String> keywords) throws Exception {
+            String ledger=key+":repair";
+            var record=new com.alibaba.fastjson2.JSONObject();
+            record.put("guards", fingerprints());
+            if(!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(ledger,record.toJSONString()))) return "REPAIR_PENDING";
+            com.alibaba.fastjson2.JSONObject reply;
+            try { reply=accounts.apiPost(account,ADD,body); }
+            catch(InterruptedException interrupted){ throw interrupted; }
+            catch(Exception uncertain){ return "REPAIR_PENDING"; }
+            if(reply!=null && reply.get("errcode") instanceof Number n && n.intValue()>0) {
+                redis.delete(ledger);
+                return "WECHAT_ADD_REJECTED_"+n.intValue();
+            }
+            if(reply==null || !"0".equals(String.valueOf(reply.get("errcode"))) || !(reply.get("template_id") instanceof String id)
+                    || !id.matches("[A-Za-z0-9_-]{6,128}")) return "REPAIR_PENDING";
+            record.put("id",id);
+            redis.opsForValue().set(ledger,record.toJSONString());
+            refresh();
+            return verifyRepair(key,record.toJSONString(),s,keywords);
+        }
+        String verifyRepair(String key,String evidence,WechatProvisioningScheme s,List<String> keywords) {
+            var record=JSON.parseObject(evidence);
+            if(record.getBooleanValue("verified")) return null;
+            String id=record.getString("id");
+            if(id==null) return "REPAIR_PENDING";
+            if(!fingerprints().containsAll(record.getList("guards",String.class))) return "REPAIR_CHANGED";
+            var actual=byId(id);
+            if(actual.size()!=1 || s.fields(actual.get(0).content(),keywords).isEmpty()) return "REPAIR_UNVERIFIED";
+            redis.opsForValue().set(key,id);
+            record.put("verified",true);
+            redis.opsForValue().set(key+":repair",record.toJSONString());
+            return null;
+        }
+
         String existingIssue(WechatProvisioningCatalog.Existing saved) {
             if (!saved.enabled()) return "MAPPING_DISABLED";
             for (var e : entries) if (e.id().equals(saved.id())) {
@@ -224,6 +283,9 @@ public class WechatTemplateProvisioner {
                 case "DUPLICATE_TITLE" -> "多个微信模板符合方案标题，请手动选择";
                 case "LIBRARY_PARAMETERS_MISSING" -> "未找到匹配模板，请在授权中心配置模板库编号和关键词";
                 case "ADD_OUTCOME_UNKNOWN", "ADD_PENDING" -> "微信添加结果待确认，不重复添加；请核对公众号模板库";
+                case "REPAIR_PENDING" -> "补建请求已登记，微信结果尚未核实；不会重复添加，请核对本公众号模板库";
+                case "REPAIR_CHANGED" -> "补建后原模板目录发生变化，已停止绑定；请核对原有模板";
+                case "REPAIR_UNVERIFIED" -> "补建回执已收到，尚未核实新模板及其字段；请稍后重新同步";
                 case "RECOVERY_AMBIGUOUS" -> "本公众号有多份模板同时符合方案，请在场景配置中选择正确模板";
                 case "RECEIPT_NOT_IN_CATALOG" -> "原回执不在当前目录，未找到可唯一核实的替代模板；请核对本号模板库中的实际标题与关键词，或手动选择模板";
                 case "ADDED_TEMPLATE_NOT_VERIFIED" -> "未能在此公众号模板库核实微信返回的模板，请稍后重试";

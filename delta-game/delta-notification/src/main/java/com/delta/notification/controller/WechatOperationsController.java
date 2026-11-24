@@ -47,11 +47,17 @@ public class WechatOperationsController {
 
     public record OpenPlatformCompletion(String state) {}
 
+    public record TemplateRepair(String action,String role,String scenario,String revision) {}
+
     @PostMapping("/admin/wechat/accounts/{id}/templates/provision")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     @OpLog(module = "wechat", operation = "重试公众号模板自动配置")
-    public R<Map<String,Object>> provision(@PathVariable String id,HttpServletRequest request) {
+    public R<Map<String,Object>> provision(@PathVariable String id,@RequestBody(required=false) TemplateRepair repair,HttpServletRequest request) {
         requireFeature(request);
+        if(repair!=null) {
+            if(!"REBUILD_MISSING".equals(repair.action())) throw new com.delta.common.exception.BusinessException(400,"不支持的模板操作");
+            return R.ok(setup.repair(id,request.getServerName(),repair.role(),repair.scenario(),repair.revision()));
+        }
         return R.ok(setup.retry(id,request.getServerName()));
     }
 

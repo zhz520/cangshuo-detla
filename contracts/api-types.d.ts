@@ -2440,6 +2440,13 @@ export interface TaskRef {
   version?: string
 }
 
+export interface TemplateRepair {
+  action?: "REBUILD_MISSING"
+  role?: string
+  scenario?: string
+  revision?: string
+}
+
 export interface TestRequest {
   recipients?: unknown
 }

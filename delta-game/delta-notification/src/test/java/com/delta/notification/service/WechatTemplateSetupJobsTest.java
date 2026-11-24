@@ -74,6 +74,23 @@ class WechatTemplateSetupJobsTest {
         due();jobs.drain("SETUP");jobs.drain("SETUP");
         verify(provisioner).provision(id); assertThat(jobs.report(id)).containsEntry("status","DONE");
     }
+    @Test void repairRequiresMatchingStoredIssueAndSignedRevisionAndOnlyClaimsOnce() throws Exception {
+        when(accounts.accounts()).thenReturn(List.of(Map.of("id",id,"mode","OPEN_PLATFORM","enabled",true)));
+        var specs=new com.fasterxml.jackson.databind.ObjectMapper().readTree("""
+          [{"id":"scheme","version":2,"role":"USER","scenario":"new_order","mappingMode":"SEMANTIC","templateIdShort":"47123","keywordNames":["商品名称"]}]
+          """);
+        when(accounts.provisioningSchemes()).thenReturn(specs);
+        jobs.retry(id,domain);
+        var raw=com.alibaba.fastjson2.JSON.toJSONString(Map.of("revisions",Map.of("USER:new_order","scheme:2"),
+            "issues",List.of(Map.of("role","USER","scenario","new_order","code","RECEIPT_NOT_IN_CATALOG"))));
+        jdbc.update("UPDATE wechat_template_setup_job SET status='ATTENTION',report_json=?",raw);
+        assertThatThrownBy(()->jobs.repair(id,domain,"USER","new_order","scheme:1")).isInstanceOf(BusinessException.class);
+        assertThat(jobs.repair(id,domain,"USER","new_order","scheme:2")).containsEntry("status","PENDING");
+        assertThatThrownBy(()->jobs.repair(id,domain,"USER","new_order","scheme:2")).isInstanceOf(BusinessException.class);
+        when(provisioner.provision(id,specs,Set.of("USER:new_order"),"USER:new_order")).thenReturn(Map.of("issues",List.of()));
+        due();jobs.drain("SETUP");verify(provisioner).provision(id,specs,Set.of("USER:new_order"),"USER:new_order");
+        assertThat(jobs.report(id)).containsEntry("status","DONE");
+    }
     @Test void expiredScanCannotImportOrQueue() {
         jobs.start(domain);jdbc.update("UPDATE wechat_template_setup_job SET expires_at=DATEADD(SECOND,-1,CURRENT_TIMESTAMP)");due();jobs.drain("SCAN");
         assertThat(jobs.progress(state).status()).isEqualTo("EXPIRED");verifyNoInteractions(provisioner,accounts);

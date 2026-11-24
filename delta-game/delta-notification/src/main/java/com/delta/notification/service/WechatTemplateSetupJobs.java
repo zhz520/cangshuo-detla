@@ -71,6 +71,35 @@ public class WechatTemplateSetupJobs {
         enqueue(accountId,domain);
         return report(accountId);
     }
+    public Map<String,Object> repair(String accountId,String domain,String role,String scenario,String revision) {
+        if(role==null || scenario==null || !WechatAccountService.ROLES.contains(role) || !WechatAccountService.SCENARIOS.contains(scenario))
+            throw new BusinessException(400,"请选择有效的模板场景");
+        if(accounts.accounts().stream().noneMatch(a->accountId.equals(a.get("id")) && "OPEN_PLATFORM".equals(a.get("mode")) && Boolean.TRUE.equals(a.get("enabled"))))
+            throw new BusinessException(409,"请先选择已启用的扫码授权公众号");
+        String scope=role+":"+scenario;
+        var specs=accounts.provisioningSchemes();
+        var versions=revisions(specs);
+        if(revision==null || !revision.equals(versions.get(scope))) throw new BusinessException(409,"授权中心方案已变化，请刷新后再试");
+        var signed=new ArrayList<WechatProvisioningScheme>();
+        specs.forEach(n->signed.add(new WechatProvisioningScheme(n)));
+        var targets=signed.stream().filter(s->s.scope().equals(scope)).toList();
+        if(targets.size()!=1) throw new BusinessException(409,"当前方案不唯一");
+        var target=targets.get(0);
+        var keywords=target.orderedKeywords();
+        if(keywords==null || target.addBody(keywords)==null) throw new BusinessException(409,"请先配置模板库编号和关键词");
+        var group=signed.stream().filter(s->s.semantic() && target.shortId().equals(s.shortId()) && keywords.equals(s.orderedKeywords())).map(WechatProvisioningScheme::scope).toList();
+        tx.executeWithoutResult(ignore->{
+            var raw=jdbc.query("SELECT report_json FROM "+TABLE+" WHERE id=? AND status='ATTENTION' FOR UPDATE",(rs,i)->rs.getString(1),"a:"+accountId);
+            var previous=raw.size()==1 && raw.get(0)!=null?JSON.parseObject(raw.get(0)):null;
+            if(previous==null || !versions.equals(previous.getJSONObject("revisions")) || previous.getJSONArray("issues")==null
+                || previous.getJSONArray("issues").stream().noneMatch(i->i instanceof Map<?,?> m && role.equals(m.get("role")) && scenario.equals(m.get("scenario")) && "RECEIPT_NOT_IN_CATALOG".equals(m.get("code"))))
+                throw new BusinessException(409,"当前状态不支持补建，请先重新检查模板");
+            previous.put("repairScope",scope);
+            previous.put("changedScopes",group);
+            jdbc.update("UPDATE "+TABLE+" SET status='PENDING',next_run=?,domain_name=?,report_json=? WHERE id=?",now(0),domain,previous.toJSONString(),"a:"+accountId);
+        });
+        return report(accountId);
+    }
     private void enqueue(String accountId,String domain) {
         String id="a:"+accountId;
         jdbc.update("INSERT INTO "+TABLE+"(id,kind,status,account_id,domain_name,next_run) VALUES(?,'SETUP','PENDING',?,?,?) ON DUPLICATE KEY UPDATE id=id",id,accountId,domain,now(0));
@@ -181,7 +210,10 @@ public class WechatTemplateSetupJobs {
                     }
                     only.retainAll(revisions.keySet());
                 }
-                var report=new LinkedHashMap<String,Object>(specs==null?provisioner.provision((String)job.get("account_id")):provisioner.provision((String)job.get("account_id"),specs,only));
+                String repair=last.getString("repairScope");
+                if(repair!=null && !revisions.equals(last.getJSONObject("revisions")))
+                    throw new BusinessException(409,"授权中心方案已变化，请重新检查");
+                var report=new LinkedHashMap<String,Object>(repair!=null?provisioner.provision((String)job.get("account_id"),specs,only,repair):specs==null?provisioner.provision((String)job.get("account_id")):provisioner.provision((String)job.get("account_id"),specs,only));
                 if(only!=null && last.getJSONArray("issues")!=null) {
                     var merged=new ArrayList<Object>((List<?>)report.getOrDefault("issues",List.of()));
                     for(var item:last.getJSONArray("issues")) if(item instanceof Map<?,?> m && !only.contains(m.get("role")+":"+m.get("scenario"))) merged.add(item);

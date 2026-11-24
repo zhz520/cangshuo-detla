@@ -125,6 +125,34 @@ async function exercise(browser, switchDuringPoll) {
   console.log('PASS:', switchDuringPoll ? 'B PENDING → ATTENTION; late A result isolated' : 'A PENDING → DONE; mapping ready', reads, 'GET only')
 }
 
+async function repairConfirmation(browser) {
+  const writes=[]
+  const scope='ADMIN:new_order', revision='scheme:2'
+  await withFixturePage(browser,entry,async (p,req)=>{
+    if(p===base+'/a/templates/provision') {
+      assert.equal(req.method(),'POST'); writes.push(req.postDataJSON()); return {status:'PENDING'}
+    }
+    if(p===base+'/a/templates') return []
+    assert.equal(p,base+'/a/readiness')
+    const data=readiness('a','ATTENTION')
+    data.templateSetup.revisions={[scope]:revision}
+    data.templateSetup.issues[0].code='RECEIPT_NOT_IN_CATALOG'
+    data.authoritySchemes=[{role:'ADMIN',scenario:'new_order',mappingMode:'SEMANTIC',revision,version:2}]
+    return data
+  },async page=>{
+    await page.goto(origin+entry)
+    const button=page.getByRole('button',{name:'补建模板',exact:true})
+    await button.click()
+    const dialog=page.locator('.el-message-box').filter({hasText:'补建缺失模板'})
+    await dialog.getByRole('button',{name:'取消'}).click()
+    assert.deepEqual(writes,[])
+    await button.click()
+    await Promise.all([page.waitForResponse(origin+base+'/a/templates/provision'),dialog.getByRole('button',{name:'确认补建'}).click()])
+    assert.deepEqual(writes,[{action:'REBUILD_MISSING',role:'ADMIN',scenario:'new_order',revision}])
+  })
+  console.log('PASS: explicit per-account repair; cancel makes no request, confirm posts the selected revision once')
+}
+
 async function notificationSwitch(browser) {
   const field = { id: 42, configKey: 'wechat.official.enabled', configGroup: '公众号通知',
     configName: '公众号模板通知', valueType: 'select', configValue: 'auto' }
@@ -170,5 +198,6 @@ const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_C
 try {
   await exercise(browser, false)
   await exercise(browser, true)
+  await repairConfirmation(browser)
   await notificationSwitch(browser)
 } finally { await browser.close() }
