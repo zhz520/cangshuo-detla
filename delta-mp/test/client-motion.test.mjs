@@ -6,6 +6,7 @@ import { useHomeNotices } from '../composables/useHomeNotices.js'
 import { usePagedList } from '../composables/usePagedList.js'
 import { enableChromiumKeyboardResize, viewportMetrics } from '../utils/viewport.js'
 import { routeMotion, installPageMotion, navigateTabWithTransition } from '../utils/page-motion.mjs'
+import { holdTabbarScrollLock, releaseTabbarScrollLock, resetTabbarScrollLock } from '../utils/tabbar-scroll-lock.js'
 
 test('only identified Chromium 108+ receives keyboard extension, once', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
@@ -144,4 +145,29 @@ test('a superseded tab transition cannot clear the newer transition marker', asy
   finish[1]()
   await Promise.resolve()
   assert.equal(root.dataset.deltaView,undefined)
+})
+
+test('tabbar scroll lock survives the old/new page hand-off', () => {
+  const classes = new Set()
+  const element = () => ({ classList: {
+    toggle: (name, on) => on ? classes.add(name) : classes.delete(name),
+    contains: name => classes.has(name)
+  } })
+  const doc = { documentElement: element(), body: element() }
+  const timers = new Map(); let id = 0
+  const win = {
+    setTimeout: cb => { const key = ++id; timers.set(key, cb); return key },
+    clearTimeout: key => timers.delete(key)
+  }
+  const flush = () => { for (const [key, cb] of [...timers]) { timers.delete(key); cb() } }
+  resetTabbarScrollLock(doc, win)
+  holdTabbarScrollLock(doc, win)
+  holdTabbarScrollLock(doc, win)
+  releaseTabbarScrollLock(doc, win)
+  flush()
+  assert.equal(classes.has('tabbar-page-locked'), true)
+  releaseTabbarScrollLock(doc, win)
+  assert.equal(classes.has('tabbar-page-locked'), true)
+  flush()
+  assert.equal(classes.has('tabbar-page-locked'), false)
 })

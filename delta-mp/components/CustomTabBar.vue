@@ -27,6 +27,7 @@ import { useAppStore } from '@/store/app'
 import { useRemindStore } from '@/store/remind'
 import { useSiteStore } from '@/store/site'
 import { ROLE_TABS } from '@/utils/role'
+import { holdTabbarScrollLock, releaseTabbarScrollLock } from '@/utils/tabbar-scroll-lock'
 // #ifdef H5
 import { navigateTabWithTransition } from '@/utils/page-motion.mjs'
 // #endif
@@ -84,34 +85,28 @@ function tabRedDot(tab) {
 onMounted(() => {
   const windowInfo = uni.getWindowInfo()
   safeBottom.value = windowInfo.safeAreaInsets?.bottom || 0
-  lockH5PageScroll()
+  // #ifdef H5
+  holdTabbarScrollLock()
+  // #endif
 })
 
 onShow(() => {
-  lockH5PageScroll()
+  // #ifdef H5
+  holdTabbarScrollLock()
+  // #endif
 })
 
 onHide(() => {
-  unlockH5PageScroll()
+  // #ifdef H5
+  releaseTabbarScrollLock()
+  // #endif
 })
 
 onUnmounted(() => {
-  unlockH5PageScroll()
+  // #ifdef H5
+  releaseTabbarScrollLock()
+  // #endif
 })
-
-function lockH5PageScroll() {
-  // #ifdef H5
-  document.documentElement.classList.add('tabbar-page-locked')
-  document.body.classList.add('tabbar-page-locked')
-  // #endif
-}
-
-function unlockH5PageScroll() {
-  // #ifdef H5
-  document.documentElement.classList.remove('tabbar-page-locked')
-  document.body.classList.remove('tabbar-page-locked')
-  // #endif
-}
 
 const TAB_BAR_PAGES = [
   '/pages/index/index',

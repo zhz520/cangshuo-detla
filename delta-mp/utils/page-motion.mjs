@@ -134,8 +134,22 @@ export function installPageMotion(router, doc = document, win = window) {
       }
     })
   }
+  function failed(error, to) {
+    const message = String(error?.message || error || '')
+    if (!/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(message)) return
+    const key = 'delta-chunk-reload'
+    try {
+      const last = Number(win.sessionStorage?.getItem(key)) || 0
+      if (Date.now() - last < 30000) return
+      win.sessionStorage.setItem(key, String(Date.now()))
+    } catch (_) {}
+    // One cache-busting reload recovers an entry chunk that still points at a
+    // previous hashed page. A second failure in 30s is left to the error UI.
+    win.location.reload()
+  }
   const stop = router.afterEach(committed)
+  const stopError = router.onError?.(failed)
   committed(router.currentRoute.value)
   preloadTabPages(win)
-  return () => { stop(); clear() }
+  return () => { stop(); stopError?.(); clear() }
 }

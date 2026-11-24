@@ -27,6 +27,8 @@ for (const platform of ['h5','mp-weixin']) {
     assert.match(headerCss,new RegExp('\\.uni-page-head-shadow-'+color+'::?after\\s*\\{[^}]*linear-gradient\\('),color)
   }
 }
+const h5Files = await readdir(path.join(root,'h5','assets'), {recursive:true})
+assert.deepEqual(h5Files.filter(name => /[^\x00-\x7F]/.test(name)), [], 'H5 code chunk names must be ASCII-only')
 console.log(routes.length+' registered WXML routes; release bundles: no cloud auth script; native stack: no H5 page animation.')
 if(!process.env.PLAYWRIGHT_MODULE) process.exit(0)
 const engine = process.env.MOTION_BROWSER || 'chromium'
@@ -68,6 +70,7 @@ try {
   const body=route=>page.locator('uni-page[data-page="'+route+'"]:visible')
   const home=body('pages/index/index'), search=body('pages/product/list')
   await home.locator('.search-bar').waitFor()
+  await page.locator('#boot-tabbar').waitFor({state:'detached'})
   if(reducedMotion==='no-preference') {
     const shadows=await page.evaluate(()=>{
       const root=document.documentElement, original=root.getAttribute('data-theme'), sample=document.createElement('div')

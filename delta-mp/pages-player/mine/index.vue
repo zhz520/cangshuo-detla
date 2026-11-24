@@ -16,19 +16,19 @@
       <!-- 菜单 -->
       <text class="group-heading">工作与管理</text>
       <view class="menu-list">
-        <view v-if="officialWechat.isEnabled('player')" class="menu-item" @click="go('/pages/wechat/binding?role=player')"><image class="menu-icon" src="/static/icons/短信.svg" mode="aspectFit" /><text>公众号消息通知</text><text class="arrow">›</text></view>
-      <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" src="/static/icons/订单.svg" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">›</text></view>
-        <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" src="/static/icons/暂无纪录.svg" mode="aspectFit" /><text>提现记录</text><text class="arrow">›</text></view>
-        <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>提现账户</text><text class="arrow">›</text></view>
-        <view class="menu-item" @click="go('/pages-player/deposit/refund')"><image class="menu-icon" src="/static/icons/理财.svg" mode="aspectFit" /><text>押金退款</text><text class="arrow">›</text></view>
+        <view v-if="officialWechat.isEnabled('player')" class="menu-item" @click="go('/pages/wechat/binding?role=player')"><image class="menu-icon" :src="'/static/icons/短信.svg'" mode="aspectFit" /><text>公众号消息通知</text><text class="arrow">›</text></view>
+      <view class="menu-item" @click="go('/pages-player/profile/introduction')"><image class="menu-icon" :src="'/static/icons/订单.svg'" mode="aspectFit" /><text>我的主页管理</text><text class="arrow">›</text></view>
+        <view class="menu-item" @click="go('/pages-player/withdraw/list')"><image class="menu-icon" :src="'/static/icons/暂无纪录.svg'" mode="aspectFit" /><text>提现记录</text><text class="arrow">›</text></view>
+        <view class="menu-item" @click="go('/pages-player/account/list')"><image class="menu-icon" :src="'/static/icons/理财.svg'" mode="aspectFit" /><text>提现账户</text><text class="arrow">›</text></view>
+        <view class="menu-item" @click="go('/pages-player/deposit/refund')"><image class="menu-icon" :src="'/static/icons/理财.svg'" mode="aspectFit" /><text>押金退款</text><text class="arrow">›</text></view>
         <view class="menu-item" @click="go('/pages-player/invite/list')">
-          <image class="menu-icon" src="/pages-player/static/icons/分享.svg" mode="aspectFit" />
+          <image class="menu-icon" :src="'/pages-player/static/icons/分享.svg'" mode="aspectFit" />
           <text>邀请列表</text>
           <view v-if="remindStore.inviteCount > 0" class="badge">{{ remindStore.inviteCount > 99 ? '99+' : remindStore.inviteCount }}</view>
           <text class="arrow">›</text>
         </view>
         <view class="menu-item" @click="go('/pages/message/index')">
-          <image class="menu-icon" src="/static/icons/提示.svg" mode="aspectFit" />
+          <image class="menu-icon" :src="'/static/icons/提示.svg'" mode="aspectFit" />
           <text>系统通知</text>
           <view v-if="remindStore.systemUnread > 0" class="badge">{{ remindStore.systemUnread > 99 ? '99+' : remindStore.systemUnread }}</view>
           <text class="arrow">›</text>
