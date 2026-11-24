@@ -16,7 +16,8 @@ async function output(relative, content) {
 }
 const spec = JSON.parse(await get('contracts/ui-motion.json'))
 assert.equal(spec.schemaVersion, 1)
-for (const key of ['enter', 'feedback', 'pulse']) assert.match(spec.tokens[key], /^[1-9]\d*ms$/, 'invalid motion duration: ' + key)
+for (const key of ['enter', 'back', 'tab', 'feedback', 'pulse']) assert.match(spec.tokens[key], /^[1-9]\d*ms$/, 'invalid motion duration: ' + key)
+assert.ok(parseInt(spec.tokens.tab) < parseInt(spec.tokens.back) && parseInt(spec.tokens.back) < parseInt(spec.tokens.enter), 'peer switches < return < forward')
 assert.match(spec.tokens.distance, /^\d+(\.\d+)?px$/)
 assert.match(spec.tokens.ease, /^cubic-bezier\([\d., -]+\)$/)
 const vars = Object.entries(spec.tokens).map(([k,v]) => '  --delta-motion-' + k + ': ' + v + ';').join('\n')

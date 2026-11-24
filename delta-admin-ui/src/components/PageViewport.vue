@@ -1,6 +1,7 @@
 <template>
   <Transition name="viewport" :appear="shell" @leave="removeImmediately">
-    <div :key="viewportKey(path, shell)" class="page-viewport" :class="shell ? 'page-viewport--shell' : 'layout-page-frame'">
+    <div :key="viewportKey(page, shell)" class="page-viewport" :data-nav-kind="state.kind"
+      :class="[shell ? 'page-viewport--shell' : 'layout-page-frame', { 'viewport-departing': state.leaving === (shell ? 'shell' : 'page') }]">
       <slot />
     </div>
   </Transition>
@@ -8,8 +9,10 @@
 
 <script setup>
 import { viewportKey } from '@/utils/page-viewport'
-defineProps({ path: { type: String, required: true }, shell: Boolean })
-// No outgoing interactive screen and no out-in blank period. A freshly
-// mounted shell animates at the outer outlet, never a second time at its inner outlet.
+import { navigationMotion } from '@/utils/navigation-motion'
+const { state } = navigationMotion
+defineProps({ page: { type: Object, required: true }, shell: Boolean })
+// The brief departure runs on the still-current screen while resolving.
+// Never retain a second interactive screen, including on rapid back/forward.
 function removeImmediately(_element, done) { done() }
 </script>

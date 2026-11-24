@@ -36,7 +36,11 @@ const browser = await playwright[engine].launch({executablePath:engine==='chromi
 const origin='http://localhost:48973'
 try {
  for(const reducedMotion of ['no-preference','reduce']) {
-  const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion,serviceWorkers:'block'})
+  const preview = reducedMotion === 'no-preference' && process.env.MOTION_PREVIEW_DIR
+  if (preview) assert.match(path.resolve(preview), /^D:[\\/]/i)
+  const size={width:390,height:844}
+  const ctx=await browser.newContext({viewport:size,reducedMotion,serviceWorkers:'block',
+    ...(preview ? { recordVideo:{dir:preview,size} } : {})})
   const errors=[], external=[]
   await ctx.routeWebSocket('**/*',w=>w.close())
   await ctx.route('**/*',async r=>{
@@ -100,14 +104,17 @@ try {
     assert.equal(await target.evaluate(el=>getComputedStyle(el).animationName),'delta-page-in')
   }else assert.equal(await search.locator(marker).count(),0)
   await search.locator('input').fill('fixture')
+  if(preview) await page.waitForTimeout(600)
   await search.locator('.product-card').nth(4).click()
   await body('pages/product/detail').waitFor()
+  if(preview) await page.waitForTimeout(650)
   await page.goBack()
   await search.locator('input').waitFor()
   assert.equal(await search.locator('input').inputValue(),'fixture')
   if(reducedMotion==='no-preference') {
     await search.locator('[data-delta-enter="back"]').waitFor()
   } else assert.equal(await search.locator(marker).count(),0)
+  if(preview) await page.waitForTimeout(500)
   await page.goBack()
   await home.locator('.search-bar').waitFor()
   if(reducedMotion==='no-preference') await home.locator(marker).waitFor()
@@ -115,5 +122,6 @@ try {
   assert.deepEqual(errors,[]); assert.deepEqual(external,[])
   console.log('Offline '+engine+': home → search → history back, cached scroll container, viewport, '+reducedMotion+' OK')
   await ctx.close()
+  if(preview) console.log('H5 fixture recording:', await page.video().path())
  }
 } finally { await browser.close() }

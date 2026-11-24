@@ -63,7 +63,7 @@
         <LoadFeedback :error="platformFeatureError" label="功能菜单" @retry="loadPlatformFeatureVisibility(true)" />
         <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
         <router-view v-slot="{ Component, route: pageRoute }">
-          <PageViewport v-if="Component" :path="pageRoute.path">
+          <PageViewport v-if="Component" :page="pageRoute">
             <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :key="`config:${pageVersion}`" :is="Component" read-only />
             <DemoReadOnlyPage :key="`demo:${pageVersion}`" v-else-if="demoMode && !pageRoute.meta.errorPage" />
             <component v-else :key="pageVersion" :is="Component" />
@@ -86,6 +86,7 @@
 </template>
 
 <script setup>
+import { useRouteSurface } from '@/composables/useRouteSurface'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onErrorCaptured } from 'vue'
 import {can, isDemoSession} from '@/utils/staff-permissions'
 import DemoReadOnlyPage from '@/components/DemoReadOnlyPage.vue'
@@ -145,11 +146,7 @@ let stopMobileTables = () => {}
 function toggleNavigation() {
   isCollapse.value = !isCollapse.value
 }
-watch(() => route.path, async () => {
-  await nextTick()
-  const element = main.value?.$el
-  if (element) { element.scrollTop = 0; element.scrollLeft = 0; element.focus({ preventScroll: true }) }
-})
+useRouteSurface(route, () => main.value?.$el)
 const nickname = computed(() => userStore.nickname)
 const role = computed(() => userStore.role)
 const currentAdminPath = computed(() => canonicalAdminPath(route.path))
@@ -238,7 +235,7 @@ onUnmounted(() => {
   background: #ffffff;
   border-right: 1px solid #eeeeee;
   box-shadow: none;
-  transition: width 0.24s ease;
+  transition: width var(--delta-motion-back, 240ms) var(--delta-motion-ease);
   overflow: hidden;
 }
 .layout-header {

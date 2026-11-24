@@ -5,7 +5,7 @@ import { useHomeRecommendations } from '../composables/useHomeRecommendations.js
 import { useHomeNotices } from '../composables/useHomeNotices.js'
 import { usePagedList } from '../composables/usePagedList.js'
 import { enableChromiumKeyboardResize, viewportMetrics } from '../utils/viewport.js'
-import { routeMotion } from '../utils/page-motion.mjs'
+import { routeMotion, installPageMotion } from '../utils/page-motion.mjs'
 
 test('only identified Chromium 108+ receives keyboard extension, once', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
@@ -73,4 +73,28 @@ test('navigation differentiates history pop, registered tab, forward and cold en
   assert.equal(routeMotion(to,from,3,2),'enter')
   assert.equal(routeMotion({meta:{isTabBar:true}},from,2,2),'tab')
   assert.equal(routeMotion(to,undefined,0,null),'enter')
+})
+
+test('cached H5 navigation ignores hidden content, superseded routes and filter replacement', () => {
+  const attrs=new Map(), hidden={getClientRects:()=>[]}
+  const pane={dataset:{deltaContent:'tab'},getClientRects:()=>[{}],setAttribute:(k,v)=>attrs.set(k,v),removeAttribute:k=>attrs.delete(k)}
+  const body={firstElementChild:{children:[]},querySelectorAll:()=>[hidden,pane]}
+  const page={dataset:{page:'orders'},getClientRects:()=>[{}],querySelector:()=>body}
+  let next, frame, count=0, stopped=false
+  const router={currentRoute:{value:null},afterEach:cb=>{next=cb;return ()=>{stopped=true}}}
+  const win={history:{state:{position:1}},requestAnimationFrame:cb=>{frame=cb;return ++count},cancelAnimationFrame:()=>{frame=null},
+    clearTimeout(){},matchMedia:()=>({matches:false})}
+  const stop=installPageMotion(router,{querySelectorAll:()=>[page]},win)
+  const route=(path,fullPath=path)=>({path,fullPath,meta:{route:path},matched:[{}]})
+  next(route('skip'),route('home'))
+  next(route('orders'),route('skip'))
+  frame()
+  assert.equal(attrs.get('data-delta-enter'),'tab')
+  next(route('orders','orders?q=filter'),route('orders'))
+  next(route('blocked'),route('orders'),new Error('guard cancelled'))
+  assert.equal(count,2)
+  win.history.state.position=0
+  next(route('orders'),route('detail'));frame()
+  assert.equal(attrs.get('data-delta-enter'),'back')
+  stop();assert.equal(stopped,true);assert.equal(attrs.size,0)
 })

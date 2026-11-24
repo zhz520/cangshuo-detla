@@ -51,5 +51,5 @@ test('admin no longer switches routes from viewport width', () => {
   const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
   assert.doesNotMatch(app, /switchAdminViewport/)
   assert.doesNotMatch(app, /MOBILE_ADMIN_MAX_WIDTH/)
-  assert.match(app, /<PageViewport v-if="Component" shell :path="pageRoute.path">/)
+  assert.match(app, /<PageViewport v-if="Component" shell :page="pageRoute">/)
 })
