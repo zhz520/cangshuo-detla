@@ -272,7 +272,7 @@ const accountForm = reactive({ id: '', name: '', appId: '', appSecret: '', mode:
 const templateForm = reactive({ configured: false, role: 'ADMIN', scenario: 'new_order', templateId: '', templateHint: '', example:'', suggestions:[], fields: [{ key: 'thing1', source: 'message' }], url: '', miniAppId: '', miniPagepath: '', enabled: true })
 const roleKeys = { USER: 'user', PLAYER: 'player', ADMIN: 'admin', CS: 'cs' }
 const roleNames = { USER: '客户', PLAYER: '打手', ADMIN: '管理员', CS: '客服' }
-const mappingStatusLabels = { READY: '映射就绪', DISABLED: '已停用', CATALOG_MISSING: '模板已移除', TEMPLATE_MISSING: '缺模板' }
+const mappingStatusLabels = { READY: '映射就绪', DISABLED: '已停用', CATALOG_MISSING: '模板不在当前目录', TEMPLATE_MISSING: '缺模板' }
 const selectedAccount = computed(() => accounts.value.find(row => row.id === selectedId.value) || null)
 const callbackUrl = computed(() => selectedId.value ? `${window.location.origin}/common/wechat/callback/${selectedId.value}` : '')
 const sourceGroups = computed(() => notificationConfigGuide('wechat.official.templates.admin')?.sourceGroups || [])

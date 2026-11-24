@@ -96,6 +96,40 @@ class WechatTemplateProvisionerTest {
         doReturn(reply).when(accounts).apiPost(ACCOUNT,ADD, Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称")));
     }
 
+    @Test void staleReceiptCanRecoverOnlyOneVerifiedReplacementWithoutAddingAgain() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
+        listed(snapshot(), snapshot("original-id"));addReply(JSONObject.of("errcode",0,"template_id","original-id"));
+        assertThat(run()).containsEntry("configured",1);
+        listed(snapshot("similar-id","another-id"));
+        assertThat(run().get("issues").toString()).contains("RECOVERY_AMBIGUOUS");
+        assertThat(mappings().get(0)).containsEntry("TEMPLATE_ID","original-id");
+        var foreign=snapshot("wrong-title");foreign.getJSONArray("template_list").getJSONObject(0).put("title","其他用途");
+        listed(foreign);assertThat(run().get("issues").toString()).contains("RECEIPT_NOT_IN_CATALOG");
+        var bad=snapshot("wrong-fields");bad.getJSONArray("template_list").getJSONObject(0).put("content","别的字段：{{thing3.DATA}}");
+        listed(bad);assertThat(run().get("issues").toString()).contains("RECEIPT_NOT_IN_CATALOG");
+        listed(snapshot("replacement-id"));
+        assertThat(run()).containsEntry("configured",1).containsEntry("issues",List.of());
+        assertThat(run()).containsEntry("preserved",1);
+        assertThat(mappings().get(0)).containsEntry("TEMPLATE_ID","replacement-id");
+        verify(accounts,times(1)).apiPost(eq(ACCOUNT),eq(ADD),any());
+    }
+
+    @Test void staleReceiptUsesOtherConfirmedSelectionOfSameLibraryEvenOnScopedRetry() throws Exception {
+        spec.put("mappingMode","SEMANTIC").putObject("fields");spec.withArray("keywordNames").add("时间");
+        spec.withArray("fieldSuggestions").addObject().put("label","时间").put("type","time").put("source","time");
+        var other=spec.deepCopy().put("role","CS");other.putArray("keywordNames").add("时间").add("商品名称");
+        schemes(spec,other);
+        doReturn(JSONObject.of("errcode",0,"template_id","previous-id")).when(accounts).apiPost(ACCOUNT,ADD,Map.of("template_id_short","47123","keyword_name_list",List.of("商品名称","时间")));
+        doReturn(JSONObject.of("errcode",0,"template_id","active-id")).when(accounts).apiPost(ACCOUNT,ADD,Map.of("template_id_short","47123","keyword_name_list",List.of("时间","商品名称")));
+        var fresh=twoFields("active-id",true);fresh.getJSONArray("template_list").getJSONObject(0).put("title","真实微信标题");
+        listed(snapshot(),snapshot(),fresh);run();
+        listed(fresh);
+        var result=service.provision(ACCOUNT,accounts.provisioningSchemes(),Set.of("ADMIN:new_order"));
+        assertThat(result).containsEntry("configured",1).containsEntry("issues",List.of());
+        assertThat(mappings()).hasSize(2).allSatisfy(row->assertThat(row).containsEntry("TEMPLATE_ID","active-id"));
+        verify(accounts,times(2)).apiPost(eq(ACCOUNT),eq(ADD),any());
+    }
+
     @Test void semanticKeywordsUseActualKeysPerAccountAndNeverRewriteManualFields() throws Exception {
         spec.put("mappingMode","SEMANTIC").putObject("fields");schemes(spec);
         var body=snapshot("owned-template"); body.getJSONArray("template_list").getJSONObject(0).put("content","商品名称：{{thing7.DATA}}");

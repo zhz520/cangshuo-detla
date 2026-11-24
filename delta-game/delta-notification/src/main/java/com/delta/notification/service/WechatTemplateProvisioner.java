@@ -43,7 +43,7 @@ public class WechatTemplateProvisioner {
             if (only != null && !only.contains(s.scope())) continue;
             groups.computeIfAbsent(List.of(s.role(), s.scenario()), ignored -> new ArrayList<>()).add(s);
         }
-        var run = new Run(accountId, report);
+        var run = new Run(accountId, report, specs);
         for (var group : groups.values()) {
             var s = group.get(0);
             String reason;
@@ -74,7 +74,24 @@ public class WechatTemplateProvisioner {
         List<WechatProvisioningCatalog.Entry> entries;
         boolean refreshFailed; String detail;
 
-        Run(String account, Report report) { this.account = account; this.report = report; }
+        final JsonNode schemes;
+        Run(String account, Report report, JsonNode schemes) { this.account = account; this.report = report; this.schemes = schemes; }
+
+        // Positive receipts only, narrowed to this tenant/account and the exact signed library short ID.
+        // Include unmodified sibling scopes even when this job retries just one changed role.
+        Set<String> relatedIds(WechatProvisioningScheme target) {
+            var ids = new HashSet<String>();
+            for (var node : schemes) {
+                var sibling = new WechatProvisioningScheme(node);
+                if (!sibling.semantic() || !target.shortId().equals(sibling.shortId()) ||
+                        !WechatAccountService.ROLES.contains(sibling.role()) || !WechatAccountService.SCENARIOS.contains(sibling.scenario())) continue;
+                var keys = sibling.orderedKeywords();
+                if (keys == null || sibling.addBody(keys) == null) continue;
+                var id = redis.opsForValue().get(receiptKey(account,sibling.shortId(),keys));
+                if (id != null && !PENDING.equals(id)) ids.add(id);
+            }
+            return ids;
+        }
 
         void refresh() throws Exception {
             entries = null;
@@ -102,12 +119,28 @@ public class WechatTemplateProvisioner {
             if (keywords == null) return "INVALID_SCHEME";
             var body = s.addBody(keywords);
             String receipt = null, key = null;
+            Set<String> recoveryIds = null;
             if (body != null) {
                 // Different roles can request the same library entry. Scope the receipt by tenant,
                 // account and library selection, NOT by job/role. No TTL: a timeout is not a rejection.
                 key = receiptKey(account, s.shortId(), keywords);
                 receipt = redis.opsForValue().get(key);
-                if(s.semantic() && receipt!=null && !PENDING.equals(receipt)) matches=byId(receipt);
+                if (s.semantic() && !PENDING.equals(receipt)) {
+                    var direct = receipt == null ? List.<WechatProvisioningCatalog.Entry>of() : byId(receipt);
+                    if (!direct.isEmpty()) matches = direct;
+                    else if (receipt != null || matches.isEmpty()) {
+                        var ids = relatedIds(s);
+                        var alternatives = entries.stream().filter(e -> s.recoveryCandidate(e, ids, keywords)).toList();
+                        if (alternatives.size() > 1) return "RECOVERY_AMBIGUOUS";
+                        if (!alternatives.isEmpty()) {
+                            matches = alternatives;
+                            recoveryIds = ids;
+                        } else if (receipt != null) {
+                            // Do not clear a receipt or submit another add on the strength of a missing catalogue entry.
+                            return "RECEIPT_NOT_IN_CATALOG";
+                        }
+                    }
+                }
             }
             if (matches.isEmpty()) {
                 if (body == null) return "LIBRARY_PARAMETERS_MISSING";
@@ -137,13 +170,13 @@ public class WechatTemplateProvisioner {
             if (matches.isEmpty()) return "ADDED_TEMPLATE_NOT_VERIFIED";
             var selected = matches.get(0);
             if (PENDING.equals(receipt)) return "ADD_OUTCOME_UNKNOWN";
-            if (receipt != null && !receipt.equals(selected.id())) return "ADDED_TEMPLATE_NOT_VERIFIED";
+            if (recoveryIds == null && receipt != null && !receipt.equals(selected.id())) return "ADDED_TEMPLATE_NOT_VERIFIED";
             var fields = s.fields(selected.content(), keywords);
             if (fields.isEmpty()) { if(s.semantic()) detail=s.mismatch(selected.content()); return "FIELD_CONFLICT"; }
             try {
                 if (managed && existing.enabled() && existing.id().equals(selected.id()) && fields.equals(JSON.parseObject(existing.fields()))
                         && Objects.equals(existing.url(),s.url().isEmpty()?null:s.url())) {report.preserved++; return null;}
-                if (!catalog.store(account, s, selected, fields, managed, s.semantic() && selected.id().equals(receipt))) return "CATALOG_CHANGED";
+                if (!catalog.store(account, s, selected, fields, managed, s.semantic() && selected.id().equals(receipt), recoveryIds)) return "CATALOG_CHANGED";
                 report.configured++;
                 return null;
             } catch (DuplicateKeyException concurrentSave) {
@@ -191,6 +224,8 @@ public class WechatTemplateProvisioner {
                 case "DUPLICATE_TITLE" -> "多个微信模板符合方案标题，请手动选择";
                 case "LIBRARY_PARAMETERS_MISSING" -> "未找到匹配模板，请在授权中心配置模板库编号和关键词";
                 case "ADD_OUTCOME_UNKNOWN", "ADD_PENDING" -> "微信添加结果待确认，不重复添加；请核对公众号模板库";
+                case "RECOVERY_AMBIGUOUS" -> "本公众号有多份模板同时符合方案，请在场景配置中选择正确模板";
+                case "RECEIPT_NOT_IN_CATALOG" -> "原回执不在当前目录，未找到可唯一核实的替代模板；请核对本号模板库中的实际标题与关键词，或手动选择模板";
                 case "ADDED_TEMPLATE_NOT_VERIFIED" -> "未能在此公众号模板库核实微信返回的模板，请稍后重试";
                 case "FIELD_CONFLICT" -> "微信模板变量与方案不能唯一对应，请手动配置";
                 case "INTERRUPTED" -> "配置被中断，请重试";

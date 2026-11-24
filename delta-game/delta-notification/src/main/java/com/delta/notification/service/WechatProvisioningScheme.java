@@ -34,6 +34,11 @@ record WechatProvisioningScheme(JsonNode spec) {
         return Normalizer.normalize(s, Normalizer.Form.NFKC).replaceAll("(?U)\\s+", "").toLowerCase(Locale.ROOT);
     }
 
+    boolean recoveryCandidate(WechatProvisioningCatalog.Entry entry, Set<String> relatedIds, List<String> keywords) {
+        return semantic() && (relatedIds.contains(entry.id()) || titles().contains(normalize(entry.title())))
+                && !fields(entry.content(), keywords).isEmpty();
+    }
+
     boolean validUrl() {
         if (spec.has("url") && !spec.get("url").isTextual()) return false;
         if (url().isEmpty()) return true;
