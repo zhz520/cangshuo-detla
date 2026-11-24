@@ -214,9 +214,10 @@ async function runCase(browser, item, config) {
         window.__qaRouteAnimations = []
         window.__qaOtherAnimations = []
         document.addEventListener('animationstart', e => {
-          if (!e.animationName.startsWith('delta-page-') && window.__qaOtherAnimations.length < 64)
+          const routeOwner = e.target.hasAttribute('data-delta-enter') && (e.animationName.startsWith('delta-page-') || e.animationName==='delta-tab-in')
+          if (!routeOwner && window.__qaOtherAnimations.length < 64)
             window.__qaOtherAnimations.push({name:e.animationName, atMs:Math.round(performance.now()), tag:e.target.tagName})
-          if (e.animationName.startsWith('delta-page-')) window.__qaRouteAnimations.push({
+          if (routeOwner) window.__qaRouteAnimations.push({
             name: e.animationName, atMs: Math.round(performance.now()), owner: e.target.getAttribute('data-delta-enter')
           })
         }, true)
@@ -406,7 +407,7 @@ export async function main(argv = process.argv.slice(2)) {
   const startedAt = new Date().toISOString(), gitBefore = gitSnapshot()
   const playwright = await resolvePlaywright(), engine = args.engine || 'chromium'
   if (!['chromium', 'webkit', 'firefox'].includes(engine)) throw new Error('Unsupported browser engine')
-  const browser = await playwright[engine].launch({ headless: true, downloadsPath: path.join(temp, 'downloads'), tracesDir: path.join(temp, 'traces') })
+  const browser = await playwright[engine].launch({ headless: true, executablePath: engine === 'chromium' ? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE : undefined, downloadsPath: path.join(temp, 'downloads'), tracesDir: path.join(temp, 'traces') })
   const runtime = { engine, browserVersion: browser.version(), playwrightVersion: 'see PLAYWRIGHT_MODULE installation', module: process.env.PLAYWRIGHT_MODULE || 'resolved package' }
   if (process.env.PLAYWRIGHT_MODULE && /^[a-zA-Z]:[\\/]/.test(process.env.PLAYWRIGHT_MODULE)) { try { runtime.playwrightVersion = JSON.parse(await readFile(path.join(path.dirname(process.env.PLAYWRIGHT_MODULE), 'package.json'), 'utf8')).version } catch {} }
   console.log(JSON.stringify({ output, cases: cases.length, runtime, profiles: selectedProfiles, themes: themeList }))

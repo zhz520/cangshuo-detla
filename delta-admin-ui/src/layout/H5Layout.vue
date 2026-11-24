@@ -18,7 +18,7 @@
       <LoadFeedback :error="platformFeatureError" label="功能菜单" @retry="loadPlatformFeatureVisibility(true)" />
       <LoadFeedback v-if="loadingFeedback.readError?.path === route.fullPath" :error="loadingFeedback.readError.message" label="页面数据" retry-label="重新加载页面" @retry="reloadPage" />
       <router-view v-slot="{ Component, route: pageRoute }">
-        <PageViewport v-if="Component" :path="pageRoute.path" class="h5-page-frame">
+        <PageViewport v-if="Component" :page="pageRoute" class="h5-page-frame">
           <component v-if="demoMode && canonicalAdminPath(pageRoute.path) === '/system/config'" :key="`config:${pageVersion}`" :is="Component" read-only />
           <DemoReadOnlyPage :key="`demo:${pageVersion}`" v-else-if="demoMode" />
           <component v-else :key="pageVersion" :is="Component" />
@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import { useRouteSurface } from '@/composables/useRouteSurface'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Bell, ChatDotRound, HomeFilled, Menu, Tickets, UserFilled } from '@element-plus/icons-vue'
@@ -176,10 +177,7 @@ function onProfileSaved(data) { userStore.updateProfile(data) }
 
 watch(() => route.fullPath, () => { if (!demoMode.value) workbench.changed() })
 watch(() => [chatStore.newMessage, chatStore.connected, chatStore.badgeSignal], () => { if (!demoMode.value) workbench.changed() })
-watch(() => route.path, async () => {
-  await nextTick()
-  if (main.value) { main.value.scrollTop = 0; main.value.scrollLeft = 0; main.value.focus({ preventScroll: true }) }
-})
+useRouteSurface(route, () => main.value)
 
 let stopMobileTables = () => {}
 onMounted(() => {

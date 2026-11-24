@@ -8,13 +8,13 @@
     <el-menu ref="menu" :default-active="active" :default-openeds="opened" :collapse="collapsed" :collapse-transition="false" unique-opened router class="layout-menu" @select="index => $emit('select', index)">
       <el-menu-item-group v-for="group in groups" :key="group.id" :title="collapsed ? '' : group.title">
         <template v-for="item in group.items" :key="item.id || item.path">
-          <el-menu-item v-if="!item.children" :index="item.path">
+          <el-menu-item v-if="!item.children" :index="item.path" :aria-current="item.path === active ? 'location' : undefined">
             <el-icon><component :is="item.icon" /></el-icon>
             <template #title>{{ item.title }} <i v-if="badges[item.path]" class="nav-dot" aria-label="有未读待办" /></template>
           </el-menu-item>
           <el-sub-menu v-else :index="item.id" popper-class="navigation-popup">
             <template #title><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }} <i v-if="item.children.some(child => badges[child.path])" class="nav-dot" aria-label="有未读待办" /></span></template>
-            <el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">{{ child.title }} <i v-if="badges[child.path]" class="nav-dot" aria-label="有未读待办" /></el-menu-item>
+            <el-menu-item v-for="child in item.children" :key="child.path" :index="child.path" :aria-current="child.path === active ? 'location' : undefined">{{ child.title }} <i v-if="badges[child.path]" class="nav-dot" aria-label="有未读待办" /></el-menu-item>
           </el-sub-menu>
         </template>
       </el-menu-item-group>
@@ -60,7 +60,7 @@ h1 { flex:1; min-width:0; font-size:15px; line-height:1.2; font-weight:700; marg
   padding:4px 10px calc(18px + var(--app-safe-bottom,0px)); background:transparent;
   :deep(.el-menu) { background:transparent; }
   :deep(.el-menu-item-group__title) { padding:18px 12px 6px!important; color:#aaaaaa; font-size:11px; line-height:20px; letter-spacing:1px; }
-  :deep(.el-menu-item), :deep(.el-sub-menu__title) { height:42px; margin:3px 0; border-radius:10px; color:#656b73; font-size:14px; transition:background .18s ease,color .18s ease; }
+  :deep(.el-menu-item), :deep(.el-sub-menu__title) { height:42px; margin:3px 0; border-radius:10px; color:#656b73; font-size:14px; transition:background-color var(--delta-motion-tab, 200ms) var(--delta-motion-ease),color var(--delta-motion-tab, 200ms) var(--delta-motion-ease); }
   :deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) { color:#171717; background:#f7f7f7; }
   :deep(.el-sub-menu.is-active > .el-sub-menu__title) { color:#171717; font-weight:700; }
   :deep(.el-sub-menu .el-menu-item) { min-width:0; height:38px; padding-left:46px!important; font-size:13px; }

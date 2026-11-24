@@ -9,7 +9,7 @@
       </view>
     </ScreenHeader>
 
-    <view class="detail-body">
+    <view data-delta-content="page" class="detail-body">
       <view class="banner-wrap">
         <swiper class="banner" :autoplay="!reducedMotion" :interval="4200" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
           <swiper-item v-for="(img, i) in images" :key="i">
@@ -123,7 +123,7 @@
           <text class="sheet-title">全部评价<span v-if="reviewTotal"> ({{ reviewTotal }})</span></text>
           <text class="sheet-close" @click="showReviews = false">✕</text>
         </view>
-        <scroll-view data-delta-content="page" scroll-y class="sheet-body">
+        <scroll-view scroll-y class="sheet-body">
           <view v-for="review in reviews" :key="review.id" class="review-item">
             <AppImage class="review-avatar" :src="review.userAvatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" />
             <view class="review-main">

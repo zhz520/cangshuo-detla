@@ -6,18 +6,26 @@ export function routeMotion(to, from, position, previous) {
 }
 
 export function installPageMotion(router, doc = document, win = window) {
-  let target, observer, frame, previous, last
+  let target, observer, frame, timeout, previous, last
+  const layers = []
+  const stopFinding = () => {
+    observer?.disconnect()
+    win.clearTimeout(timeout)
+    observer = timeout = null
+  }
   const clear = () => {
     if (frame != null) win.cancelAnimationFrame(frame)
-    observer?.disconnect()
+    stopFinding()
+    for (const layer of layers.splice(0)) layer.removeAttribute('data-delta-layer')
     target?.removeAttribute('data-delta-enter')
-    frame = observer = target = null
+    frame = target = null
   }
   function committed(to, from, failure) {
     if (failure || !to?.meta?.route) return
     const position = win.history.state?.position
     const key = [to.fullPath, win.history.state?.id, position].join('|')
-    if (last === key) return
+    // replace() of a query/filter on the same history entry is not a navigation.
+    if (last === key || (last && to.path === from?.path && position === previous && to.path)) return
     last = key
     clear()
     const kind = routeMotion(to, from, position, previous)
@@ -28,16 +36,28 @@ export function installPageMotion(router, doc = document, win = window) {
         .find(node => node.dataset.page === to.meta.route && node.getClientRects().length)
       const body = page?.querySelector('uni-page-body')
       if (!body || !body.firstElementChild) return false
-      target = body.querySelector('[data-delta-content]') || body
-      target.setAttribute('data-delta-enter', target.dataset.deltaContent === 'tab' ? 'tab' : kind)
-      observer?.disconnect()
+      target = Array.from(body.querySelectorAll('[data-delta-content]')).find(node => node.getClientRects().length) || body
+      const motion = kind !== 'back' && target.dataset.deltaContent === 'tab' ? 'tab' : kind
+      target.setAttribute('data-delta-enter', motion)
+      // Never transform a page-sized ancestor of fixed checkout/chat controls. For
+      // unmarked screens, move visible first-level cards, not the viewport itself.
+      if (target === body) {
+        for (const el of body.firstElementChild.children) {
+          if (layers.length >= 4) break
+          if (!el.matches('.card,.section,.form-card,.status-card,.status-header,.amount-area,.pay-methods,.balance-card,.summary-card,.hero,.lookup-card,.rating-area') || !el.getClientRects().length) continue
+          el.setAttribute('data-delta-layer', motion)
+          layers.push(el)
+        }
+      }
+      stopFinding()
       return true
     }
     // Async routes and cached pages have different mount timing. One mark per commit, not per update.
     frame = win.requestAnimationFrame(() => {
       if (!find()) {
         observer = new win.MutationObserver(find)
-        observer.observe(doc.body, {childList: true, subtree: true})
+        observer.observe(doc.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['style','class','hidden','data-page']})
+        timeout = win.setTimeout(stopFinding, 2500)
       }
     })
   }

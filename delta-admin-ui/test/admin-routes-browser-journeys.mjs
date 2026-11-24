@@ -44,7 +44,16 @@ export async function runJourneys(browser) {
       assert.equal(submits, 0)
       await username.fill('route-qa'); await page.getByPlaceholder('密码', { exact: true }).fill('fixture-only')
       await page.getByPlaceholder('图形验证码').fill('123456')
+      await page.evaluate(() => {
+        window.__loginOwners = []
+        new MutationObserver(() => {
+          const shell = document.querySelector('.page-viewport--shell.viewport-enter-active')
+          if (shell) window.__loginOwners.push({kind:shell.dataset.navKind, nested:Boolean(shell.querySelector('.viewport-enter-active'))})
+        }).observe(document.getElementById('app'),{subtree:true,childList:true,attributes:true,attributeFilter:['class']})
+      })
       await submit.click(); await page.waitForURL(bookmark)
+      await page.waitForFunction(() => window.__loginOwners.some(s=>s.kind==='shell'))
+      assert.ok(await page.evaluate(() => window.__loginOwners.every(s=>!s.nested)), 'login handoff animates only the outer outlet')
       await page.getByRole('button', { name: '新增商品' }).waitFor()
       assert.equal(submits, 1)
     })
@@ -59,9 +68,27 @@ export async function runJourneys(browser) {
       const menu = h5 ? page.getByRole('navigation', { name: 'H5 快捷导航' }) : page.getByRole('navigation', { name: '主导航' })
       if (!h5) await menu.getByText('订单与售后', { exact: true }).click()
       const orders = h5 ? menu.getByRole('button', { name: '订单', exact: true }) : menu.getByText('订单列表', { exact: true })
+      await page.evaluate(()=>{
+        const root=document.querySelector('.layout-main')
+        const observer=new MutationObserver(()=>{
+          const frame=root.querySelector('.viewport-enter-active[data-nav-kind="tab"]')
+          if(!frame)return
+          const css=getComputedStyle(frame)
+          window.__menuMotion={duration:parseFloat(css.transitionDuration),ease:css.transitionTimingFunction}
+          observer.disconnect()
+        })
+        observer.observe(root,{subtree:true,attributes:true,childList:true,attributeFilter:['class']})
+      })
       await orders.click(); await page.waitForURL(at('/order/list'))
+      await page.waitForFunction(()=>Boolean(window.__menuMotion))
+      const menuMotion=await page.evaluate(()=>window.__menuMotion)
+      assert.ok(Math.abs(menuMotion.duration-.2)<.001)
+      console.log('CSS-MENU',h5?'H5':'PC',JSON.stringify(menuMotion))
       const orderInput = page.getByRole('textbox', { name: '订单号' })
       await orderInput.fill('未提交搜索')
+      const frame=page.locator('.layout-page-frame')
+      assert.equal(await frame.getAttribute('data-nav-kind'),'tab','menu navigation is a peer transition')
+      if (!h5) assert.equal(await orders.locator('xpath=ancestor-or-self::*[@role="menuitem"][1]').getAttribute('aria-current'),'location')
       const depth = await page.evaluate(() => history.length)
       await orders.click(); assert.equal(await page.evaluate(() => history.length), depth)
       assert.equal(await orderInput.inputValue(), '未提交搜索', 'same destination did not remount the page')
@@ -69,6 +96,39 @@ export async function runJourneys(browser) {
       await page.goForward(); await page.waitForURL(at('/order/list'))
       await page.locator('.layout-page-frame > *').first().waitFor()
       await page.locator('.app-loading').waitFor({ state: 'hidden' })
+    })
+
+    await visit('slow page departure stays readable → browser back restores list scroll', {
+      override: ({pathname}) => pathname === '/product/list' ? ok({records:Array.from({length:20},(_,i)=>({
+        id:910000+i,name:'导航位置夹具 '+i,price:10,status:1
+      })),total:20,current:1,size:20}) : undefined
+    }, async page => {
+      await page.setViewportSize({ width: h5 ? 390 : 1440, height: 460 })
+      await page.goto(at('/product/list'), {waitUntil:'networkidle'})
+      const main = page.locator('.layout-main')
+      const add = page.getByRole('button',{name:'新增商品'})
+      await add.focus()
+      await page.waitForFunction(() => {
+        const el=document.querySelector('.layout-main')
+        return el && el.scrollHeight-el.clientHeight >= 80
+      })
+      const top=await main.evaluate(el=>{el.scrollTop=80;return el.scrollTop})
+      let release
+      const hold=new Promise(r=>{release=r})
+      await page.route('**/assets/ProductForm-*.js', async route=>{await hold;await route.fallback()})
+      try {
+        await page.keyboard.press('Enter')
+        const outgoing=main.locator('.layout-page-frame.viewport-departing')
+        await outgoing.waitFor()
+        assert.equal(await page.locator('.viewport-departing').count(),1)
+        const style=await outgoing.evaluate(el=>({opacity:+getComputedStyle(el).opacity, duration:getComputedStyle(el).transitionDuration}))
+        assert.ok(style.opacity >= .93 && Math.abs(parseFloat(style.duration)-.1) < .001)
+        console.log('CSS-EXIT',h5?'H5':'PC',JSON.stringify(style),'scrollToRestore='+top)
+      } finally { release() }
+      await page.waitForURL(at('/product/create'))
+      await page.goBack();await page.waitForURL(at('/product/list'))
+      await page.waitForFunction(y=>Math.abs(document.querySelector('.layout-main')?.scrollTop-y)<2,top)
+      assert.ok(await main.evaluate(el=>el.contains(document.activeElement)))
     })
 
     for (const reduced of [false, true]) {
@@ -83,8 +143,8 @@ export async function runJourneys(browser) {
             const node = root.querySelector('.layout-page-frame.viewport-enter-active')
             if (!node) return
             const css = getComputedStyle(node)
-            window.__routeMotionSamples.push({ property: css.transitionProperty,
-              duration: Math.max(...css.transitionDuration.split(',').map(Number.parseFloat)),
+            window.__routeMotionSamples.push({ kind: node.dataset.navKind, both: Boolean(document.querySelector('.page-viewport--shell.viewport-enter-active')), property: css.transitionProperty,
+              ease: css.transitionTimingFunction, duration: Math.max(...css.transitionDuration.split(',').map(Number.parseFloat)),
               opacity: Number(css.opacity), transform: css.transform, frames: root.querySelectorAll('.layout-page-frame').length })
           })
           obs.observe(root, { childList: true, attributes: true, attributeFilter: ['class'], subtree: true })
@@ -94,9 +154,34 @@ export async function runJourneys(browser) {
         await page.waitForFunction(() => window.__routeMotionSamples.length > 0)
         const samples = await page.evaluate(() => window.__routeMotionSamples)
         assert.ok(samples.every(s => s.frames === 1), 'no overlapping interactive page frames')
+        assert.ok(samples.every(s => s.kind === 'forward' && !s.both && s.opacity > 0), 'one visible forward owner')
         if (reduced) assert.ok(samples.every(s => (s.property === 'none' || s.duration === 0) && s.opacity === 1 && s.transform === 'none'),
           'reduced motion does not fade or translate the incoming view')
-        else assert.ok(samples.some(s => s.duration > 0 && s.property.includes('opacity')), 'normal entry transition ran')
+        else assert.ok(samples.some(s => Math.abs(s.duration - 0.3) < .001 && s.property.includes('opacity')), 'forward uses the shared 300ms token')
+        const draft = page.getByPlaceholder('请输入商品名称')
+        await draft.fill('导航保留的草稿')
+        if (!h5) {
+          await draft.evaluate(el => {window.__beforeCollapse=el})
+          await page.getByRole('button',{name:'收起导航'}).click()
+          await page.getByRole('button',{name:'展开导航'}).click()
+          assert.ok(await draft.evaluate(el=>el===window.__beforeCollapse),'sidebar collapse preserves form node')
+          await draft.focus()
+        }
+        await draft.evaluate(el => { window.__draftInput = el; el.setSelectionRange(1,3); location.hash = 'draft' })
+        await page.waitForURL(at('/product/create#draft'))
+        await page.goBack(); await page.waitForURL(at('/product/create'))
+        assert.equal(await draft.evaluate(el => el === window.__draftInput && document.activeElement === el && el.selectionStart === 1),true)
+        assert.equal(await draft.inputValue(),'导航保留的草稿')
+        await page.goBack(); await page.getByRole('button', {name:'新增商品'}).waitFor()
+        await page.waitForFunction(() => window.__routeMotionSamples.some(s => s.kind === 'back'))
+        const back = await page.evaluate(() => window.__routeMotionSamples.filter(s => s.kind === 'back'))
+        assert.ok(back.every(s=>!s.both && s.frames===1 && s.opacity>0))
+        if (!reduced) assert.ok(back.some(s=>Math.abs(s.duration-.24)<.001),'back uses the shorter token')
+        const moving=samples.find(s=>s.duration>0) || samples[0]
+        if (!reduced) assert.match(moving.ease,/cubic-bezier\(0\.16, 1, 0\.3, 1\)/)
+        console.log('CSS-HISTORY',h5?'H5':'PC',JSON.stringify({reduced,enterSeconds:moving.duration,
+          backSeconds:Math.max(...back.map(s=>s.duration)),ease:moving.ease,
+          minSampledOpacity:Math.min(...samples.map(s=>s.opacity)),maxFrames:Math.max(...samples.map(s=>s.frames))}))
       })
     }
 

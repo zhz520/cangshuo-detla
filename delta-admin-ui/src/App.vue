@@ -10,7 +10,7 @@
     <el-button size="small" text @click="loadingFeedback.routeError = null">关闭</el-button>
   </div>
   <router-view v-slot="{ Component, route: pageRoute }">
-    <PageViewport v-if="Component" shell :path="pageRoute.path">
+    <PageViewport v-if="Component" shell :page="pageRoute">
       <component :is="Component" />
     </PageViewport>
   </router-view>

@@ -73,9 +73,14 @@ html { -webkit-tap-highlight-color: transparent; }
 button, a, [role='button'], .el-menu-item, .el-sub-menu__title { touch-action: manipulation; }
 .page-viewport { min-width: 0; max-width: 100%; }
 .page-viewport--shell { height: 100%; }
-.viewport-enter-active { transition: opacity var(--delta-motion-enter) var(--delta-motion-ease), transform var(--delta-motion-enter) var(--delta-motion-ease); }
-.viewport-enter-from { opacity: 0; transform: translateY(var(--delta-motion-distance)); }
+/* A pending departure never hides the current page or delays the route commit. */
+.page-viewport { --view-time: var(--delta-motion-enter); --view-offset: var(--delta-motion-distance); }
+.page-viewport[data-nav-kind="back"] { --view-time: var(--delta-motion-back, 240ms); --view-offset: calc(-0.5 * var(--delta-motion-distance)); }
+.page-viewport[data-nav-kind="tab"] { --view-time: var(--delta-motion-tab, 200ms); --view-offset: calc(0.25 * var(--delta-motion-distance)); }
+.viewport-enter-active { transition: opacity var(--view-time) var(--delta-motion-ease), transform var(--view-time) var(--delta-motion-ease); }
+.viewport-enter-from { opacity: .86; transform: translateY(var(--view-offset)); }
 .page-viewport--shell.viewport-enter-from { transform: none; }
+.viewport-departing { opacity: .94; transition: opacity 100ms var(--delta-motion-ease) 60ms; }
 
 .el-loading-mask { background-color: color-mix(in srgb, var(--app-surface) 78%, transparent); transition-duration: var(--delta-motion-feedback); }
 .feedback-spin { animation: feedback-spin var(--delta-motion-pulse) linear infinite; }
@@ -106,7 +111,8 @@ html[data-client='qq'] .h5-bottom-nav { backdrop-filter: none; background-color:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .feedback-spin { animation: none !important; }
-  .viewport-enter-active { transition: none !important; }
+  .viewport-enter-active, .viewport-departing { transition: none !important; }
+  .viewport-departing { opacity: 1; }
   .viewport-enter-from { opacity: 1; transform: none; }
   .app-loading__bar { width: 100%; animation: none !important; transform: none; }
   .stat-card:hover { transform: none !important; }

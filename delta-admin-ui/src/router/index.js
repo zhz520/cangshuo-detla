@@ -3,6 +3,7 @@ import { getToken, getUserInfo, removeToken } from '@/utils/auth'
 import {loadStaffPermissions,can,permissionFor} from '@/utils/staff-permissions'
 import { beginNavigation, finishNavigation, failNavigation } from '@/utils/loading-feedback'
 import { buildH5Routes, canonicalAdminPath, h5Path, h5RedirectTarget, isH5Path } from '@/utils/h5-route'
+import { navigationMotion } from '@/utils/navigation-motion'
 import { legacyConfigTabs } from '@/utils/config-sections'
 
 const Layout = () => import('@/layout/index.vue')
@@ -447,6 +448,7 @@ const router = createRouter({
 // 路由守卫
 const whiteList = ['/login', '/h5/login']
 router.beforeEach(async (to, from, next) => {
+  navigationMotion.start(to, from)
   beginNavigation(to)
   const token = getToken()
   const h5 = isH5Path(to.path)
@@ -506,7 +508,13 @@ router.beforeEach(async (to, from, next) => {
   }
 })
 
-router.afterEach(to => finishNavigation(to))
-router.onError(failNavigation)
+router.afterEach((to, from, failure) => {
+  navigationMotion.settle(to, from, router.options.history.state.position, Boolean(failure))
+  finishNavigation(to)
+})
+router.onError((error, to, from) => {
+  navigationMotion.settle(to, from, null, true)
+  failNavigation(error, to)
+})
 
 export default router
