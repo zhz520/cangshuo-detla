@@ -1,7 +1,7 @@
 {
   "name": "delta-admin-ui",
   "private": true,
-  "version": "1.23.2",
+  "version": "1.23.4",
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
