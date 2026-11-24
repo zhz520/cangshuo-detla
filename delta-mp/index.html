@@ -7,12 +7,53 @@
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#f7f8f9" />
     <title>三角洲游戏平台</title>
+    <style>
+      #boot-tabbar {
+        position: fixed; right: 0; bottom: 0; left: 0; z-index: 9998;
+        display: flex; align-items: center; justify-content: space-around;
+        height: calc(57px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: #fff; border-top: 1px solid #eceef1;
+        transition: opacity 120ms ease;
+      }
+      #boot-tabbar.is-hiding { opacity: 0; pointer-events: none; }
+      #boot-tabbar span {
+        width: 18px; height: 18px; border-radius: 6px;
+        background: #e7e9ec;
+      }
+    </style>
     <!--preload-links-->
     <!--app-context-->
   <script src="/instance-config.js"></script>
   </head>
   <body>
     <div id="app"><!--app-html--></div>
+    <div id="boot-tabbar" aria-hidden="true"></div>
+    <script>
+      (function () {
+        var bar = document.getElementById('boot-tabbar')
+        var app = document.getElementById('app')
+        if (!bar || !app) return
+        var tabRoute = /^#\/(?:pages\/(?:index|category|players|chat\/list|mine)|pages-player\/(?:hall|order\/list|chat\/list|mine)|pages-cs\/(?:dashboard|order\/list|complaint\/list|chat\/list|mine))/.test(location.hash)
+        var count = /^#\/pages-player\//.test(location.hash) ? 4 : 5
+        for (var i = 0; i < count; i += 1) bar.appendChild(document.createElement('span'))
+        var hidden = false
+        function hide () {
+          if (hidden) return
+          hidden = true
+          observer.disconnect()
+          bar.classList.add('is-hiding')
+          setTimeout(function () { bar.remove() }, 140)
+        }
+        function ready () {
+          return tabRoute ? document.querySelector('.custom-tabbar') : app.children.length > 0
+        }
+        var observer = new MutationObserver(function () { if (ready()) hide() })
+        observer.observe(document.documentElement, { childList: true, subtree: true })
+        if (ready()) hide()
+        setTimeout(hide, 12000)
+      })()
+    </script>
     <script type="module" src="/main.js"></script>
   </body>
 </html>

@@ -17,19 +17,19 @@
     <!-- 扩展工具栏 - 固定显示 -->
     <view v-if="showToolbar" class="toolbar">
       <view class="toolbar-item" @click="sendImage">
-        <image class="toolbar-icon-img" src="/static/icons/图片.svg" mode="aspectFit" />
+        <image class="toolbar-icon-img" :src="'/static/icons/图片.svg'" mode="aspectFit" />
         <text class="toolbar-label">图片</text>
       </view>
       <view class="toolbar-item" @click="openProductPicker">
-        <image class="toolbar-icon-img" src="/static/icons/商品.svg" mode="aspectFit" />
+        <image class="toolbar-icon-img" :src="'/static/icons/商品.svg'" mode="aspectFit" />
         <text class="toolbar-label">商品</text>
       </view>
       <view class="toolbar-item" @click="openQuickReply">
-        <image class="toolbar-icon-img" src="/static/icons/快捷.svg" mode="aspectFit" />
+        <image class="toolbar-icon-img" :src="'/static/icons/快捷.svg'" mode="aspectFit" />
         <text class="toolbar-label">快捷</text>
       </view>
       <view v-if="canSendSmsReminder" class="toolbar-item" @click="sendSmsReminder">
-        <image class="toolbar-icon-img" src="/static/icons/短信.svg" mode="aspectFit" />
+        <image class="toolbar-icon-img" :src="'/static/icons/短信.svg'" mode="aspectFit" />
         <text class="toolbar-label">短信提醒</text>
       </view>
     </view>

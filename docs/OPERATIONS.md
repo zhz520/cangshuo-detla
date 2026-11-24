@@ -91,6 +91,8 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z <assets...> --verify-tag --title "Delta X.Y.Z" --notes-file <notes.md>
 ```
 
+生产解压 ZIP 必须保留 UTF-8 文件名。禁止直接使用会按宿主 locale 改写文件名的 `unzip`；使用 Python `zipfile.extractall`（或确认支持 UTF-8 的解压器），并在解压后检查中文静态文件名与原 ZIP 条目一致。否则浏览器按编码后的 URL 请求图片或代码块时会出现 404。
+
 `gh` 使用本机 Git Credential Manager 中已有凭据或受控 `GH_TOKEN`。禁止把 Token 写入脚本、仓库、日志或对话。
 
 ### 520 验证与制品晋级

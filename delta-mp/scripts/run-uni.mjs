@@ -1,4 +1,5 @@
 import {spawnSync} from 'node:child_process'
+import {rmSync} from 'node:fs'
 import {join} from 'node:path'
 
 const mode = process.argv[2]
@@ -8,6 +9,7 @@ if (!['dev', 'build'].includes(mode) || !process.argv[3]) {
 }
 
 const platform = process.argv[3]
+if (mode === 'build') rmSync(join(process.cwd(), 'dist', 'build', platform), {recursive: true, force: true})
 const args = []
 if (mode === 'build') args.push('build')
 args.push('-p', platform)
