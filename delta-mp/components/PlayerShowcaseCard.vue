@@ -1,13 +1,20 @@
 <template>
-  <view class="showcase-card" @click="open">
+  <view ref="cardRef" class="showcase-card" @click="open">
     <view class="portrait"><AppImage :width="320" :src="player.avatar || '/static/images/delta-default-avatar.png'" mode="aspectFill" /><text class="presence" :class="{online:player.isOnline===1}">{{ player.isOnline===1?'在线':'离线' }}</text></view>
     <view class="card-info"><text class="card-name">{{ player.nickname || '打手' }}</text><text class="card-level">{{ player.levelName || `Lv.${player.level||1}` }}</text><text class="card-meta">★ {{ Number(player.avgRating||0).toFixed(1) }} · {{ player.orderCount||0 }} 单</text></view>
   </view>
 </template>
 <script setup>
 import AppImage from '@/components/AppImage.vue'
+import { navigateWithSharedMedia } from '@/utils/shared-transition.mjs'
+import { ref } from 'vue'
 const props=defineProps({player:{type:Object,required:true}})
-function open(){uni.navigateTo({url:`/pages/players/detail?id=${props.player.id}`})}
+const cardRef=ref(null)
+function open(){
+  const root=cardRef.value?.$el||cardRef.value
+  const source=typeof root?.querySelector==='function'?root.querySelector('.portrait .app-image'):null
+  navigateWithSharedMedia({source,targetSelector:'[data-shared-target="player-avatar"]',navigate:()=>new Promise(resolve=>uni.navigateTo({url:`/pages/players/detail?id=${props.player.id}`,complete:resolve}))})
+}
 </script>
 <style lang="scss" scoped>
 .showcase-card{min-width:0;background:var(--store-surface);border:1rpx solid var(--store-line);border-radius:18rpx;overflow:hidden;box-shadow:0 6rpx 18rpx rgba(23,25,28,.035)}

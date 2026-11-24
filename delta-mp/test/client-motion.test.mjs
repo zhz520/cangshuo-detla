@@ -121,11 +121,11 @@ test('tab navigation holds the outgoing frame until the new page has painted', a
 test('tab navigation falls back without a View Transition or with reduced motion', () => {
   let calls=0
   const navigate=()=>{calls++;return Promise.resolve()}
-  const reduced=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:true})})
+  const reduced=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:true}),setTimeout:()=>1})
   assert.equal(reduced.started,false)
   assert.equal(calls,1)
   assert.equal(reduced.settled instanceof Promise,true)
-  const legacy=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:false})})
+  const legacy=navigateTabWithTransition(navigate,{documentElement:{dataset:{}}},{matchMedia:()=>({matches:false}),setTimeout:()=>1})
   assert.equal(legacy.started,false)
   assert.equal(calls,2)
 })

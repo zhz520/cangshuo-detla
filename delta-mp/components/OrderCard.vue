@@ -209,9 +209,13 @@ function repeatOrder() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
   .left {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
+    min-width: 0;
     gap: 8rpx;
     .amount-label {
       font-size: 24rpx;
@@ -232,8 +236,12 @@ function repeatOrder() {
   .right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 12rpx;
     .btn-chat {
+      white-space: nowrap;
+      flex-shrink: 0;
       font-size: 24rpx;
       color: #347a5b;
       padding: 6rpx 20rpx;
@@ -241,6 +249,8 @@ function repeatOrder() {
       border-radius: 999rpx;
     }
     .btn-repeat {
+      white-space: nowrap;
+      flex-shrink: 0;
       font-size: 24rpx;
       color: var(--store-text);
       padding: 6rpx 18rpx;
@@ -248,6 +258,8 @@ function repeatOrder() {
       border-radius: 999rpx;
     }
     .action-hint {
+      white-space: nowrap;
+      flex-shrink: 0;
       font-size: 24rpx;
       color: #fff;
       font-weight: 500;

@@ -13,7 +13,7 @@
       <view class="banner-wrap">
         <swiper class="banner" :autoplay="!reducedMotion" :interval="4200" circular :current="swiperIdx" @change="e => swiperIdx = e.detail.current">
           <swiper-item v-for="(img, i) in images" :key="i">
-            <AppImage :src="img" mode="aspectFit" fallback="/static/icons/图片.svg" class="banner-img" @click="previewImg(i)" />
+            <AppImage :src="img" mode="aspectFit" fallback="/static/icons/图片.svg" class="banner-img" :data-shared-target="i === 0 ? 'product' : undefined" @click="previewImg(i)" />
           </swiper-item>
         </swiper>
         <view class="banner-dots" v-if="images.length > 1">

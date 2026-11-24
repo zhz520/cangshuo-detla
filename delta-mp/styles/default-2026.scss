@@ -515,3 +515,10 @@ html:root:not([data-theme='neumorphism']) :is(
   border: 0 !important;
   background: #f5f6f7 !important;
 }
+/* Profile keeps the inline value on the card surface; other forms keep their field background. */
+html:root .profile-page .form-item :is(input, uni-input),
+html:root .profile-page .form-item :is(.uni-input-input, .uni-input-placeholder) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}

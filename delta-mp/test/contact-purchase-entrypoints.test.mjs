@@ -18,10 +18,11 @@ function playerCardHarness(site) {
   assert.deepEqual(template.errors, [])
   const contactCalls = []
   const modules = {
-    vue: { computed },
+    vue: { computed, ref },
     '@/components/AppImage.vue': { default: {} },
     '@/store/site': { useSiteStore: () => site },
-    '@/utils/customer-service': { openCustomerService: async (...args) => contactCalls.push(args) }
+    '@/utils/customer-service': { openCustomerService: async (...args) => contactCalls.push(args) },
+    '@/utils/shared-transition.mjs': { navigateWithSharedMedia: ({ navigate }) => navigate() }
   }
   const imports = babelParse(compiled.content, { sourceType: 'module' }).program.body.filter(node => node.type === 'ImportDeclaration')
   let code = compiled.content
