@@ -47,6 +47,22 @@ export function suggestWechatTemplate(catalog, scheme) {
   return { templateId: template.templateId, fields }
 }
 
+// One card preference per actual account template, even when several roles share it.
+export function cardDisplay(row, bindings, schemes) {
+  const fields=exportKeywordStructure(row.content)?.fields || []
+  const fieldKeys=new Set(fields.map(x=>x.key)), defaults=new Set()
+  let unresolved=false
+  for (const binding of bindings.filter(x=>x.enabled && x.templateId===row.templateId)) {
+    for (const scheme of schemes.filter(s=>s.role===binding.role && s.scenario===binding.scenario && s.priorityDisplaySource)) {
+      const keys=Object.entries(binding.fields || {}).filter(([key,value])=>fieldKeys.has(key) && value===scheme.priorityDisplaySource)
+      if(keys.length===1) defaults.add(keys[0][0]); else unresolved=true
+    }
+  }
+  const key=[...defaults][0]
+  const inherit=unresolved?'中心字段未匹配':defaults.size>1?'多个中心方案冲突':key?fields.find(f=>f.key===key).label:'未指定'
+  return {fields,inherit,stale:!!row.priorityDisplayOverride && !fieldKeys.has(row.priorityDisplayOverride)}
+}
+
 // Only the keyword, declared WeChat type and placeholder are portable; no account ID, template ID or body.
 export function exportKeywordStructure(content) {
   const rows = [], keys = new Set(), labels = new Set()

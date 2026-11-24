@@ -352,6 +352,13 @@ export interface DepositAmountRequest {
   amount?: number
 }
 
+export interface DisplayFieldChoice {
+  /**
+   * 实际模板字段；空字符串恢复继承。仅本地偏好。
+   */
+  fieldKey: string
+}
+
 export interface EnableRequest {
   enabled: boolean
 }

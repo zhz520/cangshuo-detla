@@ -21,6 +21,10 @@ export function getWechatTemplateCatalog(id) {
   return request({ url: `/admin/wechat/accounts/${id}/templates`, method: 'get' })
 }
 
+export function setWechatDisplayField(account, template, fieldKey) {
+  return request({url:`/admin/wechat/accounts/${encodeURIComponent(account)}/templates/${encodeURIComponent(template)}/display-field`,method:'put',data:{fieldKey}})
+}
+
 export function syncWechatTemplates(id) {
   return request({ url: `/admin/wechat/accounts/${id}/templates/sync`, method: 'post', data: {} })
 }

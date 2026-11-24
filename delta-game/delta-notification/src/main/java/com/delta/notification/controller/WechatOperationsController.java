@@ -100,6 +100,16 @@ public class WechatOperationsController {
         return R.ok(accounts.syncTemplates(id));
     }
 
+    public record DisplayFieldChoice(String fieldKey) {}
+    @PutMapping("/admin/wechat/accounts/{id}/templates/{templateId}/display-field")
+    @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
+    @OpLog(module="wechat",operation="配置模板优先展示偏好")
+    public R<Void> displayField(@PathVariable String id,@PathVariable String templateId,@RequestBody DisplayFieldChoice choice,HttpServletRequest request) {
+        requireFeature(request);
+        accounts.setDisplayField(id,templateId,choice.fieldKey());
+        return R.ok();
+    }
+
     @PutMapping("/admin/wechat/accounts/{id}/templates")
     @PreAuthorize("hasRole('ADMIN') and @staffPermissions.allowed('system.manage')")
     @OpLog(module = "wechat", operation = "保存公众号模板映射")

@@ -109,9 +109,21 @@
         </el-tab-pane>
 
         <el-tab-pane label="公众号模板库" name="catalog">
+          <p>这里保存展示偏好。微信卡片实际展示以公众平台「类目模板 → 详情」设置为准。</p>
           <DataTable :loading="loadingCatalog" :data="catalog" row-key="templateId" empty-text="还没有同步模板，请点击上方“同步模板”">
             <el-table-column prop="title" label="模板标题" min-width="220" />
             <el-table-column prop="templateId" label="模板 ID" min-width="230" show-overflow-tooltip />
+            <el-table-column label="优先展示字段" min-width="210">
+              <template #default="{ row }">
+                <el-select :model-value="row.priorityDisplayOverride || '__inherit'" aria-label="优先展示字段"
+                  :disabled="!!savingDisplay || loadingCatalog || loadedAccountId !== selectedId || (!displayInfo(row).fields.length && !row.priorityDisplayOverride)"
+                  @change="saveDisplay(row,$event)">
+                  <el-option value="__inherit" :label="'继承授权中心：'+displayInfo(row).inherit"/>
+                  <el-option v-if="displayInfo(row).stale" :value="row.priorityDisplayOverride" label="原字段已失效" disabled/>
+                  <el-option v-for="f in displayInfo(row).fields" :key="f.key" :value="f.key" :label="f.label+'（'+f.key+'）'"/>
+                </el-select>
+              </template>
+            </el-table-column>
             <el-table-column prop="primaryIndustry" label="主行业" min-width="150" />
             <el-table-column prop="syncedAt" label="同步时间" min-width="170" />
             <el-table-column label="字段清单" width="135">
@@ -201,10 +213,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import DataTable from '@/components/DataTable.vue'
 import { notificationConfigGuide } from '@/utils/notification-examples'
-import { exportKeywordStructure, existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
+import { cardDisplay, exportKeywordStructure, existingFieldsForTemplate, suggestWechatFields, suggestWechatTemplate } from './template-mapping'
 import {
   deleteWechatAccount, deleteWechatTemplate, getWechatAccounts, getWechatReadiness,
-  getWechatTemplateCatalog, saveWechatAccount, saveWechatTemplate, syncWechatTemplates, provisionWechatTemplates, getNoticeSender, changeNoticeSender,
+  getWechatTemplateCatalog, setWechatDisplayField, saveWechatAccount, saveWechatTemplate, syncWechatTemplates, provisionWechatTemplates, getNoticeSender, changeNoticeSender,
   getWechatOpenStatus, startWechatOpenAuthorization, completeWechatOpenAuthorization
 } from '@/api/wechat-operations'
 
@@ -458,6 +470,20 @@ function repairRevision(row) {
   const s=authoritySchemes.value.find(x=>x.role===row.role && x.scenario===row.scenario && x.mappingMode==='SEMANTIC')
   if(!s?.revision || templateSetup.value.status!=='ATTENTION' || templateSetup.value.revisions?.[row.role+':'+row.scenario]!==s.revision) return ''
   return templateSetup.value.issues?.some(i=>i.role===row.role && i.scenario===row.scenario && i.code==='RECEIPT_NOT_IN_CATALOG') ? s.revision : ''
+}
+const savingDisplay=ref('')
+const displayInfo=row=>cardDisplay(row,readinessRows.value,authoritySchemes.value)
+async function saveDisplay(row,value) {
+  const account=selectedId.value
+  if(!account || loadedAccountId.value!==account || savingDisplay.value || !catalog.value.includes(row)) return
+  const fieldKey=value==='__inherit'?'':value
+  if(fieldKey && !displayInfo(row).fields.some(f=>f.key===fieldKey)) return
+  savingDisplay.value=account
+  try {
+    await setWechatDisplayField(account,row.templateId,fieldKey)
+    if(selectedId.value===account) { await loadAccountData(); ElMessage.success('已保存展示偏好') }
+  } catch(e){ if(selectedId.value===account) ElMessage.error(apiError(e,'展示偏好保存失败')) }
+  finally { savingDisplay.value='' }
 }
 async function confirmRepair(row) {
   const id=selectedId.value, revision=repairRevision(row)

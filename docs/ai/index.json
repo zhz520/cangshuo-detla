@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.22.3",
-  "inputDigest": "sha256:d6cce51c64b3a428ecd8e2759c2234a3e6462a9c6758552c620b575a532c88c0",
+  "inputDigest": "sha256:011107390fcbdaf04453e757cfd3c4fdc114f78e05e17c4d8174fbcafd620b5f",
   "counts": {
     "modules": 19,
     "controllers": 117,
@@ -9,9 +9,9 @@
     "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
-    "migrations": 41,
+    "migrations": 42,
     "backendTests": 136,
-    "adminTests": 48,
+    "adminTests": 49,
     "h5Tests": 27
   },
   "modules": [
@@ -586,7 +586,7 @@
         {
           "name": "WechatOperationsController",
           "file": "delta-game/delta-notification/src/main/java/com/delta/notification/controller/WechatOperationsController.java",
-          "endpoints": 12
+          "endpoints": 13
         },
         {
           "name": "WechatOperationsToolsController",
@@ -1738,6 +1738,7 @@
           "saveWechatTag",
           "saveWechatTemplate",
           "sendWechatMassSend",
+          "setWechatDisplayField",
           "startWechatOpenAuthorization",
           "syncWechatFans",
           "syncWechatMaterials",
@@ -1799,6 +1800,7 @@
       "delta-admin-ui/test/wechat-menu-model.test.mjs",
       "delta-admin-ui/test/wechat-menu-preview-browser.mjs",
       "delta-admin-ui/test/wechat-operations-theme.test.mjs",
+      "delta-admin-ui/test/wechat-priority-display.test.mjs",
       "delta-admin-ui/test/wechat-template-mapping.test.mjs",
       "delta-admin-ui/test/workbench-links.test.mjs"
     ]
@@ -2128,13 +2130,17 @@
       {
         "kind": "baota",
         "path": "deploy/baota/migrations/20261123-wechat-template-setup.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261124-wechat-display-preference.sql"
       }
     ],
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
   },
   "contracts": {
-    "endpoints": 542,
-    "operations": 542,
-    "schemas": 293
+    "endpoints": 543,
+    "operations": 543,
+    "schemas": 294
   }
 }

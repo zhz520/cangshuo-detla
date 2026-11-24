@@ -153,6 +153,38 @@ async function repairConfirmation(browser) {
   console.log('PASS: explicit per-account repair; cancel makes no request, confirm posts the selected revision once')
 }
 
+async function displayPreference(browser) {
+  const item={templateId:'tmpl-seven',title:'新订单',content:'产品：{{thing7.DATA}}\n金额：{{amount9.DATA}}',priorityDisplayOverride:''}
+  const writes=[]
+  await withFixturePage(browser,entry,async (p,req)=>{
+    if(p===base+'/a/templates/tmpl-seven/display-field'){
+      assert.equal(req.method(),'PUT')
+      item.priorityDisplayOverride=req.postDataJSON().fieldKey;writes.push(item.priorityDisplayOverride);return null
+    }
+    assert.equal(req.method(),'GET')
+    if(p===base+'/a/templates') return [item]
+    assert.equal(p,base+'/a/readiness')
+    return {templates:[{role:'ADMIN',scenario:'new_order',templateId:item.templateId,enabled:true,configured:true,status:'READY',fields:{thing7:'productName',amount9:'orderAmount'}}],
+      authoritySchemes:[{role:'ADMIN',scenario:'new_order',priorityDisplaySource:'productName'}],templateSetup:{status:'DONE'}}
+  },async page=>{
+    const open=async()=>{await page.goto(origin+entry);await page.getByRole('tab',{name:'公众号模板库'}).click()}
+    await open()
+    const cell=page.getByRole('cell').filter({has:page.getByRole('combobox',{name:'优先展示字段'})})
+    const choose=async label=>{
+      await cell.locator('.el-select__wrapper').click()
+      await page.getByRole('option',{name:label,exact:true}).click()
+    }
+    await cell.getByText('继承授权中心：产品',{exact:true}).waitFor()
+    await choose('金额（amount9）')
+    await cell.getByText('金额（amount9）',{exact:true}).waitFor()
+    await open()
+    await cell.getByText('金额（amount9）',{exact:true}).waitFor()
+    await choose('继承授权中心：产品')
+    await cell.getByText('继承授权中心：产品',{exact:true}).waitFor()
+    assert.deepEqual(writes,['amount9',''])
+  })
+  console.log('PASS: inherited display preference, override persisted, restored inheritance; no WeChat request')
+}
 async function notificationSwitch(browser) {
   const field = { id: 42, configKey: 'wechat.official.enabled', configGroup: '公众号通知',
     configName: '公众号模板通知', valueType: 'select', configValue: 'auto' }
@@ -199,5 +231,6 @@ try {
   await exercise(browser, false)
   await exercise(browser, true)
   await repairConfirmation(browser)
+  await displayPreference(browser)
   await notificationSwitch(browser)
 } finally { await browser.close() }

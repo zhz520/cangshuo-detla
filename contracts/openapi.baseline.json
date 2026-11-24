@@ -7385,6 +7385,18 @@
         }
       }
     },
+    "/admin/wechat/accounts/{id}/templates/{templateId}/display-field" : {
+      "put" : {
+        "tags" : [ "wechat-operations-controller" ],
+        "operationId" : "displayField",
+        "parameters" : [
+          { "name" : "id", "in" : "path", "required" : true, "schema" : { "type" : "string" } },
+          { "name" : "templateId", "in" : "path", "required" : true, "schema" : { "type" : "string" } }
+        ],
+        "requestBody" : { "required" : true, "content" : { "application/json" : { "schema" : { "$ref" : "#/components/schemas/DisplayFieldChoice" } } } },
+        "responses" : { "200" : { "description" : "OK", "content" : { "*/*" : { "schema" : { "$ref" : "#/components/schemas/RVoid" } } } } }
+      }
+    },
     "/admin/wechat/accounts/{id}/templates/provision" : {
       "post" : {
         "tags" : [ "wechat-operations-controller" ],
@@ -19715,6 +19727,7 @@
           }
         }
       },
+      "DisplayFieldChoice" : { "type" : "object", "required" : ["fieldKey"], "properties" : { "fieldKey" : { "type" : "string", "description" : "实际模板字段；空字符串恢复继承。仅本地偏好。" } } },
       "TemplateRepair" : {
         "type" : "object",
         "properties" : {

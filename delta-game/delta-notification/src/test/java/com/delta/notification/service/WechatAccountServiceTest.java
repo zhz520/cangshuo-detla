@@ -18,6 +18,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 class WechatAccountServiceTest {
+    @Test void displayChoiceIsLocalToOneAccountTemplateAndCanBeCleared() {
+        for(String id:java.util.List.of("one","two")){
+            jdbc.update("INSERT INTO wechat_mp_account(id,name,app_id) VALUES(?,?,?)",id,id,id);
+            jdbc.update("INSERT INTO wechat_mp_template_catalog(account_id,template_id,title,content) VALUES(?,'shared','测试','产品：{{thing7.DATA}}')",id);
+        }
+        service.setDisplayField("one","shared","thing7");
+        assertThat(service.catalog("one").get(0)).containsEntry("priorityDisplayOverride","thing7");
+        assertThat(service.catalog("two").get(0)).containsEntry("priorityDisplayOverride","");
+        assertThatThrownBy(()->service.setDisplayField("one","shared","thing3")).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(()->service.setDisplayField("absent","shared","thing7")).isInstanceOf(BusinessException.class);
+        service.setDisplayField("one","shared","");
+        assertThat(service.catalog("one").get(0)).containsEntry("priorityDisplayOverride","");
+    }
     private JdbcTemplate jdbc;
     private WechatAccountService service;
     private PlatformService platform;
@@ -27,6 +40,8 @@ class WechatAccountServiceTest {
         JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:wechat_accounts;MODE=MySQL;DB_CLOSE_DELAY=-1");
         jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("DROP TABLE IF EXISTS wechat_mp_display_preference");
+        jdbc.execute("CREATE TABLE wechat_mp_display_preference(account_id VARCHAR(36),template_id VARCHAR(128),field_key VARCHAR(64),PRIMARY KEY(account_id,template_id))");
         jdbc.execute("DROP TABLE IF EXISTS wechat_mp_template");
         jdbc.execute("DROP TABLE IF EXISTS wechat_mp_template_catalog");
         jdbc.execute("DROP TABLE IF EXISTS wechat_mp_account");
@@ -91,13 +106,14 @@ class WechatAccountServiceTest {
     void authoritySchemePrefillsMappingsButNeverSuppliesATemplateId() throws Exception {
         when(platform.projectSnapshot()).thenReturn(new ObjectMapper().readTree("""
                 {"wechatTemplates":{"version":1,"schemes":[{"role":"ADMIN","scenario":"new_order",
-                "name":"管理员 · 新订单","templateHint":"新订单待处理","fields":{"thing1":"message"},"version":2}]}}
+                "name":"管理员 · 新订单","templateHint":"新订单待处理","fields":{"thing1":"message"},"priorityDisplaySource":"message","version":2}]}}
                 """));
         String accountId = String.valueOf(service.saveAccount(Map.of(
                 "name", "沧炼服务号", "appId", "wx1234567890abcdef", "appSecret", "super-secret-value",
                 "defaultAccount", true)).get("id"));
 
         assertThat(service.authoritySchemes()).hasSize(1);
+        assertThat(service.authoritySchemes().get(0)).containsEntry("priorityDisplaySource","message").doesNotContainKey("templateId");
         service.saveTemplate(accountId, Map.of(
                 "role", "ADMIN", "scenario", "new_order", "templateId", "admin-new-order", "fields", Map.of()));
 

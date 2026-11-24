@@ -147,6 +147,7 @@ public class WechatAccountService {
         if (account == null) throw new BusinessException(404, "公众号账号不存在");
         jdbc.update("DELETE FROM wechat_mp_template WHERE account_id=?", id);
         jdbc.update("DELETE FROM wechat_mp_template_catalog WHERE account_id=?", id);
+        jdbc.update("DELETE FROM wechat_mp_display_preference WHERE account_id=?",id);
         jdbc.update("DELETE FROM wechat_mp_account WHERE id=?", id);
         if (account.defaultAccount()) {
             List<String> candidates = jdbc.queryForList("SELECT id FROM wechat_mp_account WHERE account_mode='DIRECT' AND enabled=1 ORDER BY created_at ASC LIMIT 1", String.class);
@@ -159,10 +160,25 @@ public class WechatAccountService {
                 .orElseThrow(() -> new BusinessException(404, "公众号账号不存在"));
     }
 
+    /** Local operator preference only. Not a WeChat API write or acknowledgement. */
+    @Transactional(rollbackFor=Exception.class)
+    public void setDisplayField(String accountId,String templateId,String fieldKey) {
+        if(fieldKey==null || (!fieldKey.isEmpty() && !fieldKey.matches("[A-Za-z_]+[0-9]{0,4}")) || fieldKey.length()>64)
+            throw new BusinessException(400,"请选择当前模板的字段");
+        var found=jdbc.queryForList("SELECT content FROM wechat_mp_template_catalog WHERE account_id=? AND template_id=? FOR UPDATE",String.class,accountId,templateId);
+        if(found.size()!=1 || requireAccount(accountId)==null) throw new BusinessException(404,"本公众号目录中没有该模板");
+        if(fieldKey.isEmpty()) {
+            jdbc.update("DELETE FROM wechat_mp_display_preference WHERE account_id=? AND template_id=?",accountId,templateId);
+            return;
+        }
+        if(!Objects.toString(found.get(0),"").contains("{{"+fieldKey+".DATA}}")) throw new BusinessException(400,"模板字段已变化，请刷新目录");
+        jdbc.update("INSERT INTO wechat_mp_display_preference(account_id,template_id,field_key) VALUES(?,?,?) ON DUPLICATE KEY UPDATE field_key=VALUES(field_key)",accountId,templateId,fieldKey);
+    }
+
     public List<Map<String, Object>> catalog(String accountId) {
         requireAccount(accountId);
-        return jdbc.query("SELECT template_id,title,content,primary_industry,deputy_industry,synced_at " +
-                                "FROM wechat_mp_template_catalog WHERE account_id=? ORDER BY title",
+        return jdbc.query("SELECT c.template_id,c.title,c.content,c.primary_industry,c.deputy_industry,c.synced_at,p.field_key " +
+                                "FROM wechat_mp_template_catalog c LEFT JOIN wechat_mp_display_preference p ON p.account_id=c.account_id AND p.template_id=c.template_id WHERE c.account_id=? ORDER BY c.title,c.template_id",
                 (rs, n) -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("templateId", rs.getString("template_id"));
@@ -170,6 +186,7 @@ public class WechatAccountService {
                     row.put("content", rs.getString("content"));
                     row.put("primaryIndustry", rs.getString("primary_industry"));
                     row.put("deputyIndustry", rs.getString("deputy_industry"));
+                    row.put("priorityDisplayOverride", Objects.toString(rs.getString("field_key"),""));
                     row.put("syncedAt", rs.getTimestamp("synced_at"));
                     return row;
                 }, accountId);
@@ -345,6 +362,7 @@ public class WechatAccountService {
                 row.put("example", truncate(scheme.path("example").asText(""), 240));
                 JsonNode suggestions = scheme.path("fieldSuggestions");
                 if (suggestions.isArray() && suggestions.size() <= 20) row.put("fieldSuggestions", suggestions);
+                row.put("priorityDisplaySource",scheme.path("priorityDisplaySource").asText(""));
                 row.put("fields", fields);
                 row.put("url", truncate(scheme.path("url").asText(""), 2000));
                 if ("SEMANTIC".equals(scheme.path("mappingMode").asText())) {
