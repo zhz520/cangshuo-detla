@@ -39,7 +39,7 @@ function performRequest(options) {
     url,
     method = 'GET',
     data = {},
-    loading = true,
+    loading = method !== 'GET',
     auth = true,
     role,
     header = {},

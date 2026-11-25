@@ -16,6 +16,10 @@ public class Product extends BaseEntity {
     private String name;
     private String subtitle;
     private String description;
+    /** 详情页「服务内容」短说明，纯文本。 */
+    private String serviceContent;
+    /** 详情页「详情与须知」富文本。 */
+    private String detail;
     private String coverImage;
     private String images;
     private BigDecimal price;

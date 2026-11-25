@@ -1,10 +1,10 @@
 /* Generated from contracts/ui-motion.json */
 page, :root {
-  --delta-motion-enter: 300ms;
-  --delta-motion-back: 240ms;
-  --delta-motion-tab: 200ms;
+  --delta-motion-enter: 320ms;
+  --delta-motion-back: 280ms;
+  --delta-motion-tab: 320ms;
   --delta-motion-feedback: 160ms;
-  --delta-motion-distance: 16px;
-  --delta-motion-ease: cubic-bezier(.16,1,.3,1);
+  --delta-motion-distance: 20px;
+  --delta-motion-ease: cubic-bezier(.2,.8,.2,1);
   --delta-motion-pulse: 1400ms;
 }

@@ -73,6 +73,8 @@ const officialWechat = useOfficialWechatStore()
 const homeData = ref({})
 const recentOrders = ref([])
 const loading = ref(false), loaded = ref(false), loadError = ref(''), toggling = ref(false)
+let lastLoadedAt = 0
+const DASHBOARD_TTL = 15000
 
 const isOnline = computed(() => playerStore.playerInfo?.isOnline === 1)
 
@@ -80,7 +82,7 @@ onShow(() => {
   try { uni.hideHomeButton() } catch (_) {}
   officialWechat.load('player')
   remindStore.fetchPlayerRemind()
-  loadDashboard()
+  if (!lastLoadedAt || Date.now() - lastLoadedAt > DASHBOARD_TTL) loadDashboard()
 })
 async function loadDashboard() {
   if (loading.value) return
@@ -94,6 +96,7 @@ async function loadDashboard() {
   else loadError.value = '工作台数据暂未获取，请检查网络后重试。'
   if (work.status === 'fulfilled') recentOrders.value = work.value.data?.records || []
   loading.value = false
+  lastLoadedAt = Date.now()
 }
 
 async function onToggleOnline(e) {

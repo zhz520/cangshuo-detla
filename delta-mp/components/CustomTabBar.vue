@@ -48,6 +48,7 @@ const safeBottom = ref(0)
 const initialMotion = takeTabMotion()
 let navigating = false
 let flowTimer
+let scrollLocked = false
 
 const baseTabs = computed(() => ROLE_TABS[appStore.role] || ROLE_TABS.user)
 const currentTabs = computed(() => {
@@ -102,9 +103,7 @@ function tabRedDot(tab) {
 onMounted(() => {
   const windowInfo = uni.getWindowInfo()
   safeBottom.value = windowInfo.safeAreaInsets?.bottom || 0
-  // #ifdef H5
-  holdTabbarScrollLock()
-  // #endif
+  acquireScrollLock()
   requestAnimationFrame(() => requestAnimationFrame(() => {
     if (currentIndex.value >= 0 && displayIndex.value !== currentIndex.value) {
       startPillFlow()
@@ -124,22 +123,32 @@ watch(() => [currentIndex.value, currentTabs.value.length], () => {
 })
 
 onShow(() => {
-  // #ifdef H5
-  holdTabbarScrollLock()
-  // #endif
+  acquireScrollLock()
 })
 
 onHide(() => {
-  // #ifdef H5
-  releaseTabbarScrollLock()
-  // #endif
+  releaseScrollLock()
 })
 
 onUnmounted(() => {
+  releaseScrollLock()
+})
+
+function acquireScrollLock() {
+  if (scrollLocked) return
+  scrollLocked = true
+  // #ifdef H5
+  holdTabbarScrollLock()
+  // #endif
+}
+
+function releaseScrollLock() {
+  if (!scrollLocked) return
+  scrollLocked = false
   // #ifdef H5
   releaseTabbarScrollLock()
   // #endif
-})
+}
 
 const TAB_BAR_PAGES = [
   '/pages/index/index',

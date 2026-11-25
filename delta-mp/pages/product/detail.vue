@@ -1,4 +1,5 @@
 <template>
+  <view class="product-page">
   <view class="product-detail" v-if="product">
     <ScreenHeader class="detail-header" title="服务详情" back center>
       <view class="header-btn" role="button" aria-label="分享" @click="shareProduct">
@@ -51,7 +52,7 @@
           <image class="info-icon" src="/static/icons/svc-gamepad.svg" mode="aspectFit" />
           <text class="info-label">服务内容</text>
           <view class="info-line" />
-          <text class="info-value">{{ descriptionText || '以本页服务说明为准' }}</text>
+          <text class="info-value">{{ serviceContentText || '以本页服务说明为准' }}</text>
         </view>
         <view class="info-row" v-if="product.categoryName">
           <image class="info-icon" src="/static/icons/svc-tag.svg" mode="aspectFit" />
@@ -143,12 +144,18 @@
       </view>
     </view>
   </view>
+  <view v-else class="detail-loading-page">
+    <ScreenHeader class="detail-header" title="服务详情" back center />
+    <LoadFeedback />
+  </view>
+  </view>
 </template>
 <script setup>
 import { useReducedMotion } from '@/composables/useReducedMotion'
 const reducedMotion = useReducedMotion()
 import AppImage from '@/components/AppImage.vue'
 import ScreenHeader from '@/components/ScreenHeader.vue'
+import LoadFeedback from '@/components/LoadFeedback.vue'
 import { ref, computed } from 'vue'
 import { onLoad, onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { productDescriptionHtml } from '@/utils/product-content'
@@ -194,7 +201,7 @@ const limitLabel = computed(() => {
   if (labels[type]) return labels[type]
   return product.value?.perUserLimitEnabled === 1 && product.value?.perUserLimitCount ? '限购 ' + product.value.perUserLimitCount + ' 次' : ''
 })
-const descriptionText = computed(() => String(product.value?.description || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim())
+const serviceContentText = computed(() => String(product.value?.serviceContent || '').trim())
 const detailHtml = computed(() => productDescriptionHtml(product.value?.detail || product.value?.description))
 const images = computed(() => {
   if (!product.value) return []
@@ -299,6 +306,10 @@ function goBuy() {
 }
 </script>
 <style lang="scss" scoped>
+.product-page {
+  min-height: var(--app-page-height, 100vh);
+  background: var(--store-soft);
+}
 .product-detail {
   min-height: var(--app-page-height, 100vh);
   background: var(--store-soft);
@@ -320,6 +331,7 @@ function goBuy() {
   image { display: block; width: 40rpx; height: 40rpx; }
 }
 .detail-body { padding: 8rpx 28rpx 0; }
+.detail-loading-page { padding: 8rpx 28rpx 0; }
 .banner-wrap {
   position: relative;
   overflow: hidden;

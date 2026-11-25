@@ -31,7 +31,9 @@ const recentOrders = ref([])
 
 const playerStore = usePlayerStore()
 const loading = ref(false), loaded = ref(false), error = ref('')
-onShow(load)
+let lastLoadedAt = 0
+const DASHBOARD_TTL = 15000
+onShow(() => { if (!lastLoadedAt || Date.now() - lastLoadedAt > DASHBOARD_TTL) load() })
 async function load() {
   if (loading.value) return
   loading.value = true; error.value = ''
@@ -40,6 +42,7 @@ async function load() {
   else error.value = '工作台数据暂未获取，请稍后重试。'
   if (work.status === 'fulfilled') recentOrders.value = work.value.data?.records || []
   loading.value = false
+  lastLoadedAt = Date.now()
 }
 
 function go(url) { if (['/pages-player/hall/index', '/pages-player/order/list'].includes(url)) uni.redirectTo({ url }); else uni.navigateTo({ url }) }
