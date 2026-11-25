@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getSiteConfig, getThemeConfig } from '@/api/config'
-import { clientStorage as themeStorage } from '@/utils/client-storage'
+import { clientStorage } from '@/utils/client-storage'
+
+const SITE_CACHE_KEY = 'site-config-v1'
+const THEME_CACHE_KEY = 'theme-config-v1'
+const CONFIG_TTL = 60000
 
 export const useSiteStore = defineStore('site', () => {
   const siteName = ref('三角洲')
@@ -42,6 +46,8 @@ export const useSiteStore = defineStore('site', () => {
   const userThemeAllowed = ref(false)
   const userThemeOptions = ref([])
   let pendingTheme
+  let lastSiteFetch = 0
+  let lastThemeFetch = 0
   const themeId = computed(() => (userThemeAllowed.value && userTheme.value) || tenantThemeId.value)
   const externalCustomerServiceEnabled = computed(() =>
     customerServiceMode.value === 'external' && /^https:\/\//i.test(customerServiceUrl.value)
@@ -50,76 +56,68 @@ export const useSiteStore = defineStore('site', () => {
   let pendingConfigRequest = null
   let noticePopupShownThisSession = false
 
+  function applySiteConfig(data = {}) {
+    if (data.site_name) siteName.value = data.site_name
+    if (data.site_subtitle) subtitle.value = data.site_subtitle
+    if (data.site_logo) logo.value = data.site_logo
+    if (data.site_admin_title) adminTitle.value = data.site_admin_title
+    if (data.player_commission_rate !== undefined && data.player_commission_rate !== null) {
+      playerCommissionRate.value = Number(data.player_commission_rate) || 0
+    }
+    if (data.player_deposit_required !== undefined) {
+      depositRequired.value = data.player_deposit_required === 'true'
+    }
+    if (data.player_deposit_mode !== undefined) {
+      depositMode.value = ['REQUIRED','NONE','BEFORE_WITHDRAW'].includes(data.player_deposit_mode) ? data.player_deposit_mode : 'REQUIRED'
+    }
+    if (data.wx_pay_enabled !== undefined) wxPayEnabled.value = data.wx_pay_enabled === 'true'
+    if (data.wx_pay_miniapp_enabled !== undefined) wxPayMiniappEnabled.value = data.wx_pay_miniapp_enabled === 'true'
+    if (data.wx_pay_h5_enabled !== undefined) wxPayH5Enabled.value = data.wx_pay_h5_enabled === 'true'
+    if (data.wx_pay_official_enabled !== undefined) wxPayOfficialEnabled.value = data.wx_pay_official_enabled === 'true'
+    if (data.order_purchase_enabled !== undefined) orderPurchaseEnabled.value = data.order_purchase_enabled === 'true'
+    if (data.order_contact_purchase_enabled !== undefined) orderContactPurchaseEnabled.value = data.order_contact_purchase_enabled === 'true'
+    if (data.order_guest_checkout_enabled !== undefined) guestCheckoutEnabled.value = data.order_guest_checkout_enabled === 'true'
+    if (data.player_directory_enabled !== undefined) playerDirectoryEnabled.value = data.player_directory_enabled !== 'false'
+    if (data.notice_popup_every_visit !== undefined) noticePopupEveryVisit.value = data.notice_popup_every_visit === 'true'
+    if (data.tech_support_text !== undefined) techSupportText.value = String(data.tech_support_text || '').trim() || 'KK云网络提供技术支持'
+    if (data.tech_support_url !== undefined) techSupportUrl.value = String(data.tech_support_url || '').trim()
+    if (data.customer_service_mode !== undefined) customerServiceMode.value = data.customer_service_mode === 'external' ? 'external' : 'internal'
+    if (data.customer_service_external_url !== undefined) customerServiceUrl.value = String(data.customer_service_external_url || '').trim()
+    if (data.customer_service_home_icon_visible !== undefined) customerServiceHomeIconVisible.value = data.customer_service_home_icon_visible !== 'false'
+    if (data.staff_web_url !== undefined) staffWebUrl.value = String(data.staff_web_url || '').trim()
+    if (data.customer_web_url !== undefined) customerWebUrl.value = String(data.customer_web_url || '').trim()
+  }
+
+  function applyThemeConfig(data = {}) {
+    tenantThemeId.value = ['default','neumorphism','dark'].includes(data?.id) ? data.id : 'default'
+    const allowed = data?.userSwitchEnabled === 'true'
+    userThemeAllowed.value = allowed
+    userThemeOptions.value = allowed ? String(data?.userThemeOptions || 'default,dark').split(',').filter(id => ['default','dark'].includes(id)) : []
+    const cached = allowed ? clientStorage.get('h5-theme-preference') : ''
+    userTheme.value = userThemeOptions.value.includes(cached) ? cached : ''
+    if (!allowed) clientStorage.remove('h5-theme-preference')
+  }
+
+  try {
+    const cachedSite = clientStorage.get(SITE_CACHE_KEY)
+    if (cachedSite?.data) applySiteConfig(cachedSite.data)
+    const cachedTheme = clientStorage.get(THEME_CACHE_KEY)
+    if (cachedTheme?.data) applyThemeConfig(cachedTheme.data)
+  } catch (_) {}
+
   /** 完整平台名称（用于协议等文案） */
   const fullName = computed(() => siteName.value + '平台')
 
-  async function fetchSiteConfig() {
+  async function fetchSiteConfig({ force = false } = {}) {
+    if (!force && lastSiteFetch && Date.now() - lastSiteFetch < CONFIG_TTL) return
     if (pendingConfigRequest) return pendingConfigRequest
     pendingConfigRequest = (async () => {
       try {
         const res = await getSiteConfig()
         const data = res.data || {}
-        if (data.site_name) siteName.value = data.site_name
-        if (data.site_subtitle) subtitle.value = data.site_subtitle
-        if (data.site_logo) logo.value = data.site_logo
-        if (data.site_admin_title) adminTitle.value = data.site_admin_title
-        if (data.player_commission_rate !== undefined && data.player_commission_rate !== null) {
-          playerCommissionRate.value = Number(data.player_commission_rate) || 0
-        }
-        if (data.player_deposit_required !== undefined) {
-          depositRequired.value = data.player_deposit_required === 'true'
-        }
-        if (data.player_deposit_mode !== undefined) {
-          depositMode.value = ['REQUIRED','NONE','BEFORE_WITHDRAW'].includes(data.player_deposit_mode) ? data.player_deposit_mode : 'REQUIRED'
-        }
-        if (data.wx_pay_enabled !== undefined) {
-          wxPayEnabled.value = data.wx_pay_enabled === 'true'
-        }
-        if (data.wx_pay_miniapp_enabled !== undefined) {
-          wxPayMiniappEnabled.value = data.wx_pay_miniapp_enabled === 'true'
-        }
-        if (data.wx_pay_h5_enabled !== undefined) {
-          wxPayH5Enabled.value = data.wx_pay_h5_enabled === 'true'
-        }
-        if (data.wx_pay_official_enabled !== undefined) {
-          wxPayOfficialEnabled.value = data.wx_pay_official_enabled === 'true'
-        }
-        if (data.order_purchase_enabled !== undefined) {
-          orderPurchaseEnabled.value = data.order_purchase_enabled === 'true'
-        }
-        if (data.order_contact_purchase_enabled !== undefined) {
-          orderContactPurchaseEnabled.value = data.order_contact_purchase_enabled === 'true'
-        }
-        if (data.order_guest_checkout_enabled !== undefined) {
-          guestCheckoutEnabled.value = data.order_guest_checkout_enabled === 'true'
-        }
-        if (data.player_directory_enabled !== undefined) {
-          playerDirectoryEnabled.value = data.player_directory_enabled !== 'false'
-        }
-        if (data.notice_popup_every_visit !== undefined) {
-          noticePopupEveryVisit.value = data.notice_popup_every_visit === 'true'
-        }
-        if (data.tech_support_text !== undefined) {
-          techSupportText.value = String(data.tech_support_text || '').trim() || 'KK云网络提供技术支持'
-        }
-        if (data.tech_support_url !== undefined) {
-          techSupportUrl.value = String(data.tech_support_url || '').trim()
-        }
-        if (data.customer_service_mode !== undefined) {
-          customerServiceMode.value = data.customer_service_mode === 'external' ? 'external' : 'internal'
-        }
-        if (data.customer_service_external_url !== undefined) {
-          customerServiceUrl.value = String(data.customer_service_external_url || '').trim()
-        }
-        if (data.customer_service_home_icon_visible !== undefined) {
-          customerServiceHomeIconVisible.value = data.customer_service_home_icon_visible !== 'false'
-        }
-        if (data.staff_web_url !== undefined) {
-          staffWebUrl.value = String(data.staff_web_url || '').trim()
-        }
-        if (data.customer_web_url !== undefined) {
-          customerWebUrl.value = String(data.customer_web_url || '').trim()
-        }
+        applySiteConfig(data)
+        lastSiteFetch = Date.now()
+        try { clientStorage.set(SITE_CACHE_KEY, { data, at: lastSiteFetch }) } catch (_) {}
       } catch (e) {
         console.warn('[SiteStore] fetch site config failed', e)
       } finally {
@@ -129,18 +127,15 @@ export const useSiteStore = defineStore('site', () => {
     return pendingConfigRequest
   }
 
-  function fetchThemeConfig() {
+  function fetchThemeConfig({ force = false } = {}) {
+    if (!force && lastThemeFetch && Date.now() - lastThemeFetch < CONFIG_TTL) return Promise.resolve(themeId.value)
     if (pendingTheme) return pendingTheme
     pendingTheme = (async () => {
       try {
         const { data } = await getThemeConfig()
-        tenantThemeId.value = ['default','neumorphism','dark'].includes(data?.id) ? data.id : 'default'
-        const allowed = data?.userSwitchEnabled === 'true'
-        userThemeAllowed.value = allowed
-        userThemeOptions.value = allowed ? String(data?.userThemeOptions || 'default,dark').split(',').filter(id => ['default','dark'].includes(id)) : []
-        const cached = allowed ? themeStorage.get('h5-theme-preference') : ''
-        userTheme.value = userThemeOptions.value.includes(cached) ? cached : ''
-        if (!allowed) themeStorage.remove('h5-theme-preference')
+        applyThemeConfig(data)
+        lastThemeFetch = Date.now()
+        try { clientStorage.set(THEME_CACHE_KEY, { data, at: lastThemeFetch }) } catch (_) {}
       } catch (_) { /* Keep the last working theme if config is temporarily unavailable. */ }
       return themeId.value
     })().finally(() => { pendingTheme = null })
@@ -150,7 +145,7 @@ export const useSiteStore = defineStore('site', () => {
   function setUserTheme(id) {
     if (!userThemeAllowed.value || (id !== '' && !userThemeOptions.value.includes(id))) return
     userTheme.value = id
-    try { themeStorage.set('h5-theme-preference', id) } catch (_) {}
+    try { clientStorage.set('h5-theme-preference', id) } catch (_) {}
   }
 
   function hasShownNoticePopupThisSession() {

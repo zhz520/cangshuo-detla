@@ -50,6 +50,8 @@ const allCategories = ref([])
 let categoriesLoaded = false
 let categoryRequest = null
 let disposed = false
+let lastLoadedAt = 0
+const HALL_TTL = 10000
 const {
   query: categoryId, items: orders, loading, phase, error, finished,
   refresh, loadMore, retry, setQuery: filterCategory, cancel, dispose
@@ -94,7 +96,9 @@ function getCategoryIdsUnderMain(mainId) {
 onShow(() => {
   try { uni.hideHomeButton() } catch (_) {}
   remindStore.fetchPlayerRemind()
-  refresh()
+  if (!lastLoadedAt || Date.now() - lastLoadedAt > HALL_TTL) {
+    refresh().then(() => { lastLoadedAt = Date.now() })
+  }
 })
 
 onHide(cancel)

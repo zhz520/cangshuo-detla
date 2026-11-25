@@ -106,6 +106,9 @@ const latestNoticeTime = computed(() => {
   return Number.isNaN(d.getTime()) ? '' : (d.getMonth() + 1) + '-' + d.getDate()
 })
 let visible = true
+let lastListAt = 0
+let lastNoticesAt = 0
+const CHAT_LIST_TTL = 10000
 onHide(() => { visible = false })
 
 const USER_CHAT_OPTS = { chatRole: 'USER' }
@@ -116,6 +119,7 @@ async function fetchList() {
   try {
     const res = await getSessionList({ ...USER_CHAT_OPTS, loading: false })
     sessions.value = res.data || []
+    lastListAt = Date.now()
   } catch (e) { error.value = '会话加载失败，请重新加载。' }
   finally { loading.value = false }
 }
@@ -124,8 +128,8 @@ onShow(async () => {
   visible = true
   chatStore.connect(USER_CHAT_OPTS)
   remindStore.refreshBadges()
-  loadNotices()
-  await fetchList()
+  if (!lastNoticesAt || Date.now() - lastNoticesAt > CHAT_LIST_TTL) { loadNotices(); lastNoticesAt = Date.now() }
+  if (!lastListAt || Date.now() - lastListAt > CHAT_LIST_TTL) await fetchList()
 })
 
 async function loadNotices() {

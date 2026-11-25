@@ -71,13 +71,15 @@ onMounted(() => {
 onBeforeUnmount(() => observer?.disconnect())
 </script>
 <style scoped>
-.app-image { background-color: #f0f1f3; transition: opacity 220ms cubic-bezier(.2,.7,.2,1); }
-.image-loading { opacity: 0; background: linear-gradient(100deg, #f0f1f3 30%, #f7f8f9 48%, #f0f1f3 66%); background-size: 220% 100%; animation: image-shimmer 1.1s linear infinite; }
-.image-ready { opacity: 1; }
+.app-image { background-color: #f0f1f3; }
+.image-loading { opacity: 1; background: linear-gradient(100deg, #eef0f2 28%, #f8f9fa 46%, #eef0f2 64%); background-size: 220% 100%; animation: image-shimmer 1.1s linear infinite; }
+.image-ready { animation: image-reveal 220ms cubic-bezier(.2,.7,.2,1) both; }
 .image-failed { background-color: #f0f1f3; }
 .app-image.icon-image { background-color: transparent !important; }
 .app-image.icon-image.image-loading { opacity: .35; animation: none; background: transparent; }
+.app-image.icon-image.image-ready { animation: none; }
 @keyframes image-shimmer { to { background-position: -220% 0; } }
+@keyframes image-reveal { from { opacity: .55; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .app-image { transition: none; }
   .image-loading, .app-image.icon-image.image-loading { opacity: 1; animation: none; background-color: #f0f1f3; }

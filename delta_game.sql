@@ -840,6 +840,8 @@ CREATE TABLE `product` (
   `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '商品名称',
   `subtitle` varchar(200) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '商品副标题',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '商品描述',
+  `service_content` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '详情页服务内容短说明',
+  `detail` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '详情页详情与须知富文本',
   `cover_image` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '封面图URL',
   `images` varchar(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '详情图URL，多个以逗号分隔',
   `required_player_count` tinyint NOT NULL DEFAULT '1' COMMENT '需要打手数量(1-单人 2-双人组队)',
@@ -872,7 +874,7 @@ CREATE TABLE `product` (
 
 LOCK TABLES `product` WRITE;
 /*!40000 ALTER TABLE `product` DISABLE KEYS */;
-INSERT INTO `product` VALUES (78,5,'测试','','','https://example.com/file/2026/03/29/c0c712c79d9c461791d53136cc5ebf6b.jpg','https://example.com/file/2026/03/29/2b6969d3785544148b1b354f89ea3dd6.png',1,0,0,6,5.00,NULL,0,0,NULL,0,'2026-03-19 21:46:19','2026-04-07 19:33:53',0.01,1,1,2);
+INSERT INTO `product` VALUES (78,5,'测试','','','','','https://example.com/file/2026/03/29/c0c712c79d9c461791d53136cc5ebf6b.jpg','https://example.com/file/2026/03/29/2b6969d3785544148b1b354f89ea3dd6.png',1,0,0,6,5.00,NULL,0,0,NULL,0,'2026-03-19 21:46:19','2026-04-07 19:33:53',0.01,1,1,2);
 /*!40000 ALTER TABLE `product` ENABLE KEYS */;
 UNLOCK TABLES;
 

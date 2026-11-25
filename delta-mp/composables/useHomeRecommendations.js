@@ -1,13 +1,17 @@
 import { ref } from 'vue'
+import { clientStorage } from '../utils/client-storage.js'
+
+const CACHE_KEY = 'home-recommend-v1'
 
 export function useHomeRecommendations({ getRecommendProducts, getRecommendCategories, productSortParams }) {
-  const recommendProducts = ref([])
-  const recommendLoading = ref(true)
+  const cached = (() => { try { return clientStorage.get(CACHE_KEY) } catch (_) { return null } })()
+  const recommendProducts = ref(Array.isArray(cached?.products) ? cached.products : [])
+  const recommendLoading = ref(!recommendProducts.value.length)
   const recommendError = ref('')
   /** 热门推荐 Tab：全部 + 接口返回的分类（护航专区推荐、热门推荐等） */
-  const recommendTabs = ref([])
-  const currentRecommendCategoryId = ref('')
-  const currentSort = ref('default')
+  const recommendTabs = ref(Array.isArray(cached?.tabs) ? cached.tabs : [])
+  const currentRecommendCategoryId = ref(String(cached?.categoryId || ''))
+  const currentSort = ref(String(cached?.sort || 'default'))
   const showHomeActions = ref(false)
   let recommendRequest = 0
   let catalogRequest = 0
@@ -21,6 +25,7 @@ export function useHomeRecommendations({ getRecommendProducts, getRecommendCateg
           if (currentRecommendCategoryId.value !== next) recommendProducts.value = []
           currentRecommendCategoryId.value = next
         }
+        persist()
       }
     }).catch(() => {}).then(() => catalog === catalogRequest && loadRecommendProducts())
   }
@@ -47,7 +52,7 @@ export function useHomeRecommendations({ getRecommendProducts, getRecommendCateg
     if (currentRecommendCategoryId.value) params.categoryId = currentRecommendCategoryId.value
     try {
       const res = await getRecommendProducts(params, { loading: false, silent: true })
-      if (request === recommendRequest) recommendProducts.value = res.data?.records || res.data || []
+      if (request === recommendRequest) { recommendProducts.value = res.data?.records || res.data || []; persist() }
     } catch {
       if (request === recommendRequest) {
         recommendError.value = '推荐商品加载失败，请重试。'
@@ -55,6 +60,9 @@ export function useHomeRecommendations({ getRecommendProducts, getRecommendCateg
     } finally {
       if (request === recommendRequest) recommendLoading.value = false
     }
+  }
+  function persist() {
+    try { clientStorage.set(CACHE_KEY, { products: recommendProducts.value, tabs: recommendTabs.value, categoryId: currentRecommendCategoryId.value, sort: currentSort.value, at: Date.now() }) } catch (_) {}
   }
   return { recommendProducts, recommendLoading, recommendError, recommendTabs, currentRecommendCategoryId, currentSort, showHomeActions, switchRecommendCategory, chooseHomeSort, loadRecommendProducts, loadRecommendations }
 }

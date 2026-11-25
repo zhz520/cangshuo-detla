@@ -61,10 +61,14 @@
                 <div class="form-tip" style="flex-basis:100%">商品详情轮播建议统一 3:2，最多 9 张；四边预留约 5% 安全区，避免圆角裁切主体。</div>
               </div>
             </el-form-item>
-            <el-form-item label="描述">
+            <el-form-item label="服务内容">
+              <el-input v-model="form.serviceContent" type="textarea" :rows="2" maxlength="120" show-word-limit placeholder="例如：全程陪玩、指定段位、语音沟通" />
+              <span class="form-tip">详情页「服务内容」一栏使用这段短说明，纯文本，最多 120 字。</span>
+            </el-form-item>
+            <el-form-item label="详情与须知">
               <div class="description-editor">
-                <RichTextEditor v-model="form.description" :rows="8" />
-                <span class="form-tip">支持字号、颜色、对齐、列表、图片和链接，用户端会按此样式展示</span>
+                <RichTextEditor v-model="form.detail" :rows="8" />
+                <span class="form-tip">支持字号、颜色、对齐、列表、图片和链接；详情页「详情与须知」按此展示。</span>
               </div>
             </el-form-item>
           </div>
@@ -164,7 +168,7 @@ const limitTypeOptions = [
   { label: '一月限购一次', value: 3 }
 ]
 const form = reactive({
-  name: '', subtitle: '', categoryId: null, coverImage: '', description: '',
+  name: '', subtitle: '', categoryId: null, coverImage: '', serviceContent: '', detail: '',
   price: null, status: 1, sortOrder: 0, isRecommend: 0, recommendCategoryId: null, commissionRate: null,
   perUserLimitType: 0
 })
@@ -193,7 +197,7 @@ async function loadDetail() {
     const p = data.product || data
     Object.assign(form, {
       name: p.name, subtitle: p.subtitle || '', categoryId: p.categoryId, coverImage: p.coverImage || '',
-      description: p.description || '', price: p.price ?? null,
+      serviceContent: p.serviceContent || '', detail: p.detail || p.description || '', price: p.price ?? null,
       status: p.status ?? 1, sortOrder: p.sortOrder || 0, isRecommend: p.isRecommend || 0,
       recommendCategoryId: p.recommendCategoryId ?? null, commissionRate: p.commissionRate ?? null,
       perUserLimitType: normalizePerUserLimitType(p)
@@ -216,7 +220,7 @@ async function handleSubmit() {
   if (!valid) return
   submitting.value = true
   try {
-    const product = { ...form, perUserLimitType: Number(form.perUserLimitType ?? 0), images: imageList.value.join(',') }
+    const product = { ...form, description: form.detail, perUserLimitType: Number(form.perUserLimitType ?? 0), images: imageList.value.join(',') }
     if (isEdit.value) product.id = Number(route.params.id)
     isEdit.value ? await updateProduct(product) : await addProduct(product)
     ElMessage.success('操作成功')

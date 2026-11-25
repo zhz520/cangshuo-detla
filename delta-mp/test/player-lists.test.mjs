@@ -146,7 +146,9 @@ test('hall category failures are retryable and a successful empty category list 
   await page.fire('onHide')
   await page.fire('onShow')
   assert.equal(categoryCalls, 2, 'empty metadata must not be fetched on every return')
-  assert.equal(hallCalls, 2)
+  assert.equal(hallCalls, 1, 'a quick return keeps the loaded hall instead of refetching')
+  await page.state.refresh({ force: true })
+  assert.equal(hallCalls, 2, 'forced refresh still reaches the hall')
 })
 
 test('hall shares pending metadata and never chains a hall request after unload', async () => {

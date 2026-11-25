@@ -146,15 +146,20 @@ const playerEntry = computed(() => {
   return { title: '入驻接单员端', desc: '通过审核后可接单、查看收益和提现', action: '进入' }
 })
 
+let lastDashboardAt = 0
+const MINE_TTL = 15000
 onShow(() => {
   userStore.syncSessionFromStorage()
   const savedToken = getUserToken()
   if (savedToken && !userStore.token) userStore.token = savedToken
   if (userStore.token) {
-    userStore.fetchProfile(true)
     chatStore.fetchMessageUnreadCount()
-    getPlayerApplicationStatus().then(res => { playerStatus.value = res.data?.status || '' }).catch(() => {})
-    getWallet({ loading: false }).then(res => { balance.value = Number(res.data?.balance || 0).toFixed(2) }).catch(() => {})
+    if (!lastDashboardAt || Date.now() - lastDashboardAt > MINE_TTL) {
+      lastDashboardAt = Date.now()
+      userStore.fetchProfile(true)
+      getPlayerApplicationStatus().then(res => { playerStatus.value = res.data?.status || '' }).catch(() => {})
+      getWallet({ loading: false }).then(res => { balance.value = Number(res.data?.balance || 0).toFixed(2) }).catch(() => {})
+    }
   }
 })
 

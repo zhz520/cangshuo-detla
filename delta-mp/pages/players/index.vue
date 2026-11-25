@@ -104,6 +104,9 @@ const visiblePlayers = computed(() => {
 let generation = 0
 let pageNum = 1
 let closedRedirect = false
+let metaLoaded = false
+let lastLoadedAt = 0
+const PLAYERS_TTL = 30000
 
 const selectedName = computed(() => {
   if (keyword.value.trim()) return '搜索结果'
@@ -121,19 +124,22 @@ onShow(async () => {
     return
   }
   closedRedirect = false
-  try {
-    const [levelResult, layoutResult] = await Promise.allSettled([getPlayerCategories(), getPublicPlayerLayout()])
-    if (levelResult.status === 'fulfilled') levels.value = levelResult.value.data || []
-    if (layoutResult.status === 'fulfilled' && ['grid', 'list', 'compact'].includes(layoutResult.value.data?.layout)) {
-      layout.value = layoutResult.value.data.layout
+  if (!metaLoaded) {
+    try {
+      const [levelResult, layoutResult] = await Promise.allSettled([getPlayerCategories(), getPublicPlayerLayout()])
+      if (levelResult.status === 'fulfilled') levels.value = levelResult.value.data || []
+      if (layoutResult.status === 'fulfilled' && ['grid', 'list', 'compact'].includes(layoutResult.value.data?.layout)) {
+        layout.value = layoutResult.value.data.layout
+      }
+      if (selectedLevel.value !== null && !levels.value.some(level => level.id === selectedLevel.value)) {
+        selectedLevel.value = null
+      }
+      metaLoaded = true
+    } catch (_) {
+      loadError.value = true
     }
-    if (selectedLevel.value !== null && !levels.value.some(level => level.id === selectedLevel.value)) {
-      selectedLevel.value = null
-    }
-  } catch (_) {
-    loadError.value = true
   }
-  refresh()
+  if (!lastLoadedAt || Date.now() - lastLoadedAt > PLAYERS_TTL) refresh({ preserve: players.value.length > 0 })
 })
 
 function selectLevel(id) {
@@ -159,12 +165,13 @@ function onOnlineChange(event) {
   onlineOnly.value = Number(event.detail.value) === 1
 }
 
-function refresh() {
+function refresh(options = {}) {
+  const preserve = options?.preserve === true
   generation++
   pageNum = 1
-  players.value = []
   finished.value = false
   loading.value = false
+  if (!preserve) players.value = []
   loadPlayers()
 }
 
@@ -179,10 +186,12 @@ async function loadPlayers() {
     const { data } = await getPublicPlayers(params)
     if (current !== generation) return
     const records = data?.records || []
-    players.value.push(...records)
+    if (page === 1) players.value = records
+    else players.value.push(...records)
     total.value = Number(data?.total || 0)
     finished.value = records.length < 12 || players.value.length >= total.value
     pageNum++
+    lastLoadedAt = Date.now()
   } catch (_) {
     if (current === generation) loadError.value = true
   } finally {

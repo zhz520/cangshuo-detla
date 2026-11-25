@@ -27,7 +27,7 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
 @keyframes delta-page-fade { from { opacity: .64; } to { opacity: 1; } }
 @keyframes delta-page-in { from { opacity: .76; transform: translate3d(var(--delta-motion-distance),0,0); } to { opacity: 1; transform: none; } }
 @keyframes delta-page-back { from { opacity: .86; transform: translate3d(calc(0px - var(--delta-motion-distance) * .65),0,0); } to { opacity: 1; transform: none; } }
-@keyframes delta-tab-in { from { opacity: .65; transform: translate3d(0,12px,0); } to { opacity: 1; transform: none; } }
+@keyframes delta-tab-in { from { opacity: .72; transform: translate3d(16px,0,0) scale(.996); } to { opacity: 1; transform: none; } }
 @supports (view-transition-name: none) {
   @media (prefers-reduced-motion: no-preference) {
     /* Keep the root out of the snapshot: otherwise fixed tab bars appear twice. */
@@ -102,42 +102,42 @@ button:active:not([disabled]), .menu-item:active, .action:active, .action-row:ac
 @keyframes delta-tab-label-old { to { opacity: 0; } }
 @keyframes delta-tab-label-new { 0% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes delta-vt-tab-in {
-  from { opacity: .35; transform: translate3d(0,24px,0) scale(.996); }
+  from { opacity: .55; transform: translate3d(24px,0,0) scale(.994); }
   to { opacity: 1; transform: none; }
 }
 @keyframes delta-vt-tab-in-forward {
-  0% { opacity: .35; transform: translate3d(18px,22px,0) scale(.996); }
-  70% { opacity: .94; transform: translate3d(-2px,3px,0) scale(1.002); }
-  88% { transform: translate3d(1px,-1px,0); }
+  0% { opacity: .55; transform: translate3d(28px,0,0) scale(.994); }
+  72% { opacity: .97; transform: translate3d(-3px,0,0) scale(1.001); }
+  89% { transform: translate3d(1px,0,0); }
   100% { opacity: 1; transform: none; }
 }
 @keyframes delta-vt-tab-in-back {
-  0% { opacity: .35; transform: translate3d(-18px,22px,0) scale(.996); }
-  70% { opacity: .94; transform: translate3d(2px,3px,0) scale(1.002); }
-  88% { transform: translate3d(-1px,-1px,0); }
+  0% { opacity: .55; transform: translate3d(-28px,0,0) scale(.994); }
+  72% { opacity: .97; transform: translate3d(3px,0,0) scale(1.001); }
+  89% { transform: translate3d(-1px,0,0); }
   100% { opacity: 1; transform: none; }
 }
 @keyframes delta-vt-tab-out-forward {
-  to { opacity: 0; transform: translate3d(-12px,-3px,0) scale(.997); }
+  to { opacity: 0; transform: translate3d(-18px,0,0) scale(.994); }
 }
 @keyframes delta-vt-tab-out-back {
-  to { opacity: 0; transform: translate3d(12px,-3px,0) scale(.997); }
+  to { opacity: 0; transform: translate3d(18px,0,0) scale(.994); }
 }
 @keyframes delta-tab-forward {
-  from { opacity: .45; transform: translate3d(16px,14px,0); }
-  72% { opacity: .94; transform: translate3d(-2px,2px,0); }
+  from { opacity: .58; transform: translate3d(24px,0,0) scale(.994); }
+  72% { opacity: .97; transform: translate3d(-3px,0,0) scale(1.001); }
   to { opacity: 1; transform: none; }
 }
 @keyframes delta-tab-back {
-  from { opacity: .45; transform: translate3d(-16px,14px,0); }
-  72% { opacity: .94; transform: translate3d(2px,2px,0); }
+  from { opacity: .58; transform: translate3d(-24px,0,0) scale(.994); }
+  72% { opacity: .97; transform: translate3d(3px,0,0) scale(1.001); }
   to { opacity: 1; transform: none; }
 }
 html[data-delta-direction="forward"] [data-delta-enter="tab"] {
-  animation: delta-tab-forward 400ms cubic-bezier(.22,.61,.36,1) both;
+  animation: delta-tab-forward 400ms cubic-bezier(.2,.8,.2,1) both;
 }
 html[data-delta-direction="back"] [data-delta-enter="tab"] {
-  animation: delta-tab-back 400ms cubic-bezier(.22,.61,.36,1) both;
+  animation: delta-tab-back 400ms cubic-bezier(.2,.8,.2,1) both;
 }
 @supports (view-transition-name: none) {
   @media (prefers-reduced-motion: no-preference) {
@@ -145,13 +145,13 @@ html[data-delta-direction="back"] [data-delta-enter="tab"] {
       animation: delta-vt-tab-out-forward 80ms cubic-bezier(.4,0,1,1) both;
     }
     html[data-delta-view="tab"][data-delta-direction="forward"]::view-transition-new(delta-page) {
-      animation: delta-vt-tab-in-forward 400ms cubic-bezier(.22,.61,.36,1) 50ms both;
+      animation: delta-vt-tab-in-forward 420ms cubic-bezier(.2,.8,.2,1) 40ms both;
     }
     html[data-delta-view="tab"][data-delta-direction="back"]::view-transition-old(delta-page) {
       animation: delta-vt-tab-out-back 80ms cubic-bezier(.4,0,1,1) both;
     }
     html[data-delta-view="tab"][data-delta-direction="back"]::view-transition-new(delta-page) {
-      animation: delta-vt-tab-in-back 400ms cubic-bezier(.22,.61,.36,1) 50ms both;
+      animation: delta-vt-tab-in-back 420ms cubic-bezier(.2,.8,.2,1) 40ms both;
     }
     ::view-transition-group(delta-shared-media) {
       animation-duration: 380ms;

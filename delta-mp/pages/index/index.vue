@@ -282,6 +282,17 @@ const banners = ref([])
 const categories = ref([])
 const purchaseFeed = ref([])
 const purchaseFeedEnabled = ref(false)
+const HOME_CACHE_KEY = 'home-feed-v1'
+const HOME_TTL = 60000
+let lastLoadedAt = 0
+let lastPurchaseFeedAt = 0
+try {
+  const cached = clientStorage.get(HOME_CACHE_KEY)
+  if (cached?.banners) banners.value = cached.banners
+  if (cached?.categories) categories.value = cached.categories
+  if (typeof cached?.purchaseFeedEnabled === 'boolean') purchaseFeedEnabled.value = cached.purchaseFeedEnabled
+  if (Array.isArray(cached?.purchaseFeed)) purchaseFeed.value = cached.purchaseFeed
+} catch (_) {}
 const homeSortOptions = productSortOptions
 const { recommendProducts, recommendLoading, recommendError, recommendTabs, currentRecommendCategoryId, currentSort, showHomeActions, switchRecommendCategory, chooseHomeSort, loadRecommendProducts, loadRecommendations } = useHomeRecommendations({ getRecommendProducts, getRecommendCategories, productSortParams })
 const { notices, showNoticeList, popupCurrentIndex, popupNotices, showNoticePopup, noticeHtml, openNoticeDetail, closeNoticePopup, loadNotices } = useHomeNotices({ siteStore, clientStorage, getActiveNotices, productDescriptionHtml })
@@ -292,7 +303,8 @@ function formatTime(t) {
   return `${d.getMonth() + 1}-${d.getDate()}`
 }
 
-async function loadData() {
+async function loadData({ force = false } = {}) {
+  if (!force && lastLoadedAt && Date.now() - lastLoadedAt < HOME_TTL) return
   const config = siteStore.fetchSiteConfig()
   const opts = { loading: false, silent: true }
   const bannerLoad = getActiveBanners(opts).then(res => {
@@ -305,19 +317,24 @@ async function loadData() {
   })
   const recommendLoad = loadRecommendations(opts)
   await Promise.allSettled([bannerLoad, noticeLoad, categoryLoad, recommendLoad])
+  lastLoadedAt = Date.now()
+  try { clientStorage.set(HOME_CACHE_KEY, { banners: banners.value, categories: categories.value, purchaseFeedEnabled: purchaseFeedEnabled.value, purchaseFeed: purchaseFeed.value, at: lastLoadedAt }) } catch (_) {}
 }
 
 onShow(() => {
-  loadData()
-  loadPurchaseFeed()
+  if (!lastLoadedAt || Date.now() - lastLoadedAt > HOME_TTL) loadData()
+  if (!lastPurchaseFeedAt || Date.now() - lastPurchaseFeedAt > HOME_TTL) loadPurchaseFeed()
   remindStore.refreshBadges()
 })
 
-async function loadPurchaseFeed() {
+async function loadPurchaseFeed({ force = false } = {}) {
+  if (!force && lastPurchaseFeedAt && Date.now() - lastPurchaseFeedAt < HOME_TTL) return
   try {
     const res = await getPurchaseFeed({ loading: false })
     purchaseFeedEnabled.value = res.data?.enabled === true
     purchaseFeed.value = Array.isArray(res.data?.items) ? res.data.items.slice(0, 20) : []
+    lastPurchaseFeedAt = Date.now()
+    try { clientStorage.set(HOME_CACHE_KEY, { banners: banners.value, categories: categories.value, purchaseFeedEnabled: purchaseFeedEnabled.value, purchaseFeed: purchaseFeed.value, at: lastLoadedAt || Date.now() }) } catch (_) {}
   } catch (_) {
     purchaseFeedEnabled.value = false
     purchaseFeed.value = []
@@ -325,7 +342,8 @@ async function loadPurchaseFeed() {
 }
 
 onPullDownRefresh(async () => {
-  await loadData()
+  await loadData({ force: true })
+  await loadPurchaseFeed({ force: true })
   uni.stopPullDownRefresh()
 })
 
