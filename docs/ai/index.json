@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogVersion": "1.21.0",
-  "inputDigest": "sha256:bb86f67f38b1487082b51af46fabf8db2e489acf8aa7c91e112279a690912795",
+  "inputDigest": "sha256:be3eaa39e855e4bff106e7e39bba717fc2e92a2c672e8951347742c972b244b2",
   "counts": {
     "modules": 19,
     "controllers": 117,
@@ -9,10 +9,10 @@
     "adminRoutes": 72,
     "h5Pages": 60,
     "baseTables": 53,
-    "migrations": 41,
+    "migrations": 42,
     "backendTests": 137,
-    "adminTests": 49,
-    "h5Tests": 27
+    "adminTests": 50,
+    "h5Tests": 28
   },
   "modules": [
     {
@@ -1789,6 +1789,7 @@
       "delta-admin-ui/test/player-admin-delete.test.mjs",
       "delta-admin-ui/test/player-application-review.test.mjs",
       "delta-admin-ui/test/player-image-guidance.test.mjs",
+      "delta-admin-ui/test/product-form-fields.test.mjs",
       "delta-admin-ui/test/request-client.test.mjs",
       "delta-admin-ui/test/sensitive-word-admin.test.mjs",
       "delta-admin-ui/test/sms-account.test.mjs",
@@ -1898,6 +1899,7 @@
       "delta-mp/test/player-layout.test.mjs",
       "delta-mp/test/player-lists.test.mjs",
       "delta-mp/test/player-order-actions.test.mjs",
+      "delta-mp/test/product-detail-fields.test.mjs",
       "delta-mp/test/profile-product-feedback.test.mjs",
       "delta-mp/test/request.test.mjs",
       "delta-mp/test/soft-theme.test.mjs",
@@ -2130,6 +2132,10 @@
       {
         "kind": "baota",
         "path": "deploy/baota/migrations/20261123-wechat-template-setup.sql"
+      },
+      {
+        "kind": "baota",
+        "path": "deploy/baota/migrations/20261125-product-service-detail.sql"
       }
     ],
     "compatibility": "delta-game/delta-admin/src/main/java/com/delta/admin/config/DatabaseCompatibility.java"
