@@ -81,7 +81,7 @@
 - 客户 H5 / 打手 H5 在 `delta-mp`；页面必须注册到 `pages.json`，看到 Vue 文件不代表可访问。
 - H5 页签使用 View Transition 时，命名的祖先快照会冻结后代：需要运动的色块、活动图标和文字必须各自设置 `view-transition-name`，否则动画只在被遮挡的实时 DOM 中运行。View Transition 更新回调不能用 `requestAnimationFrame` 等待，否则会死锁。
 - 页签滚动锁必须按“当前可见页签组件”恰好持有一份：`onMounted`/`onShow` 用同一个布尔守卫 acquire，`onHide`/卸载 release。重复 acquire 会让 `tabbar-page-locked` 永远无法释放，导致所有详情页 `overflow:hidden`、无法下滑。
-- 同级 Tab 切换使用水平 SharedAxis；不要恢复纵向 `translateY` 上浮。GET 读取默认 `loading:false`，用页面骨架/局部刷新；只有写操作使用全屏 loading。
+- 同级 Tab 切换使用水平 SharedAxis；不要恢复纵向 `translateY` 上浮。读取请求永远不触发全屏 loading，用页面骨架/局部刷新；只有写操作使用全屏 loading。
 - 页面请求统一走 `src/api/*` 或 `delta-mp/api/*`，不散落 URL。
 - 管理端权限三层：`meta.roles`、`meta.permission`、`meta.feature`；后端仍二次校验。
 - 主题必须覆盖默认、暗黑、拟态；不能只改一个页面。
