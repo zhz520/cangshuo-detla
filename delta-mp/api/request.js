@@ -49,7 +49,8 @@ function performRequest(options) {
   } = options
 
   return new Promise((resolve, reject) => {
-    const finishLoading = loading ? loaders.begin(method !== 'GET') : () => {}
+    const showGlobalLoading = method !== 'GET' && loading
+    const finishLoading = showGlobalLoading ? loaders.begin(true) : () => {}
 
     // 注入token
     const currentRole = role || getCurrentRole()
