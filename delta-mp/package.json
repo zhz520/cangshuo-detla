@@ -1,6 +1,6 @@
 {
   "name": "delta-mp",
-  "version": "1.23.7",
+  "version": "1.23.8",
   "description": "三角洲游戏服务平台小程序",
   "main": "main.js",
   "scripts": {
